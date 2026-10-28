@@ -188,6 +188,9 @@ that gates everything else (BR-01..03).
 - Every screen of this phase renders correctly in `ar` (RTL) and `en` (LTR); no hardcoded strings in diffs.
 - pgTAP: an unverified user cannot read another user's verification documents.
 
+**Evidence:** [`docs/phase-1-report.md`](./docs/phase-1-report.md) — 214 unit tests, 53 pgTAP
+assertions executed against a real PostgreSQL (`npm run sql:check`), 18 a11y routes, 4 edge bundles.
+
 **Estimate:** 7 days.
 
 ---
