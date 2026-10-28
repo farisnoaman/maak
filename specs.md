@@ -1,13 +1,17 @@
 # Maak (معك) — Trip Management SaaS Platform
 
-**Product & Technical Specification — v1.1**
+**Product & Technical Specification — v1.2**
 Status: Draft for approval · Owner: Product/Engineering · Last updated: 2026-10-28
 
 > **v1.1 changes** — added: payments (cash, e-wallet, agent cash-in, bank deposit), payment-account registry
 > for platform **and** verified users, a finance module for individuals/companies, and Basic/Pro/Business
 > subscription plans with enforced quotas. Localisation upgraded to a fully bilingual product
 > (Arabic RTL first-class + English LTR first-class, not an afterthought).
-> See `IMPLEMENTATION_PLAN.md` for the revised 13-phase delivery.
+>
+> **v1.2 changes** — architecture revised for security and testability: business logic is **TypeScript in
+> `packages/core`** (unit-testable with Vitest), **Supabase Edge Functions are the only write path**, and
+> each command executes as **one atomic SQL call**. RLS is simplified to tenant isolation + read defense.
+> Clients have **zero direct write grants**. See §5.4, §9.4 and ADR-01/17/18/19.
 
 ---
 
@@ -251,11 +255,17 @@ falling back to `basic` defaults if no subscription exists. **A missing subscrip
 
 ### 5.4 Enforcement layers (defense in depth)
 
-1. **DB constraints** — invariants that must never break (seats ≥ 0, balanced journal entries, monotonic ODO).
-2. **RLS policies** — row visibility on every table, `FORCE ROW LEVEL SECURITY`.
-3. **RPC functions** (`SECURITY DEFINER`, pinned `search_path`) — every state transition; UI never writes
-   tables directly (trivial own-profile fields excepted).
-4. **Client guards** — UX only. Never the security boundary.
+| # | Layer | Responsibility | Failure mode if removed |
+|---|---|---|---|
+| 1 | **Edge gateway** (Supabase Edge Functions) | JWT verification, actor/tenant resolution, zod validation, authorization policy, rate limiting, request audit | Anyone can call the DB directly |
+| 2 | **Pure core logic** (`packages/core`, TS) | Pricing, discounts, refunds, commission, ledger entry construction, quota decisions, state-machine transitions — all pure functions, Vitest-tested | Rules get re-implemented per client and drift |
+| 3 | **Atomic SQL command** (one `SECURITY DEFINER` function per command) | All writes in one transaction; re-asserts the invariants that must never break (journal balances, seats never overbook, ODO monotonic, quota)<br>**EXECUTE granted to `service_role` only** | Partial writes, money drift, overbooking |
+| 4 | **RLS** | Tenant/row isolation on reads; defense in depth if a function is ever mis-scoped | Cross-tenant data leakage |
+| 5 | **Client guards** | UX only (disabled buttons, friendly reasons) | Nothing — never the security boundary |
+
+**Hard rule:** `anon` and `authenticated` hold **no** `INSERT/UPDATE/DELETE` grants on domain tables.
+Every mutation goes through an Edge Function. Reads may go directly to PostgREST, because RLS is the
+complete rule there and no business logic is involved.
 
 ---
 
@@ -641,38 +651,51 @@ All transitions are guarded in RPCs via `app.assert_transition(entity, from, to)
 |---|---|---|
 | Web | Next.js (App Router) + React + TS strict + `next-intl` | SEO marketplace, SSR, 4 consoles in one deploy |
 | Mobile | Expo (expo-router) | One codebase iOS/Android, OTA, background location, push |
-| Shared | `@maak/core` (types, zod, RPC client, i18n, pricing, finance math, hooks) | One brain for all clients/locales |
+| Shared | `@maak/core` (types, zod, api client, i18n, pricing, finance/ledger math, policy, hooks) — **framework-free** | One brain for all clients/locales; unit-testable with Vitest |
 | Design | Tailwind + NativeWind from shared tokens | Consistent UI, RTL-safe by construction |
-| Backend | **Supabase** (Postgres + PostGIS, Auth, RLS, RPC, Storage, Realtime, pg_cron) | No server to maintain; rules in one place |
-| Money | Postgres ledger (double-entry) + `payment_intents` | Auditable, reconciliation-first, no gateway dependency |
+| **Write API** | **Supabase Edge Functions** (Deno) — JWT, zod, authorization, rate limit, then one atomic SQL call | Only write path; no service key anywhere else |
+| **Read API** | PostgREST + RLS (client-side typed queries) | No business logic; cacheable; cheap; zero extra latency |
+| Database | **Supabase Postgres** + PostGIS, RLS (isolation), constraints, atomic command functions, pg_cron | Invariants can't be skipped |
+| Money | Postgres ledger (double-entry) + `payment_intents`, posted inside the command transaction | Auditable, reconciliation-first, no gateway dependency |
 | Maps | MapLibre + OSM tiles, OSRM/OpenRouteService, Nominatim | No per-load billing, no vendor lock |
-| PDF | `@react-pdf/renderer` + embedded Arabic font | One-page manifests, invoices, statements in both locales |
-| Jobs | `pg_cron` + DB functions; Edge Functions only for outbound HTTP | Cheapest, closest to data |
-| Testing | pgTAP, Vitest, Playwright (ar+en), Maestro, k6 | Protect invariants, not pixels |
-| Ops | Sentry, Supabase metrics, GitHub Actions, Vercel | Small-team friendly |
+| PDF | `@react-pdf/renderer` + embedded Arabic font (edge function or Next route) | One-page manifests, invoices, statements in both locales |
+| Jobs | `pg_cron` for time-based work; Edge Functions for outbound HTTP | Cheapest, closest to data |
+| Testing | **Vitest (core + edge units)**, pgTAP (constraints/RLS), integration (real Postgres), Playwright (ar+en), Maestro, k6 | Fast unit loop, invariants still proven |
+| Ops | Sentry, Supabase logs/metrics, GitHub Actions, Vercel | Small-team friendly |
 
 ### 9.2 Monorepo layout
 
 ```
 maak/
 ├─ apps/
-│  ├─ web/                    # Next.js: [locale] routes, public + 4 consoles
+│  ├─ web/                       # Next.js: [locale] routes, public + 4 consoles
 │  │  └─ src/
-│  │     ├─ app/[locale]/     # routes only (thin)
-│  │     ├─ modules/          # feature modules (see 9.3)
-│  │     ├─ components/       # shared primitives (RTL-safe)
-│  │     └─ lib/supabase/
-│  └─ mobile/                 # Expo: driver-first + passenger
+│  │     ├─ app/[locale]/        # routes only (thin)
+│  │     ├─ modules/             # feature modules (see 9.3)
+│  │     ├─ components/          # shared primitives (RTL-safe)
+│  │     └─ lib/api.ts           # calls @maak/core api client
+│  └─ mobile/                    # Expo: driver-first + passenger
 ├─ packages/
-│  ├─ core/                   # types, zod, rpc, i18n/{ar,en}, pricing, finance, format, hooks
-│  ├─ design-tokens/          # colors, spacing, typography, elevation
-│  └─ config/                 # eslint (boundaries, rtl, i18n), tsconfig, prettier
+│  ├─ core/                      # ⭐ framework-free TS: types, zod, api client, policy,
+│  │  ├─ src/domain/             #    pricing, ledger, refunds, quotas, state machines
+│  │  ├─ src/i18n/{ar,en}.json   #    typed dictionaries (generated key types)
+│  │  ├─ src/api/                #    typed edge-function client (Zod-parsed responses)
+│  │  ├─ src/react/              #    optional hooks (TanStack Query), shared by web+mobile
+│  │  └─ tests/                  #    Vitest unit + property tests
+│  ├─ design-tokens/             # colors, spacing, typography, elevation
+│  └─ config/                    # eslint (boundaries, rtl, i18n), tsconfig, prettier, vitest presets
 ├─ supabase/
-│  ├─ migrations/             # numbered, forward-only
-│  ├─ functions/              # notify, sms, push, statement-pdf
-│  ├─ seed/                   # geography CSVs, plans, providers, demo
-│  └─ tests/                  # pgTAP
-├─ docs/                      # ADRs, runbooks, guides (AR)
+│  ├─ functions/                 # ⭐ Edge gateway — the only write path
+│  │  ├─ _shared/                # auth, actor resolution, zod adapter, error mapping,
+│  │  │                          #   rate limit, cors, request audit, db client
+│  │  ├─ trips-create/index.ts   # one function per command (thin: validate → authorize →
+│  │  ├─ booking-accept/…        #   call package functions → one atomic rpc)
+│  │  └─ notify/                 # outbound side-effects (push/email/WA)
+│  ├─ database/
+│  │  ├─ migrations/             # numbered, forward-only (tables, RLS, constraints, commands)
+│  │  ├─ seed/                   # geography CSVs, plans, providers, demo
+│  │  └─ tests/                  # pgTAP: constraints, RLS isolation, atomicity
+├─ docs/                         # ADRs, runbooks, guides (AR)
 ├─ specs.md
 └─ IMPLEMENTATION_PLAN.md
 ```
@@ -689,22 +712,85 @@ modules/<feature>/
 ```
 Enforced by `eslint-plugin-boundaries` (deep imports fail CI).
 
-### 9.4 Data-access strategy — the core cost-saving decision
+### 9.4 Data-access strategy — the security + testability decision
 
-> **Every mutation is a Postgres function. Every read is a view or function. Clients never assemble business rules.**
+> **Reads are simple. Writes are gated. Logic is TypeScript. Transactions are SQL.**
 
 ```
+WRITES  (rare, must be exact)
 Web (Next.js) ─┐
-               ├─> @maak/core supabase client ─> PostgREST RPC ─> plpgsql (rules, guards, ledger, audit)
-Mobile (Expo) ─┘                                        │
-                                                        └─ RLS (visibility)
+               ├─> @maak/core api client ─> Edge Function ─> [one atomic SQL command] ─> Postgres
+Mobile (Expo) ─┘        (typed, zod)          │  JWT · actor · zod · policy · rate limit
+                                              └─ calls pure @maak/core functions:
+                                                 price(), discount(), refund(), commission(),
+                                                 journalEntries(), assertQuota(), transition()
+
+READS   (frequent, no logic)
+Web (Next.js) ─┐
+               ├─> @maak/core query hooks ─> PostgREST (RLS only) ─> views/tables
+Mobile (Expo) ─┘
 ```
 
-Consequences: adding a client or a locale = zero rule rewrites; bugs fixed once for all platforms;
-no trust in the UI; no API surface to version (RPC signature = contract, migrated).
+**Why this split**
 
-**Guardrails:** `SECURITY DEFINER` with `search_path = ''` and fully-qualified names; RLS tested per table;
-`supabase db lint` + `plpgsql_check` in CI; generated types committed, CI fails on drift.
+| Concern | Where it lives | Why there |
+|---|---|---|
+| "May this actor do this?" | Edge Function + pure `policy.ts` | Unit-testable, one place, easy to review |
+| "What is the correct price/refund/commission?" | `packages/core/domain/*.ts` (pure) | Vitest, no DB, fast feedback, no drift |
+| "All writes happen or none do" | One SQL command per action | Real transactions; no partial money movement |
+| "Can tenant A see tenant B's rows?" | RLS policies | DB-enforced, can't be forgotten in a query |
+| "Can a client bypass a rule?" | Revoked write grants | Physically impossible, not just discouraged |
+
+**Command contract (every write follows it)**
+
+```ts
+// supabase/functions/<command>/index.ts  — thin, ~40 lines, no business math
+export default handler(async (ctx) => {
+  const input   = CommandSchema.parse(await ctx.req.json());   // zod, shared with client
+  const actor   = await ctx.requireActor();                    // JWT → profile/org/roles/plan
+  assertPolicy('trip.create', actor, input);                   // pure, unit-tested
+  const result  = await db.rpc('cmd_trip_create', { p_actor: actor.id, ...input });
+  return ok(result);                                           // no service key escapes
+});
+```
+
+```sql
+-- one command = one transaction; grants: service_role only
+create function cmd_trip_create(p_actor uuid, ...) returns jsonb
+language plpgsql security definer set search_path = '' as $$
+begin
+  -- re-assert the invariants that cost money if broken
+  perform app.assert_quota(p_actor, 'trips');
+  perform app.assert_actor_verified(p_actor);
+  insert into public.trips (...) values (...);
+  insert into audit.log (...) values (...);
+  return jsonb_build_object('trip_id', ...);
+exception when others then raise;  -- the whole command rolls back
+end $$;
+revoke all on function cmd_trip_create(uuid, ...) from public, anon, authenticated;
+grant execute on function cmd_trip_create(uuid, ...) to service_role;
+```
+
+**Guardrails**
+- Clients get **no** `INSERT/UPDATE/DELETE` on domain tables (`revoke ... from anon, authenticated`).
+  Only `SELECT` (RLS-filtered) plus explicitly published views/functions.
+- Command functions are `SECURITY DEFINER`, `search_path = ''`, fully qualified, `service_role`-only.
+- Business math never lives in SQL; SQL only enforces invariants and writes atomically.
+- Validation exists twice on purpose: zod in the gateway (good errors) and constraints in the DB
+  (last line of defense). They are deliberately redundant, not duplicated logic.
+- `supabase gen types` (DB types) + `zod` (input contracts) are committed; CI fails on drift.
+- Every command writes an `audit.log` row in the same transaction — an action without a trace is impossible.
+- Command naming: `<domain>-<action>` (function dir) ↔ `cmd_<domain>_<action>` (SQL) ↔
+  `commands.tripCreate` (core client) — one name, three layers, greppable.
+
+**Trade-offs, stated honestly**
+
+| Cost | Mitigation |
+|---|---|
+| Extra hop (~50–150 ms, cold start on first invoke) | Writes only; keep functions small and warm via `min_instances` on paid plans |
+| Two places to change when a rule changes (zod + constraint) | Constraint is intentionally dumb; zod is the source of truth for UX |
+| Edge functions are Deno, not Node | Keep them dependency-light (`_shared/` only), no native modules |
+| Easier to break atomicity if someone adds a second `rpc()` call | Lint/review rule: exactly one `db.rpc` per command handler (asserted by an ESLint rule + test) |
 
 ### 9.5 Environments
 
@@ -732,6 +818,27 @@ place names, keyset pagination, facet cache with 30 s TTL), plus:
 
 Inherited from v1.0 (auth, RLS everywhere, private buckets, PII masking, append-only audit, rate limits,
 export/delete endpoints) plus:
+
+**Edge gateway (the only write path)**
+- Every function: verify JWT with `auth.getUser()` (never trust decoded claims), resolve actor from the DB,
+  re-check roles per request (no cached permissions), zod-validate the body, enforce `Content-Type` and a
+  max body size, then call exactly one SQL command.
+- **CORS allow-list** per environment (no `*` in production); CSRF irrelevant for bearer-token calls but
+  `Origin` is still validated for browser-originated writes.
+- **Rate limits** in Postgres (`rate_limits` table, sliding window per actor + IP): booking 5/10 min,
+  payment submission 10/h, verification decisions 200/h, QR resolution 60/min.
+- **Secrets**: `SUPABASE_SERVICE_ROLE_KEY` exists only in the function runtime env; never in a client bundle,
+  never in a response, never logged. Client bundles are built from `VITE_/NEXT_PUBLIC_` anon keys only.
+  CI greps the built bundles for `service_role` and fails the build if found.
+- **No dynamic SQL**, no `eval`, no user-supplied table/column names; all queries are parameterised.
+- **Response discipline**: explicit field maps (never `select *` into a response), so a new column can't
+  silently leak PII; shared zod response schemas keep clients honest.
+- **Idempotency**: mutating commands accept an `Idempotency-Key`; the key + response hash is stored per
+  actor, so retries and double-taps are safe (critical for payments).
+- **Audit**: every command writes `audit.log` (actor, action, entity, before/after, request id, IP) in the
+  same transaction; denied requests are logged separately with the failure reason.
+- **Supply chain**: `_shared/` has no third-party deps beyond the Supabase client and zod; lockfile pinned;
+  `npm audit` + Dependabot in CI.
 
 **Money**
 - No card data ever touches the system (no PAN, no CVV) — avoids PCI scope entirely in v1.
@@ -773,7 +880,8 @@ background location; EAS/OTA), plus:
 | Area | Target |
 |---|---|
 | Search latency | p95 < 300 ms @ 100k trips, 50 RPS |
-| RPC write latency | p95 < 250 ms |
+| Write command latency (edge + SQL) | p95 < 300 ms (edge cold start excluded after warm-up) |
+| Read query latency (PostgREST + RLS) | p95 < 120 ms |
 | Web LCP (4G, mid-range Android) | < 2.5 s trip detail, both locales |
 | Availability | 99.5% |
 | Location freshness | ping every 10 min ± 60 s; progress recompute < 2 s |
@@ -790,26 +898,31 @@ background location; EAS/OTA), plus:
 
 | Layer | Tool | Protected |
 |---|---|---|
-| DB rules | pgTAP | RLS matrix, guard functions, cutoffs (frozen clock), seat races, scope filtering |
-| Money | pgTAP + property tests | Journal balance, commission math, refunds, rounding, payout limits, double-post prevention |
-| Subscriptions | pgTAP | Quota boundaries, downgrade behaviour, trial→expiry transitions, period rollover |
-| Unit | Vitest | pricing/discount, finance math, formatters (AR/EN), zod schemas |
+| **Domain unit** | **Vitest** (`packages/core`) | pricing, discounts, per-stop fares, refunds, commission, ledger entry construction, quotas, state machines, formatters (AR/EN), zod schemas — fast, no DB |
+| **Command unit** | **Vitest** (edge handlers with a fake DB adapter) | authorization matrix, input validation, error mapping, exactly-one-rpc invariant |
+| **DB constraints** | pgTAP | journal balance, seat locks, monotonic ODO, cutoffs (frozen clock), tenant RLS isolation |
+| **Integration** | Vitest + real Postgres (CI service) | end-to-end command → rows + balanced journal + audit row; rollback on failure |
+| **Property** | fast-check | money invariants: debits == credits, refund ≤ paid, no negative balances, rounding never inflates |
 | Web e2e | Playwright (ar + en projects) | signup→verify→plan→trip→book→pay→accept→start→track→manifest |
 | Visual | Playwright snapshots | RTL/LTR layout, no clipping/overflow on key screens |
 | Mobile | Maestro (ar + en) | driver start/end with ODO, receipt upload, offline queue |
-| Contract | generated types + CI drift | Clients never desync from DB |
-| Load | k6 | search, ping ingest, booking race, payment webhook-free confirmation volume |
-| Security | Supabase linter + checklist | RLS gaps, definer functions, storage policies, ledger grants |
+| Contract | generated DB types + CI drift | Clients never desync from the schema |
+| Load | k6 | search, ping ingest, booking race, confirmation volume |
+| Security | linter + checklist + bundle grep | write grants revoked, definer functions, `service_role` never in a client bundle |
 
-CI per PR: typecheck, lint (boundaries/RTL/i18n), unit, pgTAP, `db diff` empty, Playwright smoke (both
-locales), types-drift, bundle budget, i18n key completeness.
+**Test pyramid:** ~70% Vitest (pure domain), ~20% integration (real DB), ~10% e2e/visual.
+CI per PR: typecheck, lint (boundaries/RTL/i18n), **Vitest**, pgTAP, `db diff` empty, Playwright smoke
+(both locales), types drift, bundle budget, i18n key completeness, service-key grep.
 
 ---
 
 ## 15. Cost & Maintenance Strategy
 
-1. **One implementation per rule (Postgres).** Payments, quotas, cutoffs, visibility — all in SQL.
-2. **No custom backend service.** Supabase covers auth/storage/realtime/cron; nothing extra to patch.
+1. **One implementation per rule (TypeScript core).** Pricing, refunds, commission, quotas and policy live
+   in `packages/core` as pure functions: one language, one test suite, shared by web, mobile and edge.
+   SQL only enforces atomic writes and the invariants that must never break.
+2. **No server fleet.** Supabase covers auth/storage/realtime/cron/edge; nothing to patch, scale or deploy
+   separately — and no long-running Node process to babysit.
 3. **No gateway integration in v1.** Manual/proof-based confirmation with a ledger is cheaper *and* matches
    how Yemeni operators actually get paid; the adapter interface is ready if a PSP appears.
 4. **Config over code.** Plans, limits, commission, timings live in tables/settings — sales and ops changes
@@ -946,7 +1059,8 @@ All seeds idempotent (upsert by `code`/`slug`/`idempotency_key`) so environments
 
 ## 21. ADRs
 
-- **ADR-01** Business logic in Postgres (RLS + RPC); no custom API server.
+- **ADR-01** Business logic in **TypeScript** (`packages/core`, pure functions); no custom server fleet.
+  *(Superseded v1.0's "logic in plpgsql" — chosen for testability, one language, and reviewability.)*
 - **ADR-02** Next.js web + Expo mobile; share `@maak/core`, not full UI.
 - **ADR-03** PostGIS + MapLibre + OSM + OSRM; no per-load map billing.
 - **ADR-04** Integer minor units; half-up percent rounding, unit-tested.
@@ -959,6 +1073,16 @@ All seeds idempotent (upsert by `code`/`slug`/`idempotency_key`) so environments
 - **ADR-11** **Double-entry ledger in Postgres** as the only financial truth; reports are derived views.
 - **ADR-12** **Manual/proof-based payment confirmation in v1** (no PSP), behind a `PaymentProvider` adapter interface.
 - **ADR-13** **Payment accounts are immutable rows** (archive + recreate) so history never lies.
-- **ADR-14** **Quotas are DB-enforced** with soft/hard limits; missing subscription ⇒ Basic, never unlimited.
+- **ADR-14** **Quotas are enforced at both layers** (core computes the decision, the command re-asserts it);
+  soft/hard limits; missing subscription ⇒ Basic, never unlimited.
 - **ADR-15** **Downgrades never destroy resources**; enforcement applies to creation only.
 - **ADR-16** **Logical CSS properties only** (physical direction banned by lint) to keep RTL/LTR cheap forever.
+- **ADR-17** **Edge Functions are the only write path.** Client roles hold no `INSERT/UPDATE/DELETE` grants;
+  every mutation is a `<domain>-<action>` function that validates, authorizes, then calls exactly one
+  `cmd_*` SQL function.
+- **ADR-18** **One command = one transaction.** Multi-step edge-side writes are forbidden; a command that
+  cannot be expressed as a single SQL call must be split into two commands with an explicit state machine.
+- **ADR-19** **Reads bypass the gateway** (PostgREST + RLS) to keep latency and cost low; no business logic
+  is permitted on the read path — anything non-trivial becomes a published SQL view.
+- **ADR-20** **Business math never exists in SQL**, and business *decisions* never exist in SQL either;
+  SQL enforces invariants and moves bytes atomically. Two implementations of a rule is a bug.

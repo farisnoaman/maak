@@ -26,18 +26,43 @@ run → track. Phase 9 (payments) can run in parallel with 8; Phase 10 depends o
 
 ---
 
+## Architecture convention (applies to every phase below)
+
+Stack: **Next.js (web)** + **Expo (mobile)** + **`@maak/core` (framework-free TypeScript)** +
+**Supabase Edge Functions (the only write path)** + **Postgres** (RLS for reads, atomic `cmd_*` functions).
+
+Where the task lists say *"Commands (edge fn + atomic `cmd_*` SQL)"*, each command means:
+
+```
+supabase/functions/<domain>-<action>/index.ts   thin handler:
+    1. supabase.auth.getUser()  → actor (profile, orgs, roles, plan)
+    2. zod parse (schema from @maak/core) → 400 with field errors
+    3. assertPolicy('<domain>.<action>', actor, input)   pure TS, Vitest-tested
+    4. compute in core: price() · refund() · commission() · journalEntries() · assertQuota()
+    5. exactly ONE db.rpc('cmd_<domain>_<action>', payload)  → atomic, all-or-nothing
+    6. shape response via zod response schema; audit row written inside the transaction
+```
+
+Rules that every phase must respect:
+- **No client write grants.** `anon`/`authenticated` get `SELECT` (RLS-filtered) only.
+- **One command = one transaction.** Never two `db.rpc()` calls in one handler (lint + review + test).
+- **Business math in `packages/core`, never in SQL.** SQL only asserts invariants and writes atomically.
+- **Reads bypass the gateway** (PostgREST + RLS): cheap, cacheable, no business logic allowed.
+- **Validation is deliberately redundant:** zod (good UX errors) + DB constraints (last line of defense).
+
 ## Working agreement
 
 1. **Kick-off (me):** restate the phase scope + the exact acceptance tests I will run.
-2. **Build (me):** migrations → RPCs → pgTAP → `@maak/core` → web UI → mobile UI → both locales.
+2. **Build (me):** migrations → commands (edge + atomic SQL) → Vitest → pgTAP → core → web UI → mobile UI → both locales.
 3. **Demo (you):** I run the app on a live preview, seed demo data, post a walkthrough + screenshots
    (Arabic and English).
 4. **Review:** you test the acceptance checklist. Changes stay inside the same phase.
 5. **Gate:** merge `phase-N: <name>` → I tick the tracker below → next phase starts.
 
 **Definition of Done for every phase**
-- Green CI: typecheck, lint (module boundaries + RTL + i18n parity), unit, pgTAP, Playwright smoke (ar + en),
-  `supabase db diff` empty, generated types in sync.
+- Green CI: typecheck, lint (module boundaries + RTL + i18n parity), **Vitest**, pgTAP, Playwright smoke
+  (ar + en), `supabase db diff` empty, generated types in sync, **no `service_role` string in any client bundle**.
+- Every command has a unit test (authorization + validation) and an integration test (rows + balanced journal + audit).
 - Every new user-facing string exists in **both** `ar.json` and `en.json`; every screen verified in RTL **and** LTR.
 - Migrations are forward-only and re-runnable; seeds idempotent.
 - `specs.md` updated if reality changed; one-paragraph changelog appended here.
@@ -51,50 +76,68 @@ foundation baked in from the first commit (RTL retrofits are the expensive kind)
 
 ### Deliverables
 - pnpm + Turborepo monorepo: `apps/web`, `apps/mobile`, `packages/core`, `packages/design-tokens`, `packages/config`.
+- **`packages/core`** — framework-free TypeScript with Vitest wired and a green sample suite:
+  `domain/money.ts` (minor units, half-up rounding), `domain/ledger.ts` (balanced journal builder),
+  `domain/pricing.ts` (seat/whole-trip/per-stop/discount), `policy.ts` (capability matrix as a pure function),
+  `api/client.ts` (typed edge-function client with zod-parsed responses), `i18n/{ar,en}.json` + typed keys,
+  `format.ts` (money/date/number, AR/EN, numerals preference). **No React, no Next, no RN imports** (lint-enforced)
+  so it compiles for web, mobile, edge *and* tests.
 - Next.js (App Router, TS strict, `next-intl`) with locale-prefixed routes `/{locale}`, `ar` default,
-  `en` secondary, `hreflang`, locale-preserving switch, `dir` set on `<html>`.
-- Shared design tokens → Tailwind (web) + NativeWind (mobile); Arabic (Cairo/IBM Plex Sans Arabic) +
-  Latin (Inter) font loading; **logical-property-only** style conventions enforced by ESLint.
-- `@maak/core`: typed Supabase client factory, RPC wrapper with typed errors (`Result`), zod base schemas,
-  i18n dictionaries with generated typed keys, formatters (money/date/number, AR/EN, numerals preference).
-- Supabase project skeleton: schemas `public` / `app` / `audit`, extensions (`postgis`, `pg_trgm`, `pg_crypto`),
-  migration convention, `db:types` script, committed `database.types.ts`.
+  `en` secondary, `hreflang`, locale-preserving switch, `dir` on `<html>`.
+- Shared design tokens → Tailwind (web) + NativeWind (mobile); Arabic (Cairo/IBM Plex Sans Arabic) + Latin
+  (Inter); **logical-property-only** styles enforced by ESLint.
+- **Edge gateway skeleton** (`supabase/functions/_shared/`): JWT verification, actor resolution,
+  zod parsing + error mapping, CORS allow-list, per-actor rate limit, `Idempotency-Key` handling,
+  request logging, and a `db.rpc()` wrapper that **refuses a second call per request**.
+  One reference command (`health` + `me`) proving the pattern end-to-end.
+- **Database skeleton** (`supabase/database/`): schemas `public` / `app` / `audit`, extensions
+  (`postgis`, `pg_trgm`, `pgcrypto`), migration convention, `audit.log`, `app.set_updated_at()`,
+  a `hardening.sql` migration that **revokes all client write grants** and sets `FORCE ROW LEVEL SECURITY`
+  defaults, plus `db:types` with a committed `database.types.ts`.
 - Auth shell (web SSR cookies + mobile SecureStore): phone OTP + email/password, protected-route middleware,
   locale-aware redirects.
-- App shells: public layout, operator layout, staff layout, admin layout (web); tab shell + auth screens (mobile).
-- CI (typecheck, lint, unit, `db lint`, types drift, build), Sentry, `.env.example`, README quickstart.
-- **Preview note:** this sandbox has no Docker/Supabase CLI, so the live preview runs the web shell with a
-  local mock adapter; real DB work is validated on your machine/CI via `supabase start`.
+- App shells: public / operator / staff / admin layouts (web); tab shell + auth screens (mobile).
+- CI: typecheck, lint, **Vitest**, `db lint`, types drift, build, **bundle grep for `service_role`**, i18n parity.
+- Sentry, `.env.example`, README quickstart, ADR-017/018/019 committed as `docs/adr/`.
+- **Preview note:** this sandbox has no Docker/Supabase CLI, so the live preview runs the web shell against a
+  typed mock gateway; DB + pgTAP run on your machine/CI via `supabase start`.
 
 ### Tasks
 - [ ] Init pnpm workspace, turbo pipeline, shared tsconfig/eslint/prettier/commitlint.
-- [ ] `packages/config`: eslint with `boundaries`, `no-physical-direction`, `no-hardcoded-copy` rules.
-- [ ] `packages/design-tokens`: colors (light/dark), spacing scale, radii, typography, elevation, motion.
-- [ ] Next.js scaffold: `app/[locale]/layout.tsx` with `dir`, `next-intl` middleware, `ar.json`/`en.json`,
-      typed message keys, `hreflang` alternates, locale switcher component.
-- [ ] Tailwind configured from tokens; forbidden utilities documented; base UI primitives
-      (Button, Input, Select, Dialog, Toast, Skeleton, EmptyState, DirectionalIcon).
+- [ ] `packages/config`: eslint with `boundaries`, `no-physical-direction`, `no-hardcoded-copy`,
+      and `core-is-framework-free` (blocks react/react-native/next imports inside `packages/core`).
+- [ ] `packages/design-tokens`: colors (light/dark), spacing, radii, typography, elevation, motion.
+- [ ] `packages/core` domain + tests (money, ledger, pricing, policy) — **first green `pnpm test` before any UI**.
+- [ ] `packages/core/api/client.ts`: typed command client (`commands.tripCreate(...)`), zod response parsing,
+      error-code → localized message registry, idempotency-key generation, timeout/retry policy.
+- [ ] `packages/core/format.ts`: money (`1,500 ر.ي` / `YER 1,500`), dates (`Asia/Aden`, AR months), phone, `bdi`.
+- [ ] Next.js scaffold: `app/[locale]/layout.tsx` with `dir`, `next-intl` middleware, typed keys,
+      `hreflang`, locale switcher; landings page listing the 4 consoles.
+- [ ] Tailwind from tokens; base primitives (Button, Input, Select, Dialog, Toast, Skeleton, EmptyState, DirectionalIcon).
 - [ ] Expo scaffold: expo-router, NativeWind from the same tokens, `expo-localization`, RTL-safe primitives,
-      `ar`/`en` dictionaries shared through `@maak/core`.
+      dictionaries shared through `@maak/core`.
 - [ ] Supabase init: `config.toml`, `00001_schemas_extensions.sql`, `00002_audit_log.sql`,
-      helper `app.current_profile_id()`, `app.set_updated_at()`.
-- [ ] Supabase clients (browser/server/mobile) + `db:types` + CI drift check.
-- [ ] `@maak/core/rpc.ts`: typed call wrapper, error-code → localized message registry, retry/timeout policy.
-- [ ] `@maak/core/format.ts`: money (`1,500 ر.ي` / `YER 1,500`), dates (`Asia/Aden`, AR months), phone, `bdi` helper.
+      `00003_hardening_revoke_writes.sql`, `app.set_updated_at()`, `app.current_profile_id()`.
+- [ ] Edge `_shared`: `auth.ts`, `actor.ts`, `zod.ts`, `errors.ts`, `ratelimit.ts`, `cors.ts`, `db.ts`
+      (single-rpc guard), `audit.ts`; reference functions `health` and `me`.
+- [ ] Supabase read clients (browser/server/mobile) + `db:types` + CI drift check.
 - [ ] Auth flows web + mobile; middleware; locale persistence (profile → cookie → Accept-Language).
-- [ ] Sentry (web + mobile), error boundaries, 404/500 localized pages.
+- [ ] Sentry (web + mobile), error boundaries, localized 404/500.
 - [ ] GitHub Actions + PR template + phase checklist; branch protection.
-- [ ] Seed skeleton (`supabase/seed.sql`) with a demo admin + `platform_settings` defaults.
+- [ ] Seed skeleton with a demo admin + `platform_settings` defaults.
 
 ### Acceptance criteria
-- `pnpm i && pnpm dev` runs web + Expo; `/ar` and `/en` both render, with correct `dir`, fonts and copy.
-- Switching locale on a deep link keeps the same path and query; `<html dir>` flips; no visual reflow breakage.
-- CI fails if a key is missing in `ar.json` or `en.json`, or if `margin-left`/`float:right` appear in feature code.
-- Signing up with a local OTP creates an `auth.users` row; the app lands on a localized, protected-profile screen.
-- `pnpm db:types` is idempotent; CI fails on schema/type drift.
+- `pnpm test` runs Vitest against `packages/core` and passes offline, in < 2 s, with no database.
+- `pnpm i && pnpm dev` runs web + Expo; `/ar` and `/en` both render with correct `dir`, fonts and copy.
+- Locale switch on a deep link keeps path + query; `<html dir>` flips; no visual breakage.
+- `POST /functions/v1/health` with a bad JWT → `401`; with a valid JWT → actor payload; a second `db.rpc()` in
+  one handler fails a unit test and the lint rule.
+- `anon`/`authenticated` cannot `INSERT/UPDATE/DELETE` any table (pgTAP proves it, and the grant audit script reports zero).
+- CI fails on: missing i18n key, `margin-left`/`float:right` in feature code, `service_role` in a client bundle,
+  a React/RN import inside `packages/core`, or DB/types drift.
 - Landing page: Lighthouse a11y ≥ 95 in both directions; ≤ 200 KB initial JS.
 
-**Estimate:** 5–6 days.
+**Estimate:** 6–7 days (slightly longer than v1.1: the gateway + core test harness are new).
 
 ---
 
@@ -117,7 +160,7 @@ that gates everything else (BR-01..03).
 ### Tasks
 - [ ] Migrations: profiles/orgs/members/user_roles/verification_requests + enums + indexes + `updated_at` triggers.
 - [ ] RLS on every table + pgTAP matrix (anon, unverified, verified, org member, staff, finance, admin).
-- [ ] RPCs: `submit_verification`, `decide_verification`, `create_organization`, `update_organization`,
+- [ ] Commands (edge fn + atomic `cmd_*` SQL): `submit_verification`, `decide_verification`, `create_organization`, `update_organization`,
       `invite_member`, `accept_invite`, `remove_member`, `grant_role`, `revoke_role`, `set_preferred_locale`.
 - [ ] Storage `avatars` (public) + `verification-docs` (private) + policies + signed URL helper.
 - [ ] Notifications table + in-app bell/toast (channels wired Phase 11).
@@ -156,7 +199,7 @@ that gates everything else (BR-01..03).
 ### Tasks
 - [ ] PostGIS migrations + GIST + trigram indexes on `name_ar_norm` / `name_en_norm` / `aliases`.
 - [ ] Import scripts under `scripts/geo/` (governorates static, districts OCHA/HDX, places curated CSV).
-- [ ] RPCs: `search_places(locale, q, filters)`, `nearest_place`, `create_place`, `admin_upsert_region`,
+- [ ] Commands (edge fn + atomic `cmd_*` SQL): `search_places(locale, q, filters)`, `nearest_place`, `create_place`, `admin_upsert_region`,
       `assign_region_coverage`, `assign_geo_supervisor`, `bulk_import_geo` (dry-run + apply).
 - [ ] Admin UI `/admin/geography` (tree + map + import wizard), `/admin/supervisors`.
 - [ ] `<PlacePicker>` hooks in core + web + mobile implementations; bidi-safe labels (`<bdi>`).
@@ -194,7 +237,7 @@ that gates everything else (BR-01..03).
 - [ ] Migration (~60 columns) + enums (`drive_type`, `transmission`, `fuel_type`, `body_type`, `vehicle_status`)
       + constraints (year range, seats > 0, VIN length when present).
 - [ ] RLS: owner/org isolation; staff read-all; verification-gated writes.
-- [ ] RPCs: `create_vehicle`, `update_vehicle`, `submit_vehicle_verification`, `decide_vehicle_verification`,
+- [ ] Commands (edge fn + atomic `cmd_*` SQL): `create_vehicle`, `update_vehicle`, `submit_vehicle_verification`, `decide_vehicle_verification`,
       `invite_driver`, `accept_driver_invite`, `verify_driver`, `assign_driver_to_vehicle`, `set_vehicle_status`.
 - [ ] Storage `vehicle-photos` (public) + `vehicle-documents` (private) policies.
 - [ ] Web `/operator/vehicles` (list, wizard, detail), `/operator/drivers`, `/staff/vehicles`.
@@ -239,7 +282,7 @@ that gates everything else (BR-01..03).
 - [ ] `app.assert_trip_editable()`, `app.actor_can_manage_trip()`, `app.recompute_seats_available()`,
       `app.set_trip_visibility()`.
 - [ ] `trips_search` refresh triggers + indexes (GIN stop ids, btree date/price, trigram names, featured boost).
-- [ ] RPCs: `create_trip`, `update_trip`, `set_trip_stops`, `publish_trip`, `submit_trip_verification`,
+- [ ] Commands (edge fn + atomic `cmd_*` SQL): `create_trip`, `update_trip`, `set_trip_stops`, `publish_trip`, `submit_trip_verification`,
       `decide_trip_verification`, `cancel_trip`, `search_public_trips(locale, filters, sort, cursor)`,
       `get_trip_public`, `staff_search_trips`.
 - [ ] Facets (`{ items, facets, total }`) + 30 s cache + k6 benchmark script.
@@ -280,7 +323,7 @@ that gates everything else (BR-01..03).
 
 ### Tasks
 - [ ] Migrations + enums (`booking_status`, `id_type`, `payment_status`) + constraints (identity fields required).
-- [ ] RPCs: `create_booking`, `accept_booking`, `reject_booking`, `cancel_booking_by_passenger`,
+- [ ] Commands (edge fn + atomic `cmd_*` SQL): `create_booking`, `accept_booking`, `reject_booking`, `cancel_booking_by_passenger`,
       `cancel_booking_by_operator`, `expire_booking_holds`, `get_trip_manifest_data`, `create_id_share_link`,
       `resolve_id_share_token`, `compute_refund`.
 - [ ] Storage `passenger-ids` (private) + policies + 5-min signed URLs + watermark on preview.
@@ -322,7 +365,7 @@ that gates everything else (BR-01..03).
 - [ ] Migrations: pings (partitioned), progress, route geometry, odometer readings, richer trip_events.
 - [ ] `app.recompute_trip_progress`: nearest upcoming stop (KNN), polyline or haversine distance, ETA from rolling speed.
 - [ ] Routing provider at publish (cached; OSRM/ORS) + graceful fallback.
-- [ ] RPCs: `start_trip`, `end_trip`, `record_trip_ping`, `mark_stop_reached`, `report_incident`,
+- [ ] Commands (edge fn + atomic `cmd_*` SQL): `start_trip`, `end_trip`, `record_trip_ping`, `mark_stop_reached`, `report_incident`,
       `get_trip_progress`, `get_driver_trips_today`, `check_in_passenger`.
 - [ ] Realtime publication + private-channel policy + `useTripProgress()` hook in core.
 - [ ] Mobile: driver flow, `expo-task-manager` background location, queue, permission UX (iOS/Android), bilingual prompts.
@@ -358,7 +401,7 @@ that gates everything else (BR-01..03).
 ### Tasks
 - [ ] `qr_token` generation + `GET /api/qr/trip/:token` resolver + rate limiting.
 - [ ] Scanner UI (web: `barcode-detector`/zxing; mobile: `expo-camera`) with permission prompts localized.
-- [ ] RPCs: `bulk_verify_trips`, `bulk_verify_trips_with_passengers`, `bulk_verify_passengers`,
+- [ ] Commands (edge fn + atomic `cmd_*` SQL): `bulk_verify_trips`, `bulk_verify_trips_with_passengers`, `bulk_verify_passengers`,
       `bulk_verify_entities`, `get_trip_for_staff(token)`, `staff_search_trips`, `log_document_access`.
 - [ ] PDF route `GET /api/trips/:id/manifest.pdf?locale=ar|en` + Arabic font subset; layout tests at 4/14/30 passengers.
 - [ ] Staff web `/staff/scans`, `/staff/trips/[id]` (manifest + bulk passengers), `/staff/dashboard`, `/supervisor/*`.
@@ -394,7 +437,7 @@ that gates everything else (BR-01..03).
 ### Tasks
 - [ ] Migrations + generated columns + `app.vehicle_odometer_guard()` + `app.recompute_maintenance_status()`.
 - [ ] Cron: daily maintenance scan → reminders; overdue escalation.
-- [ ] RPCs: `log_fuel`, `log_maintenance`, `upsert_maintenance_schedule`, `mark_maintenance_done`,
+- [ ] Commands (edge fn + atomic `cmd_*` SQL): `log_fuel`, `log_maintenance`, `upsert_maintenance_schedule`, `mark_maintenance_done`,
       `record_manual_odometer`, `get_vehicle_health`, `get_fleet_summary`.
 - [ ] Expense sync triggers (fuel/maintenance → `expenses`, soft-delete → reversing entry stub for Phase 10).
 - [ ] Web `/operator/vehicles/[id]/health`, `/operator/fleet`, exports.
@@ -438,7 +481,7 @@ that gates everything else (BR-01..03).
 ### Tasks
 - [ ] Migrations + enums (`payment_method`, `payment_status`, `purpose`, `account_status`, `agent_tx_kind`) + constraints.
 - [ ] RLS: payer sees own intents, owner org sees trip-related, finance sees all, agents see own float.
-- [ ] RPCs: `create_payment_intent`, `submit_payment_proof`, `confirm_payment`, `reject_payment`,
+- [ ] Commands (edge fn + atomic `cmd_*` SQL): `create_payment_intent`, `submit_payment_proof`, `confirm_payment`, `reject_payment`,
       `cancel_payment_intent`, `expire_stale_payments`, `request_refund`, `decide_refund`, `pay_refund`,
       `create_payment_account`, `verify_payment_account`, `archive_payment_account`,
       `agent_cash_in`, `request_payout`, `approve_payout`, `mark_payout_paid`.
@@ -498,7 +541,7 @@ that gates everything else (BR-01..03).
 - [ ] Plans/limits/subscriptions migrations + seeds (Basic/Pro/Business from §6.14) + `app.owner_effective_plan()`
       replacing the Phase 1 stub with real resolution (Basic fallback, trial, grace, expiry, overrides).
 - [ ] `app.assert_quota()` wired into every guarded RPC + `usage_counters` upsert + `quota_violations` logging.
-- [ ] RPCs: `start_subscription`, `change_plan`, `cancel_subscription`, `renew_subscription` (idempotent on invoice),
+- [ ] Commands (edge fn + atomic `cmd_*` SQL): `start_subscription`, `change_plan`, `cancel_subscription`, `renew_subscription` (idempotent on invoice),
       `expire_subscriptions`, `request_payout`, `approve_payout`, `mark_payout_paid`, `issue_invoice`, `void_invoice`,
       `post_manual_journal`, `import_reconciliation`, `get_finance_dashboard`, `get_statement`, `export_finance`.
 - [ ] Cron: subscription expiry/grace, usage period rollover, statement generation, integrity job.
@@ -633,7 +676,7 @@ Phase 10 must follow 9. Phase 11 needs 5, 6, 9, 10. Phase 12 is last.
 
 | Phase | Name | Status | PR | Notes |
 |---|---|---|---|---|
-| 0 | Foundations & bilingual shell | ⬜ Not started | — | next up |
+| 0 | Foundations & bilingual shell | 🚧 In progress | — | `packages/core` domain + 63 Vitest tests green; apps + edge skeleton next |
 | 1 | Identity & Trust | ⬜ | | |
 | 2 | Geography & Places | ⬜ | | |
 | 3 | Fleet | ⬜ | | quota hooks wired (Basic defaults) |
