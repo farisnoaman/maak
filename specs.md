@@ -1,23 +1,31 @@
 # Maak (معك) — Trip Management SaaS Platform
 
-**Product & Technical Specification — v1.0**
+**Product & Technical Specification — v1.1**
 Status: Draft for approval · Owner: Product/Engineering · Last updated: 2026-10-28
+
+> **v1.1 changes** — added: payments (cash, e-wallet, agent cash-in, bank deposit), payment-account registry
+> for platform **and** verified users, a finance module for individuals/companies, and Basic/Pro/Business
+> subscription plans with enforced quotas. Localisation upgraded to a fully bilingual product
+> (Arabic RTL first-class + English LTR first-class, not an afterthought).
+> See `IMPLEMENTATION_PLAN.md` for the revised 13-phase delivery.
 
 ---
 
 ## 0. TL;DR
 
 Maak is a multi-tenant SaaS for intercity and inter-governorate trip operation in Yemen.
-Individuals and companies register, get verified, register vehicles and drivers, publish trips,
-and sell seats. Passengers search a public trip marketplace, book with ID details, and follow the
-trip live. Platform staff verify accounts/vehicles/trips and supervise governorates, districts,
-and custom regions — including by scanning a trip QR code and printing an A4 trip manifest.
+Individuals and companies register, get verified, subscribe to a plan, register vehicles and drivers,
+publish trips, sell seats, and collect money through cash / e-wallets / agents / bank deposits.
+Passengers search a public marketplace, book with ID details, pay, and follow the trip live.
+Platform staff verify accounts, vehicles, trips and passengers, supervise governorates and custom
+regions — including by scanning a trip QR and printing an A4 manifest — and finance staff reconcile
+every payment against a double-entry ledger.
 
 **Architecture in one line:** Next.js (web) + Expo (iOS/Android) sharing one `@maak/core` package,
 against a **Supabase** backend where **all business rules live exactly once — in Postgres**
-(RLS + RPC functions). No separate API server, no duplicated business logic per client.
+(RLS + RPC functions). No separate API server, no duplicated logic per client.
 
-**Delivery:** 11 phases (0–10), each independently shippable. See `IMPLEMENTATION_PLAN.md`.
+**Delivery:** 13 phases (0–12), each independently shippable.
 
 ---
 
@@ -25,19 +33,22 @@ against a **Supabase** backend where **all business rules live exactly once — 
 
 | # | Goal | Success measure (v1) |
 |---|------|----------------------|
-| G1 | Operators go from signup → verified → first published trip fast | ≤ 24h median for verification turn-around; ≤ 10 min to publish after approval |
+| G1 | Operators go from signup → verified → first published trip fast | ≤ 24h median verification; ≤ 10 min to publish after approval |
 | G2 | Passengers find a suitable trip without asking anyone | ≥ 60% of sessions use ≥ 1 filter; search p95 < 300 ms |
-| G3 | Trust: nobody unverified can sell | 0 trips publicly visible from unverified owners (enforced by RLS, tested) |
-| G4 | Operational visibility for authorities/supervisors | QR scan → manifest < 3 taps; A4 PDF < 2 s |
-| G5 | Cheap to maintain | 1 business-logic implementation per rule; adding a client = 0 rule changes |
+| G3 | Trust: nobody unverified or unsubscribed can sell | 0 publicly visible trips from unverified owners (RLS-tested) |
+| G4 | Money is traceable to the last riyal | 100% of payments land in the ledger; ledger balances to zero every day |
+| G5 | Operational visibility for authorities/supervisors | QR scan → manifest < 3 taps; A4 PDF < 2 s |
+| G6 | Arabic and English are equal citizens | Every screen ships both locales; no layout break in either direction (visual suite) |
+| G7 | Cheap to maintain | 1 implementation per rule; a new client or locale = 0 rule changes |
 
 ### Non-goals for v1 (explicitly deferred)
-- Online payments / escrow / payouts (design hooks only — `payment_status` reserved).
-- Multi-currency settlement and accounting exports.
-- Recurring/scheduled trip series and route templates (backlog).
-- Ratings/reviews, chat/messaging (WhatsApp deep links instead).
-- Full call-center / booking-by-phone agent console.
-- Non-Yemen geography (schema is country-aware, but only Yemen is seeded).
+- **Automated card/PSP acquiring and webhooks** (adapter interface is built; no live gateway in v1 —
+  Yemeni coverage is thin and reconciliation is manual anyway). Card is a future method, not a v1 flow.
+- Escrow-style holding of passenger funds with instant automated payouts (v1 uses a recorded
+  receivable/payable ledger with manual/agent settlement).
+- Multi-currency settlement, VAT/tax filing integrations, payroll.
+- Recurring trip series / route templates, seat-map selection, ratings & reviews, chat.
+- WhatsApp Business API (deep links only), full call-center console, non-Yemen geography.
 
 ---
 
@@ -46,170 +57,205 @@ against a **Supabase** backend where **all business rules live exactly once — 
 | Role key | Who | Primary surface |
 |---|---|---|
 | `guest` | Anonymous visitor | Public site (search, trip detail) |
-| `individual` | Single owner-driver or small operator | Operator console (web/mobile) |
-| `org_owner` | Company account owner | Company console + billing later |
+| `individual` | Solo owner-driver / small operator | Operator console |
+| `org_owner` | Company owner | Company console |
 | `org_manager` | Company staff managing trips/vehicles/drivers | Company console |
-| `driver` | Person who physically drives; often also an employee | Driver mobile app |
-| `passenger` | Anyone who booked a seat / whole trip | Passenger app + live tracking |
-| `geo_supervisor` | Staff with a region/sub-region scope | Supervisor console (QR, verify) |
-| `platform_staff` | Platform operations staff | Ops console (verify, search all, PDF) |
-| `platform_admin` | Full control, geography + settings + role grants | Admin console |
+| `org_accountant` | Company finance user (invoices, statements, expenses) | Finance console (read + reconcile) |
+| `driver` | Physically drives; usually an employee | Driver mobile app |
+| `passenger` | Anyone who booked | Passenger app + live tracking |
+| `agent` | Cash-in agent (shop/branch) collecting and depositing money | Agent console |
+| `geo_supervisor` | Staff with region/sub-region scope | Supervisor console (QR, verify) |
+| `platform_staff` | Ops staff (verification) | Ops console |
+| `finance_officer` | Platform finance (payment confirmation, refunds, payouts, reconciliation) | Finance back-office |
+| `platform_admin` | Full control: geography, roles, plans, settings | Admin console |
 
-A single person can hold several roles simultaneously (e.g. `org_owner` + `driver` + `passenger`).
-**Roles are never stored on the user row as a scalar.** They are derived from:
-- `profiles.verification_status` (account trust),
-- `organization_members.role` (company scope),
-- `user_roles` (platform/geo roles),
-- presence of `driver_profiles` row (`is_active`).
-
-> Clean-code rule: authorisation is always evaluated through SQL helper functions
-> (`app.has_role()`, `app.is_verified_actor()`, `app.in_geo_scope()`), never re-implemented in UI code.
+A person can hold several roles at once (owner + driver + passenger). **Roles are never a scalar on the
+user row.** Effective permissions derive from `profiles.verification_status`, `organization_members.role`,
+`user_roles`, `driver_profiles`, `agent_profiles` and `subscriptions`, evaluated by SQL helpers only.
 
 ---
 
 ## 3. Glossary
 
-- **Actor** — the identity performing an action: an individual profile **or** an organization.
-- **Operator** — a verified actor that can own vehicles/trips (individual or company).
-- **Place** — any addressable point: governorate, district, city, village, landmark, station, airport, border crossing, market, gathering point.
-- **Region / Sub-region** — an *administrative grouping created by the platform admin*, containing any set of governorates and/or districts. Used for supervisor scoping and marketing grouping. (Not an official Yemeni admin level.)
-- **Gathering point (نقطة التجمع)** — the exact place where passengers meet before departure.
-- **Stop** — an intermediate point between origin and destination, optionally sellable.
-- **Manifest** — the A4 PDF with vehicle + driver + passenger details for one trip.
-- **Seat hold** — temporary reservation while the operator reviews a booking request.
+- **Actor** — identity performing an action: an individual profile **or** an organization.
+- **Operator** — a verified actor that can own vehicles/trips.
+- **Place** — any addressable point (governorate, district, city, village, landmark, station, airport, border, market, gathering point).
+- **Region / Sub-region** — platform-admin-defined grouping of governorates and/or districts (not an official Yemeni level), used for supervisor scoping and grouping.
+- **Manifest** — the one-page A4 PDF with vehicle, driver and passenger details for a trip.
+- **Payment account** — a destination/source of money: bank account (IBAN/account no.), e-wallet number, or cash agent. Owned by the platform or by a verified user/org.
+- **Agent** — an entity (shop/branch) that collects cash from passengers and settles with the platform; has a float balance and a commission.
+- **Payment intent** — a claim "someone will pay X for Y", with method, reference, optional proof, and a confirmation step.
+- **Ledger** — append-only double-entry journal; the single source of financial truth.
+- **Plan** — a subscription tier (`basic`, `pro`, `business`) with priced quotas.
+- **Quota** — a numeric limit enforced at the DB layer (vehicles, trips/month, staff, drivers).
 
 ---
 
 ## 4. Domain Model
 
-### 4.1 ERD (core)
+### 4.1 ERD (core + money)
 
 ```mermaid
 erDiagram
   profiles ||--o{ organization_members : "belongs to"
   organizations ||--o{ organization_members : has
-  organizations ||--o{ vehicles : owns
-  profiles ||--o{ vehicles : "owns (individual)"
   profiles ||--o| driver_profiles : "is driver"
-  driver_profiles }o--o{ vehicles : "assigned"
-  profiles ||--o{ trips : "owns (individual)"
-  organizations ||--o{ trips : "owns (company)"
-  vehicles ||--o{ trips : "operated by"
-  driver_profiles ||--o{ trips : drives
-  trips ||--o{ trip_stops : has
-  trips ||--o{ bookings : receives
-  trips ||--o{ trip_location_pings : emits
-  trips ||--o| trip_progress : "live state"
-  trips ||--o{ trip_verifications : "audited by"
-  bookings ||--o| passenger_documents : has
-  trips ||--o{ odometer_readings : "records"
-  vehicles ||--o{ odometer_readings : logs
-  vehicles ||--o{ fuel_logs : logs
-  vehicles ||--o{ maintenance_records : logs
-  vehicles ||--o{ maintenance_schedules : schedules
-  regions ||--o{ sub_regions : contains
-  regions }o--o{ governorates : groups
-  governorates ||--o{ districts : has
-  districts ||--o{ places : locates
-  governorates ||--o{ places : locates
-  profiles ||--o{ geo_assignments : supervises
-  regions ||--o{ geo_assignments : scoped
+  profiles ||--o| agent_profiles : "is agent"
+
+  profiles ||--o{ subscriptions : "subscribes"
+  organizations ||--o{ subscriptions : "subscribes"
+  plans ||--o{ subscriptions : "tier"
+  plans ||--o{ plan_limits : "quotas"
+  subscriptions ||--o{ usage_counters : tracks
+
+  profiles ||--o{ payment_accounts : "receives via"
+  organizations ||--o{ payment_accounts : "receives via"
+  payment_accounts ||--o{ payment_intents : "paid into"
+
+  bookings ||--o| payment_intents : "settled by"
+  subscriptions ||--o{ invoices : "billed by"
+  bookings ||--o| invoices : "generates"
+
+  payment_intents ||--o{ ledger_entries : posts
+  invoices ||--o{ ledger_entries : posts
+  ledger_accounts ||--o{ ledger_entries : "debited/credited"
+
+  profiles ||--o{ payouts : receives
+  agents ||--o{ payouts : settles
 ```
 
-### 4.2 Tables (schemas: `public` for domain, `app` for private helpers, `audit` for history)
+*(Fleet and trip tables are unchanged from v1.0 — see §4.2 and §6.3–6.9.)*
+
+### 4.2 Tables
+
+Schemas: `public` (domain), `app` (private helpers), `audit` (append-only history).
 
 **Identity & trust**
 | Table | Key columns |
 |---|---|
-| `profiles` | `id (auth.users)`, `full_name`, `phone`, `phone_verified_at`, `nationality`, `dob`, `avatar_path`, `kind (individual)`, `verification_status`, `preferred_language`, `created_at` |
-| `organizations` | `id`, `legal_name`, `display_name`, `slug`, `tax_id`, `commercial_reg_no`, `logo_path`, `city_id`, `contact_phone`, `contact_email`, `verification_status`, `created_by` |
-| `organization_members` | `org_id`, `user_id`, `role (owner,manager,dispatcher,accountant)`, `status (invited,active,removed)`, invited_by, accepted_at |
-| `user_roles` | `user_id`, `role (platform_admin,platform_staff,geo_supervisor)`, `granted_by`, `revoked_at` |
-| `verification_requests` | `id`, `subject_type (profile,organization,vehicle,driver,trip)`, `subject_id`, `status`, `submitted_by`, `reviewed_by`, `decision_reason`, `decided_at`, `documents jsonb` |
+| `profiles` | `id (auth.users)`, `full_name`, `phone`, `phone_verified_at`, `nationality`, `dob`, `avatar_path`, `verification_status`, `preferred_language (ar,en)`, `preferred_numerals (western,arabic_indic)`, `timezone`, `created_at`, `deleted_at` |
+| `organizations` | `id`, `legal_name`, `display_name`, `slug`, `tax_id`, `commercial_reg_no`, `logo_path`, `city_place_id`, `contact_phone`, `contact_email`, `verification_status`, `created_by` |
+| `organization_members` | `org_id`, `user_id`, `role (owner,manager,dispatcher,accountant)`, `status (invited,active,removed)`, `invited_by`, `accepted_at` |
+| `user_roles` | `user_id`, `role (platform_admin,platform_staff,finance_officer,geo_supervisor)`, `granted_by`, `revoked_at` |
+| `verification_requests` | `subject_type (profile,organization,vehicle,driver,agent)`, `subject_id`, `status`, `submitted_by`, `reviewed_by`, `decision_reason`, `decided_at`, `documents jsonb` |
 | `audit_log` | `id`, `actor_id`, `action`, `entity_type`, `entity_id`, `before jsonb`, `after jsonb`, `ip`, `created_at` |
 
-**Geography**
+**Geography** (unchanged from v1.0)
+`regions` (self-referencing, `level: region|sub_region`), `governorates`, `districts` (+geometry),
+`places` (`type`, `name_ar/en`, `aliases[]`, `point geography`, `is_popular`, `is_verified`),
+`region_governorates`, `region_districts`, `geo_assignments` (`scope_type`, `scope_id`, `can_view_passengers`).
+
+**Fleet** (unchanged from v1.0)
+`vehicles` (~60 attribute columns, `owner_profile_id` XOR `owner_org_id`, `current_odometer_km`),
+`vehicle_photos`, `driver_profiles`, `vehicle_driver_assignments`, `odometer_readings`,
+`fuel_logs`, `maintenance_records`, `maintenance_schedules`.
+
+**Trips** (unchanged from v1.0, plus payment policy)
+`trips` — as before **plus** `payment_policy (cash_on_boarding | prepay_optional | prepay_required)`,
+`deposit_percent`, `accepts_cash`, `accepts_e_wallet`, `accepts_bank_deposit`, `accepts_agent`.
+`trip_stops`, `bookings` (+ `payment_status`, `amount_paid_minor`, `amount_due_minor`),
+`passenger_documents`, `trip_verifications`, `trip_location_pings`, `trip_progress`, `trip_events`.
+
+**Payments**
 | Table | Key columns |
 |---|---|
-| `regions` | `id`, `parent_region_id` (nullable), `level (region,sub_region)`, `name_ar`, `name_en`, `slug`, `description`, `is_active`, `sort_order` |
-| `governorates` | `id`, `code` (ISO 3166-2:YE-xx), `name_ar`, `name_en`, `centroid (geography)`, `is_active` |
-| `districts` | `id`, `governorate_id`, `name_ar`, `name_en`, `code` (OCHA pcode), `geom (geography, MultiPolygon)` |
-| `places` | `id`, `governorate_id`, `district_id`, `type (city,town,village,landmark,station,airport,border,market,port,hospital,university,custom_gathering_point)`, `name_ar`, `name_en`, `aliases text[]`, `point geography(Point)`, `is_popular`, `is_verified`, `created_by` |
-| `region_governorates` / `region_districts` | `region_id`, `governorate_id` / `district_id` — admin assigns coverage to a region |
-| `geo_assignments` | `id`, `user_id`, `scope_type (region,sub_region,governorate,district)`, `scope_id`, `can_view_passengers bool`, `granted_by`, `expires_at` |
+| `payment_accounts` | `id`, `owner_type (platform,profile,organization,agent)`, `owner_id`, `method (bank,e_wallet,cash)`, `provider` (`alkuraimi_jaib,cash_one,mfloos,yempay,al_kuraimi_bank,tadhamon,other_cash`), `account_ref` (IBAN / wallet number / branch code), `holder_name`, `branch`, `currency`, `instructions_ar/en`, `is_default`, `status (active,disabled,pending_verification)`, `verified_by`, `verified_at`, `created_by` |
+| `payment_intents` | `id`, `code` (human ref `PAY-2026-000456`), `purpose (booking,booking_balance,subscription,payout,top_up,adjustment)`, `booking_id`, `invoice_id`, `payer_user_id`, `payee_owner_type/owner_id`, `amount_minor`, `currency`, `method (cash,e_wallet,bank_deposit,agent)`, `payment_account_id`, `reference_no` (customer-entered txn ref), `proof_path` (receipt photo), `status (created,awaiting_proof,submitted,confirmed,rejected,refunded,expired,cancelled)`, `submitted_at`, `confirmed_by`, `confirmed_at`, `rejection_reason`, `agent_id`, `idempotency_key`, `metadata jsonb` |
+| `refunds` | `id`, `payment_intent_id`, `booking_id`, `amount_minor`, `reason`, `status (requested,approved,paid,rejected)`, `method`, `processed_by`, `processed_at`, `payout_id` |
+| `agents` | `id`, `code`, `name`, `owner_profile_id`, `city_place_id`, `branch_label`, `commission_kind (fixed,percent)`, `commission_value`, `float_balance_minor`, `credit_limit_minor`, `status (active,suspended)`, `verified_by`, `verified_at` |
+| `agent_transactions` | `id`, `agent_id`, `payment_intent_id`, `kind (cash_in,cash_out,settlement,adjustment)`, `amount_minor`, `balance_after_minor`, `created_by`, `note` |
+| `payouts` | `id`, `payee_owner_type/owner_id`, `amount_minor`, `currency`, `status (requested,approved,processing,paid,rejected)`, `method`, `payment_account_id`, `period_start`, `period_end`, `reference_no`, `proof_path`, `approved_by`, `paid_at`, `note` |
+| `payout_items` | `payout_id`, `booking_id`, `amount_minor` |
 
-**Fleet**
+**Finance (double-entry)**
 | Table | Key columns |
 |---|---|
-| `vehicles` | ~60 attribute columns (see §6.3), + `owner_profile_id` XOR `owner_org_id`, `verification_status`, `status`, `current_odometer_km`, `odometer_unit` |
-| `vehicle_photos` | `vehicle_id`, `storage_path`, `kind (exterior,interior,document)`, `sort_order` |
-| `driver_profiles` | `id`, `user_id`, `org_id?`, `license_no`, `license_class`, `license_expiry`, `dob`, `phone_alt`, `verification_status`, `is_active`, `years_experience` |
-| `vehicle_driver_assignments` | `vehicle_id`, `driver_id`, `valid_from`, `valid_to`, `is_default` |
-| `odometer_readings` | `id`, `vehicle_id`, `trip_id?`, `kind (baseline,trip_start,trip_end,manual)`, `value_km`, `recorded_at`, `recorded_by`, `photo_path`, `note` |
-| `fuel_logs` | `id`, `vehicle_id`, `trip_id?`, `filled_at`, `liters`, `price_minor`, `currency`, `odometer_km`, `station_place_id?`, `full_tank bool`, `receipt_path` |
-| `maintenance_records` | `id`, `vehicle_id`, `schedule_id?`, `kind (oil,tyres,brakes,engine,ac,inspection,other)`, `performed_at`, `odometer_km`, `cost_minor`, `vendor`, `description`, `attachments` |
-| `maintenance_schedules` | `id`, `vehicle_id`, `kind`, `interval_km`, `interval_days`, `last_done_at`, `last_done_km`, `next_due_km (generated)`, `next_due_at (generated)`, `is_active` |
+| `ledger_accounts` | `id`, `code`, `name_ar/en`, `type (asset,liability,revenue,expense,equity)`, `owner_scope (platform,profile,organization,agent)`, `owner_id`, `currency`, `is_system` |
+| `journal_entries` | `id`, `entry_no`, `description`, `posting_date`, `source_type (payment,refund,payout,invoice,commission,adjustment,subscription)`, `source_id`, `created_by`, `created_at`, `reverses_entry_id` |
+| `ledger_entries` | `journal_entry_id`, `ledger_account_id`, `direction (debit,credit)`, `amount_minor`, `currency`, `owner_type`, `owner_id`, `memo` — **`sum(debit) = sum(credit)` enforced per journal entry** |
+| `invoices` | `id`, `invoice_no`, `kind (booking,subscription)`, `booking_id`, `subscription_id`, `issued_to_type/id`, `issued_by_owner_type/id`, `currency`, `subtotal_minor`, `discount_minor`, `commission_minor`, `tax_minor`, `total_minor`, `status (draft,open,paid,void,refunded)`, `due_at`, `snapshot jsonb` (frozen line items + names, PII-minimal), `pdf_path` |
+| `expenses` | `id`, `owner_type/id`, `category (fuel,maintenance,salary,rent,commission,fees,other)`, `vehicle_id`, `trip_id`, `amount_minor`, `currency`, `spent_at`, `vendor`, `payment_intent_id`, `receipt_path`, `note` |
+| `commission_rules` | `id`, `scope (global,owner)`, `owner_id`, `kind (percent,fixed)`, `value`, `min_minor`, `max_minor`, `effective_from`, `effective_to` |
+| `statements` | `id`, `owner_type/id`, `period_start`, `period_end`, `opening_balance_minor`, `closing_balance_minor`, `gross_minor`, `commission_minor`, `payouts_minor`, `status (draft,issued)`, `pdf_path` |
 
-**Trips**
+**Plans & subscriptions**
 | Table | Key columns |
 |---|---|
-| `trips` | `id`, `code` (human ref e.g. `MK-2026-000123`), `title`, `description`, `owner_profile_id` XOR `owner_org_id`, `vehicle_id`, `driver_id`, `pickup_place_id`, `gathering_point_place_id`, `gathering_point_note`, `destination_place_id`, `departure_at timestamptz`, `estimated_arrival_at`, `timezone` (default `Asia/Aden`), `trip_type (one_way,round_trip,charter)`, `seats_total`, `seats_available`, `price_per_seat_minor`, `currency`, `booking_mode (per_seat,whole_trip,both)`, `whole_trip_price_minor`, `discount_kind (none,fixed,percent)`, `discount_value`, `discount_scope (per_seat,whole_trip,all)`, `pricing_mode (flat,per_stop)`, `luggage_policy`, `gender_policy (mixed,families,women_only)`, `cancellation_policy`, `contact_whatsapp`, `status (draft,published,in_progress,completed,cancelled)`, `verification_status (unsubmitted,pending,verified,rejected,revoked)`, `verified_by`, `verified_at`, `qr_token uuid`, `published_at`, `cancelled_reason` |
-| `trip_stops` | `id`, `trip_id`, `sort_order`, `place_id`, `label`, `arrival_offset_minutes`, `departure_offset_minutes`, `price_from_origin_minor` (NULL → use trip price), `allows_pickup`, `allows_dropoff`, `note` |
-| `bookings` | `id`, `trip_id`, `passenger_user_id`, `seats`, `boarding_stop_id?`, `alighting_stop_id?`, `fare_minor`, `discount_minor`, `total_minor`, `currency`, `status (pending,accepted,rejected,cancelled_by_passenger,cancelled_by_operator,expired,completed,no_show)`, `hold_expires_at`, `passenger_full_name`, `id_type`, `id_number`, `id_place_of_birth`, `mobile`, `note`, `decided_by`, `decided_at`, `decision_reason`, `whatsapp_shared_at`, `checked_in_at`, `created_at` |
-| `passenger_documents` | `booking_id`, `storage_path` (private bucket), `mime`, `uploaded_by`, `scan_status` |
-| `trip_verifications` | `id`, `trip_id`, `verifier_id`, `decision (verified,rejected,revoked)`, `reason`, `passengers_reviewed int`, `created_at` |
-| `trip_location_pings` | `id`, `trip_id`, `driver_id`, `point geography(Point)`, `accuracy_m`, `speed_kmh`, `heading`, `source (device,manual)`, `recorded_at`, `received_at` |
-| `trip_progress` | `trip_id PK`, `last_point`, `nearest_stop_id`, `next_stop_id`, `distance_to_next_stop_m`, `eta_next_stop`, `distance_to_destination_m`, `eta_destination`, `remaining_seats`, `updated_at`, `source` |
-| `trip_events` | `trip_id`, `kind (created,verified,started,stop_reached,ended,cancelled,driver_changed)`, `payload jsonb`, `at` |
-| `saved_searches` / `notification_preferences` / `notifications` | per user (§6.10) |
+| `plans` | `code (basic,pro,business)`, `name_ar/en`, `description_ar/en`, `price_minor`, `currency`, `interval (month,year)`, `trial_days`, `features jsonb`, `is_active`, `is_public`, `sort_order`, `grace_days` |
+| `plan_limits` | `plan_code`, `metric (vehicles,trips_per_month,staff,drivers,active_trips,featured_listings,finance_exports)`, `limit_value` (`NULL` = unlimited), `soft_limit` (warn vs block) |
+| `subscriptions` | `id`, `owner_type (profile,organization)`, `owner_id`, `plan_code`, `status (trialing,active,past_due,grace,cancelled,expired)`, `period_start`, `period_end`, `cancel_at_period_end`, `trial_ends_at`, `started_at`, `ended_at`, `created_by` |
+| `usage_counters` | `subscription_id`, `period_start`, `metric`, `value`, `updated_at` (upserted on each metered action) |
+| `subscription_events` | `subscription_id`, `kind (created,upgraded,downgraded,renewed,cancelled,expired,past_due,limit_reached)`, `payload jsonb`, `at`, `actor_id` |
+| `quota_violations` | `subscription_id`, `metric`, `attempted_at`, `actor_id`, `context jsonb` (for upgrade nudges + abuse detection) |
 
-**Money representation:** `*_minor bigint` + `currency char(3)` (YER exponent = 0).
-Never floats. Rounding rule: percent discounts round **half-up to the nearest 1 YER**;
-documented in `app.money_round()` and unit-tested.
+**Money representation:** `*_minor bigint` + `currency char(3)` (YER exponent 0). Never floats.
+Rounding documented in `app.money_round()` (half-up), unit-tested.
 
 ---
 
 ## 5. Permission Model
 
-### 5.1 Trust gates (BR — see §8)
+### 5.1 Trust & entitlement gates
 
-```
-unverified actor  → cannot add vehicle · create trip · assign driver · accept/cancel booking
-verified actor    → all of the above
-verified trip     → only then can driver press "Start trip"
-verified vehicle  → cannot be assigned to a published trip
-verified driver   → cannot be assigned to a published trip
-```
+| Gate | Blocks | Enforced by |
+|---|---|---|
+| Actor verified | add vehicle, create trip, assign driver, accept/cancel booking, add payout account | RLS + `app.is_verified_actor()` |
+| Vehicle verified + active | attach to publishable trip | trigger |
+| Driver verified | attach to trip | trigger |
+| Trip verified | driver "Start trip" | `start_trip()` |
+| Active subscription with quota | create vehicle / trip / staff / driver beyond plan | `app.assert_quota()` in RPCs |
+| Payment confirmed (when `payment_policy = prepay_required`) | seat stays `pending` → not confirmed | `accept_booking()` / payment hook |
 
-"Verified actor" = `profiles.verification_status = 'verified'` **or** owning org is `verified`
-(for company-owned resources). Effective status is computed by `app.actor_verification(profile_id, org_id)`.
+Entitlement resolution: `app.owner_effective_plan(owner_type, owner_id)` returns the plan + limits,
+falling back to `basic` defaults if no subscription exists. **A missing subscription never means
+"unlimited"** — it means basic limits (safe default).
 
-### 5.2 Capability matrix
+### 5.2 Capability matrix — core
 
 | Capability | Guest | Passenger | Verified individual | Verified company (owner/manager) | Driver | Geo supervisor | Platform staff | Platform admin |
 |---|---|---|---|---|---|---|---|---|
 | Browse public trips & filters | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Book a seat | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| See own bookings / history | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| See live progress of a trip | ❌ | booked only | booked only | owner side | driving only | scope only | all | all |
-| Register vehicle / driver | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ |
-| Create / edit trip | ❌ | ❌ | ✅ (own) | ✅ (org) | ❌ | ❌ | ❌ | ✅ |
-| Assign vehicle/driver | ❌ | ❌ | ✅ (own) | ✅ (org) | ❌ | ❌ | ❌ | ✅ |
-| Accept / reject / cancel booking | ❌ | ❌ | ✅ (own trips) | ✅ (org trips) | ❌ | ❌ | ✅ | ✅ |
-| Verify accounts / vehicles / drivers | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
-| Verify trips (+ passengers), bulk | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ in scope | ✅ | ✅ |
-| Search historical/completed trips | ❌ | own only | own only | own only | own only | ✅ in scope | ✅ all | ✅ all |
-| Manage geography & regions | ❌ | ❌ | ❌ | ❌ | ❌ | view only | view | ✅ |
+| Own bookings / history | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Live progress | ❌ | booked only | booked only | own trips | driving only | in scope | all | all |
+| Register vehicle / driver | ❌ | ❌ | ✅ (within quota) | ✅ (within quota) | ❌ | ❌ | ❌ | ✅ |
+| Create / edit trip | ❌ | ❌ | ✅ own (within quota) | ✅ org (within quota) | ❌ | ❌ | ❌ | ✅ |
+| Assign vehicle/driver | ❌ | ❌ | ✅ own | ✅ org | ❌ | ❌ | ❌ | ✅ |
+| Accept / reject / cancel booking | ❌ | ❌ | ✅ own | ✅ org | ❌ | ❌ | ✅ | ✅ |
+| Verify accounts/vehicles/drivers | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Verify trips / passengers (bulk) | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ in scope | ✅ | ✅ |
+| Search historical trips | ❌ | own only | own only | own only | own only | in scope | ✅ all | ✅ all |
+| Manage geography & regions | ❌ | ❌ | ❌ | ❌ | ❌ | view | view | ✅ |
 | Assign geo supervisors | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Print A4 manifest | ❌ | ❌ | own trips | own trips | ❌ | ✅ in scope | ✅ | ✅ |
-| Platform settings | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | read | ✅ |
+| Print A4 manifest | ❌ | ❌ | own trips | own trips | ❌ | in scope | ✅ | ✅ |
 
-### 5.3 Enforcement layers (defense in depth)
+### 5.3 Capability matrix — money
 
-1. **DB constraints** — invariants that must never be violated (seats ≥ 0, mono-tonic odometer, cutoffs).
-2. **RLS policies** — row visibility, all tables, `FORCE ROW LEVEL SECURITY`.
-3. **RPC functions** (`SECURITY DEFINER`, `search_path` pinned) — every state transition; UI never writes tables directly except trivial own-profile fields.
-4. **Client guards** — UX only (disable buttons, show reasons). Never the security boundary.
+| Capability | Passenger | Verified individual | Verified company (owner) | `org_accountant` | Agent | Finance officer | Admin |
+|---|---|---|---|---|---|---|---|
+| Pay for a booking (cash/e-wallet/agent/bank) | ✅ | ✅ | ✅ | ✅ | ✅ (on behalf) | ✅ | ✅ |
+| Upload payment proof (receipt) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Confirm/reject a payment | ❌ | ✅ own trips' bookings | ✅ org trips' bookings | ✅ org | ✅ own cash-ins only | ✅ all | ✅ all |
+| Add own payout/bank account | ❌ | ✅ | ✅ | ❌ | ✅ | ❌ | ✅ |
+| Add/edit **platform** payment accounts | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Finance dashboard (revenue, expenses, statements) | ❌ | ✅ own | ✅ org | ✅ org | own float | ✅ all | ✅ all |
+| Issue/void invoice | ❌ | ✅ own bookings | ✅ org | ✅ org | ✅ own | ✅ all | ✅ all |
+| Request payout | ❌ | ✅ | ✅ | ❌ | ✅ | ❌ | ✅ |
+| Approve payout / mark paid | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Process refund | ❌ | request only | request only | request only | ❌ | ✅ | ✅ |
+| Manage commission rules | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Manage plans & limits | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Subscribe / upgrade / cancel plan | ✅ personal | ✅ | ✅ | ❌ | ✅ | ❌ | ✅ |
+| View ledger entries | ❌ | own | own | own | own | ✅ all | ✅ all |
+| Post manual journal adjustment | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
+
+### 5.4 Enforcement layers (defense in depth)
+
+1. **DB constraints** — invariants that must never break (seats ≥ 0, balanced journal entries, monotonic ODO).
+2. **RLS policies** — row visibility on every table, `FORCE ROW LEVEL SECURITY`.
+3. **RPC functions** (`SECURITY DEFINER`, pinned `search_path`) — every state transition; UI never writes
+   tables directly (trivial own-profile fields excepted).
+4. **Client guards** — UX only. Never the security boundary.
 
 ---
 
@@ -217,307 +263,321 @@ verified driver   → cannot be assigned to a published trip
 
 ### 6.1 Accounts, onboarding & verification
 
-**Individual account**
-- Sign up with phone (OTP) — primary in Yemen — or email+password; OTP via Supabase Auth (SMS provider pluggable, e.g. Twilio/Unifonic/local aggregator).
-- Profile: full name, phone, optional national ID, city, avatar.
-- Submit verification: full name, ID type (`national_id`, `passport`, `residence`), ID number, ID photo(s), selfie optional.
-- Status: `unverified → pending → verified | rejected(reason)`. Rejected can resubmit after edit.
+**Individual:** sign up by phone OTP (primary) or email+password → profile (name, phone, avatar, country,
+preferred language/numerals) → submit verification (ID type `national_id|passport|residence`, number,
+place of birth, ID photos, optional selfie) → `unverified → pending → verified | rejected(reason)`.
+Rejection is editable and resubmittable.
 
-**Company account**
-- Created by any verified individual → creator becomes `org_owner`.
-- Fields: legal name, display name, slug, commercial registration no., tax ID, logo, address (place), contact phone/email.
-- Add staff by phone/email invite → `organization_members` (`manager`, `dispatcher`, `accountant`).
-- Company verification: commercial registration document + owner ID; approved by platform staff.
+**Company:** created by a verified individual (becomes `org_owner`) → legal name, display name, slug,
+commercial registration no., tax ID, logo, address place, contacts → verification with CR document +
+owner ID → team invites (`manager`, `dispatcher`, `accountant`) by phone/email.
 
-**Platform & geo roles**
-- Granted only by `platform_admin` (`user_roles`) — never self-service.
-- `geo_supervisor` grant requires at least one `geo_assignments` row.
+**Platform/geo/finance roles:** granted only by `platform_admin`; audited; `geo_supervisor` requires ≥ 1
+`geo_assignments` row.
 
-**Rules**
-- One phone = one auth user. A user may belong to many organizations.
-- Account switching in UI is context only; permissions always re-evaluated server-side.
-- Deleting an account = soft delete + anonymisation job (retain financial/audit records).
-- Verification decisions are always audited with actor, reason, timestamp; notifications sent in-app + push.
+**Rules:** one phone = one auth user; a user may belong to many organizations; context switching is UI-only
+(server re-evaluates); deletion = soft delete + anonymisation after 30 days, retaining financial/audit
+records; every verification decision is audited and notified.
+
+**Localisation at account level:** `preferred_language` and `preferred_numerals` are stored on the profile
+and applied everywhere (web, mobile, PDFs, emails, notifications). Switching locale never changes URLs
+semantics — see §16.
 
 ### 6.2 Geography & places
 
-- **Hierarchy:** `regions` (self-referencing: `region` → `sub_region`) → contains **governorates** → contains **districts**; any set, admin-defined. A region may include whole governorates and/or cherry-picked districts.
-- **Seed (Phase 2):** 22 Yemeni governorates (incl. Amanat Al Asimah, Socotra), ~333 districts, + curated `places`:
-  cities, airports, ports, border crossings, major hospitals/universities, markets, and famous landmarks
-  (e.g. Old Sana'a, Bab al-Yemen, Socotra, Seiyun, Shibam, Al Mukalla corniche, Taiz Castle, Ibb, Zabid, Marib dam).
-  Import pipeline: CSV/GeoJSON → validated → idempotent upsert (idempotency key = `code`/`name+gov`).
-- **Admin CRUD** for regions/sub-regions/governorates/districts/places; bulk import with dry-run diff preview.
-- **Place picker component** (shared across web + mobile):
-  - type-ahead over `name_ar`, `name_en`, `aliases` (trigram index), scoped by governorate/district,
-  - "popular" quick picks, "use my location" (nearest place),
-  - create custom gathering point (verified actors only; `is_verified=false` until staff confirm),
-  - optional map pin for exact point.
-- **Supervisor scoping:** `geo_assignments` rows (region/sub_region/governorate/district) + `can_view_passengers`.
-  A trip is *in scope* if its pickup, gathering point, destination **or any stop** lies in the scope's
-  governorates/districts (`app.trip_in_scope(trip_id, user_id)` with a cached `trip_scope_index` table for speed).
+Unchanged from v1.0: `regions` (self-referencing, admin-defined) → governorates and/or districts;
+seeded 22 governorates, ~333 districts, ~200 curated places (airports, ports, borders, landmarks,
+hospitals, universities, markets); admin CRUD + idempotent CSV/GeoJSON import with dry-run diff;
+shared **`<PlacePicker>`** with AR/EN trigram autocomplete, aliases, cascade, popular places,
+"use my location", custom gathering points (pending staff verification).
+
+**Supervisor scoping:** `geo_assignments` at region/sub-region/governorate/district level, with
+`can_view_passengers`. A trip is in scope when pickup, gathering point, destination **or any stop**
+intersects the scope (`app.trip_in_scope()`, backed by `trip_scope_index`).
 
 ### 6.3 Fleet: vehicles & drivers
 
-**Vehicle registration (verified actors only).** Field set — all optional unless marked *required*:
-- *Identity:* make*, model*, year*, trim, body type (sedan/SUV/van/minibus/bus/pickup/4x4), generation, plate number*, plate region, VIN/chassis, engine number, vehicle nickname.
-- *Mechanical:* drive type (`FWD,RWD,AWD,4WD`), transmission (`manual,automatic,CVT,DCT,AMT`), fuel type (`petrol,diesel,hybrid,plug_in_hybrid,electric,LPG,CNG`), engine size (cc), cylinders, horsepower, fuel tank (L), rated consumption (L/100km), emission standard, start/stop, cruise control.
-- *Capacity:* total seats* (incl. driver), passenger seats*, doors, luggage capacity (L), max luggage pieces, roof rack, tow hitch.
-- *Comfort:* AC*, climate zones, rear AC vents, heater, audio/USB/Bluetooth/CarPlay, USB port count, wifi hotspot, phone chargers, sunroof, curtains, reclining seats, seat layout notes, screen/TV, fridge/cooler, child seat, booster, prayer mats, tissues/water.
-- *Safety & compliance:* first aid kit, fire extinguisher, spare tyre + tools, ABS/airbags note, insurance company/policy/expiry, registration number/expiry, technical inspection expiry, tourism transport permit*, intercity permit, GPS tracker present.
-- *Accessibility:* wheelchair accessible, ramp/lift, assistance needed.
-- *Appearance:* exterior color (name + hex), interior color, condition (excellent/good/fair), odometer (initial), odometer unit.
-- *Media:* exterior photos (min 3), interior photos, documents (private).
-- *Operational:* status (`active,maintenance,suspended,retired`), default driver, allowed drivers[] with validity.
-- Computed/derived: average fuel consumption (from `fuel_logs`), maintenance due badges, utilisation rate.
+Full attribute set unchanged (identity, mechanical, capacity, comfort, safety/compliance, accessibility,
+appearance, media, operational — ~60 columns; see v1.0 field list retained in migration `00030_vehicles`).
 
-**Validation:** year within 1990..current+1; VIN 17 chars if provided; plate uniqueness per country/region
-(soft — warn, don't block, since Yemeni plates can repeat); insurance/inspection expiry warnings at
-30/14/7/0 days.
+Additions for v1.1:
+- Vehicle creation is gated by **plan quota** (`vehicles`) and actor verification.
+- Soft-downgrade behaviour: existing vehicles stay, new ones blocked, with an upgrade prompt.
+- Vehicle count surfaced in the plan usage widget.
 
-**Driver profiles:** linked to an auth user (`user_id`) — the driver logs in on mobile. Company staff add a
-driver by phone invite; the invitee gets a driver account bound to that org. Fields: licence no., class,
-expiry, DOB, phone alt., years of experience, photo, ID doc, verification status.
-`vehicle_driver_assignments` lets one driver serve many vehicles and vice-versa; trip assignment must
-respect a valid, non-expired assignment **or** be explicitly overridden by owner/manager (audited).
+Drivers unchanged: linked auth user, licence data, verification, `vehicle_driver_assignments`,
+override with reason (audited). Driver count is quota-gated (`drivers`).
 
 ### 6.4 Trip creation & lifecycle
 
-**Creation (verified actor).** Steps in the UI (wizard, resumable draft):
-1. Route: pickup place*, gathering point* (+ note/pin), destination*, trip type.
-2. Schedule: date*, time* (Asia/Aden), estimated arrival, timezone locked to Yemen.
-3. Stops: optional ordered list (place, arrival offset, dwell, pickup allowed?, dropoff allowed?, note).
-4. Capacity & pricing: seats available*, price per seat*, currency (YER default),
-   booking mode (`per_seat` / `whole_trip` / `both`) + whole-trip price,
-   **stops pricing**: `flat` (one price for all stops) or `per_stop` (each stop carries `price_from_origin`);
-   discount: `none | fixed | percent`, value, scope (`per_seat | whole_trip | all`).
-5. Vehicle & driver: vehicle* (must be verified + active), driver* (must be verified + assigned to vehicle or overridden with reason).
-6. Policies: luggage, gender policy, cancellation policy, contact WhatsApp, terms.
-7. Review → submit → `verification_status = pending` (or `verified` immediately if
-   `platform_settings.trip_verification_mode = auto_for_verified_actors`).
+Unchanged lifecycle and 2-hour edit lock (BR-06), with these v1.1 additions:
 
-**Lifecycle**
-```
-draft ──submit──> pending ──approve──> verified ──publish──> published ──start──> in_progress ──end──> completed
-   │                 │                    │                     │                       │
-   └──discard──> (deleted)                └──reject──> rejected  └──cancel──> cancelled  └──cancel──> cancelled
-```
-- `verification_status` and `status` are **separate fields** (a published trip loses `published` if
-  verification is revoked).
-- Public visibility requires: `status = 'published' AND verification_status = 'verified' AND departure_at > now()`.
-- Full/over-booked trips remain visible but marked "مكتمل العدد" until departure (configurable by setting).
-
-**Edit rules (BR-06):**
-- Editable fields before the cutoff: price per seat / whole trip / discount, departure date & time,
-  stops (if no accepted bookings beyond affected stops), seats (never below accepted seats),
-  vehicle/driver (with audit + notification to accepted passengers), descriptive fields.
-- **Hard lock: no edits within `trip_edit_lock_hours` (default 2) of `departure_at`.** Enforced by DB trigger
-  `app.assert_trip_editable(trip_id)` used by all update RPCs — not just the UI. Changing departure time is
-  allowed as long as the **new** time is > now + lock window.
-- Every change writes to `audit_log` and `trip_events`; accepted passengers get notified for material changes
-  (price ↑, time change, vehicle change, stop removal).
-- Cancel trip: owner/staff with reason; refunds are offline in v1; passengers notified immediately.
-
-**Seat accounting:** `seats_available = seats_total − sum(seats of accepted + pending-within-hold bookings)`.
-All mutations go through `book_seats()` / `release_seats()` which lock the trip row (`FOR UPDATE`) —
-no race conditions, no overbooking.
+- **Payment policy on the trip:** `cash_on_boarding` (default), `prepay_optional`, `prepay_required`.
+  `prepay_required` means a booking is not confirmed until a payment is `confirmed`.
+- Accepted payment methods per trip: `accepts_cash`, `accepts_e_wallet`, `accepts_bank_deposit`,
+  `accepts_agent` (booleans, default all true except bank).
+- Optional `deposit_percent` (e.g. 30% to hold the seat) — enforced by `book_seats()`.
+- **Quota gate:** creating a trip consumes `trips_per_month`; the RPC returns `QUOTA_EXCEEDED` with
+  `{ plan, metric, limit, used, upgrade_url }` so the client can show an upgrade dialog, not a dead end.
 
 ### 6.5 Public discovery & search
 
-**Public trips page** — mobile-first, SEO-indexed, Arabic RTL first.
+Unchanged: cascading facets, keyset pagination, active-only visibility (BR-07/08), staff historical search,
+saved-filter URL state, JSON-LD SEO.
 
-Filters (all combinable, cascading):
-- Origin / pickup place (autocomplete, governorate → district → city)
-- Destination place
-- Gathering point
-- Departure date (today / tomorrow / date, range) & time-of-day bucket
-- Stops: `any | with_stops | without_stops | contains_stop(place)`
-- Seats needed (1..N), price range (min/max), currency
-- Trip type, booking mode, discount available, gender policy, amenities
-  (AC, wifi, wheelchair, extra luggage), vehicle type, company vs individual operator
-- Sort: departure soonest, cheapest, shortest duration, best rated-operator (proxy: completion rate)
-
-**Cascading behaviour:** selecting a filter must recompute the *available* options of every other filter
-from the current result set, and show counts, e.g. `عدن (34)`. Implemented as one RPC returning
-`{ items, facets, total }` — never N+1 client queries.
-
-**Rules (BR-07, BR-08):**
-- Only `published + verified + departure_at > now()` appear. Completed/cancelled/in-progress disappear from
-  the public list automatically (a trip moves to "live" only for its booked passengers).
-- Guests can search/browse; booking requires sign-in.
-- Staff can search **all** trips including history and cancelled (`/staff/trips`), filterable by
-  verification status, owner, governorate, date range; results can be exported CSV.
-
-**Performance:** `trips_search` denormalised table (or materialized view) with place ids/names,
-stop place ids array, price, seats, timestamps; GIN on place arrays + btree on departure/price;
-refresh via triggers on relevant columns. Target: 100k trips, p95 < 300 ms.
-
-**Trip detail page:** gallery, route timeline with stops, map preview, price breakdown incl. discount and
-per-stop pricing, operator card (verified badge, completed trips count), policies, "Book" CTA,
-remaining seats, share link, structured data (JSON-LD) for SEO.
-
-**Preferences / saved searches:** any user can save a filter set with a name and enable alerts →
-new matching trips trigger a notification (Phase 9).
+v1.1 additions:
+- **Bilingual search**: `search_public_trips(locale, …)` returns names in the requested locale with fallback;
+  Arabic and English both indexed (normalised Arabic — alef/hamza/teh-marbuta folding, diacritics stripped).
+- **Plan-driven merchandising:** `featured_listings` quota lets Pro/Business operators pin trips to the top
+  of results (clearly labelled, never disguised as organic).
+- Operator card shows plan badge only where it is meaningful (e.g. "شركة موثّقة").
 
 ### 6.6 Booking & passenger details
 
-**Flow**
-1. Passenger picks boarding stop (if `per_stop`) and alighting stop, seats count → live price breakdown.
-2. Booking form (required): full name*, ID type* (`national_id,passport,residence,driving_license`),
-   ID number*, ID place of birth*, mobile* (prefilled + verified), note, **ID photo upload** (camera or file;
-   stored in **private** bucket `passenger-ids`).
-3. Optional: "Share ID privately on WhatsApp" → generates a **signed, single-purpose link**
-   (`/s/:token`, expires in 72 h, viewable only by the trip owner/manager, watermarked preview) and opens
-   `https://wa.me/<owner number>?text=...`. This lets passengers who don't want to upload still complete
-   the trust step. Sharing is recorded (`whatsapp_shared_at`).
-4. Submit → `pending` with a hold (`booking_hold_minutes`, default 120, capped before departure).
-5. Operator (owner/manager/dispatcher) sees a request inbox per trip: accept / reject with reason.
-   Accept requires the operator be verified; triggers seat commit + notification (push/WhatsApp/email).
-6. Cancellations:
-   - Passenger may cancel **only ≥ `passenger_cancel_cutoff_hours` (2) before departure**; after that the
-     button is disabled and the API rejects.
-   - Operator may cancel anytime (with reason, passenger notified), or mark `no_show` after departure.
-7. `completed` set automatically when the trip completes (or by driver manifest check-in).
+Unchanged flows (stop selection, passenger identity form, ID photo, WhatsApp private share, holds,
+operator accept/reject, cancellation cutoffs) with payments wired in:
 
-**Rules:** no seat overbooking; one user may book multiple seats; passenger cannot book own trip;
-duplicate active booking for same trip+identity warns then blocks (configurable);
-pending holds expire automatically (cron) and free seats.
-
-**Privacy:** ID photos are never public; signed URLs with 5-minute TTL; access limited to booking owner,
-trip owner org members with permission, platform staff/geo supervisors with `can_view_passengers`;
-every view is audited (`document_access_log`). Retention: purge 90 days after trip completion (setting).
+- Booking lifecycle extends to `pending → accepted → confirmed` where **`confirmed` requires
+  payment when `prepay_required`**; otherwise `accepted` is terminal-good and money is collected on boarding.
+- `bookings.payment_status (unpaid, deposit_paid, paid, refunded, partially_refunded)` is derived from
+  confirmed payment intents — never set by hand.
+- On accept with `prepay_required`: passenger gets a "complete payment" prompt with the accepted methods,
+  the platform's payment accounts (or the operator's own accounts if the operator collects directly),
+  reference instructions, and a proof upload.
+- Cancellation refund rules: refund eligibility is a pure function
+  `app.compute_refund(booking_id, cancelled_at)` → `{ amount_minor, reason, policy_snapshot }`,
+  honouring the trip's cancellation policy and the 2-hour cutoff. Finance officer executes; v1 records
+  the refund and (if paid) creates a payout/reversal — no automatic PSP refund.
 
 ### 6.7 Trip execution, live location & progress
 
-**Driver console (mobile)**
-- Shows today's assigned trips. `Start trip` is **disabled unless `verification_status = 'verified'`**
-  and the vehicle/driver assignment is valid.
-- Start requires: **odometer reading photo + value** (must be ≥ last recorded for that vehicle),
-  optional fuel level, optional notes. Server: `start_trip(trip_id, odo_km, photo_path)`.
-- While running: automatic location ping every **10 minutes** (`expo-location` background task on mobile;
-  web fallback = manual "I'm here" + browser geolocation while tab open), plus pings on stop arrival.
-  Offline queue: pings buffered locally with `recorded_at` and flushed when online (server clamps future times).
-- Complete requires: **odometer end reading** (≥ start reading), optional fuel log, incident note.
-  Server computes distance travelled and upserts vehicle `current_odometer_km`, fuel-consumption stats,
-  and maintenance due statuses.
-- Buttons: "Reached stop X", "Report delay/incident", "Call dispatcher".
+Unchanged (verified-only start, ODO at start/end, 10-minute pings, progress text, staleness rules,
+booked-only visibility).
 
-**Live progress (passenger view — booked users only)**
-- Big live card: current position on map, `الآن في: <nearest place>`, next stop with **remaining km + ETA**,
-  remaining km/ETA to destination, progress bar % of route, last update time + "live/stale" badge.
-- Text template the spec asks for:
-  > «الآن في **الحوطة** · بعد ١٠ دقائق سيكون في **الصخرة** · يتبقى **٢٤ كم** لأقرب توقف (**توقف الراهدة**) · يتبقى **١٣٧ كم** للوصول إلى **عدن**»
-- Updates pushed via Supabase Realtime (private channel `trip:<id>`, RLS-authorised) with 30 s polling fallback.
-- Staleness: no ping for > 20 min → "الموقع غير محدّث" + last known point; > 60 min → escalate to ops.
-- Visibility: only `accepted` passengers, trip owner/staff, geo supervisors in scope, platform staff.
-  Location granularity is the raw ping point (coarse option: snap to nearest place only) — config.
+v1.1 additions:
+- **Cash collection at boarding** (when policy is cash/on-boarding): the driver sees "collect 5,000 YER"
+  per passenger and can mark `cash_collected` (offline-tolerant, queued) — creating a payment intent with
+  method `cash` pending confirmation by the operator/finance. This makes cash trips auditable end-to-end.
+- Driver sees a payment badge per passenger (paid / due / partial) so nobody is offloaded by mistake.
 
-**Progress computation** (`record_trip_ping` → `app.recompute_trip_progress`)
-1. Store ping in `trip_location_pings`.
-2. Find nearest upcoming stop by route order and geo distance (PostGIS KNN).
-3. If a route polyline is available (`trip_route_geometry`, produced by routing provider at publish time),
-   compute remaining distance along the line via `ST_LineLocatePoint` + `ST_Length`; else fall back to
-   haversine sum over the stop sequence.
-4. ETA = remaining distance ÷ rolling average speed (last 30 min) with a floor, else posted schedule.
-5. Upsert `trip_progress`; a trigger pushes `trip_events`/Realtime broadcast; update `nearest place` label.
+### 6.8 Staff operations: QR, bulk verification, A4 manifest
 
-### 6.8 Staff operations (QR, verification, manifest)
+Unchanged (QR scan with permission-trimmed views, bulk verify trips / trips+passengers / passengers /
+entities, A4 manifest).
 
-**QR scan**
-- Every verified trip gets `qr_token` (unguessable uuid) rendered as QR on the operator's trip page.
-- Staff/supervisor scans with camera (Web or Expo) → resolves trip → **permission-trimmed view**:
-  - basic (any staff): trip summary, route, status, owner, vehicle plate, driver name
-  - `can_view_passengers = true`: passenger list (name, seats, boarding stop, ID type masked, mobile masked)
-  - `platform_staff/admin`: full passenger details + ID document viewer (audited)
-- Scanning is auditing (`audit_log` action `trip.qr_scan`) and works even for historic trips.
-- Invalid/expired token → generic error; rate-limited.
+v1.1 additions:
+- Manifest shows **payment status per passenger** and trip-level totals (`collected`, `due`).
+- QR scan view (with `can_view_passengers`) shows payment status; finance officers see amounts, geo
+  supervisors see paid/unpaid only (no amounts) unless granted `can_view_finance`.
+- Manifest generation is a `finance_relevant` audit event.
 
-**Bulk verification (Phase 7)**
-- `bulk_verify_trips(ids[], decision, reason)` — verify/reject many trips.
-- `bulk_verify_trips_with_passengers(ids[], decision, reason)` — verify trips **and** their pending passengers.
-- `bulk_verify_passengers(trip_id, booking_ids[], decision, reason)` — within a single trip.
-- `bulk_verify_entities(type, ids[], decision)` — profiles/orgs/vehicles/drivers (ops console).
-- All-or-nothing per row with per-row result report (`{id, ok, error}`); partial success allowed and shown;
-  every decision audited and notified. Respect geo scope: rows outside scope are rejected with clear error.
+### 6.9 Vehicle operations: ODO, fuel & maintenance
 
-**A4 manifest PDF**
-- Route: `GET /api/trips/:id/manifest.pdf` (server-rendered, `@react-pdf/renderer`, Arabic font embedded).
-- One A4 page: header (platform, trip code, QR), trip summary (route, stops, times, seats, price),
-  vehicle block (make/model/year/trim/plate/color/drive/transmission/fuel/seats/AC/insurance expiry),
-  driver block (name, licence, phone), passengers table (#, name, seats, boarding stop, mobile, ID type +
-  masked number, status) — compact 2-column layout when > 14 passengers; overflow to a second page only
-  if physically required (documented, > 30 passengers).
-- Permission: trip owner, geo supervisor in scope, platform staff. Every generation audited.
-
-### 6.9 Vehicle operations (ODO, fuel, maintenance)
-
-- **ODO:** every trip start/end writes `odometer_readings`; vehicle `current_odometer_km` kept in sync by
-  trigger with a monotonic check (`new ≥ current`, else rejected with a clear message and manual-override
-  flow for owner/manager with reason). Manual readings allowed with photo.
-- **Fuel:** log litres, price, station, full-tank flag, ODO → compute consumption between full tanks
-  (`L/100km`, `km/L`, cost/km), per-trip fuel cost, monthly trend.
-- **Maintenance:** records (what, when, ODO, cost, vendor, attachments) + **schedules**
-  (`interval_km`, `interval_days`). `next_due_km/at` are generated columns; a daily cron materialises
-  `maintenance_status` and creates reminders at 500 km / 1000 km / 14 days / 7 days / due / overdue.
-  Overdue vehicles show a badge and (setting) can block new trip assignment.
-- **Dashboards:** per-vehicle health card, fleet rollup (utilisation, km, cost/km, fuel efficiency,
-  upcoming maintenance), CSV/PDF export.
-- **Auto tracking:** trip start/end ODO is the primary source; the cron fills gaps and flags anomalies
-  (e.g. end − start ≠ route distance ± 20%).
+Unchanged, with finance glue: fuel logs and maintenance records **auto-create `expenses`** rows
+(category `fuel` / `maintenance`) linked to the vehicle and trip, so the finance dashboard reconciles
+without double entry. Deleting a fuel log soft-deletes the expense and posts a reversing journal entry.
 
 ### 6.10 Notifications, preferences & history
 
-| Event | Passenger | Operator | Staff |
-|---|---|---|---|
-| Verification decided | ✅ | ✅ | — |
-| Booking requested | — | ✅ | — |
-| Booking accepted / rejected | ✅ | — | — |
-| Trip changed (price/time/vehicle) | ✅ | — | — |
-| Trip cancelled | ✅ | ✅ | ✅ |
-| Trip starting in 2 h (reminder) | ✅ | ✅ | — |
-| Trip started / ended | ✅ | ✅ | ✅ |
-| Delay/incident reported | ✅ | ✅ | — |
-| Maintenance due/overdue | — | ✅ | — |
-| New trip matching saved search | ✅ | — | — |
+Event matrix from v1.0 **plus**: payment submitted, payment confirmed, payment rejected (with reason),
+refund approved/paid, payout approved/paid, invoice issued, subscription expiring (7/3/1 days),
+quota reached (80%, 100%), plan upgraded/downgraded, cash-in settled by agent.
 
-Channels: **in-app** (`notifications` table + Realtime), **push** (Expo), **email** (Resend), and
-**WhatsApp deep link** (no WhatsApp Business API in v1 to avoid cost; upgrade path documented).
-Per-event, per-channel `notification_preferences`; quiet hours 22:00–06:00 (Asia/Aden) except critical
-(trip cancellation, verification decision).
+Channels: in-app, push (Expo), email (Resend), WhatsApp deep link. Per-event × per-channel preferences,
+quiet hours 22:00–06:00 Asia/Aden with critical overrides. Fully localised templates (AR/EN).
 
-**History**
-- Passenger: past/upcoming bookings, status, cancel, download receipt-like summary, re-book.
-- Operator: trips list (draft/published/completed/cancelled), revenue summary (accepted bookings), per-trip manifest.
-- Staff: full-text + filtered search over all trips/bookings with CSV export.
-- Nothing is hard-deleted; trips are archived, and public visibility is computed (BR-07).
+History: passenger bookings; operator trips + revenue; staff all trips/bookings with CSV export;
+finance statements and invoices; nothing hard-deleted.
 
 ### 6.11 Admin & settings
 
-`platform_settings` (JSONB, versioned, audited): edit lock hours (2), passenger cancel cutoff (2),
-booking hold minutes (120), trip verification mode, ping interval (10 min), stale thresholds,
-maintenance reminder thresholds, ID retention days, feature flags (whole-trip booking, gender policy,
-saved-search alerts), supported currencies, platform contact info, SMS/push/email provider keys (via env).
+`platform_settings` (JSONB, versioned, audited) now also holds: default currency, commission defaults,
+payment confirmation SLA, refund policy defaults, plan trial days, overage behaviour, invoice numbering
+prefix, agent commission defaults, featured-listing rules, and all v1.0 operational timings.
 
-Admin console: users/orgs (verify, suspend, grant roles), geography CRUD + import, region coverage,
-geo supervisor assignment, settings editor, audit log explorer, health dashboard (pending verifications,
-stale live trips, failed notifications, overdue maintenance count).
+Admin console gains: plans & limits editor, commission rules editor, payment accounts (platform),
+agents management, subscription overview, quota exceptions (per-owner override with reason + expiry).
+
+### 6.12 Payments
+
+**Purpose:** record and confirm money movement without requiring a card gateway — Yemen-appropriate
+(cash, e-wallets, agents, bank deposits), auditable, and reconcilable.
+
+**Payment methods (`payment_method` enum)**
+| Method | Flow | Confirmation |
+|---|---|---|
+| `cash` | Paid to driver/operator at boarding or in office | Operator/manager marks collected; finance reconciles daily |
+| `e_wallet` | Passenger transfers to a wallet number (platform or operator account) | Upload proof + reference number → operator or finance confirms |
+| `bank_deposit` | Passenger deposits to a bank account, uploads receipt | Operator or finance confirms (bank statement match) |
+| `agent` | Passenger pays cash at an agent branch; agent records cash-in to their float | Agent submits cash-in; finance/agent settlement confirms |
+| `card` | **Deferred** (adapter interface only) | — |
+
+**Payment accounts registry**
+- Platform accounts: created/edited by `finance_officer`/`platform_admin`; providers seeded
+  (e.g. Al-Kuraimi Jaib, Cash/ONE Cash, M-Floos, YemPay, Al-Kuraimi Bank, Tadhamon, other cash desk);
+  `instructions_ar/en` shown to passengers verbatim; `is_default` per method/currency.
+- User accounts: verified individuals/companies (and agents) add their **own** receiving accounts
+  for direct collection or payouts. Status `pending_verification` until finance confirms ownership
+  (name match on uploaded statement/cheque image). Only `active` accounts can receive money.
+- Immutable history: editing a number archives the old row (`status = disabled`) rather than mutating it,
+  because historical payment intents point at it.
+
+**Intent lifecycle**
+```
+created → awaiting_proof → submitted → confirmed | rejected(reason) → (refunded)
+                    ↘ cancelled / expired
+```
+- `create_payment_intent()` is idempotent via `idempotency_key` (double-tap safe).
+- Proof upload to private bucket `payment-proofs` (5-min signed URLs, audited).
+- Confirming posts **one balanced journal entry**, updates the booking/invoice, notifies the payer.
+- Rejection requires a reason and re-opens the intent for a new proof.
+- Daily auto-expiry for stale intents (`pending_payment_ttl_hours`, default 48 h) → seat released.
+- **Cash trips:** driver/organizer marks collected in bulk ("collect all due") — one intent per passenger,
+  batched into one journal entry per day per operator.
+
+**Anti-fraud (v1, pragmatic):**
+- Unique `reference_no` per method per day (duplicate detection)
+- Same proof image hash cannot confirm two intents (`proof_hash` unique check)
+- Amount tolerance check (under/over payment → `booking_balance` intent)
+- Velocity limits: 10 intents/hour/user; 3 failed proofs → manual review flag
+- All confirmations audited with actor; suspicious patterns surface in the finance dashboard.
+
+### 6.13 Finance module (verified individuals & companies)
+
+**Purpose:** give operators a real financial picture without spreadsheets, and give the platform a single
+ledger it can trust.
+
+**Double-entry core**
+- Chart of accounts seeded per owner scope: platform (`platform_cash`, `platform_bank`, `agent_receivable`,
+  `operator_payable`, `commission_revenue`, `refund_expense`, `suspense`), plus per-owner
+  (`owner_receivable`, `owner_cash`, `owner_revenue`, `owner_expense`, `owner_payable`).
+- Every money event posts a `journal_entry` with ≥ 2 `ledger_entries` summing to zero (trigger-enforced).
+- Nothing mutates a posted entry; corrections are reversing entries (`reverses_entry_id`).
+- **Daily invariant job:** every journal entry balances, owner balances reconcile with
+  `sum(bookings confirmed) − refunds − commission`, and the platform suspense account is zero or explained.
+
+**What the operator sees**
+- Revenue: confirmed bookings (gross), commission deducted, net payable to them.
+- Expenses: auto from fuel/maintenance + manual (`expenses` table, receipt upload, categories).
+- Profit per trip, per vehicle, per month; cost/km and revenue/km.
+- Receivables: unpaid/partially paid bookings; overdue deposits.
+- Statements: monthly PDF/CSV `statement` (opening balance, gross, commission, payouts, closing).
+- Payouts: request → finance approves → mark paid with reference/proof → journal posts and statement updates.
+- Exports: CSV + PDF, gated by plan (`finance_exports` metric), all localised.
+
+**What the platform sees**
+- Money in by method/account/day, unmatched deposits queue, agent float exposure, payouts due,
+  commission revenue, refunds, VAT placeholder (off by default), per-owner balance ledger drill-down.
+- Reconciliation workspace: import a bank/e-wallet statement CSV (columns mapped by admin), auto-match by
+  reference/amount/date, resolve exceptions, post adjustments (audited, requires reason).
+
+**Commission**
+- `commission_rules` global default (e.g. 5% of seat fare) with per-owner overrides and caps/floors,
+  effective-dated. Applied at booking confirmation, posted as `commission_revenue` + `operator_payable`
+  split so the operator's gross and net are both visible.
+
+### 6.14 Plans, quotas & subscriptions
+
+**Three tiers** (values are data in `plans`/`plan_limits`, editable by admin — never hardcoded):
+
+| Metric | Basic | Pro | Business |
+|---|---|---|---|
+| Vehicles | 1 | 5 | unlimited |
+| Trips per month | 5 | 50 | unlimited |
+| Staff members | 1 | 5 | unlimited |
+| Drivers | 1 | 10 | unlimited |
+| Active (simultaneous) trips | 1 | 5 | unlimited |
+| Featured listings / month | 0 | 2 | 10 |
+| Finance exports | 0 | monthly | unlimited |
+| Finance module | read-only summary | full | full + statements |
+| Verification SLA | standard | 24 h | 4 h (priority) |
+| Commission | standard | −1 pp | −2 pp (configurable) |
+| Price (indicative, admin-editable) | 0 YER | 7,500 YER/mo | 25,000 YER/mo |
+
+**Rules**
+- Every owner (individual profile or organization) has **at most one active subscription**;
+  a missing one = Basic defaults (safe, never unlimited).
+- `app.assert_quota(owner_type, owner_id, metric, delta)` is called by `create_vehicle`, `create_trip`,
+  `invite_member`, `invite_driver`, `publish_trip` (active trips), `request_featured_listing`,
+  `export_finance`. Returns structured `QUOTA_EXCEEDED` / `QUOTA_WARNING`.
+- Usage is counted per billing period in `usage_counters` (trips counted on **create**, not publish;
+  a deleted draft within 24 h is refunded to the counter — prevents gaming and unfairness).
+- **Soft vs hard:** `soft_limit = true` → allow with a warning banner (Pro/Business overage grace);
+  `false` → hard block with upgrade CTA.
+- **Downgrade:** existing vehicles/trips/staff remain editable and operational; only *new* creation is
+  blocked. A downgrade prompt shows exactly what will be frozen. Deleting resources frees quota immediately.
+- **Trial:** `trial_days` (default 14 on Pro) → `trialing` → `active` on first subscription payment →
+  `past_due` if unpaid → `grace` (grace_days, default 7) → `expired` (falls back to Basic limits).
+- Renewal is invoice-driven (no auto-charge in v1): invoice issued 7 days before period end; paying it
+  extends `period_end` atomically (`renew_subscription()`, idempotent on invoice).
+- `subscription_events` is the audit trail; plan changes notify the owner; usage resets on period roll.
+- **Overage/exception:** admin can grant a temporary quota override (`quota_overrides`: owner, metric,
+  extra_value, expires_at, reason) — audited, auto-expires. This keeps sales conversations out of code.
+
+### 6.15 Bilingual product (Arabic RTL + English LTR)
+
+Both locales are first-class deliverables, not a translation layer added later.
+
+**Routing (web):** locale-prefixed routes `/{locale}/...` (`ar` default, `en` secondary) via `next-intl`;
+`/` redirects to the negotiated locale (profile → cookie → `Accept-Language`); `hreflang` alternates on
+every public page; canonical URLs per locale; locale switch preserves the current path + query.
+
+**Direction:** `<html lang dir>` set from locale. Layout uses **CSS logical properties only**
+(`margin-inline-start`, `padding-inline-end`, `inset-inline-*`, `text-align: start/end`) — CI lints
+against `margin-left/right`, `float: left/right`, and absolute `left:`/`right:` in feature code.
+Directional icons (chevrons, arrows, "next") flip via a `<DirectionalIcon>` component; brand marks and
+numbers do not. Candidate: use `rtl:`/`ltr:` variants only for unavoidable physical shadows/gradients.
+
+**Mobile (Expo):** `I18nManager` RTL requires an app restart on toggle — so the app is designed
+direction-agnostic (flex `row` with `start/end`, logical spacing) to avoid depending on `I18nManager`,
+with `expo-localization` deciding the initial direction. Locale switch shows an explicit
+"restart to fully apply" prompt only if a forced restart is needed.
+
+**Content:** all copy in `@maak/core/i18n/{ar,en}.json` with typed keys (`i18n.d.ts` generated);
+CI fails on missing keys, unused keys, or hardcoded Arabic/English strings in JSX (custom ESLint rule).
+Arabic specifics: plural categories (zero/one/two/few/many/other), gender-aware phrasing for
+"رحلة/رحلات", tashkeel-free UI copy, correct hamza forms, Arabic-Indic numeral option (default western
+for prices/plates, Arabic-Indic allowed by preference), `Intl.NumberFormat('ar-YE')` with `latn` override
+to keep prices legible.
+
+**Dates/times:** all storage UTC, display `Asia/Aden`, locale-formatted (`ar-YE` uses Arabic month names),
+week starts Saturday, time inputs accept both 12h/24h per locale preference.
+
+**Documents:** A4 manifest, invoices, statements and PDFs are generated in the viewer's locale with an
+embedded Arabic font subset (Cairo / IBM Plex Sans Arabic) and mirrored layout where appropriate.
+A manifest can be re-generated in the other language with one toggle.
+
+**QA:** Playwright project matrix runs every public route in `ar` and `en`; a visual snapshot suite catches
+overflow/clipping in both directions; `dir=rtl` keyboard navigation and screen-reader order are checked
+manually each phase. Mobile: Maestro flows run in both `ar` and `en` device locales.
 
 ---
 
 ## 7. State Machines
 
 **Trip lifecycle:** `draft → published → in_progress → completed` | `cancelled` (from any non-terminal).
-Edits allowed in `draft|published`; start requires `published + verified + now ∈ [departure − window, +2h]`.
+Start requires `published + verified + now ∈ [departure − window, +2h]`.
 
-**Trip verification:** `unsubmitted → pending → verified | rejected` ; `verified → revoked` (by staff, with reason).
-Any material edit by the owner on a verified trip sets `pending` again *if* `reverify_on_edit = true`
-(setting, default `true` for company accounts, `false` for individuals with clean history).
+**Trip verification:** `unsubmitted → pending → verified | rejected`; `verified → revoked` (reason required).
+Material edits may return a verified trip to `pending` when `reverify_on_edit` applies.
 
-**Booking:** `pending → accepted | rejected | expired`; `accepted → cancelled_by_passenger | cancelled_by_operator | completed | no_show`.
-Transitions are guarded in RPCs with explicit `app.assert_transition(from, to)`.
+**Booking:** `pending → accepted → confirmed*` | `rejected` | `expired`;
+`accepted|confirmed → cancelled_by_passenger | cancelled_by_operator | completed | no_show`.
+`*confirmed` only when payment policy requires prepayment (otherwise `accepted` is operational).
 
-**Verification request:** `pending → approved | rejected`; re-submission creates a new request (history kept).
+**Payment intent:** `created → awaiting_proof → submitted → confirmed | rejected → (refunded)`;
+`created|awaiting_proof → expired`; `submitted → cancelled` (before confirmation only).
+
+**Payout:** `requested → approved → processing → paid` | `rejected`.
+
+**Subscription:** `trialing → active → past_due → grace → expired`;
+`active|trialing → cancelled` (at period end) → `expired`.
+
+**Verification request:** `pending → approved | rejected`; resubmission creates a new request.
 
 **Vehicle:** `active ↔ maintenance`; `active → suspended → retired`.
+
+All transitions are guarded in RPCs via `app.assert_transition(entity, from, to)` with typed errors.
 
 ---
 
@@ -527,29 +587,49 @@ Transitions are guarded in RPCs with explicit `app.assert_transition(from, to)`.
 |---|---|---|
 | BR-01 | Only verified actors add vehicles/drivers | RLS + `app.is_verified_actor()` |
 | BR-02 | Only verified actors create trips | RPC guard |
-| BR-03 | Only verified actors assign drivers / accept / cancel bookings | RPC guard |
-| BR-04 | Only verified + active vehicles and verified drivers can be attached to a verified/published trip | Trigger |
-| BR-05 | Only verified trips can be started; only the assigned driver (or owner override, audited) can start | `start_trip()` |
-| BR-06 | No trip edits inside `trip_edit_lock_hours` (2 h) before departure | `app.assert_trip_editable()` trigger |
-| BR-07 | Public list = `published` ∧ `verified` ∧ `departure_at > now()` | `trips_search` view + RLS |
-| BR-08 | Completed/cancelled/in-progress trips vanish from public search instantly | Derived visibility |
+| BR-03 | Only verified actors assign drivers / accept or cancel bookings | RPC guard |
+| BR-04 | Only verified + active vehicles and verified drivers attach to a verified trip | Trigger |
+| BR-05 | Only verified trips can start; only assigned driver (or audited owner override) | `start_trip()` |
+| BR-06 | No trip edits inside 2 h of departure (configurable) | `app.assert_trip_editable()` |
+| BR-07 | Public list = published ∧ verified ∧ future | `trips_search` + RLS |
+| BR-08 | Completed/cancelled/in-progress vanish from public search instantly | Derived visibility |
 | BR-09 | Passengers cancel only ≥ 2 h before departure | `cancel_booking()` |
-| BR-10 | No overbooking; seats reserved transactionally | `book_seats()` `FOR UPDATE` + CHECK |
+| BR-10 | No overbooking; seats reserved transactionally | `book_seats()` `FOR UPDATE` |
 | BR-11 | Pending bookings expire after hold window | `pg_cron` |
-| BR-12 | Booking requires all passenger identity fields + optional ID image | Table constraint + RPC |
-| BR-13 | ID documents: private bucket, signed URLs ≤ 5 min, access audited, purge after retention | Storage policy + cron |
-| BR-14 | Live location visible only to accepted passengers of that trip + staff/supervisors in scope | Realtime RLS + RPC |
-| BR-15 | A ping may not be more than 5 min in the future nor move the trip backwards in route order | `record_trip_ping()` |
+| BR-12 | Booking requires all passenger identity fields + optional ID image | Constraint + RPC |
+| BR-13 | ID documents: private, signed URLs ≤ 5 min, audited, purged after retention | Storage policy + cron |
+| BR-14 | Live location only to accepted passengers + scoped staff | Realtime RLS + RPC |
+| BR-15 | Pings can't be future-dated or move the trip backwards | `record_trip_ping()` |
 | BR-16 | Start/end ODO required and monotonic per vehicle | `start_trip()` / `end_trip()` |
-| BR-17 | Geo supervisors only see/verify trips intersecting their scope | `app.trip_in_scope()` in RLS |
-| BR-18 | Bulk actions return per-row results and are fully audited | RPC |
-| BR-19 | Every verification decision has an actor, reason and timestamp | `audit_log` NOT NULL |
-| BR-20 | Money is integer minor units + currency; percent rounding is half-up | DB types + `app.money_round()` |
-| BR-21 | Trip owner cannot book own trip; driver cannot book own trip | RPC guard |
-| BR-22 | Seats for a trip may never drop below accepted seats | Trigger |
-| BR-23 | QR token is unguessable and never exposes passenger data without permission | Signed token + RPC trimming |
-| BR-24 | All timestamps stored UTC; displayed in Asia/Aden | Convention + UI formatter |
-| BR-25 | Whitelisted/complete-only trip edits: any material change notifies accepted passengers | Trigger → notifications |
+| BR-17 | Geo supervisors only see/verify trips intersecting their scope | `app.trip_in_scope()` |
+| BR-18 | Bulk actions return per-row results and are audited | RPC |
+| BR-19 | Every verification decision has actor, reason, timestamp | `audit_log` NOT NULL |
+| BR-20 | Money is integer minor units + currency; percent rounding half-up | Types + `app.money_round()` |
+| BR-21 | Owner/driver cannot book their own trip | RPC guard |
+| BR-22 | Seats never drop below accepted seats | Trigger |
+| BR-23 | QR token unguessable; passenger data only per permission | Token + RPC trimming |
+| BR-24 | All timestamps UTC; displayed in Asia/Aden per locale | Convention + formatter |
+| BR-25 | Material trip edits notify accepted passengers | Trigger → notifications |
+| **BR-26** | Every payment intent posts exactly one balanced journal entry on confirmation | `confirm_payment()` + ledger trigger |
+| BR-27 | Journal entries must balance to zero; posted entries are immutable | Deferred constraint trigger |
+| BR-28 | A booking's `payment_status` is derived, never written by hand | Generated/maintained by trigger |
+| BR-29 | `prepay_required` trips cannot reach `confirmed` without a confirmed payment | `accept_booking()` guard |
+| BR-30 | Only `active` payment accounts can receive money; historical ones are archived, never mutated | RLS + `archive_payment_account()` |
+| BR-31 | Platform payment accounts are editable only by finance officer/admin | RLS |
+| BR-32 | Verified users may add their own accounts, pending finance verification | RPC + status guard |
+| BR-33 | Proof images are hashed; one image cannot confirm two payments | Unique `proof_hash` |
+| BR-34 | Reference numbers unique per method per day | Partial unique index |
+| BR-35 | Payment confirmation is idempotent (key-based) — no double posting | `idempotency_key` unique |
+| BR-36 | Quotas enforced at DB level for vehicle/trip/staff/driver/featured/export actions | `app.assert_quota()` |
+| BR-37 | Missing subscription = Basic limits, never unlimited | `app.owner_effective_plan()` |
+| BR-38 | Downgrade never deletes or disables existing resources | Enforcement on create only |
+| BR-39 | Trial → past_due → grace → expired falls back to Basic limits automatically | Cron + resolver |
+| BR-40 | Payouts require an approved request and a paid payment intent; no negative owner balance | `request_payout()` / `approve_payout()` |
+| BR-41 | Refund amount is a pure function of booking + cancellation time + policy snapshot | `app.compute_refund()` |
+| BR-42 | All financial mutations are audited with actor, reason and amounts | `audit_log` + journal |
+| BR-43 | Both locales must exist for every UI key; no hardcoded copy | CI lint + i18n key test |
+| BR-44 | Layout uses logical CSS properties only; no physical margins/floats | ESLint rule + visual tests |
+| BR-45 | Currency/number/date formatting is locale-aware and centralised | `@maak/core/format` + tests |
 
 ---
 
@@ -559,147 +639,132 @@ Transitions are guarded in RPCs with explicit `app.assert_transition(from, to)`.
 
 | Layer | Choice | Why |
 |---|---|---|
-| Web | Next.js (App Router) + React + TypeScript (strict) | SEO for public trips, server components, one deploy on Vercel |
-| Mobile | Expo (React Native, expo-router) | One codebase for iOS/Android, OTA updates, background location, push |
-| Shared | `@maak/core` (types, zod, RPC client, i18n, formatters, state hooks) | One brain for both clients |
-| Design | Tailwind + NativeWind with shared design tokens | Consistent UI, one palette/typography source |
-| Backend | **Supabase** (Postgres + PostGIS, Auth, RLS, RPC, Storage, Realtime, pg_cron, Edge Functions) | No server to maintain; business logic in DB |
-| Maps | MapLibre + OSM tiles; OSRM/OpenRouteService for routes; Nominatim geocode (self-host option) | Free of vendor lock; Yemen coverage OK; no per-map-load cost |
-| PDF | `@react-pdf/renderer` in a Next route handler | Server-side A4, no browser dependency |
-| Jobs | `pg_cron` + DB functions; Edge Functions only for outbound HTTP (SMS/push/email) | Cheapest, closest to data |
-| Testing | pgTAP (RLS/RPC), Vitest (unit), Playwright (web e2e), Maestro (mobile smoke) | Protect the invariants that matter |
-| Ops | Sentry, Supabase logs/metrics, GitHub Actions CI, Vercel preview envs | Small-team friendly |
+| Web | Next.js (App Router) + React + TS strict + `next-intl` | SEO marketplace, SSR, 4 consoles in one deploy |
+| Mobile | Expo (expo-router) | One codebase iOS/Android, OTA, background location, push |
+| Shared | `@maak/core` (types, zod, RPC client, i18n, pricing, finance math, hooks) | One brain for all clients/locales |
+| Design | Tailwind + NativeWind from shared tokens | Consistent UI, RTL-safe by construction |
+| Backend | **Supabase** (Postgres + PostGIS, Auth, RLS, RPC, Storage, Realtime, pg_cron) | No server to maintain; rules in one place |
+| Money | Postgres ledger (double-entry) + `payment_intents` | Auditable, reconciliation-first, no gateway dependency |
+| Maps | MapLibre + OSM tiles, OSRM/OpenRouteService, Nominatim | No per-load billing, no vendor lock |
+| PDF | `@react-pdf/renderer` + embedded Arabic font | One-page manifests, invoices, statements in both locales |
+| Jobs | `pg_cron` + DB functions; Edge Functions only for outbound HTTP | Cheapest, closest to data |
+| Testing | pgTAP, Vitest, Playwright (ar+en), Maestro, k6 | Protect invariants, not pixels |
+| Ops | Sentry, Supabase metrics, GitHub Actions, Vercel | Small-team friendly |
 
 ### 9.2 Monorepo layout
 
 ```
 maak/
 ├─ apps/
-│  ├─ web/                       # Next.js: public site + operator + admin + staff consoles
+│  ├─ web/                    # Next.js: [locale] routes, public + 4 consoles
 │  │  └─ src/
-│  │     ├─ app/                 # routes only (thin)
-│  │     ├─ modules/             # feature modules (see 9.3)
-│  │     ├─ components/          # shared UI primitives (web)
-│  │     └─ lib/supabase/        # browser/server clients
-│  └─ mobile/                    # Expo app (driver-first + passenger)
-│     └─ src/
-│        ├─ app/                 # expo-router routes
-│        ├─ features/            # thin screens over @maak/core
-│        └─ lib/                 # location task, push, secure store
+│  │     ├─ app/[locale]/     # routes only (thin)
+│  │     ├─ modules/          # feature modules (see 9.3)
+│  │     ├─ components/       # shared primitives (RTL-safe)
+│  │     └─ lib/supabase/
+│  └─ mobile/                 # Expo: driver-first + passenger
 ├─ packages/
-│  ├─ core/                      # ⭐ domain types, zod schemas, RPC client, rules mirrors, i18n
-│  ├─ design-tokens/             # colors, spacing, typography (JSON → tailwind + nativewind)
-│  └─ config/                    # eslint, tsconfig, prettier presets
+│  ├─ core/                   # types, zod, rpc, i18n/{ar,en}, pricing, finance, format, hooks
+│  ├─ design-tokens/          # colors, spacing, typography, elevation
+│  └─ config/                 # eslint (boundaries, rtl, i18n), tsconfig, prettier
 ├─ supabase/
-│  ├─ migrations/                # numbered, forward-only
-│  ├─ functions/                 # edge functions (notify, sms, geocode proxy)
-│  ├─ seed/                      # geography CSVs, demo data
-│  └─ tests/                     # pgTAP
-├─ docs/                         # ADRs, runbooks
+│  ├─ migrations/             # numbered, forward-only
+│  ├─ functions/              # notify, sms, push, statement-pdf
+│  ├─ seed/                   # geography CSVs, plans, providers, demo
+│  └─ tests/                  # pgTAP
+├─ docs/                      # ADRs, runbooks, guides (AR)
 ├─ specs.md
 └─ IMPLEMENTATION_PLAN.md
 ```
 
 ### 9.3 Feature-module contract (clean code)
 
-Each domain is a **module with a narrow public surface**:
-
 ```
-modules/trips/
-├─ api.ts            # typed wrappers over RPCs (the only I/O used by UI)
-├─ queries.ts        # TanStack Query keys + hooks
-├─ components/       # trip-specific UI (web)
-├─ schemas.ts        # zod (re-exported from @maak/core)
-└─ index.ts          # PUBLIC API — the only file other modules may import
+modules/<feature>/
+├─ api.ts        # typed RPC wrappers (only I/O the UI uses)
+├─ queries.ts    # TanStack Query keys + hooks
+├─ components/
+├─ schemas.ts    # zod (re-exported from @maak/core)
+└─ index.ts      # PUBLIC API — the only file others may import
 ```
+Enforced by `eslint-plugin-boundaries` (deep imports fail CI).
 
-Enforced by `eslint-plugin-boundaries` (deep imports fail CI). Cross-cutting concerns (auth, i18n,
-notifications, permissions) live in `modules/<x>` and are consumed through their `index.ts`.
-
-### 9.4 Data access strategy — the core cost-saving decision
+### 9.4 Data-access strategy — the core cost-saving decision
 
 > **Every mutation is a Postgres function. Every read is a view or function. Clients never assemble business rules.**
 
 ```
 Web (Next.js) ─┐
-               ├─> @maak/core supabase client ─> PostgREST RPC ─> plpgsql (rules, guards, audit)
-Mobile (Expo) ─┘                                      │
-                                                      └─ RLS (visibility)
+               ├─> @maak/core supabase client ─> PostgREST RPC ─> plpgsql (rules, guards, ledger, audit)
+Mobile (Expo) ─┘                                        │
+                                                        └─ RLS (visibility)
 ```
 
-Consequences:
-- Adding a client (e.g. a kiosk app) = **zero** rule rewrites.
-- No REST/GraphQL schema to version; RPC signatures **are** the API contract, versioned by migration.
-- Bugs are fixed once, at the DB layer, for all platforms.
-- The UI carries no trust: guards are server-side, so a hacked client can't bypass cutoffs or verification.
+Consequences: adding a client or a locale = zero rule rewrites; bugs fixed once for all platforms;
+no trust in the UI; no API surface to version (RPC signature = contract, migrated).
 
-**Guardrails:** every `SECURITY DEFINER` function sets `search_path = ''` + fully-qualified names;
-RLS is tested by pgTAP per table; `supabase db lint` + `plpgsql_check` in CI; generated types
-(`supabase gen types typescript`) are committed and a CI job fails when out of sync.
+**Guardrails:** `SECURITY DEFINER` with `search_path = ''` and fully-qualified names; RLS tested per table;
+`supabase db lint` + `plpgsql_check` in CI; generated types committed, CI fails on drift.
 
 ### 9.5 Environments
 
-`local` (Supabase CLI, Docker) → `staging` (Supabase project + Vercel preview + Expo dev/EAS internal)
-→ `production`. Migrations applied by CI (`supabase db push` with review gate). Seed data is
-environment-scoped (`seed/geography` always; `seed/demo` staging only).
+`local` (Supabase CLI + Docker — developer machines/CI) → `staging` → `production`.
+Migrations applied by CI with a review gate; geography seeded everywhere, demo data only on staging.
+> Note: the current build sandbox has no Docker, so full pgTAP runs in CI; SQL is otherwise validated
+> by lint + local runs on the developer machine.
 
 ---
 
 ## 10. Search & Geospatial Design
 
-- `places.point geography(Point,4326)`, GIST index; `districts.geom` for scope checks.
-- `trips_search` denormalised row per trip: `trip_id, owner_type, owner_id, origin place ids/names,
-  destination place ids/names, stop_place_ids uuid[], has_stops bool, departure_at, duration_minutes,
-  price_min_per_seat, seats_available, trip_type, booking_mode, has_discount, gender_policy,
-  amenities text[], vehicle_seats, verified_at`.
-- Indexes: GIN(`stop_place_ids`), btree(`departure_at`), btree(`price_min_per_seat`),
-  GIN trigram on place names for autocomplete, composite(`status`,`verification_status`,`departure_at`).
-- `search_public_trips(filters jsonb, sort text, cursor text, limit int)` returns
-  `{ items jsonb, facets jsonb, next_cursor, total_estimate }` — keyset pagination (no OFFSET).
-- Facet computation: `GROUP BY` over the filtered set excluding the facet's own dimension (classic
-  cascading behaviour), capped and cached in a 30 s materialized snapshot table (`search_facets_cache`)
-  refreshed by trigger/cron to keep p95 low.
-- Route distance/ETA: routing provider at publish (cache by origin/destination/stop hash); fallback to
-  haversine × road-factor (1.25) when the provider is unavailable.
+Unchanged core (`trips_search` denormalised table, GIN on stop ids, btree on date/price, trigram on
+place names, keyset pagination, facet cache with 30 s TTL), plus:
+
+- **Locale-aware indexes:** separate tree of normalised text columns `name_ar_norm`, `name_en_norm`
+  (Arabic folding: alef variants, teh marbuta, diacritics, tatweel) used for autocomplete and search.
+- **Featured listings:** `boost_score` column = 0 for organic, 1..n for plan-boosted; sort key composes
+  `(boost_flag, sort_metric)` so paid placement never hijacks relevance entirely and is always labelled.
+- **Facet payload** includes localized labels + counts + `selected` flags to render cascading chips in AR/EN.
 
 ---
 
 ## 11. Security & Privacy
 
-- **Auth:** Supabase Auth; phone OTP primary; rate-limited; optional TOTP for staff; session refresh via
-  SSR cookies (web) and SecureStore (mobile). No service-role key in any client.
-- **RLS:** enabled + forced on all tables; `anon` sees only the public search view; no table grants to `anon`
-  beyond that. Tests assert every table denies cross-tenant reads.
-- **Storage:** `vehicle-photos` (public read, owner write), `verification-docs` (private),
-  `passenger-ids` (private), `odometer-photos` (private), `manifests` (private, 24 h TTL links).
-  Policies keyed on path prefixes `<owner_type>/<owner_id>/...`.
-- **PII:** ID numbers masked in lists (`••••1234`), full value only for staff with permission (audited).
-  ID images watermarked with "للاستخدام في رحلة <code>". Retention: purge 90 days post-trip (configurable).
-- **Audit:** every verification, document view, manifest generation, QR scan, role grant, settings change,
-  and price/date edit is appended to `audit_log` (append-only; no UPDATE/DELETE grants).
-- **Abuse:** rate limits on booking creation (5/10 min/user), OTP (3/10 min), QR scans (60/min/user),
-  search (120/min/IP). CAPTCHA on signup if needed.
-- **Compliance:** data export/delete endpoints per user; privacy notice; audit retention 2 years.
+Inherited from v1.0 (auth, RLS everywhere, private buckets, PII masking, append-only audit, rate limits,
+export/delete endpoints) plus:
+
+**Money**
+- No card data ever touches the system (no PAN, no CVV) — avoids PCI scope entirely in v1.
+- Payment proofs (`payment-proofs` bucket) are private: signed URLs ≤ 5 min, access audited, purged after
+  180 days (retain journal entries forever; proofs only as long as dispute window).
+- Double-entry ledger is append-only: `INSERT` only; `UPDATE`/`DELETE` revoked from all non-superuser roles;
+  corrections via reversing entries.
+- Every confirmation, rejection, payout approval, refund, plan change and manual journal posts an
+  `audit_log` row with actor, reason, before/after amounts.
+- Segregation of duties: the person who requests a payout cannot approve it (`finance_officer` ≠ requester);
+  enforced in `approve_payout()`.
+- Reconciliation exports are watermarked with the generating user + timestamp.
+- Daily integrity job alerts if: an entry is unbalanced, suspense ≠ 0, owner balance drifts from expected,
+  or a confirmed payment lacks a journal entry.
+
+**Privacy**
+- Passenger ID numbers masked everywhere except authorised staff views (audited, reason-required for full view).
+- Financial data visibility is owner-scoped; geosupervisors see paid/unpaid, not amounts, unless granted.
+- Retention: payment proofs 180 days; invoices/ledger 7 years (statutory-style); ID docs 90 days post-trip.
 
 ---
 
 ## 12. Mobile & Web Strategy
 
-- **Web (Next.js):** public marketplace (SSR/ISR, SEO), operator console, admin/staff console,
-  print-friendly manifest. PWA installable with offline shell for the driver screens.
-- **Mobile (Expo):** driver-first (start/end trip, ODO capture with camera, background location, push)
-  + passenger (search, booking, live tracking, ticket/QR).
-- **Sharing:** all types, zod schemas, RPC calls, i18n strings, formatters, permission helpers live in
-  `@maak/core`. Screens are thin. Design tokens shared; components are platform-specific but
-  visually identical (same tokens, same spacing scale).
-- **Offline:** ping queue + "pending sync" badge; ODO photo captured offline and uploaded on reconnect;
-  cached trip manifest for drivers (read-only).
-- **Background location:** `expo-task-manager` + `expo-location` with 10-min minimum interval;
-  Android foreground service notification; iOS "Always" permission with clear in-app explanation
-  (App Store requirement). Fallback: manual "checkpoint" button if permission denied.
-- **Releases:** EAS build + submit; OTA updates for JS-only changes; native version bumps only when needed.
-- **RTL/AR:** Arabic (`ar-YE`) primary, English secondary; locale-aware numbers/dates
-  (Arabic-Indic optional), `Intl` formatters, mirrored layouts, mixed-direction-safe components.
+Unchanged (Next.js public + consoles; Expo driver-first + passenger; shared core; offline queues;
+background location; EAS/OTA), plus:
+
+- **Bilingual by construction:** locale set from profile at login, overridable per device; `ar` is the
+  default for `+967` users, `en` otherwise; language switch is in the first-run onboarding and every
+  settings screen; currency/number formatting follows the locale preference.
+- **Mobile money UX:** payment screens are one-thumb usable, show the account number with a one-tap copy,
+  support uploading a receipt from the camera roll, and work offline (queued submission).
+- **PDF parity:** manifests/invoices can be generated from mobile too (server-rendered, opened in system viewer).
 
 ---
 
@@ -708,65 +773,79 @@ environment-scoped (`seed/geography` always; `seed/demo` staging only).
 | Area | Target |
 |---|---|
 | Search latency | p95 < 300 ms @ 100k trips, 50 RPS |
-| RPC latency (writes) | p95 < 250 ms |
-| Web LCP (4G, mid-range Android) | < 2.5 s on trip detail |
-| Availability | 99.5% (Supabase Pro + Vercel) |
+| RPC write latency | p95 < 250 ms |
+| Web LCP (4G, mid-range Android) | < 2.5 s trip detail, both locales |
+| Availability | 99.5% |
 | Location freshness | ping every 10 min ± 60 s; progress recompute < 2 s |
-| Concurrency | 200 simultaneous live trips; 5k pings/hour without table bloat (partition by month) |
-| Accessibility | WCAG AA, keyboard nav, 44 px touch targets, contrast-checked tokens |
-| Data retention | pings 90 days (then aggregated), ID docs 90 days post-trip, audits 2 years, soft-deleted users anonymised at 30 days |
+| Financial integrity | 100% balanced journals; daily integrity job green; zero unexplained suspense |
+| Payment confirmation | proof → confirmed median < 30 min (SLA dashboards) |
+| Quota checks | added latency < 5 ms (indexed counters) |
+| Concurrency | 200 live trips; 5k pings/hour; 500 concurrent bookings |
+| Accessibility | WCAG AA both directions; 44 px targets; contrast-checked tokens |
+| Localisation | 100% key coverage AR/EN; 0 hardcoded strings; 0 physical-direction CSS |
 
 ---
 
 ## 14. Testing Strategy
 
-| Layer | Tool | What is protected |
+| Layer | Tool | Protected |
 |---|---|---|
-| DB | pgTAP | RLS matrix per role, guard functions, cutoffs (freeze time), seat concurrency, scope filtering |
-| Unit | Vitest | pricing/discount math, formatters, zod schemas, progress formatting |
-| Web e2e | Playwright | signup→verify (seeded)→create trip→book→accept→start→track→manifest |
-| Mobile | Maestro | driver start/end trip with ODO, offline queue, login |
-| Contract | generated types + CI drift check | Client/DB never desync |
-| Load | k6 script | `search_public_trips` + ping ingest |
-| Security | Supabase linter + manual review checklist | RLS gaps, definer functions, storage policies |
+| DB rules | pgTAP | RLS matrix, guard functions, cutoffs (frozen clock), seat races, scope filtering |
+| Money | pgTAP + property tests | Journal balance, commission math, refunds, rounding, payout limits, double-post prevention |
+| Subscriptions | pgTAP | Quota boundaries, downgrade behaviour, trial→expiry transitions, period rollover |
+| Unit | Vitest | pricing/discount, finance math, formatters (AR/EN), zod schemas |
+| Web e2e | Playwright (ar + en projects) | signup→verify→plan→trip→book→pay→accept→start→track→manifest |
+| Visual | Playwright snapshots | RTL/LTR layout, no clipping/overflow on key screens |
+| Mobile | Maestro (ar + en) | driver start/end with ODO, receipt upload, offline queue |
+| Contract | generated types + CI drift | Clients never desync from DB |
+| Load | k6 | search, ping ingest, booking race, payment webhook-free confirmation volume |
+| Security | Supabase linter + checklist | RLS gaps, definer functions, storage policies, ledger grants |
 
-CI on every PR: typecheck, lint, unit, `supabase db diff` empty, pgTAP, Playwright smoke, bundle budgets.
+CI per PR: typecheck, lint (boundaries/RTL/i18n), unit, pgTAP, `db diff` empty, Playwright smoke (both
+locales), types-drift, bundle budget, i18n key completeness.
 
 ---
 
-## 15. Cost & Maintenance Strategy (answering "how do I reduce feature-maintenance cost?")
+## 15. Cost & Maintenance Strategy
 
-1. **One implementation per rule (Postgres).** Web + mobile + future clients call the same RPCs.
-   No duplicated validation, no drift, no "fixed on web but broken on mobile".
-2. **No custom backend service.** Supabase provides auth, storage, realtime, cron, functions.
-   Nothing to patch, scale, or deploy separately.
-3. **RLS instead of hand-written authorisation code.** Adding a role is a policy change, not a new endpoint.
-4. **Config over code.** Timings, thresholds, feature flags live in `platform_settings`; ops changes
-   don't require a deploy or an app-store release.
-5. **Generated types + single zod source.** Rename a column → CI fails until both clients follow.
-6. **Feature modules with enforced boundaries.** Deleting/rewriting a feature touches one folder.
-7. **Admin-managed geography.** New places/regions are data, never code releases.
-8. **Boring, cheap infrastructure.** OSM/MapLibre/OSRM instead of per-load map billing; Expo OTA instead
-   of store releases for JS changes; one web deploy for four consoles.
-9. **Thin UI, thick core.** Screens are declarative; shared hooks mean a new screen is ~100 lines.
-10. **Test the invariants, not the pixels.** pgTAP for the rules that cost money/trust; a small e2e suite
-    for flows. Keeps CI fast and refactors safe.
+1. **One implementation per rule (Postgres).** Payments, quotas, cutoffs, visibility — all in SQL.
+2. **No custom backend service.** Supabase covers auth/storage/realtime/cron; nothing extra to patch.
+3. **No gateway integration in v1.** Manual/proof-based confirmation with a ledger is cheaper *and* matches
+   how Yemeni operators actually get paid; the adapter interface is ready if a PSP appears.
+4. **Config over code.** Plans, limits, commission, timings live in tables/settings — sales and ops changes
+   need no deploy and no app-store release.
+5. **Ledger instead of reconciliation scripts.** Every money event has one canonical representation, so
+   reports, statements, invoices and commissions are all *derived views*, not separate features.
+6. **Generated types + single zod source.** Rename a column → CI fails until all clients follow.
+7. **Feature modules with enforced boundaries.** Rewriting a feature touches one folder.
+8. **Locale as data.** One dictionary, typed keys, CI-enforced parity — adding a third language is a
+   JSON file, not a refactor.
+9. **Boring, cheap infrastructure.** OSM/MapLibre/OSRM, Expo OTA, one web deploy for four consoles.
 
 **Indicative running cost (v1):** Supabase Pro $25 + Vercel Pro $20 + EAS (optional) $99 +
-domain/email ~$15 + SMS OTP usage (variable, ~$0.02–0.05/SMS) → **~$60–160/month** before SMS volume.
-Everything is single-vendor until scale demands otherwise.
+domain/email ~$15 + SMS OTP (variable, ~$0.02–0.05/SMS) → **~$60–160/month** before SMS volume.
+Subscription revenue (Basic free, Pro 7,500 YER, Business 25,000 YER) offsets this from ~10 Pro customers.
 
 ---
 
 ## 16. Localisation & UX Guidelines
 
-- Arabic-first, RTL; English switchable. All copy in `@maak/core/i18n` (`ar.json`, `en.json`), no hardcoded strings.
-- Yemen defaults: timezone `Asia/Aden`, currency `YER`, week starts Saturday, phone format `+967 7XX XXX XXX`.
-- Mobile-first layouts, thumb-reachable primary actions, large tap targets, low-bandwidth friendly
-  (image sizes, lazy maps, skeleton screens, retry states).
-- Every destructive action requires a confirmation with the *reason* where mandated (cancel, reject, revoke).
-- Empty states always suggest the next action; errors are human and actionable (Arabic first).
-- Trust is visible: verified badges, "منذ" timestamps, trip code, operator history.
+- **Arabic-first, English-equal.** `ar-YE` is the default for Yemeni users; every product surface exists in
+  both, verified by CI and the visual suite. No "English-only" admin corners.
+- **Direction-agnostic layout:** logical properties, `<DirectionalIcon>`, no `float`, no physical offsets,
+  no `text-align: left/right` in feature code. Charts and maps keep physical axes; chrome mirrors.
+- **Typography:** Cairo / IBM Plex Sans Arabic for Arabic, Inter for Latin; both loaded with `font-display: swap`
+  and preloaded on the landing/detail pages; mixed-direction strings (plates, codes, phone numbers) wrapped
+  in `<bdi>` to prevent scrambling.
+- **Numbers:** prices default to western digits for legibility, user can opt into Arabic-Indic; always paired
+  with the currency symbol/code (`ر.ي` / `YER`); grouped per locale.
+- **Dates:** relative ("بعد ٣ ساعات"), absolute, and calendar views all locale-aware; Saturday week start;
+  Hijri display optional (read-only) in v1.1+.
+- **Forms:** labels above inputs, errors inline and announced; phone input with `+967` preset; ID type and
+  place-of-birth pickers localised; date/time pickers respect locale hour cycle.
+- **Trust & tone:** verified badges, trip codes, "آخر تحديث" timestamps, plain-language policies;
+  destructive actions require typed reason where mandated (cancel, reject, revoke, refund, quota override).
+- **Low bandwidth:** image CDN transforms, lazy maps, skeletons, retry states, ≤ 200 KB initial JS per route.
 
 ---
 
@@ -775,12 +854,15 @@ Everything is single-vendor until scale demands otherwise.
 | Dataset | Source / approach | Phase |
 |---|---|---|
 | 22 governorates | Static curated list (ISO codes) | 2 |
-| ~333 districts | OCHA/HDX Yemen admin boundaries or GeoBoundaries (import script, P-codes) | 2 |
-| ~200 famous places & POIs | Curated CSV with lat/lng (airports, ports, borders, landmarks, hospitals, universities) | 2 |
-| Region groupings (e.g., إقليم المرتفعات، الساحل، الشرق) | Admin-defined defaults, editable | 2 |
-| Demo accounts/vehicles/trips | Staging-only seed (5 users, 3 orgs, 12 trips) | 4 |
+| ~333 districts | OCHA/HDX Yemen admin boundaries (P-codes + geometry) | 2 |
+| ~200 famous places & POIs | Curated CSV with lat/lng | 2 |
+| Region groupings (e.g. إقليم المرتفعات، الساحل، الشرق) | Admin defaults, editable | 2 |
+| Payment providers + platform payment accounts | Config seed (placeholder numbers, disabled) | 9 |
+| Commission rules | Global 5% default + examples | 10 |
+| Plans + limits (Basic/Pro/Business) | Seeded from the table in §6.14, admin-editable | 10 |
+| Demo accounts/vehicles/trips/payments/subscriptions | Staging-only (5 users, 3 orgs, 12 trips, 20 payments) | 5, 10 |
 
-All seeds are **idempotent** (upsert by code/slug) so environments can be refreshed safely.
+All seeds idempotent (upsert by `code`/`slug`/`idempotency_key`) so environments refresh safely.
 
 ---
 
@@ -788,77 +870,95 @@ All seeds are **idempotent** (upsert by code/slug) so environments can be refres
 
 | Risk | Impact | Mitigation |
 |---|---|---|
-| Live GPS unreliable (permissions, coverage, battery) | Tracking looks broken | 10-min pings + stop checkpoints + manual "I'm here" + staleness badges; never silently lie |
-| District/POI data quality | Bad filters, bad scope | Verified flag on places, admin curation + import diff review, user-submitted places pending approval |
-| SMS OTP cost/failure in Yemen | Signup blocked | Email fallback + WhatsApp OTP provider pluggable; cost caps |
-| User reluctance to upload ID | Booking drop-off | WhatsApp private-share path + "pay on boarding" trust model; clear retention policy |
-| Verification becomes a bottleneck | Slow onboarding | Configurable auto-verify for trusted actors, bulk tools, SLA dashboard |
-| Map/routing provider gaps in Yemen | Wrong distances/ETA | Polyline cached at publish; haversine fallback; ETA shown as estimate |
-| Scope creep in v1 | Never ships | Non-goals list + phased gates; payments/reviews explicitly deferred |
-| Supabase vendor lock-in | Strategic | Plain Postgres + PostGIS; all logic in SQL migrations; storage paths standard; exit = managed Postgres |
+| Fake payment proofs | Revenue leak, disputes | Image hash uniqueness, reference dedupe, finance review queue, amounts reconciled daily, audit trail |
+| Cash collection disputes (driver says collected, operator disagrees) | Trust loss | Per-passenger cash intents, timestamps, driver confirmation + operator reconciliation, immutable audit |
+| Payment confirmation bottleneck | Slow bookings | SLA dashboard, bulk confirm, agent network, `prepay_optional` default, auto-confirm for trusted accounts |
+| Plan/quota bypass | Lost revenue | All creation paths go through `assert_quota()`; no direct table writes; pgTAP covers every entry point |
+| Quota enforcement surprises operators mid-season | Churn | Soft limits + 80% warnings + downgrade keeps existing resources + admin overrides |
+| Ledger drift from manual adjustments | Wrong reports | Reversing entries only, daily integrity job, adjustments require reason + are audited |
+| GPS unreliability | Tracking looks broken | 10-min pings + checkpoints + manual "I'm here" + explicit staleness badges |
+| District/POI data quality | Bad filters/scope | Verified flags, admin curation, import diff review, user-submitted places pending approval |
+| Bilingual QA debt | Broken English or RTL bugs ship | CI key parity, ESLint physical-direction ban, Playwright ar/en matrix, visual snapshots |
+| SMS OTP cost/failure | Signup blocked | Email fallback, pluggable provider, cost caps |
+| ID upload reluctance | Booking drop-off | WhatsApp private share + cash-on-boarding default + clear retention policy |
+| Scope creep | Never ships | Non-goals list + phase gates; card acquiring, escrow, payroll explicitly deferred |
 
 ---
 
 ## 19. Assumptions & Open Questions
 
-**Assumptions (changeable without rework):**
-- No online payment in v1 (cash on boarding; `payment_status` reserved).
-- 2-hour edit/cancel windows are defaults, configurable in settings.
-- Trips are one-off (no recurrence) in v1.
-- One vehicle + one driver per trip per leg (round trips = two trips or a leg extension).
-- Passengers' ID data is required for all bookings (per the brief).
-- WhatsApp integration = `wa.me` deep links (no Business API).
+**Assumptions**
+- Money is recorded, not held: no escrow in v1; platform commission is booked, payouts are manual/agent.
+- Cash on boarding remains the default payment policy; prepay is opt-in per trip.
+- Plans: Basic free, Pro 7,500 YER/mo, Business 25,000 YER/mo, 14-day Pro trial — all admin-editable.
+- One active subscription per owner (individual or organization), no add-on seats in v1.
+- 2-hour edit/cancel windows, 120-min booking holds, 10-min pings — configurable defaults.
+- One vehicle + one driver per trip; round trips = two trips.
+- WhatsApp = `wa.me` deep links, no Business API in v1.
 
-**Open questions for the product owner:**
-1. Should *individual* accounts auto-verify vehicles after one approved document, or every vehicle needs review?
-2. Do you need seat-level selection (specific seat numbers) or just seat count?
-3. Female/family-only sections — is this required in v1?
-4. Should pending bookings auto-expire (e.g., 2 h) or wait until the operator decides?
-5. Any commission model to record (even without online payment)?
-6. Which SMS/OTP provider is preferred in Yemen?
+**Open questions**
+1. Should Basic be truly free (0 YER) or a small monthly fee? (Affects trial/funnel design.)
+2. Commission: is it on the seat fare, the booking total, or only on prepaid bookings? Default assumed: seat fare, all confirmed bookings.
+3. Payout cadence: weekly, monthly, or on request? (Default assumed: on request, no minimum.)
+4. Do you want agent float credit limits (agents fronting cash) in v1, or cash-in only?
+5. Are subscriber plans sold per owner, or per owner **and** per driver seat?
+6. Which e-wallet providers should be seeded first (Jaib, Cash/ONE, M-Floos, YemPay, Al-Kuraimi, other)?
+7. Should platform commission be waivable per owner (partnerships) in v1? (Design supports it via `commission_rules`.)
 
 ---
 
 ## 20. Requirement Traceability
 
-| Req ID | Requirement (from brief) | Spec section | Phase |
+| Req | Requirement | Spec | Phase |
 |---|---|---|---|
 | R01 | Individual + company accounts | §6.1 | 1 |
 | R02 | Both have drivers, vehicles, staff | §6.1, §6.3 | 1, 3 |
 | R03 | Create trips → public trips page | §6.4, §6.5 | 4 |
-| R04 | Search filters + per-user preferences | §6.5, §6.10 | 4, 9 |
-| R05 | Staff verify users, companies, vehicles | §6.1, §6.3, §6.8 | 1, 3, 7 |
-| R06 | Verified-only actions (vehicles/trips/drivers/bookings) | §5, §8 BR-01..03 | 1→4 |
+| R04 | Search filters + per-user preferences | §6.5, §6.10 | 4, 11 |
+| R05 | Staff verify users, companies, vehicles | §6.1, §6.8 | 1, 3, 7 |
+| R06 | Verified-only actions | §5, BR-01..03 | 1→4 |
 | R07 | Full vehicle feature set | §6.3 | 3 |
-| R08 | Places: regions, sub-regions, govs, districts, famous places; admin-managed; assignment | §6.2 | 2 |
-| R09 | Assign supervisors to regions/sub-regions | §6.2, §6.11 | 2 |
+| R08 | Regions/sub-regions/govs/districts/places, admin-managed | §6.2 | 2 |
+| R09 | Assign region/sub-region supervisors | §6.2, §6.11 | 2 |
 | R10 | QR scan → permission-based trip + passengers | §6.8 | 7 |
-| R11 | Trip creation fields, whole-trip booking, discounts, vehicle + driver | §6.4 | 4 |
+| R11 | Trip creation fields, whole-trip booking, discounts, vehicle+driver | §6.4 | 4 |
 | R12 | Flat or per-stop pricing | §6.4 | 4 |
 | R13 | Edit price/time, locked 2 h before start | §6.4, BR-06 | 4 |
 | R14 | Owner/staff accept/cancel bookings | §6.6 | 5 |
 | R15 | Passenger cancel ≥ 2 h before | §6.6, BR-09 | 5 |
 | R16 | Passenger details + ID photo + WhatsApp share | §6.6 | 5 |
-| R17 | Booked-only live status, seats, 10-min location, progress messages | §6.7 | 6 |
+| R17 | Booked-only live status, seats, 10-min progress messages | §6.7 | 6 |
 | R18 | Bulk verify trips / trips+passengers / passengers | §6.8 | 7 |
 | R19 | Driver starts only when trip verified | §6.7, BR-05 | 6 |
 | R20 | A4 PDF manifest with vehicle + passengers | §6.8 | 7 |
-| R21 | Public guest search, cascading filters, active-only, staff history search | §6.5, BR-07/08 | 4, 7 |
+| R21 | Public guest search, cascading filters, staff history search | §6.5, BR-07/08 | 4, 7 |
 | R22 | Trip history per user | §6.10 | 4, 5 |
-| R23 | ODO tracking, fuel, maintenance, auto schedules | §6.9 | 8 |
+| R23 | ODO/fuel/maintenance + auto schedules | §6.9 | 8 |
 | R24 | ODO entry on start and completion | §6.7, §6.9 | 6 |
+| **R25** | **Arabic-first full RTL + full English LTR** | **§6.15, §16** | **0 → 12** |
+| **R26** | **Payments: cash / e-wallet / agent / bank deposit** | **§6.12** | **9** |
+| **R27** | **Platform payment accounts (add/edit) + verified-user accounts** | **§6.12, BR-30..32** | **9** |
+| **R28** | **Finance module for verified individuals/companies** | **§6.13** | **10** |
+| **R29** | **Basic / Pro / Business plans with vehicle, trip, staff, driver limits** | **§6.14, BR-36..39** | **10** |
+| **R30** | **Multi-agent support (cash-in, float, settlement)** | **§6.12, §6.13** | **9** |
 
 ---
 
-## 21. ADRs (decisions, one line each)
+## 21. ADRs
 
-- **ADR-01** Business logic in Postgres (RLS + RPC), no custom API server — cheapest to maintain, one rule set for all clients.
-- **ADR-02** Next.js for web (SEO-critical marketplace) + Expo for native; share `@maak/core`, not full UI.
-- **ADR-03** PostGIS for places/progress; MapLibre + OSM + OSRM (no per-load map billing, no vendor lock).
-- **ADR-04** Integer minor units for money; percent rounding half-up, unit-tested.
-- **ADR-05** Status and verification are separate fields on trips (revocation without losing lifecycle).
-- **ADR-06** Config-driven policy (`platform_settings`) instead of hardcoded thresholds.
-- **ADR-07** Private buckets + signed URLs + audited document access; data minimisation with retention windows.
-- **ADR-08** Keyset pagination + denormalised `trips_search` + facet cache for cascading filters.
-- **ADR-09** One PR per phase with migrations, tests, and demo screenshots; phase gate checklist.
-- **ADR-10** Arabic-first RTL with `next-intl`/`i18next` keys in the shared package.
+- **ADR-01** Business logic in Postgres (RLS + RPC); no custom API server.
+- **ADR-02** Next.js web + Expo mobile; share `@maak/core`, not full UI.
+- **ADR-03** PostGIS + MapLibre + OSM + OSRM; no per-load map billing.
+- **ADR-04** Integer minor units; half-up percent rounding, unit-tested.
+- **ADR-05** Trip `status` and `verification_status` are separate fields.
+- **ADR-06** Config-driven policy (`platform_settings`) over hardcoded thresholds.
+- **ADR-07** Private buckets, signed URLs, audited document access, retention windows.
+- **ADR-08** Denormalised `trips_search` + facet cache + keyset pagination.
+- **ADR-09** One PR per phase with migrations, tests, demo screenshots; phase gates.
+- **ADR-10** Arabic-first RTL with typed i18n keys; English at parity, enforced in CI.
+- **ADR-11** **Double-entry ledger in Postgres** as the only financial truth; reports are derived views.
+- **ADR-12** **Manual/proof-based payment confirmation in v1** (no PSP), behind a `PaymentProvider` adapter interface.
+- **ADR-13** **Payment accounts are immutable rows** (archive + recreate) so history never lies.
+- **ADR-14** **Quotas are DB-enforced** with soft/hard limits; missing subscription ⇒ Basic, never unlimited.
+- **ADR-15** **Downgrades never destroy resources**; enforcement applies to creation only.
+- **ADR-16** **Logical CSS properties only** (physical direction banned by lint) to keep RTL/LTR cheap forever.
