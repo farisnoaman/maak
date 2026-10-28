@@ -32,7 +32,7 @@ supabase/     Migrations, RLS, RPCs, cron, seed geography/plans, pgTAP tests
 
 ```bash
 npm install                 # web, mobile and core workspaces
-npm test                    # 131 unit tests, ~1s, no database required
+npm test                    # 176 unit tests, ~1.7s, no database required
 npm run lint                # ESLint + 5 custom architecture rules
 npm run check:guards        # boundaries, RTL, secrets, migration naming
 npm run test:coverage       # coverage thresholds (domain 100% lines)
@@ -48,12 +48,13 @@ supabase test db            # pgTAP: write lockdown, RLS, append-only audit
 
 ## Status
 
-**Phase 0 complete and audited** — monorepo, bilingual web + mobile shells, shared domain with
-**131 passing tests**, hardened database migrations, edge gateway (auth, validation, rate limits,
+**Phase 1 complete** — identity, company accounts, staff roles and the verification queue.
+Phase 0 (foundations) is audited and green. Shared domain, **176 passing tests**, hardened database migrations, edge gateway (auth, validation, rate limits,
 single-write guard, audit), ESLint + Prettier with five custom architecture rules, UI primitives,
 auth shell and error boundaries.
 
-- [`docs/phase-0-audit.md`](./docs/phase-0-audit.md) — every task and acceptance criterion, verified
+- [`docs/phase-1-report.md`](./docs/phase-1-report.md) — accounts, verification, what was proven
+- [`docs/phase-0-audit.md`](./docs/phase-0-audit.md) — every Phase 0 task and acceptance criterion, verified
 - [`docs/phase-0-report.md`](./docs/phase-0-report.md) — narrative walkthrough and decisions
 - [`docs/adr/0001-backend-architecture.md`](./docs/adr/0001-backend-architecture.md) — why the write path looks like this
 

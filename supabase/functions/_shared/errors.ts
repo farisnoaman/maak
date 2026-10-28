@@ -55,7 +55,11 @@ export function fromPostgres(error: { message?: string; code?: string }): ApiErr
   const known: ErrorCode[] = [
     'FORBIDDEN',
     'NOT_VERIFIED',
+    'SELF_LOCKOUT',
     'VALIDATION_FAILED',
+    'MISSING_DOCUMENT',
+    'INVITE_INVALID',
+    'INVITE_EXPIRED',
     'NOT_FOUND',
     'CONFLICT',
     'QUOTA_EXCEEDED',
@@ -73,7 +77,17 @@ export function fromPostgres(error: { message?: string; code?: string }): ApiErr
   // Commands raise with a machine code prefix, e.g. `raise exception 'EDIT_WINDOW_CLOSED: ...'`.
   const prefix = message.split(':')[0]?.trim();
   if (prefix && (known as string[]).includes(prefix)) {
-    const status = prefix === 'FORBIDDEN' || prefix === 'NOT_VERIFIED' ? 403 : 409;
+    const status =
+      prefix === 'FORBIDDEN' || prefix === 'NOT_VERIFIED' || prefix === 'SELF_LOCKOUT'
+        ? 403
+        : prefix === 'VALIDATION_FAILED' ||
+            prefix === 'MISSING_DOCUMENT' ||
+            prefix === 'INVITE_INVALID' ||
+            prefix === 'INVITE_EXPIRED'
+          ? 400
+          : prefix === 'NOT_FOUND'
+            ? 404
+            : 409;
     return new ApiError(status, prefix as ErrorCode, message);
   }
   if (error.code === '23505') return new ApiError(409, 'CONFLICT', 'Duplicate');

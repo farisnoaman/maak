@@ -31,7 +31,11 @@ export async function resolveActor(userId: string): Promise<ResolvedActor> {
       .eq('id', userId)
       .maybeSingle(),
     db.from('user_roles').select('role').eq('user_id', userId).is('revoked_at', null),
-    db.from('organization_members').select('org_id').eq('user_id', userId).eq('status', 'active'),
+    db
+      .from('organization_members')
+      .select('org_id, role')
+      .eq('user_id', userId)
+      .eq('status', 'active'),
     db.from('geo_assignments').select('id').eq('user_id', userId).limit(1),
     db.from('driver_profiles').select('id').eq('user_id', userId).eq('is_active', true).limit(1),
   ]);
@@ -41,11 +45,23 @@ export async function resolveActor(userId: string): Promise<ResolvedActor> {
 
   const profile = profileResult.data as ProfileRow;
   const platformRoles = (rolesResult.data ?? []).map((row) => row.role as Role);
-  const orgIds = (orgResult.data ?? []).map((row) => row.org_id as string);
+  const membershipRows = (orgResult.data ?? []) as { org_id: string; role: string }[];
+  const orgIds = membershipRows.map((row) => row.org_id);
   const hasGeoScope = (geoResult.data ?? []).length > 0;
 
+  // Organization roles are mapped, never flattened: an accountant must not inherit owner powers.
+  const ORG_ROLE_MAP: Record<string, Role> = {
+    owner: 'org_owner',
+    manager: 'org_manager',
+    accountant: 'org_accountant',
+    dispatcher: 'org_manager',
+  };
+
   const roles: Role[] = ['passenger', ...platformRoles];
-  if (orgIds.length > 0) roles.push('org_owner');
+  for (const membership of membershipRows) {
+    const mapped = ORG_ROLE_MAP[membership.role];
+    if (mapped && !roles.includes(mapped)) roles.push(mapped);
+  }
   if ((driverResult.data ?? []).length > 0) roles.push('driver');
 
   const actor: Actor = {

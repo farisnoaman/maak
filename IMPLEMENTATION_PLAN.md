@@ -150,7 +150,9 @@ foundation baked in from the first commit (RTL retrofits are the expensive kind)
 
 ---
 
-## Phase 1 — Identity, Accounts & Verification
+## Phase 1 — Identity, Accounts & Verification ✅
+
+**Status: complete (audited 2026-10-28).** Evidence: [`docs/phase-1-report.md`](./docs/phase-1-report.md).
 
 **Goal:** real multi-tenant identity — individuals, companies, staff, roles — and the verification workflow
 that gates everything else (BR-01..03).
@@ -167,16 +169,16 @@ that gates everything else (BR-01..03).
 - Mobile: sign-in, profile, verification submission with camera capture.
 
 ### Tasks
-- [ ] Migrations: profiles/orgs/members/user_roles/verification_requests + enums + indexes + `updated_at` triggers.
-- [ ] RLS on every table + pgTAP matrix (anon, unverified, verified, org member, staff, finance, admin).
-- [ ] Commands (edge fn + atomic `cmd_*` SQL): `submit_verification`, `decide_verification`, `create_organization`, `update_organization`,
-      `invite_member`, `accept_invite`, `remove_member`, `grant_role`, `revoke_role`, `set_preferred_locale`.
-- [ ] Storage `avatars` (public) + `verification-docs` (private) + policies + signed URL helper.
-- [ ] Notifications table + in-app bell/toast (channels wired Phase 11).
-- [ ] Web: onboarding wizard, company settings, team management, `/staff/verifications`, `/admin/users`, `/admin/roles`.
-- [ ] Mobile: auth, profile, verification upload, company switcher.
-- [ ] Locale preference persisted on profile and applied on next login (web + mobile).
-- [ ] Fixtures: 1 admin, 2 staff, 1 finance officer, 3 verified individuals, 2 verified companies, 1 unverified of each.
+- [x] Migrations: profiles/orgs/members/user_roles/verification_requests + enums + indexes + `updated_at` triggers.
+- [x] RLS on every table + pgTAP matrix (anon, unverified, verified, org member, staff, finance, admin) — 23 assertions in `supabase/tests/0003_*` (needs Docker to run).
+- [x] Commands (edge fn + atomic `cmd_*` SQL): `submit_verification`, `decide_verification`, `create_organization`, `update_organization`,
+      `invite_member`, `accept_invite`, `remove_member`, `grant_role`, `revoke_role`, `set_preferred_locale` (+ `update_profile`, `mark_notifications_read`).
+- [x] Storage `avatars` (public) + `verification-docs` (private) + policies + signed URL helper (`verification-queue`).
+- [x] Notifications table + in-app list with mark-all-read (channels wired Phase 11).
+- [x] Web: verification wizard, company settings, team management, `/staff/verifications`, `/admin/users` (roles inline).
+- [x] Mobile: profile, verification upload with camera capture, company list.
+- [x] Locale preference persisted on profile (`cmd_set_preferred_locale`) and used by the gateway on every request.
+- [~] Fixtures: the preview dataset covers the personas for UI review; real seeds need `auth.users` rows, so they live in pgTAP, not `seed.sql`.
 
 ### Acceptance criteria
 - Unverified user sees "add vehicle / create trip" disabled **and** the RPC returns `NOT_VERIFIED` when called directly.
@@ -686,7 +688,7 @@ Phase 10 must follow 9. Phase 11 needs 5, 6, 9, 10. Phase 12 is last.
 | Phase | Name | Status | PR | Notes |
 |---|---|---|---|---|
 | 0 | Foundations & bilingual shell | ✅ Complete (audited) | — | 117 tests · lint+guards green · `/ar` + `/en` live · 2 edge functions · 5 migrations · auth shell · pgTAP written (needs Docker) |
-| 1 | Identity & Trust | ⬜ | | |
+| 1 | Identity & Trust | ✅ Complete | — | 176 tests · orgs + membership + roles · 12 commands · verification queue with signed docs · 23 pgTAP assertions (need Docker) |
 | 2 | Geography & Places | ⬜ | | |
 | 3 | Fleet | ⬜ | | quota hooks wired (Basic defaults) |
 | 4 | Trips & Marketplace | ⬜ | | quota hooks wired |

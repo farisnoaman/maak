@@ -29,6 +29,17 @@ const ROUTES = [
   { path: '/en/auth/sign-in', lang: 'en', dir: 'ltr' },
   { path: '/ar/operator', lang: 'ar', dir: 'rtl' },
   { path: '/en/staff', lang: 'en', dir: 'ltr' },
+  // Phase 1 surfaces
+  { path: '/ar/account', lang: 'ar', dir: 'rtl' },
+  { path: '/en/account', lang: 'en', dir: 'ltr' },
+  { path: '/ar/account/verification', lang: 'ar', dir: 'rtl' },
+  { path: '/en/account/verification', lang: 'en', dir: 'ltr' },
+  { path: '/ar/operator/settings', lang: 'ar', dir: 'rtl' },
+  { path: '/en/operator/team', lang: 'en', dir: 'ltr' },
+  { path: '/ar/staff/verifications', lang: 'ar', dir: 'rtl' },
+  { path: '/en/staff/verifications', lang: 'en', dir: 'ltr' },
+  { path: '/ar/admin/users', lang: 'ar', dir: 'rtl' },
+  { path: '/en/admin/users', lang: 'en', dir: 'ltr' },
 ];
 
 const failures = [];

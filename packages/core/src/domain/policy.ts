@@ -51,6 +51,14 @@ export interface Resource {
 }
 
 export type Capability =
+  | 'org.create'
+  | 'org.update'
+  | 'member.invite'
+  | 'member.remove'
+  | 'verification.submit'
+  | 'verification.decide'
+  | 'role.manage'
+  | 'notification.read'
   | 'trip.browse'
   | 'trip.create'
   | 'trip.update'
@@ -94,10 +102,33 @@ interface Rule {
 }
 
 const STAFF: readonly Role[] = ['platform_staff', 'platform_admin'];
+const AUTHENTICATED: readonly Role[] = [
+  'passenger',
+  'individual',
+  'org_owner',
+  'org_manager',
+  'org_accountant',
+  'driver',
+  'agent',
+  'geo_supervisor',
+  'platform_staff',
+  'finance_officer',
+  'platform_admin',
+];
 const FINANCE: readonly Role[] = ['finance_officer', 'platform_admin'];
 const OPERATOR: readonly Role[] = ['individual', 'org_owner', 'org_manager'];
 
 const RULES: Record<Capability, Rule> = {
+  // Phase 1 — identity and accounts.
+  'org.create': { roles: AUTHENTICATED },
+  'org.update': { roles: ['org_owner', 'org_manager', ...STAFF], scoped: 'orgMember' },
+  'member.invite': { roles: ['org_owner', 'org_manager', ...STAFF], scoped: 'orgMember' },
+  'member.remove': { roles: ['org_owner', ...STAFF], scoped: 'orgMember' },
+  'verification.submit': { roles: AUTHENTICATED },
+  'verification.decide': { roles: [...STAFF] },
+  'role.manage': { roles: ['platform_admin'] },
+  'notification.read': { roles: AUTHENTICATED },
+
   'trip.browse': {
     roles: [
       'passenger',

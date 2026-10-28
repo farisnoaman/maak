@@ -48,6 +48,9 @@ export function SiteHeader({
           <Link className="nav-link" href={withQuery('/auth/sign-in')}>
             {t('nav.signIn')}
           </Link>
+          <Link className="nav-link" href={withQuery('/account')}>
+            {t('nav.account')}
+          </Link>
         </nav>
 
         <LocaleSwitch
