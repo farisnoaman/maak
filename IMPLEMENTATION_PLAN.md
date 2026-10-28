@@ -688,7 +688,7 @@ Phase 10 must follow 9. Phase 11 needs 5, 6, 9, 10. Phase 12 is last.
 | Phase | Name | Status | PR | Notes |
 |---|---|---|---|---|
 | 0 | Foundations & bilingual shell | ✅ Complete (audited) | — | 117 tests · lint+guards green · `/ar` + `/en` live · 2 edge functions · 5 migrations · auth shell · pgTAP written (needs Docker) |
-| 1 | Identity & Trust | ✅ Complete | — | 176 tests · orgs + membership + roles · 12 commands · verification queue with signed docs · 23 pgTAP assertions (need Docker) |
+| 1 | Identity & Trust | ✅ Complete | — | 214 tests · orgs + membership + roles · 16 commands · verification queue with signed docs · **53 pgTAP assertions executed** (`npm run sql:check`) |
 | 2 | Geography & Places | ⬜ | | |
 | 3 | Fleet | ⬜ | | quota hooks wired (Basic defaults) |
 | 4 | Trips & Marketplace | ⬜ | | quota hooks wired |

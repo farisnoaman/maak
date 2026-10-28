@@ -20,19 +20,24 @@
     "db:types": "node scripts/db-types.mjs --write",
     "db:types:check": "node scripts/db-types.mjs --check",
     "test:coverage": "npm --workspace @maak/core run test:coverage",
-    "check:a11y": "node scripts/check-a11y.mjs"
+    "check:a11y": "node scripts/check-a11y.mjs",
+    "sql:check": "node scripts/sql-check.mjs",
+    "check:all": "npm run check:guards && npm run lint && npm run format:check && npm run typecheck && npm test && npm run test:coverage && npm run db:types:check && npm run check:functions && npm run sql:check",
+    "ci:install": "node scripts/install-ci.mjs"
   },
   "devDependencies": {
+    "@embedded-postgres/linux-x64": "^17.10.0-beta.17",
+    "@eslint/js": "^10.0.1",
     "@types/node": "^22.9.0",
     "@vitest/coverage-v8": "^5.0.5",
-    "eslint": "^10.13.0",
+    "embedded-postgres": "^17.10.0-beta.17",
     "esbuild": "^0.28.2",
+    "eslint": "^10.13.0",
     "node-html-parser": "^9.0.5",
     "prettier": "^3.9.10",
     "typescript": "^5.6.3",
     "typescript-eslint": "^8.72.1",
-    "vitest": "^5.0.5",
-    "@eslint/js": "^10.0.1"
+    "vitest": "^5.0.5"
   },
   "engines": {
     "node": ">=22"

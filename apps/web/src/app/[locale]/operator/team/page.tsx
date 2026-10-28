@@ -51,6 +51,7 @@ export default async function OperatorTeamPage({
           <TeamPanel
             locale={locale}
             orgId={org.id}
+            orgName={org.name}
             actorRole={org.role}
             actorId={data.user?.id ?? null}
             configured={!preview}

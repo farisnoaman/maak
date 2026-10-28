@@ -40,6 +40,7 @@ export interface HandlerOptions<TInput> {
 const ANON_ACTOR: ResolvedActor = {
   actor: { userId: null, roles: [], verification: 'unverified', plan: 'basic' },
   orgIds: [],
+  memberships: [],
   hasGeoScope: false,
   preferredLanguage: 'ar',
 };

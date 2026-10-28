@@ -22,6 +22,7 @@ export interface AccountProfile {
   readonly nationalIdType: string | null;
   readonly birthPlace: string | null;
   readonly avatarPath: string | null;
+  readonly deletionRequestedAt: string | null;
 }
 
 export interface AccountOrganization {
@@ -97,7 +98,7 @@ export async function loadAccountContext(): Promise<AccountContext> {
     client
       .from('profiles')
       .select(
-        'id, full_name, phone, email, verification_status, verification_note, national_id_type, birth_place, avatar_path',
+        'id, full_name, phone, email, verification_status, verification_note, national_id_type, birth_place, avatar_path, deletion_requested_at',
       )
       .eq('id', userId)
       .maybeSingle(),
@@ -128,6 +129,7 @@ export async function loadAccountContext(): Promise<AccountContext> {
         nationalIdType: str(profileRow.national_id_type),
         birthPlace: str(profileRow.birth_place),
         avatarPath: str(profileRow.avatar_path),
+        deletionRequestedAt: str(profileRow.deletion_requested_at),
       }
     : null;
 

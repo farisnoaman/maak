@@ -80,7 +80,15 @@ async function main() {
       console.log('• Supabase CLI not found: keeping the committed types and re-stamping the hash');
     }
 
-    const stamped = `${HASH_PREFIX} ${hash}\n/* Generated from ${count} migrations. Run \`npm run db:types\` after changing the schema. */\n${content.replace(/^\uFEFF/, '')}`;
+    // Strip every existing banner before adding one: re-running --write must be idempotent.
+    const body = content
+      .replace(/^\uFEFF/, '')
+      .split('\n')
+      .filter((line) => !line.startsWith(HASH_PREFIX) && !line.startsWith('/* Generated from'))
+      .join('\n')
+      .replace(/^\n+/, '');
+
+    const stamped = `${HASH_PREFIX} ${hash}\n/* Generated from ${count} migrations. Run \`npm run db:types\` after changing the schema. */\n\n${body}`;
     await writeFile(typesPath, stamped);
     return;
   }

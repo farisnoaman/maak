@@ -454,7 +454,7 @@ begin
   if v_member.invite_expires_at is null or v_member.invite_expires_at < now() then
     raise exception 'INVITE_EXPIRED: expired' using errcode = 'P0001';
   end if;
-  if v_member.invite_token_hash is distinct from encode(digest(p_token, 'sha256'), 'hex') then
+  if v_member.invite_token_hash is distinct from encode(sha256(convert_to(p_token, 'UTF8')), 'hex') then
     raise exception 'INVITE_INVALID: token mismatch' using errcode = '42501';
   end if;
 
@@ -921,6 +921,229 @@ begin
 end;
 $$;
 
+
+-- ---------------------------------------------------------------------------
+-- Ownership transfer and leaving an organization
+-- ---------------------------------------------------------------------------
+
+create or replace function public.cmd_transfer_ownership(
+  p_actor uuid,
+  p_org_id uuid,
+  p_member_id uuid,
+  p_reason text default null,
+  p_request_id text default null,
+  p_ip inet default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_org public.organizations%rowtype;
+  v_target public.organization_members%rowtype;
+  v_actor_role public.member_role;
+begin
+  if p_actor is null then
+    raise exception 'UNAUTHENTICATED: missing actor' using errcode = '28000';
+  end if;
+
+  select * into v_org from public.organizations where id = p_org_id for update;
+  if not found then
+    raise exception 'NOT_FOUND: organization' using errcode = 'P0002';
+  end if;
+
+  v_actor_role := app.org_role(p_org_id, p_actor);
+  if v_actor_role is distinct from 'owner' and not app.is_platform_admin(p_actor) then
+    raise exception 'FORBIDDEN: only the owner can transfer ownership' using errcode = '42501';
+  end if;
+
+  select * into v_target
+  from public.organization_members
+  where id = p_member_id and org_id = p_org_id
+  for update;
+
+  if not found then
+    raise exception 'NOT_FOUND: member' using errcode = 'P0002';
+  end if;
+  if v_target.status <> 'active' or v_target.user_id is null then
+    raise exception 'CONFLICT: target must be an active member' using errcode = '23505';
+  end if;
+  if v_target.user_id = v_org.owner_id then
+    raise exception 'CONFLICT: already the owner' using errcode = '23505';
+  end if;
+  -- An unverified organization may change hands; a verified one keeps its verified owner on record,
+  -- so the transfer is only allowed between accounts that are themselves verified.
+  if v_org.verification_status = 'verified'
+     and not exists (
+       select 1 from public.profiles p
+       where p.id = v_target.user_id and p.verification_status = 'verified'
+     ) then
+    raise exception 'CONFLICT: the new owner must be verified' using errcode = '23505';
+  end if;
+
+  -- Order matters: demote the old owner first so the "one owner" invariant never lapses.
+  update public.organization_members
+  set role = 'manager'
+  where org_id = p_org_id and user_id = v_org.owner_id and role = 'owner';
+
+  update public.organization_members
+  set role = 'owner'
+  where id = p_member_id;
+
+  update public.organizations set owner_id = v_target.user_id where id = p_org_id;
+
+  perform app.notify(
+    v_target.user_id, 'role_granted', 'notifications.ownershipReceived',
+    jsonb_build_object('orgId', p_org_id, 'name', v_org.name), '/operator/settings'
+  );
+  if v_org.owner_id is not null and v_org.owner_id <> v_target.user_id then
+    perform app.notify(
+      v_org.owner_id, 'role_revoked', 'notifications.ownershipTransferred',
+      jsonb_build_object('orgId', p_org_id, 'name', v_org.name), '/operator/team'
+    );
+  end if;
+
+  perform app.write_audit(
+    p_actor, 'organization.transfer_ownership', 'organization', p_org_id::text,
+    jsonb_build_object('owner_id', v_org.owner_id),
+    jsonb_build_object('owner_id', v_target.user_id, 'member_id', p_member_id),
+    p_reason, p_request_id, p_ip
+  );
+
+  return jsonb_build_object('orgId', p_org_id, 'ownerId', v_target.user_id);
+end;
+$$;
+
+create or replace function public.cmd_leave_organization(
+  p_actor uuid,
+  p_org_id uuid,
+  p_request_id text default null,
+  p_ip inet default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_role public.member_role;
+begin
+  if p_actor is null then
+    raise exception 'UNAUTHENTICATED: missing actor' using errcode = '28000';
+  end if;
+
+  v_role := app.org_role(p_org_id, p_actor);
+  if v_role is null then
+    raise exception 'NOT_FOUND: membership' using errcode = 'P0002';
+  end if;
+  -- The owner must hand the company over first: an organization without an owner is unmanageable.
+  if v_role = 'owner' then
+    raise exception 'CONFLICT: transfer ownership before leaving' using errcode = '23505';
+  end if;
+
+  update public.organization_members
+  set status = 'removed', removed_at = now(), removed_by = p_actor
+  where org_id = p_org_id and user_id = p_actor and status = 'active';
+
+  perform app.write_audit(
+    p_actor, 'member.leave', 'organization_member', p_org_id::text,
+    jsonb_build_object('role', v_role),
+    jsonb_build_object('status', 'removed'),
+    null, p_request_id, p_ip
+  );
+
+  return jsonb_build_object('orgId', p_org_id, 'status', 'removed');
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Account deletion (request + cancel; the deletion itself is a staff action)
+-- ---------------------------------------------------------------------------
+
+alter table public.profiles
+  add column if not exists deletion_requested_at timestamptz,
+  add column if not exists deletion_reason text;
+
+comment on column public.profiles.deletion_requested_at is
+  'Set when the user asks for deletion. Financial and audit records must be retained, so removal is '
+  'a staff action (Phase 7), not an immediate DELETE.';
+
+create or replace function public.cmd_request_account_deletion(
+  p_actor uuid,
+  p_reason text default null,
+  p_request_id text default null,
+  p_ip inet default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_owned int;
+begin
+  if p_actor is null then
+    raise exception 'UNAUTHENTICATED: missing actor' using errcode = '28000';
+  end if;
+
+  -- An account that still owns a company cannot be deleted: it would orphan the organization and
+  -- every trip it ever ran.
+  select count(*) into v_owned
+  from public.organizations o
+  where o.owner_id = p_actor;
+  if v_owned > 0 then
+    raise exception 'CONFLICT: transfer your organizations first' using errcode = '23505';
+  end if;
+
+  update public.profiles
+  set deletion_requested_at = now(),
+      deletion_reason = nullif(btrim(coalesce(p_reason, '')), '')
+  where id = p_actor;
+
+  perform app.write_audit(
+    p_actor, 'account.deletion_requested', 'profile', p_actor::text,
+    jsonb_build_object('deletion_requested_at', null),
+    jsonb_build_object('deletion_requested_at', now()),
+    p_reason, p_request_id, p_ip
+  );
+
+  return jsonb_build_object('requested', true);
+end;
+$$;
+
+create or replace function public.cmd_cancel_account_deletion(
+  p_actor uuid,
+  p_request_id text default null,
+  p_ip inet default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if p_actor is null then
+    raise exception 'UNAUTHENTICATED: missing actor' using errcode = '28000';
+  end if;
+
+  update public.profiles
+  set deletion_requested_at = null, deletion_reason = null
+  where id = p_actor and deletion_requested_at is not null;
+
+  if not found then
+    raise exception 'NOT_FOUND: no pending deletion' using errcode = 'P0002';
+  end if;
+
+  perform app.write_audit(
+    p_actor, 'account.deletion_cancelled', 'profile', p_actor::text,
+    null, null, null, p_request_id, p_ip
+  );
+
+  return jsonb_build_object('requested', false);
+end;
+$$;
+
 -- ---------------------------------------------------------------------------
 -- Grants: service_role only
 -- ---------------------------------------------------------------------------
@@ -942,7 +1165,11 @@ begin
     'public.cmd_decide_verification(uuid, uuid, public.verification_outcome, text, text, inet)',
     'public.cmd_grant_role(uuid, uuid, public.platform_role, text, text, inet)',
     'public.cmd_revoke_role(uuid, uuid, public.platform_role, text, text, inet)',
-      'public.cmd_mark_notifications_read(uuid, uuid[], text)'
+      'public.cmd_mark_notifications_read(uuid, uuid[], text)',
+      'public.cmd_transfer_ownership(uuid, uuid, uuid, text, text, inet)',
+      'public.cmd_leave_organization(uuid, uuid, text, inet)',
+      'public.cmd_request_account_deletion(uuid, text, text, inet)',
+      'public.cmd_cancel_account_deletion(uuid, text, inet)'
     ])
   loop
     execute format('revoke all on function %s from public, anon, authenticated', v_signature);

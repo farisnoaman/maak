@@ -27,6 +27,7 @@ const profile: AccountProfile = {
   nationalIdType: 'national_id',
   birthPlace: 'عدن',
   avatarPath: null,
+  deletionRequestedAt: null,
 };
 
 const organizations: AccountOrganization[] = [

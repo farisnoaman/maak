@@ -1,3 +1,5 @@
+import { buildErrorPayload, type ErrorContext, type ErrorPayload } from '@maak/core';
+
 /**
  * Error reporting with a deliberately tiny surface.
  *
@@ -12,43 +14,10 @@
  * from an instrumentation hook once Sentry is installed.
  */
 
-export interface ErrorContext {
-  readonly boundary?: string;
-  readonly digest?: string;
-  readonly route?: string;
-  readonly [key: string]: unknown;
-}
+export { redact, buildErrorPayload, REDACTED, REDACTED_KEYS } from '@maak/core';
+export type { ErrorContext, ErrorPayload } from '@maak/core';
 
-type Transport = (payload: Record<string, unknown>) => void | Promise<void>;
-
-const REDACTED_KEYS = [
-  'password',
-  'token',
-  'authorization',
-  'cookie',
-  'id_number',
-  'idNumber',
-  'phone',
-  'email',
-  'iban',
-  'account_ref',
-];
-
-/** Removes keys that must never reach a third party, at any depth. */
-export function redact(value: unknown, depth = 0): unknown {
-  if (depth > 4 || value === null || typeof value !== 'object') return value;
-  if (Array.isArray(value)) return value.map((item) => redact(item, depth + 1));
-
-  const output: Record<string, unknown> = {};
-  for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
-    if (REDACTED_KEYS.some((needle) => key.toLowerCase().includes(needle.toLowerCase()))) {
-      output[key] = '[redacted]';
-    } else {
-      output[key] = redact(entry, depth + 1);
-    }
-  }
-  return output;
-}
+type Transport = (payload: ErrorPayload) => void | Promise<void>;
 
 let transport: Transport | null = null;
 
@@ -56,7 +25,7 @@ export function setErrorTransport(next: Transport | null): void {
   transport = next;
 }
 
-function httpTransport(payload: Record<string, unknown>): void {
+function httpTransport(payload: ErrorPayload): void {
   const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
   if (!dsn) return;
   // Minimal envelope-shaped post; replace with the Sentry SDK when installed.
@@ -70,13 +39,8 @@ function httpTransport(payload: Record<string, unknown>): void {
 
 export function reportError(error: unknown, context: ErrorContext = {}): void {
   try {
-    const payload = {
-      level: 'error',
-      message: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
-      context: redact(context),
-      at: new Date().toISOString(),
-    };
+    // Shaping and redaction are pure and live in @maak/core, where they are unit-tested.
+    const payload = buildErrorPayload(error, context);
 
     if (transport) {
       void transport(payload);

@@ -1,6 +1,5 @@
-// migrations-sha256: 7d9d60a232c2300506b732d927c58efee78cc167ce94ac2cde8bf1816ad547dc
+// migrations-sha256: 9ff96575f0b1fa9036bacf05543e9b15ac09aca645818ec19dad16df249096c8
 /* Generated from 7 migrations. Run `npm run db:types` after changing the schema. */
-/* Generated from 5 migrations. Run `npm run db:types` after changing the schema. */
 
 /**
  * Schema types for RLS-filtered reads (Phase 0 subset).
@@ -48,6 +47,8 @@ export interface Profile {
   date_of_birth: string | null;
   avatar_path: string | null;
   verification_note: string | null;
+  deletion_requested_at: string | null;
+  deletion_reason: string | null;
   onboarded_at: string | null;
   last_seen_at: string | null;
   created_at: string;

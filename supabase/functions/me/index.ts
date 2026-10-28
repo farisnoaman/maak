@@ -6,16 +6,20 @@
  */
 
 import { z } from 'zod';
-import { capabilitiesOf, isOperator, isPlatformStaff } from '@maak/core';
+import { capabilityContexts, isOperator, isPlatformStaff } from '@maak/core';
 import { defineCommand } from '../_shared/handler.ts';
 import { enforceRateLimit } from '../_shared/ratelimit.ts';
 
 const schema = z.object({});
 
 export default defineCommand({ schema }, async (ctx) => {
-  const { actor, orgIds, hasGeoScope, preferredLanguage } = ctx.resolved;
+  const { actor, memberships, hasGeoScope, preferredLanguage } = ctx.resolved;
 
   await enforceRateLimit(actor.userId as string, 'session.probe');
+
+  // Capabilities are returned per context, never as one flattened list: an owner of company A must
+  // not appear to have those powers while acting for company B.
+  const contexts = capabilityContexts(actor, memberships);
 
   return {
     user: {
@@ -24,10 +28,12 @@ export default defineCommand({ schema }, async (ctx) => {
       verification: actor.verification,
       plan: actor.plan,
       preferredLanguage,
-      organizations: orgIds,
+      organizations: memberships.map((membership) => membership.orgId),
+      memberships,
       hasGeoScope,
     },
-    capabilities: capabilitiesOf(actor),
+    contexts,
+    capabilities: contexts[0]?.capabilities ?? [],
     flags: {
       isOperator: isOperator(actor),
       isStaff: isPlatformStaff(actor),

@@ -12,6 +12,7 @@ import { internal } from './errors.ts';
 export interface ResolvedActor {
   readonly actor: Actor;
   readonly orgIds: string[];
+  readonly memberships: { orgId: string; role: string }[];
   readonly hasGeoScope: boolean;
   readonly preferredLanguage: 'ar' | 'en';
 }
@@ -57,7 +58,9 @@ export async function resolveActor(userId: string): Promise<ResolvedActor> {
     dispatcher: 'org_manager',
   };
 
-  const roles: Role[] = ['passenger', ...platformRoles];
+  // `individual` means "has a personal account"; the verification gate still decides what that
+  // account may do, so an unverified individual simply fails the `verified: true` rules.
+  const roles: Role[] = ['passenger', 'individual', ...platformRoles];
   for (const membership of membershipRows) {
     const mapped = ORG_ROLE_MAP[membership.role];
     if (mapped && !roles.includes(mapped)) roles.push(mapped);
@@ -73,7 +76,13 @@ export async function resolveActor(userId: string): Promise<ResolvedActor> {
     hasGeoScope,
   };
 
-  return { actor, orgIds, hasGeoScope, preferredLanguage: profile.preferred_language };
+  return {
+    actor,
+    orgIds,
+    memberships: membershipRows.map((row) => ({ orgId: row.org_id, role: row.role })),
+    hasGeoScope,
+    preferredLanguage: profile.preferred_language,
+  };
 }
 
 /**

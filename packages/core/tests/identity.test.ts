@@ -32,7 +32,7 @@ import {
   validateDocuments,
   validateRejectionReason,
 } from '../src/domain/identity';
-import { can } from '../src/domain/policy';
+import { can, capabilitiesIn, capabilityContexts, actorInOrganization } from '../src/domain/policy';
 import type { Actor, Role } from '../src/domain/policy';
 
 const actor = (roles: Role[], verification: Actor['verification'] = 'unverified'): Actor => ({
@@ -407,5 +407,69 @@ describe('phase 1 capabilities', () => {
   it('keeps role administration to admins', () => {
     expect(can(actor(['platform_staff']), 'role.manage')).toBe(false);
     expect(can(actor(['platform_admin']), 'role.manage')).toBe(true);
+  });
+});
+
+describe('capabilities are evaluated per organization, never flattened', () => {
+  // A passenger who belongs to two companies with different roles.
+  const multi = {
+    userId: 'user-1',
+    roles: ['passenger', 'org_owner', 'org_accountant'] as Role[],
+    verification: 'verified' as const,
+    plan: 'basic' as const,
+  };
+
+  it('drops other organizations when one is selected', () => {
+    const accountant = actorInOrganization(multi, 'org-b', 'accountant');
+    expect(accountant.roles).toEqual(['passenger', 'org_accountant']);
+    expect(accountant.roles).not.toContain('org_owner');
+    expect(accountant.orgIds).toEqual(['org-b']);
+  });
+
+  it('gives an owner powers in their own organization only', () => {
+    const asOwner = capabilitiesIn(multi, 'org-a', 'owner');
+    const asAccountant = capabilitiesIn(multi, 'org-b', 'accountant');
+
+    expect(asOwner).toContain('member.invite');
+    expect(asAccountant).not.toContain('member.invite');
+    expect(asAccountant).toContain('finance.viewOwn');
+  });
+
+  it('treats a dispatcher as a trip manager, not an owner', () => {
+    const dispatcher = capabilitiesIn({ ...multi, roles: ['passenger'] }, 'org-a', 'dispatcher');
+    expect(dispatcher).toContain('trip.create');
+    expect(dispatcher).not.toContain('member.remove');
+  });
+
+  it('keeps personal powers personal: a verified individual operates without an organization', () => {
+    const individual = { ...multi, roles: ['passenger', 'individual'] as Role[] };
+    expect(capabilitiesIn(individual, null, null)).toContain('trip.create');
+    expect(capabilitiesIn(individual, null, null)).not.toContain('member.invite');
+  });
+
+  it('denies an unverified individual even with the individual role', () => {
+    const unverified = {
+      ...multi,
+      roles: ['passenger', 'individual'] as Role[],
+      verification: 'unverified' as const,
+    };
+    expect(capabilitiesIn(unverified, null, null)).not.toContain('trip.create');
+  });
+
+  it('returns one context per membership plus the personal one', () => {
+    const contexts = capabilityContexts(multi, [
+      { orgId: 'org-a', role: 'owner' },
+      { orgId: 'org-b', role: 'accountant' },
+    ]);
+
+    expect(contexts).toHaveLength(3);
+    expect(contexts[0]!.organizationId).toBeNull();
+    expect(contexts[1]!.capabilities).toContain('member.invite');
+    expect(contexts[2]!.capabilities).not.toContain('member.invite');
+  });
+
+  it('still lets a platform admin act anywhere', () => {
+    const admin = { ...multi, roles: ['platform_admin'] as Role[] };
+    expect(capabilitiesIn(admin, 'any-org', 'accountant')).toContain('member.remove');
   });
 });

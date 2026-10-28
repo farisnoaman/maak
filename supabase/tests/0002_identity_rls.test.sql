@@ -10,7 +10,7 @@ begin;
 
 create extension if not exists pgtap;
 
-select plan(8);
+select plan(9);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures: two users, one of them platform staff. Inserted as the superuser so the

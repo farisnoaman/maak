@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { isOperator, isPlatformStaff, type Actor } from '../src/domain/policy';
+import {
+  can,
+  isOperator,
+  isPlatformStaff,
+  PolicyError,
+  requirePolicy,
+  type Actor,
+} from '../src/domain/policy';
+import { nextVerificationStatus } from '../src/domain/identity';
+import { dictionaries, translate } from '../src/i18n/dictionaries';
 import { equals, isZero, max, min, money, negate, toMajor } from '../src/domain/money';
 import { computeRefund, RefundPolicyError } from '../src/domain/finance';
 import { computePrice, PricingError, seatsAfterBooking, toMoney } from '../src/domain/pricing';
@@ -135,5 +144,58 @@ describe('ledger edge cases', () => {
 describe('interpolation safety', () => {
   it('returns the template untouched when no variables are supplied', () => {
     expect(interpolate('no {vars} here')).toBe('no {vars} here');
+  });
+});
+
+describe('small branches kept honest', () => {
+  it('verification state machine is a total function', () => {
+    // Every action on every status has a defined outcome — no silent undefined.
+    const statuses = ['unverified', 'pending', 'verified', 'rejected'] as const;
+    const actions = ['submit', 'approve', 'reject', 'withdraw', 'revoke'] as const;
+    for (const status of statuses) {
+      for (const action of actions) {
+        expect(typeof nextVerificationStatus(status, action)).toBe('string');
+      }
+    }
+    // The default arm: an action that is not in the union changes nothing.
+    expect(nextVerificationStatus('verified', 'nonsense' as 'submit')).toBe('verified');
+  });
+
+  it('requirePolicy throws a typed error carrying the capability', () => {
+    const nobody = {
+      userId: 'u1',
+      roles: ['passenger'] as const,
+      verification: 'unverified' as const,
+      plan: 'basic' as const,
+    };
+    expect(() => requirePolicy(nobody, 'vehicle.create')).toThrow(PolicyError);
+    try {
+      requirePolicy(nobody, 'vehicle.create');
+    } catch (error) {
+      expect((error as PolicyError).code).toBe('FORBIDDEN');
+      expect((error as PolicyError).capability).toBe('vehicle.create');
+    }
+  });
+
+  it('an unknown capability is denied rather than allowed', () => {
+    const actor = {
+      userId: 'u1',
+      roles: ['org_owner'] as const,
+      verification: 'verified' as const,
+      plan: 'basic' as const,
+    };
+    expect(can(actor, 'not.a.capability' as 'trip.create')).toBe(false);
+  });
+
+  it('translate falls back to Arabic, then to the key itself', () => {
+    // A key that exists in Arabic but not in the requested locale dictionary.
+    const missingInEn = Object.keys(dictionaries.ar).find((key) => !(key in dictionaries.en));
+    expect(missingInEn).toBeUndefined(); // parity is enforced elsewhere; this documents the guarantee
+
+    expect(translate('ar', 'missing.key' as never)).toBe('missing.key');
+
+    // A template with placeholders and no values keeps them literal (never "undefined").
+    expect(translate('ar', 'org.inviteMessage', {})).toContain('{org}');
+    expect(translate('ar', 'org.inviteMessage', { org: 'معك' })).toContain('معك');
   });
 });

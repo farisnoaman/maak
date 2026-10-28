@@ -256,6 +256,91 @@ export function isPlatformStaff(actor: Actor): boolean {
   return actor.roles.some((r) => STAFF.includes(r));
 }
 
-export function capabilitiesOf(actor: Actor): Capability[] {
-  return (Object.keys(RULES) as Capability[]).filter((c) => can(actor, c));
+/**
+ * Every capability the actor holds **in the given resource context**.
+ *
+ * The resource argument is not optional decoration: most capabilities are scoped ("own trip", "own
+ * organization"), and `can()` answers false for a scoped rule when no scope is supplied. Passing `{}`
+ * returns only the unscoped capabilities, which is exactly right for a screen that has not yet chosen
+ * what it is acting on.
+ */
+export function capabilitiesOf(actor: Actor, resource: Resource = {}): Capability[] {
+  return (Object.keys(RULES) as Capability[]).filter((c) => can(actor, c, resource));
+}
+
+// ---------------------------------------------------------------------------
+// Organization-scoped capabilities
+// ---------------------------------------------------------------------------
+
+/**
+ * An actor's roles are *not* a flat set: being an owner of company A says nothing about company B,
+ * and an accountant must never inherit the owner's powers. `capabilitiesOf` therefore describes the
+ * personal context only; use `capabilitiesIn()` for anything that touches an organization.
+ */
+const ORG_ROLE_TO_ROLE: Record<string, Role> = {
+  owner: 'org_owner',
+  manager: 'org_manager',
+  accountant: 'org_accountant',
+  dispatcher: 'org_manager',
+};
+
+export interface OrgMembership {
+  readonly orgId: string;
+  readonly role: string;
+}
+
+export interface CapabilityContext {
+  /** null for the personal context (no organization selected). */
+  readonly organizationId: string | null;
+  readonly memberRole: string | null;
+  readonly capabilities: readonly Capability[];
+}
+
+/** The actor as they are when acting for one organization — other organizations' roles removed. */
+export function actorInOrganization(
+  actor: Actor,
+  organizationId: string | null,
+  memberRole: string | null,
+): Actor {
+  const base = actor.roles.filter((role) => !role.startsWith('org_'));
+  const mapped = memberRole ? ORG_ROLE_TO_ROLE[memberRole] : undefined;
+  return {
+    ...actor,
+    roles: mapped && !base.includes(mapped) ? [...base, mapped] : base,
+    orgIds: organizationId ? [organizationId] : [],
+  };
+}
+
+export function capabilitiesIn(
+  actor: Actor,
+  organizationId: string | null,
+  memberRole: string | null,
+): Capability[] {
+  const scoped = actorInOrganization(actor, organizationId, memberRole);
+  return capabilitiesOf(scoped, resourceFor(memberRole));
+}
+
+/** The scope facts implied by a membership (or by the absence of one). */
+export function resourceFor(memberRole: string | null): Resource {
+  if (!memberRole) return { isBooker: true };
+  return { isOrgMember: true, isOwner: memberRole === 'owner' };
+}
+
+/** Every context a client may switch to, each with its own capability list. */
+export function capabilityContexts(
+  actor: Actor,
+  memberships: readonly OrgMembership[],
+): CapabilityContext[] {
+  return [
+    {
+      organizationId: null,
+      memberRole: null,
+      capabilities: capabilitiesIn(actor, null, null),
+    },
+    ...memberships.map((membership) => ({
+      organizationId: membership.orgId,
+      memberRole: membership.role,
+      capabilities: capabilitiesIn(actor, membership.orgId, membership.role),
+    })),
+  ];
 }

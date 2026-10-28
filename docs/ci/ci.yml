@@ -1,8 +1,9 @@
 # Copy this file to `.github/workflows/ci.yml` to activate CI.
 #
 # It lives in docs/ci/ because the GitHub App used by the coding agent lacks the `workflows`
-# permission, so it cannot push files under `.github/workflows/`. One `git mv` fixes that:
-#   mkdir -p .github/workflows && git mv docs/ci/ci.yml .github/workflows/ci.yml
+# permission, so it cannot push files under `.github/workflows/`. Activate it on a machine (or with a
+# token) that has the permission:
+#   npm run ci:install && git add .github/workflows/ci.yml && git commit -m "ci: activate" && git push
 
 name: CI
 
@@ -61,9 +62,29 @@ jobs:
         run: npm --workspace @maak/web run build
 
   database:
-    name: Postgres rules (pgTAP)
+    name: Postgres rules (migrations + pgTAP)
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # No Docker and no Supabase CLI needed: an embedded PostgreSQL applies every migration, runs the
+      # committed pgTAP suites and diffs the live schema against database.types.ts.
+      - name: Migrations, pgTAP suites, type drift
+        run: npm run sql:check
+
+  supabase:
+    name: Supabase stack (real CLI, RLS + storage)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    continue-on-error: false
     steps:
       - uses: actions/checkout@v4
 
@@ -79,6 +100,7 @@ jobs:
       - name: Lint SQL
         run: supabase db lint --level error
 
+      # The genuine pgTAP extension, against the real platform (auth.users, storage, PostGIS).
       - name: pgTAP — write lockdown, RLS, append-only audit
         run: supabase test db
 

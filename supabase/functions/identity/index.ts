@@ -158,6 +158,50 @@ export default defineCommand({ schema }, async (ctx) => {
       return { ...result, requestId: ctx.requestId };
     }
 
+    case 'organization.transferOwnership': {
+      if (!orgIds.includes(input.orgId)) throw forbidden('Not a member of this organization');
+      await enforceRateLimit(actorId, 'organization.transferOwnership');
+      const result = await run('cmd_transfer_ownership', {
+        p_actor: actorId,
+        p_org_id: input.orgId,
+        p_member_id: input.memberId,
+        p_reason: input.reason ?? null,
+        ...audit,
+      });
+      return { ...result, requestId: ctx.requestId };
+    }
+
+    case 'member.leave': {
+      if (!orgIds.includes(input.orgId)) throw forbidden('Not a member of this organization');
+      const result = await run('cmd_leave_organization', {
+        p_actor: actorId,
+        p_org_id: input.orgId,
+        ...audit,
+      });
+      return { ...result, requestId: ctx.requestId };
+    }
+
+    case 'account.requestDeletion': {
+      await enforceRateLimit(actorId, 'account.requestDeletion', {
+        limit: 3,
+        windowSeconds: 86400,
+      });
+      const result = await run('cmd_request_account_deletion', {
+        p_actor: actorId,
+        p_reason: input.reason ?? null,
+        ...audit,
+      });
+      return { ...result, requestId: ctx.requestId };
+    }
+
+    case 'account.cancelDeletion': {
+      const result = await run('cmd_cancel_account_deletion', {
+        p_actor: actorId,
+        ...audit,
+      });
+      return { ...result, requestId: ctx.requestId };
+    }
+
     case 'verification.submit': {
       requirePolicy(actor, 'verification.submit');
 

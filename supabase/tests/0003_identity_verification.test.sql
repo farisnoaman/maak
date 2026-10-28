@@ -14,7 +14,7 @@ begin;
 
 create extension if not exists pgtap;
 
-select plan(23);
+select plan(35);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -59,7 +59,7 @@ select is(
 
 select is(
   (select verification_status::text from public.organizations
-   where id = ((select payload -> 'organization' ->> 'id')::uuid)),
+   where id = ((select payload -> 'organization' ->> 'id' from t_org)::uuid)),
   'unverified',
   'a new organization starts unverified (nothing is usable until staff approve it)'
 );
@@ -107,11 +107,11 @@ reset role;
 
 select public.cmd_invite_member(
   'bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb',
-  ((select payload -> 'organization' ->> 'id')::uuid),
+  ((select payload -> 'organization' ->> 'id' from t_org)::uuid),
   'manager',
   'manager@example.test',
   null,
-  repeat('ab', 32),
+  encode(sha256(convert_to(repeat('ab', 32), 'UTF8')), 'hex'),
   now() + interval '72 hours',
   'test-request-2',
   null
@@ -119,7 +119,7 @@ select public.cmd_invite_member(
 
 select is(
   (select invite_token_hash from public.organization_members where invited_email = 'manager@example.test'),
-  repeat('ab', 32),
+  encode(sha256(convert_to(repeat('ab', 32), 'UTF8')), 'hex'),
   'only the sha256 hash of the invite token is stored'
 );
 
@@ -141,6 +141,12 @@ select public.cmd_accept_invite(
   repeat('ab', 32),
   'test-request-3',
   null
+);
+
+select ok(
+  (select invite_token_hash is null from public.organization_members
+   where invited_email = 'manager@example.test'),
+  'the stored token hash is cleared once the invite is accepted'
 );
 
 select is(
@@ -272,7 +278,7 @@ values ('aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa', 'platform_admin');
 select public.cmd_submit_verification(
   'bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb',
   'organization',
-  ((select payload -> 'organization' ->> 'id')::uuid),
+  ((select payload -> 'organization' ->> 'id' from t_org)::uuid),
   '[{"kind":"commercial_registration","path":"bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb/cr.pdf"}]'::jsonb,
   '{}'::jsonb,
   null,
@@ -285,7 +291,7 @@ select throws_ok(
     $$ select public.cmd_decide_verification(%L::uuid, %L::uuid, 'approve', null, 'test', null) $$,
     'bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb',
     (select id from public.verification_requests where subject_id
-       = ((select payload -> 'organization' ->> 'id')::uuid))
+       = ((select payload -> 'organization' ->> 'id' from t_org)::uuid))
   ),
   '42501',
   null,
@@ -311,6 +317,135 @@ select throws_ok(
   '42501',
   null,
   'a client cannot forge a notification row'
+);
+
+
+-- ---------------------------------------------------------------------------
+-- 7. Ownership transfer and leaving
+-- ---------------------------------------------------------------------------
+
+-- Section 6 switched to the authenticated role; back to the owner role (and the temp fixtures).
+reset role;
+
+select throws_ok(
+  format(
+    $$ select public.cmd_transfer_ownership(%L::uuid, %L::uuid, %L::uuid, null, 'test', null) $$,
+    'eeeeeeee-5555-4555-8555-eeeeeeeeeeee',
+    ((select payload -> 'organization' ->> 'id' from t_org)::uuid),
+    (select id from public.organization_members where user_id = 'eeeeeeee-5555-4555-8555-eeeeeeeeeeee')
+  ),
+  '42501',
+  null,
+  'a manager cannot transfer ownership'
+);
+
+-- A verified company must keep a verified owner on record.
+update public.organizations set verification_status = 'verified'
+where id = ((select payload -> 'organization' ->> 'id' from t_org)::uuid);
+
+select throws_ok(
+  format(
+    $$ select public.cmd_transfer_ownership(%L::uuid, %L::uuid, %L::uuid, null, 'test', null) $$,
+    'bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb',
+    ((select payload -> 'organization' ->> 'id' from t_org)::uuid),
+    (select id from public.organization_members where user_id = 'eeeeeeee-5555-4555-8555-eeeeeeeeeeee')
+  ),
+  '23505',
+  null,
+  'ownership cannot move to an unverified member while the company is verified'
+);
+
+update public.profiles set verification_status = 'verified'
+where id = 'eeeeeeee-5555-4555-8555-eeeeeeeeeeee';
+
+select public.cmd_transfer_ownership(
+  'bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb',
+  ((select payload -> 'organization' ->> 'id' from t_org)::uuid),
+  (select id from public.organization_members where user_id = 'eeeeeeee-5555-4555-8555-eeeeeeeeeeee'),
+  'handover',
+  'test-request-7',
+  null
+);
+
+select is(
+  (select role::text from public.organization_members
+   where user_id = 'eeeeeeee-5555-4555-8555-eeeeeeeeeeee'),
+  'owner',
+  'the target member becomes the owner'
+);
+
+select is(
+  (select role::text from public.organization_members
+   where user_id = 'bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb'),
+  'manager',
+  'the previous owner is demoted to manager, never removed'
+);
+
+select is(
+  (select owner_id from public.organizations
+   where id = ((select payload -> 'organization' ->> 'id' from t_org)::uuid)),
+  'eeeeeeee-5555-4555-8555-eeeeeeeeeeee'::uuid,
+  'organizations.owner_id follows the transfer'
+);
+
+select is(
+  (select count(*)::int from public.organization_members
+   where org_id = ((select payload -> 'organization' ->> 'id' from t_org)::uuid) and role = 'owner'),
+  1,
+  'exactly one owner remains at all times'
+);
+
+select public.cmd_leave_organization(
+  'bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb',
+  ((select payload -> 'organization' ->> 'id' from t_org)::uuid),
+  'test-request-8',
+  null
+);
+
+select is(
+  (select status::text from public.organization_members
+   where user_id = 'bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb'),
+  'removed',
+  'a manager may leave the organization'
+);
+
+select throws_ok(
+  format(
+    $$ select public.cmd_leave_organization(%L::uuid, %L::uuid, 'test', null) $$,
+    'eeeeeeee-5555-4555-8555-eeeeeeeeeeee',
+    ((select payload -> 'organization' ->> 'id' from t_org)::uuid)
+  ),
+  '23505',
+  null,
+  'the owner cannot leave without handing the company over'
+);
+
+-- ---------------------------------------------------------------------------
+-- 8. Account deletion is a request, not a DELETE
+-- ---------------------------------------------------------------------------
+
+select throws_ok(
+  format($$ select public.cmd_request_account_deletion(%L::uuid, null, 'test', null) $$,
+         'eeeeeeee-5555-4555-8555-eeeeeeeeeeee'),
+  '23505',
+  null,
+  'an owner cannot delete an account that still owns an organization'
+);
+
+select public.cmd_request_account_deletion('aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa', 'leaving', 'test-request-9', null);
+
+select ok(
+  (select deletion_requested_at is not null from public.profiles
+   where id = 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa'),
+  'the deletion request is recorded on the profile'
+);
+
+select public.cmd_cancel_account_deletion('aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa', 'test-request-10', null);
+
+select ok(
+  (select deletion_requested_at is null from public.profiles
+   where id = 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa'),
+  'the request can be cancelled before staff act on it'
 );
 
 select * from finish();

@@ -22,3 +22,4 @@ export * from './api/client';
 export * from './i18n/locale';
 export * from './i18n/dictionaries';
 export * from './format';
+export * from './monitoring';

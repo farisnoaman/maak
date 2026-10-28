@@ -6,6 +6,7 @@ import { PreviewBanner } from '@/components/PreviewBanner';
 import { Badge } from '@/components/ui/Feedback';
 import { NotificationPanel } from '@/components/account/NotificationPanel';
 import { CreateOrganizationForm } from '@/components/account/CreateOrganizationForm';
+import { DeletionPanel } from '@/components/account/DeletionPanel';
 import { activeOrganization, loadAccountContext, type AccountContext } from '@/lib/account';
 import { previewAccount } from '@/lib/preview-data';
 
@@ -150,6 +151,14 @@ export default async function AccountPage({
               readAt: item.readAt,
               createdAt: item.createdAt,
             }))}
+          />
+        </section>
+
+        <section style={{ marginBlockStart: 'var(--space-8)' }}>
+          <DeletionPanel
+            locale={locale}
+            configured={!preview}
+            pending={Boolean(profile?.deletionRequestedAt)}
           />
         </section>
       </main>

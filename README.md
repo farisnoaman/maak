@@ -32,16 +32,17 @@ supabase/     Migrations, RLS, RPCs, cron, seed geography/plans, pgTAP tests
 
 ```bash
 npm install                 # web, mobile and core workspaces
-npm test                    # 176 unit tests, ~1.7s, no database required
+npm test                    # 214 unit tests, ~2s, no database required
 npm run lint                # ESLint + 5 custom architecture rules
 npm run check:guards        # boundaries, RTL, secrets, migration naming
-npm run test:coverage       # coverage thresholds (domain 100% lines)
+npm run test:coverage       # coverage thresholds (98% statements, 99% functions)
+npm run sql:check           # embedded PostgreSQL: migrations + pgTAP + type drift (no Docker)
 npm run build:functions     # bundle edge functions for deploy
 npm run dev                 # web on http://localhost:3000  (/ar and /en)
 
 supabase start              # requires Docker
 supabase db reset           # migrations + seed
-supabase test db            # pgTAP: write lockdown, RLS, append-only audit
+supabase test db            # the same pgTAP suites on the real stack (auth, storage, PostGIS)
 ```
 
 > No Docker in the build sandbox: `supabase start` and pgTAP run on your machine and in CI.

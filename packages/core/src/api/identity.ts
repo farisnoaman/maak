@@ -103,6 +103,27 @@ export const removeMemberSchema = z.object({
   reason: z.string().trim().max(500).optional(),
 });
 
+export const transferOwnershipSchema = z.object({
+  action: z.literal('organization.transferOwnership'),
+  orgId: uuid,
+  memberId: uuid,
+  reason: z.string().trim().max(500).optional(),
+});
+
+export const leaveOrganizationSchema = z.object({
+  action: z.literal('member.leave'),
+  orgId: uuid,
+});
+
+export const requestDeletionSchema = z.object({
+  action: z.literal('account.requestDeletion'),
+  reason: z.string().trim().max(500).optional(),
+});
+
+export const cancelDeletionSchema = z.object({
+  action: z.literal('account.cancelDeletion'),
+});
+
 export const submitVerificationSchema = z.object({
   action: z.literal('verification.submit'),
   subjectType: z.enum(['individual', 'organization']),
@@ -146,6 +167,10 @@ export const identityActionSchema = z.discriminatedUnion('action', [
   inviteMemberSchema,
   acceptInviteSchema,
   removeMemberSchema,
+  transferOwnershipSchema,
+  leaveOrganizationSchema,
+  requestDeletionSchema,
+  cancelDeletionSchema,
   submitVerificationSchema,
   decideVerificationSchema,
   grantRoleSchema,
