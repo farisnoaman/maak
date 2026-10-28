@@ -1,0 +1,78 @@
+# Copy this file to `.github/workflows/ci.yml` to activate CI.
+#
+# It lives in docs/ci/ because the GitHub App used by the coding agent lacks the `workflows`
+# permission, so it cannot push files under `.github/workflows/`. One `git mv` fixes that:
+#   mkdir -p .github/workflows && git mv docs/ci/ci.yml .github/workflows/ci.yml
+#
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Types, tests, guards
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Architecture promises are checked before code quality: a broken boundary is a design bug.
+      - name: Guard the architecture
+        run: npm run check:guards
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests (packages/core)
+        run: npm test
+
+      - name: Edge bundle builds and stays consistent
+        run: |
+          npm run build:functions
+          npm run check:functions
+
+      - name: Web production build
+        run: npm --workspace @maak/web run build
+
+  security:
+    name: Security scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Dependency audit (high and above)
+        run: npm audit --audit-level=high
+
+      - name: Service-role key must not reach a client bundle
+        run: |
+          npm --workspace @maak/web run build
+          if grep -rIl "SUPABASE_SERVICE_ROLE_KEY" apps/web/.next/static 2>/dev/null; then
+            echo "::error::service role key referenced in client bundle"
+            exit 1
+          fi
+          echo "clean"

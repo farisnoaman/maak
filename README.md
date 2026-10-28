@@ -31,15 +31,26 @@ supabase/     Migrations, RLS, RPCs, cron, seed geography/plans, pgTAP tests
 ## Local development
 
 ```bash
-pnpm install
-supabase start          # requires Docker
-pnpm db:reset           # migrations + seed
-pnpm dev                # web :3000, mobile via Expo
+npm install                 # installs web, mobile and core workspaces
+npm test                    # 100 unit tests, ~1s, no database required
+npm run check:guards        # architecture guards (boundaries, RTL, secrets)
+npm run build:functions     # bundle edge functions for deploy
+npm run dev                 # web on http://localhost:3000  (/ar and /en)
+
+supabase start              # requires Docker
+supabase db reset           # migrations + seed
 ```
 
-> No Docker in the current build sandbox: full pgTAP suites run in CI and on developer machines.
+> No Docker in the build sandbox: `supabase start` and pgTAP run on your machine and in CI.
 
 ## Status
 
-Planning complete (v1.1) — Phase 0 (foundations & bilingual shell) is next, pending go-ahead.
-See the progress tracker in `IMPLEMENTATION_PLAN.md`.
+**Phase 0 complete** — monorepo, bilingual web + mobile shells, shared domain with 100 passing
+tests, hardened database migrations, edge gateway, architecture guards and CI.
+See [`docs/phase-0-report.md`](./docs/phase-0-report.md) for the review checklist and the evidence.
+
+| Phase | Status |
+|---|---|
+| 0 Foundations & bilingual shell | ✅ awaiting review |
+| 1 Identity & Trust | next |
+| 2–12 | see [`IMPLEMENTATION_PLAN.md`](./IMPLEMENTATION_PLAN.md) |

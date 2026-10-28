@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "معك Maak",
+    "slug": "maak",
+    "scheme": "maak",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "ye.maak.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "يُستخدم موقعك لعرض تقدّم الرحلة للمسافرين. Your location is used to show trip progress to passengers.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "يُرسل موقع الرحلة كل ١٠ دقائق أثناء التشغيل. Trip location is sent every 10 minutes while a trip is running.",
+        "NSCameraUsageDescription": "لتصوير عدّاد المسافة وإيصالات الدفع. To photograph the odometer and payment receipts."
+      }
+    },
+    "android": {
+      "package": "ye.maak.app",
+      "permissions": ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION", "ACCESS_BACKGROUND_LOCATION", "CAMERA"]
+    },
+    "plugins": ["expo-router", "expo-localization", "expo-secure-store"],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "note": "Expo SDK 52. Run `npm install` then `npx expo start` on a machine with the Expo toolchain."
+    }
+  }
+}

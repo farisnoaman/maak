@@ -686,7 +686,7 @@ Phase 10 must follow 9. Phase 11 needs 5, 6, 9, 10. Phase 12 is last.
 
 | Phase | Name | Status | PR | Notes |
 |---|---|---|---|---|
-| 0 | Foundations & bilingual shell | 🚧 In progress | — | `packages/core` domain + 63 Vitest tests green; apps + edge skeleton next |
+| 0 | Foundations & bilingual shell | ✅ Complete (awaiting review) | — | 100 tests green · web `/ar` + `/en` live · 2 edge functions bundled · 4 hardened migrations · guards + CI |
 | 1 | Identity & Trust | ⬜ | | |
 | 2 | Geography & Places | ⬜ | | |
 | 3 | Fleet | ⬜ | | quota hooks wired (Basic defaults) |

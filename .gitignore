@@ -22,3 +22,6 @@ supabase/.temp/
 coverage/
 .turbo/
 .DS_Store
+
+# edge bundles are build artefacts (CI rebuilds them)
+supabase/functions/_bundled/

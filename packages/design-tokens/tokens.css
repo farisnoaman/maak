@@ -1,0 +1,94 @@
+/*
+ * Maak design tokens.
+ *
+ * Every value is a CSS custom property so web (Tailwind/CSS) and mobile (NativeWind)
+ * consume one source. Layout rules in apps must use logical properties
+ * (margin-inline, padding-inline, inset-inline) so RTL and LTR cost nothing to maintain.
+ */
+
+:root {
+  color-scheme: light dark;
+
+  --brand-50: #ecfdf5;
+  --brand-100: #d1fae5;
+  --brand-300: #6ee7b7;
+  --brand-500: #0f9d76;
+  --brand-600: #0b7f60;
+  --brand-700: #0a6550;
+  --brand-900: #053b30;
+
+  --sand-50: #fdfaf3;
+  --sand-100: #f8f1e0;
+  --sand-300: #e8d5a8;
+  --sand-500: #c9a227;
+
+  --ink-900: #0b1220;
+  --ink-800: #16202f;
+  --ink-700: #243244;
+  --ink-600: #3d4d61;
+  --ink-500: #5b6b80;
+  --ink-400: #8592a5;
+
+  --surface-base: #ffffff;
+  --surface-muted: #f6f8f7;
+  --surface-sunken: #eef2f0;
+
+  --state-success: #0f9d76;
+  --state-warning: #b7791f;
+  --state-danger: #b4232a;
+  --state-info: #1d5f9e;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 26px;
+  --radius-pill: 999px;
+
+  --font-arabic: 'Cairo', 'IBM Plex Sans Arabic', 'Segoe UI', Tahoma, sans-serif;
+  --font-latin: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  --shadow-sm: 0 1px 2px rgba(11, 18, 32, 0.06);
+  --shadow-md: 0 6px 24px rgba(11, 18, 32, 0.08);
+  --shadow-lg: 0 18px 48px rgba(11, 18, 32, 0.12);
+
+  --content-max: 1120px;
+  --tap-target: 44px;
+}
+
+:root[dir='rtl'] {
+  --font-ui: var(--font-arabic);
+}
+
+:root[dir='ltr'] {
+  --font-ui: var(--font-latin);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface-base: #0b1220;
+    --surface-muted: #121c2b;
+    --surface-sunken: #0f1724;
+    --ink-900: #f4f7fa;
+    --ink-800: #e3e9f1;
+    --ink-700: #c8d3e0;
+    --ink-600: #a7b6c9;
+    --ink-500: #8497ae;
+    --ink-400: #6a7f97;
+    --brand-50: #06251d;
+    --brand-100: #083026;
+    --shadow-md: 0 6px 24px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 18px 48px rgba(0, 0, 0, 0.5);
+  }
+}
