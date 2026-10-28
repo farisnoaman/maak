@@ -38,6 +38,10 @@ export const ar = {
   'home.foundationI18n': 'عربي وإنجليزي بجدارة',
   'home.foundationI18nDesc':
     'تخطيط RTL/LTR كامل، وكل نص موجود في اللغتين، والبناء يفشل إذا نقص أي مفتاح.',
+  // Landing-page figures. `home.statTests` mirrors `npm test`; keep it honest when the suite grows.
+  'home.statTests': 'اختبار وحدة ناجح',
+  'home.statLocales': 'لغات (RTL + LTR)',
+  'home.statWritePath': 'بوابة كتابة واحدة',
 
   'calc.title': 'جرّب حساب السعر',
   'calc.subtitle': 'نفس الدالة التي تعمل على الخادم، تعمل الآن في متصفحك.',
@@ -169,6 +173,9 @@ export const en: Record<TranslationKey, string> = {
   'home.foundationI18n': 'Arabic and English, properly',
   'home.foundationI18nDesc':
     'Full RTL and LTR layouts, every string in both languages, and the build fails when a key is missing.',
+  'home.statTests': 'unit tests passing',
+  'home.statLocales': 'locales (RTL + LTR)',
+  'home.statWritePath': 'one write path',
 
   'calc.title': 'Try the fare calculation',
   'calc.subtitle':

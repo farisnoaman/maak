@@ -63,22 +63,16 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
               </div>
               <div className="hero__stats">
                 <div>
-                  <div className="stat__value num">100</div>
-                  <div className="stat__label">
-                    {locale === 'ar' ? 'اختبار وحدة ناجح' : 'unit tests passing'}
-                  </div>
+                  <div className="stat__value num">131</div>
+                  <div className="stat__label">{t('home.statTests')}</div>
                 </div>
                 <div>
                   <div className="stat__value num">2</div>
-                  <div className="stat__label">
-                    {locale === 'ar' ? 'لغات (RTL + LTR)' : 'locales (RTL + LTR)'}
-                  </div>
+                  <div className="stat__label">{t('home.statLocales')}</div>
                 </div>
                 <div>
                   <div className="stat__value num">{formatMoney(money(0), { locale })}</div>
-                  <div className="stat__label">
-                    {locale === 'ar' ? 'بوابة كتابة واحدة' : 'one write path'}
-                  </div>
+                  <div className="stat__label">{t('home.statWritePath')}</div>
                 </div>
               </div>
             </div>
