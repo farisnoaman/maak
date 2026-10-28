@@ -7,7 +7,7 @@ import type { Locale } from './locale';
 export const ar = {
   'common.appName': 'معك',
   'common.brandMark': 'م',
-  'common.footerStack': 'المرحلة 0 · Next.js · Expo · Supabase',
+  'common.footerStack': 'المرحلة 1 · Next.js · Expo · Supabase',
   'common.tagline': 'منصة إدارة الرحلات في اليمن',
   'common.language': 'اللغة',
   'common.arabic': 'العربية',
@@ -29,6 +29,8 @@ export const ar = {
   'home.verified': 'موثّق',
   'home.sectionConsoles': 'المنصات',
   'home.sectionFoundations': 'الأساس التقني',
+  'home.eyebrow': 'المرحلة 1 — الهوية والتوثيق',
+  'home.sectionIdentity': 'الهوية والتوثيق',
   'home.foundationSecurity': 'بوابة كتابة واحدة',
   'home.foundationSecurityDesc':
     'كل تعديل يمرّ عبر Edge Function تتحقق من الصلاحيات، ثم عملية SQL واحدة ذرّية. لا يوجد مسار كتابة آخر.',
@@ -313,7 +315,7 @@ export type TranslationKey = keyof typeof ar;
 export const en: Record<TranslationKey, string> = {
   'common.appName': 'Maak',
   'common.brandMark': 'M',
-  'common.footerStack': 'Phase 0 · Next.js · Expo · Supabase',
+  'common.footerStack': 'Phase 1 · Next.js · Expo · Supabase',
   'common.tagline': 'Trip management for Yemen',
   'common.language': 'Language',
   'common.arabic': 'العربية',
@@ -335,6 +337,8 @@ export const en: Record<TranslationKey, string> = {
   'home.verified': 'Verified',
   'home.sectionConsoles': 'Surfaces',
   'home.sectionFoundations': 'Technical foundations',
+  'home.eyebrow': 'Phase 1 — identity & verification',
+  'home.sectionIdentity': 'Identity & verification',
   'home.foundationSecurity': 'One write path',
   'home.foundationSecurityDesc':
     'Every change goes through an Edge Function that checks permissions, then a single atomic SQL command. There is no other way to write.',

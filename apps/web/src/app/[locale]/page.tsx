@@ -49,7 +49,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
             <div>
               <span className="eyebrow">
                 <span aria-hidden="true">◆</span>
-                {t('common.phase')} 0 — {t('home.sectionFoundations')}
+                {t('home.eyebrow')}
               </span>
               <h1>{t('home.heroTitle')}</h1>
               <p className="lead">{t('home.heroSubtitle')}</p>
@@ -63,7 +63,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
               </div>
               <div className="hero__stats">
                 <div>
-                  <div className="stat__value num">131</div>
+                  <div className="stat__value num">214</div>
                   <div className="stat__label">{t('home.statTests')}</div>
                 </div>
                 <div>
