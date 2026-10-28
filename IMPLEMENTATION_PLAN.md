@@ -49,6 +49,11 @@ Rules that every phase must respect:
 - **Business math in `packages/core`, never in SQL.** SQL only asserts invariants and writes atomically.
 - **Reads bypass the gateway** (PostgREST + RLS): cheap, cacheable, no business logic allowed.
 - **Validation is deliberately redundant:** zod (good UX errors) + DB constraints (last line of defense).
+- **Client prices are claims, not facts:** the command recomputes the fare from trip/stop rows and rejects
+  mismatches with `PRICE_CHANGED` (ADR-24).
+- **Geometry in PostGIS, money in TypeScript.** No distance math in Deno; no ledger math in SQL (ADR-22).
+- **Bundle before deploy:** `pnpm build:functions` inlines `packages/core`; deploying unbundled fails CI
+  (ADR-21). Full rationale: `docs/adr/0001-backend-architecture.md`.
 
 ## Working agreement
 
@@ -90,15 +95,19 @@ foundation baked in from the first commit (RTL retrofits are the expensive kind)
   zod parsing + error mapping, CORS allow-list, per-actor rate limit, `Idempotency-Key` handling,
   request logging, and a `db.rpc()` wrapper that **refuses a second call per request**.
   One reference command (`health` + `me`) proving the pattern end-to-end.
-- **Database skeleton** (`supabase/database/`): schemas `public` / `app` / `audit`, extensions
+- **Database skeleton** (CLI-native `supabase/migrations`): schemas `public` / `app` / `audit`, extensions
   (`postgis`, `pg_trgm`, `pgcrypto`), migration convention, `audit.log`, `app.set_updated_at()`,
   a `hardening.sql` migration that **revokes all client write grants** and sets `FORCE ROW LEVEL SECURITY`
   defaults, plus `db:types` with a committed `database.types.ts`.
 - Auth shell (web SSR cookies + mobile SecureStore): phone OTP + email/password, protected-route middleware,
   locale-aware redirects.
 - App shells: public / operator / staff / admin layouts (web); tab shell + auth screens (mobile).
-- CI: typecheck, lint, **Vitest**, `db lint`, types drift, build, **bundle grep for `service_role`**, i18n parity.
-- Sentry, `.env.example`, README quickstart, ADR-017/018/019 committed as `docs/adr/`.
+- **Function bundling** (`pnpm build:functions`): esbuild inlines `packages/core` + `_shared` into each
+  edge function before deploy (ADR-21), with a CI check that the bundle is fresh.
+- CI: typecheck, lint, **Vitest (90% on `domain/`)**, `db lint`, types drift, build,
+  **bundle grep for `service_role`**, i18n parity.
+- Sentry, `.env.example`, README quickstart, and `docs/adr/0001-backend-architecture.md` (the comparison
+  that produced this architecture) committed.
 - **Preview note:** this sandbox has no Docker/Supabase CLI, so the live preview runs the web shell against a
   typed mock gateway; DB + pgTAP run on your machine/CI via `supabase start`.
 
@@ -134,7 +143,8 @@ foundation baked in from the first commit (RTL retrofits are the expensive kind)
   one handler fails a unit test and the lint rule.
 - `anon`/`authenticated` cannot `INSERT/UPDATE/DELETE` any table (pgTAP proves it, and the grant audit script reports zero).
 - CI fails on: missing i18n key, `margin-left`/`float:right` in feature code, `service_role` in a client bundle,
-  a React/RN import inside `packages/core`, or DB/types drift.
+  a React/RN import inside `packages/core`, a stale function bundle, or DB/types drift.
+- `packages/core/src/domain/**` line coverage ≥ 90%, and `policy.ts` ≥ 95% (authorization boundary).
 - Landing page: Lighthouse a11y ≥ 95 in both directions; ≤ 200 KB initial JS.
 
 **Estimate:** 6–7 days (slightly longer than v1.1: the gateway + core test harness are new).

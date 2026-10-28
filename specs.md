@@ -684,17 +684,17 @@ maak/
 │  │  └─ tests/                  #    Vitest unit + property tests
 │  ├─ design-tokens/             # colors, spacing, typography, elevation
 │  └─ config/                    # eslint (boundaries, rtl, i18n), tsconfig, prettier, vitest presets
-├─ supabase/
+├─ supabase/                     # CLI-native layout (no path overrides)
 │  ├─ functions/                 # ⭐ Edge gateway — the only write path
 │  │  ├─ _shared/                # auth, actor resolution, zod adapter, error mapping,
 │  │  │                          #   rate limit, cors, request audit, db client
 │  │  ├─ trips-create/index.ts   # one function per command (thin: validate → authorize →
 │  │  ├─ booking-accept/…        #   call package functions → one atomic rpc)
-│  │  └─ notify/                 # outbound side-effects (push/email/WA)
-│  ├─ database/
-│  │  ├─ migrations/             # numbered, forward-only (tables, RLS, constraints, commands)
-│  │  ├─ seed/                   # geography CSVs, plans, providers, demo
-│  │  └─ tests/                  # pgTAP: constraints, RLS isolation, atomicity
+│  │  ├─ notify/                 # outbound side-effects (push/email/WA)
+│  │  └─ _bundled/               # build output: packages/core inlined for deploy (gitignored)
+│  ├─ migrations/                # numbered, forward-only: tables, RLS, constraints, cmd_* fns
+│  ├─ tests/                     # pgTAP: constraints, RLS isolation, atomicity, concurrency
+│  └─ seed.sql                   # geography, plans, providers, settings (idempotent)
 ├─ docs/                         # ADRs, runbooks, guides (AR)
 ├─ specs.md
 └─ IMPLEMENTATION_PLAN.md
@@ -791,6 +791,27 @@ grant execute on function cmd_trip_create(uuid, ...) to service_role;
 | Two places to change when a rule changes (zod + constraint) | Constraint is intentionally dumb; zod is the source of truth for UX |
 | Edge functions are Deno, not Node | Keep them dependency-light (`_shared/` only), no native modules |
 | Easier to break atomicity if someone adds a second `rpc()` call | Lint/review rule: exactly one `db.rpc` per command handler (asserted by an ESLint rule + test) |
+
+**Deployment mechanics (learned the hard way — see ADR-0001)**
+
+- `supabase functions deploy` uploads **only the function's own folder**. A workspace import such as
+  `@maak/core` resolves locally with `supabase functions serve` but **fails in production**.
+  Therefore: `pnpm build:functions` runs esbuild, inlines `packages/core` + `_shared` into each function,
+  and CI deploys the bundled output. Deploying without a fresh bundle fails the pipeline.
+- Bundling also shrinks cold starts (one file, no workspace resolution at runtime).
+- `supabase/` uses the CLI-native layout (no custom migration paths) so `db push`, `db reset`,
+  `db diff` and `functions serve` all behave as documented.
+
+**Boundary between TypeScript and PostGIS**
+
+| Task | Where |
+|---|---|
+| Fare, discount, refund, commission, quota, policy, state transitions | TypeScript (`packages/core`) |
+| "Which places are near this point", "which stop is next", "how far along the route" | PostGIS (`<->` KNN, `ST_DWithin`, `ST_LineLocatePoint`, `ST_Length`) |
+| Number/date/currency formatting for display | TypeScript (`format.ts`, locale-aware) |
+
+Pulling coordinates into Deno to re-implement distance is slower, untestable at the edges, and loses the
+GIST indexes. PostGIS is the right tool for geometry; it is the wrong tool for ledgers.
 
 ### 9.5 Environments
 
@@ -909,6 +930,10 @@ background location; EAS/OTA), plus:
 | Contract | generated DB types + CI drift | Clients never desync from the schema |
 | Load | k6 | search, ping ingest, booking race, confirmation volume |
 | Security | linter + checklist + bundle grep | write grants revoked, definer functions, `service_role` never in a client bundle |
+
+**Coverage policy:** `packages/core/src/domain/**` ≥ 90% lines/branches (enforced in Vitest config);
+`policy.ts` effectively 100% (it is the authorization boundary); edge handlers covered by unit tests with a
+fake DB adapter; SQL covered by pgTAP. 100% *global* coverage is not a goal — it rewards assertion-free tests.
 
 **Test pyramid:** ~70% Vitest (pure domain), ~20% integration (real DB), ~10% e2e/visual.
 CI per PR: typecheck, lint (boundaries/RTL/i18n), **Vitest**, pgTAP, `db diff` empty, Playwright smoke
@@ -1086,3 +1111,10 @@ All seeds idempotent (upsert by `code`/`slug`/`idempotency_key`) so environments
   is permitted on the read path — anything non-trivial becomes a published SQL view.
 - **ADR-20** **Business math never exists in SQL**, and business *decisions* never exist in SQL either;
   SQL enforces invariants and moves bytes atomically. Two implementations of a rule is a bug.
+- **ADR-21** **Edge functions are bundled before deploy** (esbuild inlines `packages/core`); the CLI only
+  uploads the function folder, so workspace imports work locally and break in production otherwise.
+- **ADR-22** **Geospatial work stays in PostGIS**; TypeScript handles money, policy and presentation only.
+- **ADR-23** **CLI-native Supabase layout** (`supabase/migrations`, `functions`, `tests`, `seed.sql`) —
+  no custom paths, so every CLI command keeps working.
+- **ADR-24** **Client-supplied prices are claims, not facts**: the command recomputes the fare from
+  trip/stop rows inside the transaction and rejects mismatches (`PRICE_CHANGED`).
