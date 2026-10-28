@@ -31,26 +31,34 @@ supabase/     Migrations, RLS, RPCs, cron, seed geography/plans, pgTAP tests
 ## Local development
 
 ```bash
-npm install                 # installs web, mobile and core workspaces
-npm test                    # 100 unit tests, ~1s, no database required
-npm run check:guards        # architecture guards (boundaries, RTL, secrets)
+npm install                 # web, mobile and core workspaces
+npm test                    # 131 unit tests, ~1s, no database required
+npm run lint                # ESLint + 5 custom architecture rules
+npm run check:guards        # boundaries, RTL, secrets, migration naming
+npm run test:coverage       # coverage thresholds (domain 100% lines)
 npm run build:functions     # bundle edge functions for deploy
 npm run dev                 # web on http://localhost:3000  (/ar and /en)
 
 supabase start              # requires Docker
 supabase db reset           # migrations + seed
+supabase test db            # pgTAP: write lockdown, RLS, append-only audit
 ```
 
 > No Docker in the build sandbox: `supabase start` and pgTAP run on your machine and in CI.
 
 ## Status
 
-**Phase 0 complete** — monorepo, bilingual web + mobile shells, shared domain with 100 passing
-tests, hardened database migrations, edge gateway, architecture guards and CI.
-See [`docs/phase-0-report.md`](./docs/phase-0-report.md) for the review checklist and the evidence.
+**Phase 0 complete and audited** — monorepo, bilingual web + mobile shells, shared domain with
+**131 passing tests**, hardened database migrations, edge gateway (auth, validation, rate limits,
+single-write guard, audit), ESLint + Prettier with five custom architecture rules, UI primitives,
+auth shell and error boundaries.
+
+- [`docs/phase-0-audit.md`](./docs/phase-0-audit.md) — every task and acceptance criterion, verified
+- [`docs/phase-0-report.md`](./docs/phase-0-report.md) — narrative walkthrough and decisions
+- [`docs/adr/0001-backend-architecture.md`](./docs/adr/0001-backend-architecture.md) — why the write path looks like this
 
 | Phase | Status |
 |---|---|
-| 0 Foundations & bilingual shell | ✅ awaiting review |
+| 0 Foundations & bilingual shell | ✅ complete (audited) |
 | 1 Identity & Trust | next |
 | 2–12 | see [`IMPLEMENTATION_PLAN.md`](./IMPLEMENTATION_PLAN.md) |

@@ -6,7 +6,7 @@
  * a build is slow or flaky. Each check fails the build with an actionable message.
  */
 
-import { readdir, readFile, stat } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import { dirname, extname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -23,7 +23,12 @@ async function walk(dir, predicate, out = []) {
   for (const entry of entries) {
     const full = join(dir, entry.name);
     if (entry.isDirectory()) {
-      if (['node_modules', '.next', 'dist', 'build', '_bundled', '.git', 'coverage'].includes(entry.name)) continue;
+      if (
+        ['node_modules', '.next', 'dist', 'build', '_bundled', '.git', 'coverage'].includes(
+          entry.name,
+        )
+      )
+        continue;
       await walk(full, predicate, out);
     } else if (predicate(full)) {
       out.push(full);
@@ -38,7 +43,13 @@ function rel(path) {
 
 /* 1. packages/core stays framework-free (ADR-01). */
 const coreFiles = await walk(join(root, 'packages', 'core', 'src'), (f) => f.endsWith('.ts'));
-const FORBIDDEN = [/from ['"]react['"]/, /from ['"]react-native['"]/, /from ['"]next/, /from ['"]expo/, /from ['"]@supabase\//];
+const FORBIDDEN = [
+  /from ['"]react['"]/,
+  /from ['"]react-native['"]/,
+  /from ['"]next/,
+  /from ['"]expo/,
+  /from ['"]@supabase\//,
+];
 for (const file of coreFiles) {
   const source = await readFile(file, 'utf8');
   for (const pattern of FORBIDDEN) {
@@ -49,7 +60,9 @@ for (const file of coreFiles) {
 }
 
 /* 2. No physical-direction CSS: RTL must stay free (ADR-16). */
-const styleFiles = await walk(join(root, 'apps'), (f) => ['.css', '.scss', '.tsx'].includes(extname(f)));
+const styleFiles = await walk(join(root, 'apps'), (f) =>
+  ['.css', '.scss', '.tsx'].includes(extname(f)),
+);
 const PHYSICAL = [
   [/\bmargin-(left|right)\s*:/, 'margin-inline-start/end'],
   [/\bpadding-(left|right)\s*:/, 'padding-inline-start/end'],
@@ -67,15 +80,18 @@ for (const file of styleFiles) {
     if (/--(left|right)/.test(lineText)) return;
     for (const [pattern, replacement] of PHYSICAL) {
       if (pattern.test(lineText)) {
-        failures.push(`${rel(file)}:${index + 1}: use a logical property (${replacement}) — ${lineText.trim()}`);
+        failures.push(
+          `${rel(file)}:${index + 1}: use a logical property (${replacement}) — ${lineText.trim()}`,
+        );
       }
     }
   });
 }
 
 /* 3. The service role key must never reach a client bundle (ADR-17). */
-const clientArtefacts = await walk(join(root, 'apps'), (f) =>
-  f.endsWith('.js') && (f.includes('.next/static') || f.includes('/dist/')),
+const clientArtefacts = await walk(
+  join(root, 'apps'),
+  (f) => f.endsWith('.js') && (f.includes('.next/static') || f.includes('/dist/')),
 );
 for (const file of clientArtefacts) {
   const source = await readFile(file, 'utf8');
@@ -88,7 +104,9 @@ for (const file of clientArtefacts) {
 const functionDirs = await readdir(join(root, 'supabase', 'functions'), { withFileTypes: true });
 for (const entry of functionDirs) {
   if (!entry.isDirectory() || ['_shared', '_bundled'].includes(entry.name)) continue;
-  const files = await walk(join(root, 'supabase', 'functions', entry.name), (f) => f.endsWith('.ts'));
+  const files = await walk(join(root, 'supabase', 'functions', entry.name), (f) =>
+    f.endsWith('.ts'),
+  );
   for (const file of files) {
     const source = await readFile(file, 'utf8');
     for (const match of source.matchAll(/from ['"](\.\.\/\.\.\/(?!packages)[^'"]+)['"]/g)) {
@@ -100,11 +118,16 @@ for (const entry of functionDirs) {
 }
 
 /* 5. No `select('*')` in edge functions: response shapes must be explicit (§11). */
-const edgeFiles = await walk(join(root, 'supabase', 'functions'), (f) => f.endsWith('.ts') && !f.includes('_bundled'));
+const edgeFiles = await walk(
+  join(root, 'supabase', 'functions'),
+  (f) => f.endsWith('.ts') && !f.includes('_bundled'),
+);
 for (const file of edgeFiles) {
   const source = await readFile(file, 'utf8');
   if (/\.select\(\s*['"]\*['"]\s*\)/.test(source)) {
-    failures.push(`${rel(file)}: select('*') leaks new columns into responses; enumerate the fields`);
+    failures.push(
+      `${rel(file)}: select('*') leaks new columns into responses; enumerate the fields`,
+    );
   }
 }
 

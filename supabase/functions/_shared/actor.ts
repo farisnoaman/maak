@@ -1,8 +1,8 @@
 /**
- * Actor resolution: JWT subject → the shape `packages/core/policy.ts` expects.
+ * Actor resolution: JWT subject → the shape `@maak/core` policy expects.
  *
- * Roles are re-read on **every** request from the database. Nothing is cached and nothing is
- * trusted from the token's claims, so revoking a role takes effect on the very next call.
+ * Roles, membership, geo scope and plan are re-read on **every** request. Nothing is cached and
+ * nothing is trusted from token claims, so revoking a role takes effect on the next call.
  */
 
 import type { Actor, PlanCode, Role, VerificationStatus } from '@maak/core';
@@ -13,6 +13,7 @@ export interface ResolvedActor {
   readonly actor: Actor;
   readonly orgIds: string[];
   readonly hasGeoScope: boolean;
+  readonly preferredLanguage: 'ar' | 'en';
 }
 
 interface ProfileRow {
@@ -23,11 +24,16 @@ interface ProfileRow {
 export async function resolveActor(userId: string): Promise<ResolvedActor> {
   const db = serviceClient();
 
-  const [profileResult, rolesResult, orgResult, geoResult] = await Promise.all([
-    db.from('profiles').select('verification_status, preferred_language').eq('id', userId).maybeSingle(),
+  const [profileResult, rolesResult, orgResult, geoResult, driverResult] = await Promise.all([
+    db
+      .from('profiles')
+      .select('verification_status, preferred_language')
+      .eq('id', userId)
+      .maybeSingle(),
     db.from('user_roles').select('role').eq('user_id', userId).is('revoked_at', null),
     db.from('organization_members').select('org_id').eq('user_id', userId).eq('status', 'active'),
     db.from('geo_assignments').select('id').eq('user_id', userId).limit(1),
+    db.from('driver_profiles').select('id').eq('user_id', userId).eq('is_active', true).limit(1),
   ]);
 
   if (profileResult.error) throw internal(profileResult.error.message);
@@ -38,9 +44,9 @@ export async function resolveActor(userId: string): Promise<ResolvedActor> {
   const orgIds = (orgResult.data ?? []).map((row) => row.org_id as string);
   const hasGeoScope = (geoResult.data ?? []).length > 0;
 
-  // Org membership maps onto operator roles; the org's own plan is resolved per-resource later.
   const roles: Role[] = ['passenger', ...platformRoles];
   if (orgIds.length > 0) roles.push('org_owner');
+  if ((driverResult.data ?? []).length > 0) roles.push('driver');
 
   const actor: Actor = {
     userId,
@@ -51,29 +57,14 @@ export async function resolveActor(userId: string): Promise<ResolvedActor> {
     hasGeoScope,
   };
 
-  return { actor, orgIds, hasGeoScope };
+  return { actor, orgIds, hasGeoScope, preferredLanguage: profile.preferred_language };
 }
 
 /**
- * Phase 0 default: Basic. Phase 10 replaces this body with a subscriptions lookup.
- * It deliberately defaults to the *lowest* plan, never to unlimited (BR-37).
+ * Phase 0 default: Basic — the *lowest* plan, never unlimited (BR-37).
+ * Phase 10 replaces this body with a subscriptions lookup; the signature stays identical, so no
+ * caller changes.
  */
 async function resolvePlan(_orgIds: string[]): Promise<PlanCode> {
   return 'basic';
-}
-
-/** Detects the driver role from an actual driver profile row, not from a claim. */
-export async function resolveDriverActor(userId: string): Promise<ResolvedActor> {
-  const resolved = await resolveActor(userId);
-  const { data } = await serviceClient()
-    .from('driver_profiles')
-    .select('id')
-    .eq('user_id', userId)
-    .eq('is_active', true)
-    .maybeSingle();
-
-  if (data) {
-    return { ...resolved, actor: { ...resolved.actor, roles: [...resolved.actor.roles, 'driver'] } };
-  }
-  return resolved;
 }

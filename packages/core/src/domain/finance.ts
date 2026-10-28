@@ -29,8 +29,7 @@ export function computeCommission(grossMinor: number, rule: CommissionRule): num
   if (!Number.isSafeInteger(grossMinor) || grossMinor < 0) {
     throw new CommissionError(`Gross must be a non-negative integer, got ${grossMinor}`);
   }
-  let amount =
-    rule.kind === 'percent' ? percentOf(grossMinor, rule.value) : Math.trunc(rule.value);
+  let amount = rule.kind === 'percent' ? percentOf(grossMinor, rule.value) : Math.trunc(rule.value);
 
   if (rule.minMinor != null) amount = Math.max(amount, rule.minMinor);
   if (rule.maxMinor != null) amount = Math.min(amount, rule.maxMinor);

@@ -44,7 +44,12 @@ describe('per-seat pricing', () => {
 
 describe('whole-trip pricing', () => {
   it('charges the whole-trip price regardless of seats', () => {
-    const p = computePrice({ ...base, bookingMode: 'whole_trip', seats: 14, wholeTripPriceMinor: 60_000 });
+    const p = computePrice({
+      ...base,
+      bookingMode: 'whole_trip',
+      seats: 14,
+      wholeTripPriceMinor: 60_000,
+    });
     expect(p.subtotalMinor).toBe(60_000);
   });
 
@@ -78,8 +83,20 @@ describe('discounts', () => {
   });
 
   it('applies a whole-trip discount only to whole-trip bookings', () => {
-    expect(computeDiscountMinor(10_000, { kind: 'percent', value: 500, scope: 'whole_trip' }, 'per_seat')).toBe(0);
-    expect(computeDiscountMinor(10_000, { kind: 'percent', value: 500, scope: 'whole_trip' }, 'whole_trip')).toBe(500);
+    expect(
+      computeDiscountMinor(
+        10_000,
+        { kind: 'percent', value: 500, scope: 'whole_trip' },
+        'per_seat',
+      ),
+    ).toBe(0);
+    expect(
+      computeDiscountMinor(
+        10_000,
+        { kind: 'percent', value: 500, scope: 'whole_trip' },
+        'whole_trip',
+      ),
+    ).toBe(500);
   });
 
   it('reports components for the UI', () => {

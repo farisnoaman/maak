@@ -1,0 +1,7 @@
+node_modules
+.next
+dist
+coverage
+supabase/functions/_bundled
+package-lock.json
+*.md

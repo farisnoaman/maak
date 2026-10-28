@@ -61,7 +61,8 @@ export interface PriceBreakdown {
 }
 
 export class PricingError extends Error {
-  readonly code: 'INVALID_SEATS' | 'MISSING_WHOLE_TRIP_PRICE' | 'MODE_NOT_ALLOWED' | 'INVALID_PRICE';
+  readonly code:
+    'INVALID_SEATS' | 'MISSING_WHOLE_TRIP_PRICE' | 'MODE_NOT_ALLOWED' | 'INVALID_PRICE';
   constructor(code: PricingError['code'], message: string) {
     super(message);
     this.name = 'PricingError';
@@ -71,7 +72,10 @@ export class PricingError extends Error {
 
 function assertNonNegative(value: number, field: string): void {
   if (!Number.isSafeInteger(value) || value < 0) {
-    throw new PricingError('INVALID_PRICE', `${field} must be a non-negative integer, got ${value}`);
+    throw new PricingError(
+      'INVALID_PRICE',
+      `${field} must be a non-negative integer, got ${value}`,
+    );
   }
 }
 

@@ -109,7 +109,10 @@ export class ApiClient {
     }
 
     const failure = toApiFailure(response.body);
-    return fail({ ...failure, code: failure.code === 'INTERNAL' && response.status === 429 ? 'RATE_LIMITED' : failure.code });
+    return fail({
+      ...failure,
+      code: failure.code === 'INTERNAL' && response.status === 429 ? 'RATE_LIMITED' : failure.code,
+    });
   }
 }
 

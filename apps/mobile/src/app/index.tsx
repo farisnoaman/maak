@@ -47,15 +47,21 @@ export default function HomeScreen() {
         <Text style={styles.cardTitle}>{t('calc.title')}</Text>
         <View style={styles.row}>
           <Text style={styles.label}>{t('calc.subtotal')}</Text>
-          <Text style={styles.value}>{formatMinor(breakdown.subtotalMinor, 'YER', { locale })}</Text>
+          <Text style={styles.value}>
+            {formatMinor(breakdown.subtotalMinor, 'YER', { locale })}
+          </Text>
         </View>
         <View style={styles.row}>
           <Text style={styles.label}>{t('calc.discountAmount')}</Text>
-          <Text style={styles.value}>{formatMinor(breakdown.discountMinor, 'YER', { locale })}</Text>
+          <Text style={styles.value}>
+            {formatMinor(breakdown.discountMinor, 'YER', { locale })}
+          </Text>
         </View>
         <View style={[styles.row, styles.rowTotal]}>
           <Text style={styles.totalLabel}>{t('calc.total')}</Text>
-          <Text style={styles.totalValue}>{formatMinor(breakdown.totalMinor, 'YER', { locale })}</Text>
+          <Text style={styles.totalValue}>
+            {formatMinor(breakdown.totalMinor, 'YER', { locale })}
+          </Text>
         </View>
       </View>
 

@@ -85,7 +85,9 @@ async function main() {
       process.exit(1);
     }
     if (JSON.stringify(existing.functions) !== JSON.stringify(manifest)) {
-      console.error('✗ Edge bundle is stale relative to sources. Re-run `npm run build:functions`.');
+      console.error(
+        '✗ Edge bundle is stale relative to sources. Re-run `npm run build:functions`.',
+      );
       process.exit(1);
     }
     console.log('✓ Edge bundle is up to date.');

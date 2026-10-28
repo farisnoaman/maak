@@ -3,7 +3,7 @@
 # It lives in docs/ci/ because the GitHub App used by the coding agent lacks the `workflows`
 # permission, so it cannot push files under `.github/workflows/`. One `git mv` fixes that:
 #   mkdir -p .github/workflows && git mv docs/ci/ci.yml .github/workflows/ci.yml
-#
+
 name: CI
 
 on:
@@ -20,7 +20,7 @@ permissions:
 
 jobs:
   quality:
-    name: Types, tests, guards
+    name: Guards, types, tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -33,23 +33,54 @@ jobs:
 
       - run: npm ci
 
-      # Architecture promises are checked before code quality: a broken boundary is a design bug.
-      - name: Guard the architecture
+      # Architecture promises first: a broken boundary is a design bug, not a style nit.
+      - name: Guards (boundaries, RTL, secrets, migrations)
         run: npm run check:guards
 
-      - name: Typecheck
+      - name: Lint (ESLint + custom architecture rules)
+        run: npm run lint
+
+      - name: Formatting
+        run: npm run format:check
+
+      - name: Typecheck all workspaces
         run: npm run typecheck
 
-      - name: Unit tests (packages/core)
-        run: npm test
+      - name: Unit tests with coverage thresholds
+        run: npm run test:coverage
 
-      - name: Edge bundle builds and stays consistent
+      - name: Database types match migrations
+        run: npm run db:types:check
+
+      - name: Edge bundle builds and is consistent
         run: |
           npm run build:functions
           npm run check:functions
 
       - name: Web production build
         run: npm --workspace @maak/web run build
+
+  database:
+    name: Postgres rules (pgTAP)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - run: supabase start
+
+      - name: Apply migrations and seed
+        run: supabase db reset
+
+      - name: Lint SQL
+        run: supabase db lint --level error
+
+      - name: pgTAP — write lockdown, RLS, append-only audit
+        run: supabase test db
 
   security:
     name: Security scan
@@ -76,3 +107,26 @@ jobs:
             exit 1
           fi
           echo "clean"
+
+  accessibility:
+    name: Accessibility + direction smoke (ar/en)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: quality
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Start web server
+        run: |
+          npm --workspace @maak/web run dev &
+          npx wait-on http://127.0.0.1:3000/ar --timeout 90000
+
+      - name: Checks (lang/dir, landmarks, labels, skip link) in RTL and LTR
+        run: npm run check:a11y

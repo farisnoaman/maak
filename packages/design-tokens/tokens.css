@@ -69,10 +69,13 @@
 
 :root[dir='rtl'] {
   --font-ui: var(--font-arabic);
+  /* Directional glyphs flip once, here, instead of with rtl: variants in every component. */
+  --icon-flip: -1;
 }
 
 :root[dir='ltr'] {
   --font-ui: var(--font-latin);
+  --icon-flip: 1;
 }
 
 @media (prefers-color-scheme: dark) {

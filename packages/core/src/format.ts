@@ -9,6 +9,9 @@ import type { Locale } from './i18n/locale';
 
 export const APP_TIMEZONE = 'Asia/Aden';
 
+/** Input mask for Yemeni mobiles — a format, not translatable copy. */
+export const PHONE_PLACEHOLDER = '+967 7XX XXX XXX';
+
 export type Numerals = 'western' | 'arabic_indic';
 
 export interface FormatOptions {
@@ -36,7 +39,11 @@ export function formatMoney(amount: Money, opts: FormatOptions): string {
   return opts.locale === 'ar' ? `${n} ${symbolAr}` : `${symbolEn} ${n}`;
 }
 
-export function formatMinor(amountMinor: number, currency: CurrencyCode, opts: FormatOptions): string {
+export function formatMinor(
+  amountMinor: number,
+  currency: CurrencyCode,
+  opts: FormatOptions,
+): string {
   return formatMoney({ amountMinor, currency }, opts);
 }
 
@@ -81,11 +88,7 @@ export function bidiIsolate(value: string): string {
 }
 
 /** Relative time in the viewer's language, for "last updated" style labels. */
-export function formatRelative(
-  then: string | Date,
-  now: Date,
-  opts: FormatOptions,
-): string {
+export function formatRelative(then: string | Date, now: Date, opts: FormatOptions): string {
   const target = typeof then === 'string' ? new Date(then) : then;
   const diffMs = target.getTime() - now.getTime();
   const minutes = Math.round(diffMs / 60_000);

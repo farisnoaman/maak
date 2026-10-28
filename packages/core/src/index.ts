@@ -14,6 +14,7 @@ export * from './domain/finance';
 export * from './domain/policy';
 
 export * from './api/errors';
+export * from './api/gateway';
 export * from './api/client';
 
 export * from './i18n/locale';

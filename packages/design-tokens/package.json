@@ -6,5 +6,8 @@
     "./tokens.css": "./tokens.css",
     "./tokens.json": "./tokens.json"
   },
-  "files": ["tokens.css", "tokens.json"]
+  "files": [
+    "tokens.css",
+    "tokens.json"
+  ]
 }

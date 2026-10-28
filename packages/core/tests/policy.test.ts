@@ -9,10 +9,30 @@ const verifiedIndividual: Actor = {
 };
 
 const unverifiedIndividual: Actor = { ...verifiedIndividual, verification: 'unverified' };
-const passenger: Actor = { userId: 'u2', roles: ['passenger'], verification: 'verified', plan: 'basic' };
-const staff: Actor = { userId: 'u3', roles: ['platform_staff'], verification: 'verified', plan: 'basic' };
-const admin: Actor = { userId: 'u4', roles: ['platform_admin'], verification: 'verified', plan: 'business' };
-const finance: Actor = { userId: 'u5', roles: ['finance_officer'], verification: 'verified', plan: 'basic' };
+const passenger: Actor = {
+  userId: 'u2',
+  roles: ['passenger'],
+  verification: 'verified',
+  plan: 'basic',
+};
+const staff: Actor = {
+  userId: 'u3',
+  roles: ['platform_staff'],
+  verification: 'verified',
+  plan: 'basic',
+};
+const admin: Actor = {
+  userId: 'u4',
+  roles: ['platform_admin'],
+  verification: 'verified',
+  plan: 'business',
+};
+const finance: Actor = {
+  userId: 'u5',
+  roles: ['finance_officer'],
+  verification: 'verified',
+  plan: 'basic',
+};
 const supervisor: Actor = {
   userId: 'u6',
   roles: ['geo_supervisor'],

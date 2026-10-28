@@ -37,13 +37,7 @@ export interface LedgerLine {
 }
 
 export type JournalSource =
-  | 'payment'
-  | 'refund'
-  | 'payout'
-  | 'invoice'
-  | 'commission'
-  | 'subscription'
-  | 'adjustment';
+  'payment' | 'refund' | 'payout' | 'invoice' | 'commission' | 'subscription' | 'adjustment';
 
 export interface JournalDraft {
   readonly description: string;
@@ -76,13 +70,11 @@ export class InvalidLedgerLineError extends Error {
   }
 }
 
-export function line(
-  account: AccountCode,
-  direction: Direction,
-  amountMinor: number,
-): LedgerLine {
+export function line(account: AccountCode, direction: Direction, amountMinor: number): LedgerLine {
   if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0) {
-    throw new InvalidLedgerLineError(`Ledger amounts must be positive integers, got ${amountMinor}`);
+    throw new InvalidLedgerLineError(
+      `Ledger amounts must be positive integers, got ${amountMinor}`,
+    );
   }
   return { account, direction, amountMinor };
 }

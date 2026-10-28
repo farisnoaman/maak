@@ -36,7 +36,12 @@ export const unauthorized = (detail = 'Missing or invalid token') =>
 export const forbidden = (detail = 'Not allowed') => new ApiError(403, 'FORBIDDEN', detail);
 export const notVerified = () => new ApiError(403, 'NOT_VERIFIED', 'Account is not verified');
 export const invalid = (fields?: Record<string, string>) =>
-  new ApiError(400, 'VALIDATION_FAILED', 'Request validation failed', fields ? { fields } : undefined);
+  new ApiError(
+    400,
+    'VALIDATION_FAILED',
+    'Request validation failed',
+    fields ? { fields } : undefined,
+  );
 export const notFound = (detail = 'Not found') => new ApiError(404, 'NOT_FOUND', detail);
 export const rateLimited = (retryAfterSeconds: number) =>
   new ApiError(429, 'RATE_LIMITED', `Retry in ${retryAfterSeconds}s`, {

@@ -1,7 +1,11 @@
 /**
- * CORS with an explicit allow-list. No `*` in production: a browser-based write must prove
- * which origin it came from, and preflight is answered deliberately.
+ * CORS with an explicit allow-list — no `*`, ever.
+ *
+ * The matching logic lives in @maak/core (`isOriginAllowed`) so web, edge and tests share one
+ * interpretation of "allowed origin".
  */
+
+import { isOriginAllowed } from '@maak/core';
 
 const DEFAULT_ORIGINS = ['http://localhost:3000', 'http://127.0.0.1:3000'];
 
@@ -16,23 +20,20 @@ export function allowedOrigins(): string[] {
 
 export function corsHeaders(request: Request): Record<string, string> {
   const origin = request.headers.get('origin');
-  const allowed = allowedOrigins();
-  const isAllowed = origin !== null && allowed.includes(origin);
 
   return {
-    // Echo only a known origin; never `*`.
-    ...(isAllowed ? { 'Access-Control-Allow-Origin': origin } : {}),
+    // Echo only a known origin; the browser rejects anything else.
+    ...(isOriginAllowed(origin, allowedOrigins()) && origin
+      ? { 'Access-Control-Allow-Origin': origin }
+      : {}),
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'authorization, content-type, idempotency-key, x-maak-client',
     'Access-Control-Max-Age': '600',
-    'Vary': 'Origin',
+    Vary: 'Origin',
   };
 }
 
-export function rejectDisallowedOrigin(request: Request): boolean {
-  const origin = request.headers.get('origin');
-  // Non-browser callers (mobile apps, server-to-server) send no Origin and are allowed through;
-  // they carry a bearer token and are rate-limited by actor.
-  if (!origin) return false;
-  return !allowedOrigins().includes(origin);
+/** True when a browser request comes from somewhere we did not approve. */
+export function isDisallowedOrigin(request: Request): boolean {
+  return !isOriginAllowed(request.headers.get('origin'), allowedOrigins());
 }

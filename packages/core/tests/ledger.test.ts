@@ -51,13 +51,10 @@ describe('journal invariants', () => {
   });
 
   it('accepts a balanced entry and reports totals', () => {
-    const j = journal(
-      { type: 'payment', id: 'pay_1' },
-      'booking paid',
-      DATE,
-      'YER',
-      [line(ACCOUNTS.platformCash, 'debit', 10_000), line(ACCOUNTS.operatorPayable, 'credit', 10_000)],
-    );
+    const j = journal({ type: 'payment', id: 'pay_1' }, 'booking paid', DATE, 'YER', [
+      line(ACCOUNTS.platformCash, 'debit', 10_000),
+      line(ACCOUNTS.operatorPayable, 'credit', 10_000),
+    ]);
     expect(j.balanced).toBe(true);
     expect(j.totalDebitMinor).toBe(10_000);
     expect(j.totalCreditMinor).toBe(10_000);
@@ -76,8 +73,16 @@ describe('booking entries', () => {
   it('splits gross into operator payable and commission', () => {
     const lines = bookingPaidLines(10_000, 500);
     expect(totals(lines)).toEqual({ debit: 10_000, credit: 10_000 });
-    expect(lines).toContainEqual({ account: ACCOUNTS.operatorPayable, direction: 'credit', amountMinor: 9_500 });
-    expect(lines).toContainEqual({ account: ACCOUNTS.commissionRevenue, direction: 'credit', amountMinor: 500 });
+    expect(lines).toContainEqual({
+      account: ACCOUNTS.operatorPayable,
+      direction: 'credit',
+      amountMinor: 9_500,
+    });
+    expect(lines).toContainEqual({
+      account: ACCOUNTS.commissionRevenue,
+      direction: 'credit',
+      amountMinor: 500,
+    });
   });
 
   it('omits the commission line when commission is zero', () => {
@@ -101,7 +106,11 @@ describe('refund and payout entries', () => {
   it('refunds out of collected cash and balances', () => {
     const lines = refundLines(3_000);
     expect(isBalanced(lines)).toBe(true);
-    expect(lines).toContainEqual({ account: ACCOUNTS.platformCash, direction: 'credit', amountMinor: 3_000 });
+    expect(lines).toContainEqual({
+      account: ACCOUNTS.platformCash,
+      direction: 'credit',
+      amountMinor: 3_000,
+    });
   });
 
   it('pays out of the payable balance and balances', () => {

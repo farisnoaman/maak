@@ -10,8 +10,10 @@ import { defineCommand } from '../_shared/handler.ts';
 
 const schema = z.object({ echo: z.string().max(64).optional() });
 
-export default defineCommand({ schema, auth: false }, async (ctx) => ({
+// `optional`: no token is fine, but a token that IS presented must be valid (bad token => 401).
+export default defineCommand({ schema, auth: 'optional' }, async (ctx) => ({
   status: 'ok',
   requestId: ctx.requestId,
+  authenticated: ctx.auth !== null,
   ...(ctx.input.echo ? { echo: ctx.input.echo } : {}),
 }));

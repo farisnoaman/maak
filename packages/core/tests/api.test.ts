@@ -14,7 +14,9 @@ const spec = {
 
 const TRIP_ID = '11111111-1111-4111-8111-111111111111';
 
-function makeClient(handler: (req: TransportRequest) => Promise<{ status: number; body: unknown }>) {
+function makeClient(
+  handler: (req: TransportRequest) => Promise<{ status: number; body: unknown }>,
+) {
   const calls: TransportRequest[] = [];
   const client = new ApiClient({
     baseUrl: 'https://example.supabase.co/functions/v1',
@@ -121,7 +123,9 @@ describe('error contract', () => {
   it('normalizes unknown throws', () => {
     expect(toApiFailure(new Error('x')).code).toBe('NETWORK');
     expect(toApiFailure('nope').code).toBe('INTERNAL');
-    expect(toApiFailure({ code: 'QUOTA_EXCEEDED', context: { limit: 1 } }).code).toBe('QUOTA_EXCEEDED');
+    expect(toApiFailure({ code: 'QUOTA_EXCEEDED', context: { limit: 1 } }).code).toBe(
+      'QUOTA_EXCEEDED',
+    );
   });
 
   it('every code has a localized message', () => {

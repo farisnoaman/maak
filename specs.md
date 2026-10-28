@@ -936,6 +936,12 @@ background location; EAS/OTA), plus:
 fake DB adapter; SQL covered by pgTAP. 100% *global* coverage is not a goal — it rewards assertion-free tests.
 
 **Test pyramid:** ~70% Vitest (pure domain), ~20% integration (real DB), ~10% e2e/visual.
+
+**Static guards shipped in Phase 0** (run on every PR, all fail the build):
+`core-is-framework-free`, `no-physical-direction`, `no-hardcoded-copy`, `single-write-per-handler`
+(ESLint) plus `check-guards.mjs` (service-role in bundles, `select('*')`, function-folder imports,
+migration naming), `db:types --check` (schema drift), `build-functions --check` (stale edge bundle),
+and `check-a11y.mjs` (lang/dir, landmarks, labels, skip link on every route in both directions).
 CI per PR: typecheck, lint (boundaries/RTL/i18n), **Vitest**, pgTAP, `db diff` empty, Playwright smoke
 (both locales), types drift, bundle budget, i18n key completeness, service-key grep.
 

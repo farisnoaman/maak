@@ -1,8 +1,14 @@
-import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { translate, isLocale, formatMoney, money, type Locale, type TranslationKey } from '@maak/core';
-import { LocaleSwitch } from '@/components/LocaleSwitch';
+import {
+  translate,
+  isLocale,
+  formatMoney,
+  money,
+  type Locale,
+  type TranslationKey,
+} from '@maak/core';
+import { SiteHeader } from '@/components/SiteHeader';
 import { FareCalculator } from '@/components/FareCalculator';
 
 export const metadata: Metadata = {
@@ -35,25 +41,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
 
   return (
     <>
-      <header className="site-header">
-        <div className="shell site-header__inner">
-          <a className="brand" href={`/${locale}`}>
-            <span className="brand__mark" aria-hidden="true">
-              م
-            </span>
-            <span>
-              {t('common.appName')}
-              <span className="brand__sub" style={{ display: 'block' }}>
-                {t('common.tagline')}
-              </span>
-            </span>
-          </a>
-          <span className="header__spacer" />
-          <Suspense fallback={null}>
-            <LocaleSwitch current={locale} label={t('common.language')} />
-          </Suspense>
-        </div>
-      </header>
+      <SiteHeader locale={locale} />
 
       <main id="main">
         <section className="hero">
@@ -144,7 +132,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
           <span>
             {t('common.appName')} · {t('common.tagline')}
           </span>
-          <span className="num">Phase 0 · Next.js · Expo · Supabase</span>
+          <span className="num">{t('common.footerStack')}</span>
         </div>
       </footer>
     </>

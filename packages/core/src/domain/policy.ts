@@ -98,7 +98,20 @@ const FINANCE: readonly Role[] = ['finance_officer', 'platform_admin'];
 const OPERATOR: readonly Role[] = ['individual', 'org_owner', 'org_manager'];
 
 const RULES: Record<Capability, Rule> = {
-  'trip.browse': { roles: ['passenger', 'individual', 'org_owner', 'org_manager', 'driver', 'agent', 'geo_supervisor', 'platform_staff', 'finance_officer', 'platform_admin'] },
+  'trip.browse': {
+    roles: [
+      'passenger',
+      'individual',
+      'org_owner',
+      'org_manager',
+      'driver',
+      'agent',
+      'geo_supervisor',
+      'platform_staff',
+      'finance_officer',
+      'platform_admin',
+    ],
+  },
   'trip.create': { roles: OPERATOR, verified: true },
   'trip.update': { roles: [...OPERATOR, ...STAFF], scoped: 'owner' },
   'trip.cancel': { roles: [...OPERATOR, ...STAFF], scoped: 'owner' },
@@ -107,11 +120,25 @@ const RULES: Record<Capability, Rule> = {
   'trip.viewPassengers': { roles: ['geo_supervisor', ...STAFF], scoped: 'geo' },
   'trip.manifest': { roles: [...OPERATOR, ...STAFF, 'geo_supervisor'], scoped: 'owner' },
 
-  'booking.create': { roles: ['passenger', ...OPERATOR, 'driver', 'agent', 'geo_supervisor', 'platform_staff', 'finance_officer', 'platform_admin'] },
+  'booking.create': {
+    roles: [
+      'passenger',
+      ...OPERATOR,
+      'driver',
+      'agent',
+      'geo_supervisor',
+      'platform_staff',
+      'finance_officer',
+      'platform_admin',
+    ],
+  },
   'booking.accept': { roles: [...OPERATOR, ...STAFF], verified: true, scoped: 'owner' },
   'booking.cancelAsOperator': { roles: [...OPERATOR, ...STAFF], verified: true, scoped: 'owner' },
   'booking.cancelAsPassenger': { roles: ['passenger', ...OPERATOR], scoped: 'booker' },
-  'booking.viewLive': { roles: ['passenger', ...OPERATOR, ...STAFF, 'geo_supervisor'], scoped: 'booker' },
+  'booking.viewLive': {
+    roles: ['passenger', ...OPERATOR, ...STAFF, 'geo_supervisor'],
+    scoped: 'booker',
+  },
 
   'vehicle.create': { roles: OPERATOR, verified: true },
   'vehicle.verify': { roles: [...STAFF] },
@@ -122,7 +149,16 @@ const RULES: Record<Capability, Rule> = {
   'geo.manage': { roles: ['platform_admin'] },
   'geo.assignSupervisor': { roles: ['platform_admin'] },
 
-  'payment.submit': { roles: ['passenger', ...OPERATOR, 'agent', 'platform_staff', 'finance_officer', 'platform_admin'] },
+  'payment.submit': {
+    roles: [
+      'passenger',
+      ...OPERATOR,
+      'agent',
+      'platform_staff',
+      'finance_officer',
+      'platform_admin',
+    ],
+  },
   'payment.confirm': { roles: [...OPERATOR, 'agent', ...FINANCE], verified: true, scoped: 'owner' },
   'payment.account.manageOwn': { roles: [...OPERATOR, 'agent'], verified: true },
   'payment.account.managePlatform': { roles: [...FINANCE] },
@@ -156,7 +192,11 @@ export function can(actor: Actor, capability: Capability, resource: Resource = {
     case 'driver':
       return resource.isAssignedDriver === true || actor.roles.some((r) => STAFF.includes(r));
     case 'booker':
-      return resource.isBooker === true || resource.isOrgMember === true || actor.roles.some((r) => STAFF.includes(r));
+      return (
+        resource.isBooker === true ||
+        resource.isOrgMember === true ||
+        actor.roles.some((r) => STAFF.includes(r))
+      );
     default:
       return true;
   }
