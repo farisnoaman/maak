@@ -79,6 +79,8 @@ export type Capability =
   | 'entity.verify'
   | 'geo.manage'
   | 'geo.assignSupervisor'
+  | 'place.create'
+  | 'place.decide'
   | 'payment.submit'
   | 'payment.confirm'
   | 'payment.account.manageOwn'
@@ -179,6 +181,10 @@ const RULES: Record<Capability, Rule> = {
 
   'geo.manage': { roles: ['platform_admin'] },
   'geo.assignSupervisor': { roles: ['platform_admin'] },
+  // Anyone verified may drop a pin (their own gathering point); staff create reference places.
+  // The `verified` rule is enforced in SQL because staff are trusted without being verified.
+  'place.create': { roles: [...OPERATOR, ...STAFF] },
+  'place.decide': { roles: [...STAFF] },
 
   'payment.submit': {
     roles: [

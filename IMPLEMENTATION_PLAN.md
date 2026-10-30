@@ -200,24 +200,32 @@ assertions executed against a real PostgreSQL (`npm run sql:check`), 18 a11y rou
 **Goal:** the places component for all of Yemen, admin-managed, plus region/sub-region scoping.
 
 ### Deliverables
-- `regions` (self-referencing), `governorates`, `districts` (+geometry), `places`, `region_governorates`,
-  `region_districts`, `geo_assignments`.
-- Seed: 22 governorates, ~333 districts (OCHA P-codes), ~200 curated places — idempotent.
-- Admin console: geography CRUD, region builder (governorates and/or districts), CSV/GeoJSON import with
-  dry-run diff, place-verification queue, supervisor assignment.
-- Shared `<PlacePicker>` (web + mobile): AR/EN trigram autocomplete with Arabic normalisation, aliases,
-  governorate→district cascade, popular places, "use my location", custom gathering point creation.
-- MapLibre map component with point selection; localized map labels.
-- `app.in_geo_scope()`, `app.trip_in_scope()`, `trip_scope_index`.
+- ✅ `regions` (self-referencing, depth ≤3, cycle-safe), `governorates`, `districts`, `places`,
+  `region_governorates`, `region_districts`, `geo_assignments`.
+- ⚠️ Seed: all **22 governorates** + a *starter* set of 29 districts and 29 places (idempotent). The
+  full 333-district OCHA list is imported with `scripts/geo/import-districts.mjs`; it is not shipped.
+- ✅ Admin console: region builder (governorates and/or districts), coverage replacement, supervisor
+  assignment, place-verification queue, CSV import with a dry-run diff.
+- ✅ Shared `<PlacePicker>` (web + mobile): AR/EN trigram autocomplete with Arabic normalisation,
+  aliases, governorate→district cascade, custom gathering point creation.
+- ⛔ MapLibre map component (point selection by search works; the map arrives with Phase 6 tracking).
+- ✅ `app.in_geo_scope()`, `app.geo_scope_districts()`, `app.region_descendants()`. `app.trip_in_scope()`
+  and `trip_scope_index` wait for the `trips` table (Phase 4).
 
 ### Tasks
-- [ ] PostGIS migrations + GIST + trigram indexes on `name_ar_norm` / `name_en_norm` / `aliases`.
-- [ ] Import scripts under `scripts/geo/` (governorates static, districts OCHA/HDX, places curated CSV).
-- [ ] Commands (edge fn + atomic `cmd_*` SQL): `search_places(locale, q, filters)`, `nearest_place`, `create_place`, `admin_upsert_region`,
-      `assign_region_coverage`, `assign_geo_supervisor`, `bulk_import_geo` (dry-run + apply).
-- [ ] Admin UI `/admin/geography` (tree + map + import wizard), `/admin/supervisors`.
-- [ ] `<PlacePicker>` hooks in core + web + mobile implementations; bidi-safe labels (`<bdi>`).
-- [ ] Scope helpers + pgTAP: supervisors see only scoped rows; others see none; passenger-visibility flag honoured.
+- [x] PostGIS (guarded, optional) + trigram indexes on `name_ar_norm` / `name_en_norm` / `aliases_norm`
+      (aliases are flattened into a generated column: `gin_trgm_ops` rejects `text[]`).
+- [x] Import helper `scripts/geo/import-districts.mjs` (OCHA CSV → validated `geo.import` payload,
+      dry-run by default). Governorates are static in the seed; curated places are still starter data.
+- [x] Commands (edge fn + atomic `cmd_*` SQL): `search_places` (RPC), `cmd_upsert_region`,
+      `cmd_assign_geo_supervisor`, `cmd_revoke_geo_supervisor`, `cmd_create_place`, `cmd_decide_place`,
+      `cmd_import_geo` (dry-run + apply). Coverage replacement is part of `cmd_upsert_region`.
+- [x] Admin UI `/admin/regions` (tree + builder + supervisors) and `/admin/places` (review queue,
+      add-place form, picker). `nearest_place` is deferred to the map work in Phase 6.
+- [x] `<PlacePicker>` (web) + native `/places` screen sharing `reducePicker` / `rankPlaces` /
+      `search_places`; labels stay in the RTL flow, numbers and coordinates are `<bdi>`-safe.
+- [x] Scope helpers + pgTAP (55 assertions): scope expansion, immediate revocation, private places,
+      depth/cycle rejection, dry-run imports, and `42501` for client-called commands.
 
 ### Acceptance criteria
 - Typing «عدن» returns governorate, districts and POIs; typing «الحوطة» disambiguates by governorate; same in English.
@@ -226,6 +234,9 @@ assertions executed against a real PostgreSQL (`npm run sql:check`), 18 a11y rou
 - A supervisor scoped to Aden sees only Aden-intersecting trips (fixtures prove it); out-of-scope returns empty.
 - Re-running the districts import changes nothing (`+0 ~0 -0`).
 - Place picker and admin tree render correctly in RTL and LTR; map controls mirrored but map itself is not.
+
+**Evidence:** [`docs/phase-2-report.md`](./docs/phase-2-report.md) — **260 unit tests**, **108 pgTAP
+assertions** executed against a real PostgreSQL (`npm run sql:check`), 22 a11y routes, 5 edge bundles.
 
 **Estimate:** 7 days.
 

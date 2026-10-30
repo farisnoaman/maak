@@ -1,5 +1,6 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { getLocales } from 'expo-localization';
+import { useRouter } from 'expo-router';
 import {
   LOCALE_LABEL,
   computePrice,
@@ -11,12 +12,14 @@ import {
 } from '@maak/core';
 
 /**
- * Phase 0 mobile shell.
+ * Mobile shell.
  *
  * Proves the shared package works on native: same pricing function, same dictionaries,
- * same money formatting as web and edge — no duplicated rules.
+ * same money formatting as web and edge — no duplicated rules. The place picker (`/places`) uses
+ * the same `reducePicker` / `rankPlaces` functions as the web picker.
  */
 export default function HomeScreen() {
+  const router = useRouter();
   const deviceLocale = getLocales()[0]?.languageTag ?? 'ar';
   const locale: Locale = isLocale(deviceLocale.split('-')[0])
     ? (deviceLocale.split('-')[0] as Locale)
@@ -65,8 +68,16 @@ export default function HomeScreen() {
         </View>
       </View>
 
+      <Pressable
+        accessibilityRole="link"
+        onPress={() => router.push('/places')}
+        style={styles.link}
+      >
+        <Text style={styles.linkText}>{t('picker.title')}</Text>
+      </Pressable>
+
       <Text style={styles.note}>
-        {LOCALE_LABEL[locale]} · {t('common.phase')} 0
+        {LOCALE_LABEL[locale]} · {t('common.phase')} 2
       </Text>
     </ScrollView>
   );
@@ -97,5 +108,14 @@ const styles = StyleSheet.create({
   value: { color: '#0b1220', fontSize: 14, fontVariant: ['tabular-nums'] },
   totalLabel: { color: '#0b1220', fontSize: 16, fontWeight: '800' },
   totalValue: { color: '#0a6550', fontSize: 16, fontWeight: '800' },
-  note: { marginTop: 24, color: '#8592a5', fontSize: 12 },
+  link: {
+    marginTop: 24,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#0b7a5a',
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  linkText: { color: '#0b7a5a', fontWeight: '700' },
+  note: { marginTop: 12, color: '#8592a5', fontSize: 12 },
 });

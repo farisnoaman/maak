@@ -19,6 +19,7 @@
     "format:check": "prettier --check .",
     "db:types": "node scripts/db-types.mjs --write",
     "db:types:check": "node scripts/db-types.mjs --check",
+    "geo:import": "node scripts/geo/import-districts.mjs",
     "test:coverage": "npm --workspace @maak/core run test:coverage",
     "check:a11y": "node scripts/check-a11y.mjs",
     "sql:check": "node scripts/sql-check.mjs",

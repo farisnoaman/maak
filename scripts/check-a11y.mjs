@@ -40,6 +40,11 @@ const ROUTES = [
   { path: '/en/staff/verifications', lang: 'en', dir: 'ltr' },
   { path: '/ar/admin/users', lang: 'ar', dir: 'rtl' },
   { path: '/en/admin/users', lang: 'en', dir: 'ltr' },
+  // Phase 2 surfaces
+  { path: '/ar/admin/regions', lang: 'ar', dir: 'rtl' },
+  { path: '/en/admin/regions', lang: 'en', dir: 'ltr' },
+  { path: '/ar/admin/places', lang: 'ar', dir: 'rtl' },
+  { path: '/en/admin/places', lang: 'en', dir: 'ltr' },
 ];
 
 const failures = [];

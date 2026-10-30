@@ -49,11 +49,12 @@ supabase test db            # the same pgTAP suites on the real stack (auth, sto
 
 ## Status
 
-**Phase 1 complete** — identity, company accounts, staff roles and the verification queue.
-Phase 0 (foundations) is audited and green. Shared domain, **176 passing tests**, hardened database migrations, edge gateway (auth, validation, rate limits,
-single-write guard, audit), ESLint + Prettier with five custom architecture rules, UI primitives,
-auth shell and error boundaries.
+**Phase 2 complete** — geography, places and supervisor scoping, on top of identity and the
+verification queue. Shared domain, **260 passing tests**, hardened database migrations (10),
+edge gateway (auth, validation, rate limits, single-write guard, audit), ESLint + Prettier with five
+custom architecture rules, UI primitives, auth shell and error boundaries.
 
+- [`docs/phase-2-report.md`](./docs/phase-2-report.md) — 22 governorates, regions, places, scope, what was proven
 - [`docs/phase-1-report.md`](./docs/phase-1-report.md) — accounts, verification, what was proven
 - [`docs/phase-0-audit.md`](./docs/phase-0-audit.md) — every Phase 0 task and acceptance criterion, verified
 - [`docs/phase-0-report.md`](./docs/phase-0-report.md) — narrative walkthrough and decisions
@@ -62,5 +63,6 @@ auth shell and error boundaries.
 | Phase | Status |
 |---|---|
 | 0 Foundations & bilingual shell | ✅ complete (audited) |
-| 1 Identity & Trust | next |
-| 2–12 | see [`IMPLEMENTATION_PLAN.md`](./IMPLEMENTATION_PLAN.md) |
+| 1 Identity & Trust | ✅ complete |
+| 2 Geography & Places | ✅ complete (starter district/place data — see the report) |
+| 3–12 | see [`IMPLEMENTATION_PLAN.md`](./IMPLEMENTATION_PLAN.md) |

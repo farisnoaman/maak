@@ -6,7 +6,15 @@
  * dependency-free — no type information required, so linting stays fast.
  */
 
-const FRAMEWORK_IMPORTS = ['react', 'react-dom', 'react-native', 'next', 'expo', 'expo-router', '@supabase'];
+const FRAMEWORK_IMPORTS = [
+  'react',
+  'react-dom',
+  'react-native',
+  'next',
+  'expo',
+  'expo-router',
+  '@supabase',
+];
 const PHYSICAL_CSS = [
   { pattern: /\bmargin-(left|right)\b/, logical: 'margin-inline-start/end' },
   { pattern: /\bpadding-(left|right)\b/, logical: 'padding-inline-start/end' },
@@ -25,7 +33,10 @@ function isFramework(name) {
 const coreIsFrameworkFree = {
   meta: {
     type: 'problem',
-    docs: { description: 'packages/core must stay framework-free so it runs on web, native, edge and tests.' },
+    docs: {
+      description:
+        'packages/core must stay framework-free so it runs on web, native, edge and tests.',
+    },
     schema: [],
     messages: {
       forbidden: "'{{name}}' must not be imported in packages/core — keep it pure TypeScript.",
@@ -63,7 +74,11 @@ const noPhysicalDirection = {
       for (const rule of PHYSICAL_CSS) {
         const match = text.match(rule.pattern);
         if (match) {
-          context.report({ node, messageId: 'physical', data: { found: match[0], logical: rule.logical } });
+          context.report({
+            node,
+            messageId: 'physical',
+            data: { found: match[0], logical: rule.logical },
+          });
           return;
         }
       }
@@ -76,7 +91,18 @@ const noPhysicalDirection = {
       Property(node) {
         const key = node.key?.name ?? node.key?.value;
         if (typeof key !== 'string') return;
-        if (['marginLeft', 'marginRight', 'paddingLeft', 'paddingRight', 'borderLeftWidth', 'borderRightWidth', 'left', 'right'].includes(key)) {
+        if (
+          [
+            'marginLeft',
+            'marginRight',
+            'paddingLeft',
+            'paddingRight',
+            'borderLeftWidth',
+            'borderRightWidth',
+            'left',
+            'right',
+          ].includes(key)
+        ) {
           context.report({
             node,
             messageId: 'physical',
@@ -92,8 +118,16 @@ const noHardcodedCopy = {
   meta: {
     type: 'problem',
     docs: { description: 'All user-facing copy must come from the i18n dictionaries (BR-43).' },
-    schema: [{ type: 'object', properties: { ignore: { type: 'array', items: { type: 'string' } } }, additionalProperties: false }],
-    messages: { hardcoded: "Hardcoded copy '{{text}}' — add a key to packages/core/src/i18n/dictionaries.ts." },
+    schema: [
+      {
+        type: 'object',
+        properties: { ignore: { type: 'array', items: { type: 'string' } } },
+        additionalProperties: false,
+      },
+    ],
+    messages: {
+      hardcoded: "Hardcoded copy '{{text}}' — add a key to packages/core/src/i18n/dictionaries.ts.",
+    },
   },
   create(context) {
     const filename = context.filename.replace(/\\/g, '/');
@@ -128,9 +162,14 @@ const noHardcodedCopy = {
       JSXAttribute(node) {
         const name = node.name?.name;
         if (!['aria-label', 'placeholder', 'title', 'alt', 'label'].includes(name)) return;
-        if (node.value?.type === 'Literal' && suspicious(node.value.value)) report(node, String(node.value.value));
-        if (node.value?.type === 'JSXExpressionContainer' && node.value.expression?.type === 'Literal') {
-          if (suspicious(node.value.expression.value)) report(node, String(node.value.expression.value));
+        if (node.value?.type === 'Literal' && suspicious(node.value.value))
+          report(node, String(node.value.value));
+        if (
+          node.value?.type === 'JSXExpressionContainer' &&
+          node.value.expression?.type === 'Literal'
+        ) {
+          if (suspicious(node.value.expression.value))
+            report(node, String(node.value.expression.value));
         }
       },
       CallExpression(node) {
@@ -147,10 +186,14 @@ const noHardcodedCopy = {
 const singleWritePerHandler = {
   meta: {
     type: 'problem',
-    docs: { description: 'One command = one transaction. More than one rpc() call risks a partial commit (ADR-18).' },
+    docs: {
+      description:
+        'One command = one transaction. More than one rpc() call risks a partial commit (ADR-18).',
+    },
     schema: [],
     messages: {
-      multiple: 'This handler makes {{count}} rpc() calls. Bundle the writes into a single cmd_* call.',
+      multiple:
+        'This handler makes {{count}} rpc() calls. Bundle the writes into a single cmd_* call.',
     },
   },
   create(context) {

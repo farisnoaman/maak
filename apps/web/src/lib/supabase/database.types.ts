@@ -1,5 +1,5 @@
-// migrations-sha256: 9ff96575f0b1fa9036bacf05543e9b15ac09aca645818ec19dad16df249096c8
-/* Generated from 7 migrations. Run `npm run db:types` after changing the schema. */
+// migrations-sha256: 607e47a2fb16c804d68ef23d47611368420c332aea9f250f88fd1b9edc69ef9f
+/* Generated from 10 migrations. Run `npm run db:types` after changing the schema. */
 
 /**
  * Schema types for RLS-filtered reads (Phase 0 subset).
@@ -18,6 +18,109 @@ export type MemberStatus = 'invited' | 'active' | 'suspended' | 'removed';
 export type VerificationSubject = 'individual' | 'organization';
 export type VerificationRequestStatus = 'pending' | 'approved' | 'rejected' | 'withdrawn';
 export type VerificationOutcome = 'approve' | 'reject';
+export type RegionKind = 'region' | 'sub_region';
+export type PlaceKind =
+  | 'city'
+  | 'town'
+  | 'village'
+  | 'district_centre'
+  | 'landmark'
+  | 'station'
+  | 'airport'
+  | 'port'
+  | 'border_crossing'
+  | 'market'
+  | 'hospital'
+  | 'gathering_point'
+  | 'other';
+
+export interface Governorate {
+  id: string;
+  code: string;
+  name_ar: string;
+  name_en: string;
+  name_ar_norm: string;
+  name_en_norm: string;
+  region_hint: string | null;
+  center_lat: number | null;
+  center_lng: number | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface District {
+  id: string;
+  governorate_id: string;
+  pcode: string | null;
+  name_ar: string;
+  name_en: string;
+  name_ar_norm: string;
+  name_en_norm: string;
+  center_lat: number | null;
+  center_lng: number | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Place {
+  id: string;
+  kind: PlaceKind;
+  name_ar: string;
+  name_en: string | null;
+  name_ar_norm: string;
+  name_en_norm: string;
+  aliases_ar: string[];
+  aliases_en: string[];
+  aliases_norm: string;
+  governorate_id: string | null;
+  district_id: string | null;
+  lat: number | null;
+  lng: number | null;
+  is_public: boolean;
+  created_by: string | null;
+  created_by_org: string | null;
+  verification_status: VerificationStatus;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Region {
+  id: string;
+  parent_id: string | null;
+  kind: RegionKind;
+  name_ar: string;
+  name_en: string;
+  name_ar_norm: string;
+  description: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RegionGovernorate {
+  region_id: string;
+  governorate_id: string;
+}
+
+export interface RegionDistrict {
+  region_id: string;
+  district_id: string;
+}
+
+export interface GeoAssignment {
+  id: string;
+  user_id: string;
+  region_id: string;
+  granted_by: string | null;
+  granted_at: string;
+  revoked_at: string | null;
+  revoked_by: string | null;
+  reason: string | null;
+}
+
 export type NotificationKind =
   | 'verification_submitted'
   | 'verification_approved'
@@ -193,6 +296,41 @@ export interface Database {
         };
         Update: Partial<VerificationDocument>;
       };
+      governorates: {
+        Row: Governorate;
+        Insert: Partial<Governorate> & { code: string; name_ar: string; name_en: string };
+        Update: Partial<Governorate>;
+      };
+      districts: {
+        Row: District;
+        Insert: Partial<District> & { governorate_id: string; name_ar: string; name_en: string };
+        Update: Partial<District>;
+      };
+      places: {
+        Row: Place;
+        Insert: Partial<Place> & { kind: PlaceKind; name_ar: string };
+        Update: Partial<Place>;
+      };
+      regions: {
+        Row: Region;
+        Insert: Partial<Region> & { name_ar: string; name_en: string };
+        Update: Partial<Region>;
+      };
+      region_governorates: {
+        Row: RegionGovernorate;
+        Insert: RegionGovernorate;
+        Update: Partial<RegionGovernorate>;
+      };
+      region_districts: {
+        Row: RegionDistrict;
+        Insert: RegionDistrict;
+        Update: Partial<RegionDistrict>;
+      };
+      geo_assignments: {
+        Row: GeoAssignment;
+        Insert: Partial<GeoAssignment> & { user_id: string; region_id: string };
+        Update: Partial<GeoAssignment>;
+      };
       notifications: {
         Row: Notification;
         Insert: Partial<Notification> & {
@@ -216,6 +354,7 @@ export interface Database {
       verification_request_status: VerificationRequestStatus;
       verification_outcome: VerificationOutcome;
       notification_kind: NotificationKind;
+      region_kind: RegionKind;
     };
   };
 }

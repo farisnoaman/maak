@@ -68,6 +68,10 @@ async function main() {
     password: 'postgres',
     port: 55432,
     persistent: keep,
+    // The migrations contain Arabic (names, normalisation rules) and U&'…' escapes; a SQL_ASCII
+    // cluster would refuse them. Supabase itself is UTF8, so the harness must be too.
+    initdbFlags: ['--encoding=UTF8', '--locale=C'],
+    postgresFlags: ['-c', 'client_encoding=UTF8', '-c', 'timezone=UTC'],
     onLog: () => {},
   });
 

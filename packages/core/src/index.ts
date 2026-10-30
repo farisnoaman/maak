@@ -13,10 +13,12 @@ export * from './domain/pricing';
 export * from './domain/finance';
 export * from './domain/policy';
 export * from './domain/identity';
+export * from './domain/geo';
 
 export * from './api/errors';
 export * from './api/gateway';
 export * from './api/identity';
+export * from './api/geography';
 export * from './api/client';
 
 export * from './i18n/locale';

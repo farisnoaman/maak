@@ -14,6 +14,16 @@ import type {
   AccountProfile,
 } from './account';
 import type { VerificationQueueItem } from '@maak/core';
+import type {
+  GeoDirectory,
+  GeoDistrict,
+  GeoGovernorate,
+  GeoPendingPlace,
+  GeoPlaceOption,
+  GeoRegion,
+  GeoSupervisor,
+  GeoUserOption,
+} from './geo-types';
 
 export const PREVIEW_USER_ID = '11111111-1111-4111-8111-111111111111';
 
@@ -209,3 +219,256 @@ export const previewUsers: readonly {
     roles: ['finance_officer'],
   },
 ];
+
+// ---------------------------------------------------------------------------
+// Phase 2 — geography (preview fixtures)
+//
+// A handful of real governorates and districts so the screens read like the product, not like a
+// wireframe. The full reference set (22 governorates, 333 districts) is seeded by migration 00009
+// and imported with `scripts/geo/import-districts.mjs`.
+// ---------------------------------------------------------------------------
+
+const g = (id: string, code: string, nameAr: string, nameEn: string, lat: number, lng: number) =>
+  ({ id, code, nameAr, nameEn, centerLat: lat, centerLng: lng }) as const;
+
+export const previewGovernorates: readonly GeoGovernorate[] = [
+  g('10000000-0000-4000-8000-000000000001', 'YE-AD', 'عدن', 'Aden', 12.7855, 45.0187),
+  g('10000000-0000-4000-8000-000000000002', 'YE-SA', 'صنعاء', "Sana'a", 15.3694, 44.191),
+  g('10000000-0000-4000-8000-000000000003', 'YE-LA', 'لحج', 'Lahij', 13.0583, 44.8833),
+  g('10000000-0000-4000-8000-000000000004', 'YE-TA', 'تعز', 'Taiz', 13.5795, 44.0209),
+  g('10000000-0000-4000-8000-000000000005', 'YE-HD', 'حضرموت', 'Hadramaut', 15.95, 48.8),
+  g('10000000-0000-4000-8000-000000000006', 'YE-HJ', 'حجة', 'Hajjah', 15.6943, 43.6012),
+  g('10000000-0000-4000-8000-000000000007', 'YE-IB', 'إب', 'Ibb', 13.9667, 44.1667),
+  g('10000000-0000-4000-8000-000000000008', 'YE-MR', 'مأرب', 'Marib', 15.4622, 45.3258),
+];
+
+const d = (id: string, governorateId: string, nameAr: string, nameEn: string) =>
+  ({ id, governorateId, nameAr, nameEn }) as const;
+
+export const previewDistricts: readonly GeoDistrict[] = [
+  d('20000000-0000-4000-8000-000000000001', previewGovernorates[0]!.id, 'كريتر', 'Crater'),
+  d('20000000-0000-4000-8000-000000000002', previewGovernorates[0]!.id, 'المعلا', 'Al Mualla'),
+  d('20000000-0000-4000-8000-000000000003', previewGovernorates[0]!.id, 'خور مكسر', 'Khormaksar'),
+  d('20000000-0000-4000-8000-000000000004', previewGovernorates[0]!.id, 'المنصورة', 'Al Mansura'),
+  d(
+    '20000000-0000-4000-8000-000000000005',
+    previewGovernorates[0]!.id,
+    'الشيخ عثمان',
+    'Sheikh Othman',
+  ),
+  d('20000000-0000-4000-8000-000000000006', previewGovernorates[2]!.id, 'الحوطة', 'Al Hawtah'),
+  d('20000000-0000-4000-8000-000000000007', previewGovernorates[2]!.id, 'تبن', 'Tuban'),
+  d('20000000-0000-4000-8000-000000000008', previewGovernorates[3]!.id, 'صالة', 'Sala'),
+  d('20000000-0000-4000-8000-000000000009', previewGovernorates[4]!.id, 'المكلا', 'Mukalla'),
+  d('20000000-0000-4000-8000-00000000000a', previewGovernorates[4]!.id, 'سيئون', 'Sayun'),
+  d(
+    '20000000-0000-4000-8000-00000000000b',
+    previewGovernorates[1]!.id,
+    'صنعاء القديمة',
+    "Old Sana'a",
+  ),
+];
+
+export const previewRegions: readonly GeoRegion[] = [
+  {
+    id: '30000000-0000-4000-8000-000000000001',
+    parentId: null,
+    kind: 'region',
+    nameAr: 'إقليم عدن والساحل',
+    nameEn: 'Aden & the Coast',
+    governorateIds: [previewGovernorates[0]!.id, previewGovernorates[2]!.id],
+    districtIds: [previewDistricts[8]!.id],
+  },
+  {
+    id: '30000000-0000-4000-8000-000000000002',
+    parentId: '30000000-0000-4000-8000-000000000001',
+    kind: 'sub_region',
+    nameAr: 'إقليم عدن الفرعي',
+    nameEn: 'Aden Sub-region',
+    governorateIds: [previewGovernorates[0]!.id],
+    districtIds: [],
+  },
+  {
+    id: '30000000-0000-4000-8000-000000000003',
+    parentId: null,
+    kind: 'region',
+    nameAr: 'إقليم المرتفعات',
+    nameEn: 'Highlands',
+    governorateIds: [previewGovernorates[1]!.id],
+    districtIds: [],
+  },
+];
+
+export const previewPendingPlaces: readonly GeoPendingPlace[] = [
+  {
+    id: '40000000-0000-4000-8000-000000000001',
+    kind: 'gathering_point',
+    nameAr: 'نقطة تجمع الشارع الخامس',
+    nameEn: 'Fifth Street gathering point',
+    governorateName: 'عدن',
+    districtName: 'كريتر',
+    submittedBy: 'فارس نعمان',
+    createdAt: '2026-10-28T07:20:00.000Z',
+    lat: 12.7801,
+    lng: 45.0302,
+  },
+  {
+    id: '40000000-0000-4000-8000-000000000002',
+    kind: 'landmark',
+    nameAr: 'جولة القصر',
+    nameEn: 'Al Qasr roundabout',
+    governorateName: 'لحج',
+    districtName: 'الحوطة',
+    submittedBy: 'وكالة عدن للسفر',
+    createdAt: '2026-10-29T05:40:00.000Z',
+    lat: 13.0552,
+    lng: 44.8801,
+  },
+  {
+    id: '40000000-0000-4000-8000-000000000003',
+    kind: 'gathering_point',
+    nameAr: 'موقف المكلا الجديد',
+    nameEn: null,
+    governorateName: 'حضرموت',
+    districtName: 'المكلا',
+    submittedBy: 'شركة معك للنقل',
+    createdAt: '2026-10-30T04:10:00.000Z',
+    lat: 14.5421,
+    lng: 49.1242,
+  },
+];
+
+export const previewGeoUsers: readonly GeoUserOption[] = [
+  { id: '50000000-0000-4000-8000-000000000001', name: 'سامي القباطي' },
+  { id: '50000000-0000-4000-8000-000000000002', name: 'هدى باشراحيل' },
+  { id: '50000000-0000-4000-8000-000000000003', name: 'عبدالله المخلافي' },
+];
+
+export const previewSupervisors: readonly GeoSupervisor[] = [
+  {
+    userId: previewGeoUsers[0]!.id,
+    name: previewGeoUsers[0]!.name,
+    regionIds: ['30000000-0000-4000-8000-000000000001'],
+    districtCount: 8,
+  },
+];
+
+const pl = (
+  id: string,
+  kind: string,
+  nameAr: string,
+  nameEn: string | null,
+  governorateId: string | null,
+  districtId: string | null,
+  lat: number | null,
+  lng: number | null,
+  aliasesAr: readonly string[] = [],
+) =>
+  ({
+    id,
+    kind,
+    nameAr,
+    nameEn,
+    governorateId,
+    districtId,
+    aliasesAr,
+    aliasesEn: [] as readonly string[],
+    lat,
+    lng,
+    isPublic: true,
+  }) as const;
+
+export const previewPlaces: readonly GeoPlaceOption[] = [
+  pl(
+    '60000000-0000-4000-8000-000000000001',
+    'city',
+    'عدن',
+    'Aden',
+    previewGovernorates[0]!.id,
+    previewDistricts[0]!.id,
+    12.7855,
+    45.0187,
+    ['عدن الصغرى'],
+  ),
+  pl(
+    '60000000-0000-4000-8000-000000000002',
+    'station',
+    'موقف عدن المركزي',
+    'Aden Central Station',
+    previewGovernorates[0]!.id,
+    previewDistricts[0]!.id,
+    12.7799,
+    45.0345,
+  ),
+  pl(
+    '60000000-0000-4000-8000-000000000003',
+    'city',
+    'صنعاء',
+    "Sana'a",
+    previewGovernorates[1]!.id,
+    previewDistricts[10]!.id,
+    15.3694,
+    44.191,
+  ),
+  pl(
+    '60000000-0000-4000-8000-000000000004',
+    'city',
+    'المكلا',
+    'Mukalla',
+    previewGovernorates[4]!.id,
+    previewDistricts[8]!.id,
+    14.5421,
+    49.1242,
+  ),
+  pl(
+    '60000000-0000-4000-8000-000000000005',
+    'city',
+    'تعز',
+    'Taiz',
+    previewGovernorates[3]!.id,
+    null,
+    13.5795,
+    44.0209,
+  ),
+  pl(
+    '60000000-0000-4000-8000-000000000006',
+    'city',
+    'الحوطة',
+    'Al Hawtah',
+    previewGovernorates[2]!.id,
+    previewDistricts[5]!.id,
+    13.0583,
+    44.8833,
+  ),
+  pl(
+    '60000000-0000-4000-8000-000000000007',
+    'airport',
+    'مطار عدن الدولي',
+    'Aden International Airport',
+    previewGovernorates[0]!.id,
+    previewDistricts[2]!.id,
+    12.8295,
+    45.0288,
+  ),
+  pl(
+    '60000000-0000-4000-8000-000000000008',
+    'market',
+    'سوق المكلا',
+    'Mukalla Market',
+    previewGovernorates[4]!.id,
+    previewDistricts[8]!.id,
+    14.5333,
+    49.1333,
+  ),
+];
+
+export const previewDirectory: GeoDirectory = {
+  configured: false,
+  governorates: previewGovernorates,
+  districts: previewDistricts,
+  regions: previewRegions,
+  places: previewPlaces,
+  pendingPlaces: previewPendingPlaces,
+  supervisors: previewSupervisors,
+  users: previewGeoUsers,
+};

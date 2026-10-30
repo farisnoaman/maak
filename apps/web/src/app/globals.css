@@ -1203,3 +1203,53 @@ a {
   border-color: var(--brand-500, #0d7a5f);
   box-shadow: 0 0 0 1px var(--brand-500, #0d7a5f);
 }
+
+/* --- geography (Phase 2) --------------------------------------------------- */
+.geo-console {
+  display: grid;
+  gap: var(--space-5);
+  grid-column: 1 / -1;
+}
+.geo-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+.geo-coverage {
+  border: 0;
+  padding: 0;
+  margin-block: var(--space-4);
+}
+.geo-coverage legend {
+  font-weight: 700;
+  padding: 0;
+  margin-block-end: var(--space-2);
+}
+.geo-check-grid {
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  margin-block-end: var(--space-3);
+}
+.geo-check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0.4rem 0.55rem;
+  border: 1px solid var(--border, #d8dde6);
+  border-radius: 0.5rem;
+  background: var(--surface, #fff);
+  cursor: pointer;
+  font-size: 0.92rem;
+}
+.geo-check input {
+  accent-color: var(--accent, #0b7a5a);
+}
+.geo-result-list {
+  list-style: none;
+  display: grid;
+  gap: var(--space-2);
+  padding: 0;
+  margin: 0 0 var(--space-3);
+}

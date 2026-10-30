@@ -1,13 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import {
-  translate,
-  isLocale,
-  formatMoney,
-  money,
-  type Locale,
-  type TranslationKey,
-} from '@maak/core';
+import { translate, isLocale, type Locale, type TranslationKey } from '@maak/core';
 import { SiteHeader } from '@/components/SiteHeader';
 import { FareCalculator } from '@/components/FareCalculator';
 
@@ -63,7 +56,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
               </div>
               <div className="hero__stats">
                 <div>
-                  <div className="stat__value num">214</div>
+                  <div className="stat__value num">260</div>
                   <div className="stat__label">{t('home.statTests')}</div>
                 </div>
                 <div>
@@ -71,8 +64,8 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
                   <div className="stat__label">{t('home.statLocales')}</div>
                 </div>
                 <div>
-                  <div className="stat__value num">{formatMoney(money(0), { locale })}</div>
-                  <div className="stat__label">{t('home.statWritePath')}</div>
+                  <div className="stat__value num">22</div>
+                  <div className="stat__label">{t('home.statGovernorates')}</div>
                 </div>
               </div>
             </div>
