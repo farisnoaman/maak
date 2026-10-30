@@ -8,6 +8,7 @@ import {
   type Locale,
 } from '../src/i18n/locale';
 import { ar, dictionaries, en, keyParity, translate } from '../src/i18n/dictionaries';
+import { PLACE_KIND_KEY } from '../src/domain/geo';
 
 describe('locale handling', () => {
   it('defaults to Arabic and knows both directions', () => {
@@ -77,5 +78,43 @@ describe('dictionary parity (BR-43)', () => {
   it('falls back to the key when a key is somehow missing at runtime', () => {
     const key = 'not.a.real.key' as keyof typeof ar;
     expect(translate('en', key)).toBe('not.a.real.key');
+  });
+});
+
+describe('every key the product can render exists', () => {
+  it('has a localised label for every place kind, in both directions', () => {
+    for (const [kind, key] of Object.entries(PLACE_KIND_KEY)) {
+      expect(ar, `ar is missing ${key} (${kind})`).toHaveProperty([key]);
+      expect(en, `en is missing ${key} (${kind})`).toHaveProperty([key]);
+      expect(ar[key as keyof typeof ar]).not.toBe(key);
+      expect(en[key as keyof typeof en]).not.toBe(key);
+    }
+  });
+
+  it('has a label for every notification the database can create', () => {
+    // Mirrors the guard in scripts/check-guards.mjs, but as a unit test so a broken key is caught
+    // before anyone opens the notification bell.
+    const emitted = [
+      'notifications.memberInvited',
+      'notifications.memberJoined',
+      'notifications.memberRemoved',
+      'notifications.organizationInvalidated',
+      'notifications.ownershipReceived',
+      'notifications.ownershipTransferred',
+      'notifications.roleGranted',
+      'notifications.roleRevoked',
+      'notifications.verificationApproved',
+      'notifications.verificationInvalidated',
+      'notifications.verificationRejected',
+      'notifications.verificationSubmitted',
+      'notifications.geoAssigned',
+      'notifications.placeApproved',
+      'notifications.placeRejected',
+      'notifications.placePending',
+    ];
+    for (const key of emitted) {
+      expect(ar, `ar is missing ${key}`).toHaveProperty([key]);
+      expect(en, `en is missing ${key}`).toHaveProperty([key]);
+    }
   });
 });

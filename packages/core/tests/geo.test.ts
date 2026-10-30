@@ -121,6 +121,25 @@ describe('trigram similarity and ranking', () => {
     expect(rankPlaces('عدن', places, { districtId: 'd-tawahi' }).map((p) => p.id)).toEqual(['d']);
     expect(rankPlaces('عدن', places, { kind: 'station' }).map((p) => p.id)).toEqual(['c']);
   });
+
+  it('browses instead of returning nothing when the query is empty', () => {
+    const places = [
+      place({ id: 'station', kind: 'station', nameAr: 'موقف عدن' }),
+      place({ id: 'city', kind: 'city', nameAr: 'عدن' }),
+      place({ id: 'far', kind: 'city', nameAr: 'المكلا', governorateId: 'g-hadramaut' }),
+    ];
+
+    // No query: the filtered set is returned, importance first (both cities before the station),
+    // then alphabetical — deterministic, so the list does not reshuffle between renders.
+    expect(rankPlaces('', places).map((entry) => entry.id)).toEqual(['far', 'city', 'station']);
+    expect(rankPlaces('', places, { governorateId: 'g-aden' }).map((entry) => entry.id)).toEqual([
+      'city',
+      'station',
+    ]);
+    expect(rankPlaces('   ', places, { limit: 2 })).toHaveLength(2);
+    // The SQL RPC mirrors this; without it a picker shows nothing until someone types.
+    expect(rankPlaces('', [], {})).toEqual([]);
+  });
 });
 
 describe('distance', () => {
@@ -188,6 +207,50 @@ describe('region coverage', () => {
         districts,
       ),
     ).toEqual([]);
+  });
+
+  // The acceptance criterion, literally: «إقليم المرتفعات» = 6 governorates + 4 districts from
+  // another governorate. Nothing may be rejected, and the scope must be the union.
+  it('builds a region from 6 governorates plus 4 districts from elsewhere', () => {
+    const six: GovernorateRef[] = Array.from({ length: 6 }, (_, index) => ({
+      id: `g-${index}`,
+      code: `YE-X${index}`,
+      nameAr: `محافظة ${index}`,
+      nameEn: `Governorate ${index}`,
+    }));
+    const extra: DistrictRef[] = Array.from({ length: 4 }, (_, index) => ({
+      id: `d-extra-${index}`,
+      governorateId: 'g-elsewhere',
+      nameAr: `مديرية ${index}`,
+      nameEn: `District ${index}`,
+    }));
+    const owned: DistrictRef[] = six.map((governorate, index) => ({
+      id: `d-${index}`,
+      governorateId: governorate.id,
+      nameAr: `مديرية ${governorate.nameAr}`,
+      nameEn: `District of ${governorate.nameEn}`,
+    }));
+
+    const coverage = {
+      governorateIds: six.map((governorate) => governorate.id),
+      districtIds: extra.map((district) => district.id),
+    };
+    const allGovernorates: GovernorateRef[] = [
+      ...six,
+      { id: 'g-elsewhere', code: 'YE-ZZ', nameAr: 'محافظة أخرى', nameEn: 'Elsewhere' },
+    ];
+
+    // The extra districts come from a governorate that is *not* selected — and that is accepted.
+    expect(validateCoverage(coverage, allGovernorates, [...extra, ...owned])).toEqual([]);
+    expect(expandCoverage(coverage, [...extra, ...owned])).toHaveLength(10);
+
+    // …but their governorate still has to exist: a dangling district is stale reference data.
+    expect(validateCoverage(coverage, six, [...extra, ...owned])).toEqual([
+      { code: 'DISTRICT_GOVERNORATE_UNKNOWN', id: 'd-extra-0' },
+      { code: 'DISTRICT_GOVERNORATE_UNKNOWN', id: 'd-extra-1' },
+      { code: 'DISTRICT_GOVERNORATE_UNKNOWN', id: 'd-extra-2' },
+      { code: 'DISTRICT_GOVERNORATE_UNKNOWN', id: 'd-extra-3' },
+    ]);
   });
 
   it('rejects an empty region', () => {

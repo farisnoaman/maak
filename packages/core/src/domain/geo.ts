@@ -62,6 +62,26 @@ export type PlaceKind =
   | 'gathering_point'
   | 'other';
 
+/**
+ * Display labels for place kinds. The value is an i18n key, so a new kind cannot ship with an
+ * English-only label: `places.kind.*` must exist in both dictionaries (guarded by the i18n test).
+ */
+export const PLACE_KIND_KEY: Record<PlaceKind, string> = {
+  city: 'places.kind.city',
+  town: 'places.kind.town',
+  village: 'places.kind.village',
+  district_centre: 'places.kind.district_centre',
+  landmark: 'places.kind.landmark',
+  station: 'places.kind.station',
+  airport: 'places.kind.airport',
+  port: 'places.kind.port',
+  border_crossing: 'places.kind.border_crossing',
+  market: 'places.kind.market',
+  hospital: 'places.kind.hospital',
+  gathering_point: 'places.kind.gathering_point',
+  other: 'places.kind.other',
+};
+
 /** Kinds an ordinary user may create (they become a *custom gathering point*, pending review). */
 export const USER_CREATABLE_KINDS: readonly PlaceKind[] = ['gathering_point', 'landmark', 'other'];
 
@@ -102,6 +122,20 @@ export interface GeoPoint {
   readonly lng: number;
 }
 
+/** Browsing order and tie-breaking: a city before a bus stop, at equal text quality. */
+const PLACE_KIND_WEIGHT: Partial<Record<PlaceKind, number>> = {
+  city: 6,
+  district_centre: 4,
+  town: 3,
+  landmark: 2,
+  station: 1,
+  airport: 1,
+  port: 1,
+  border_crossing: 1,
+  market: 1,
+  hospital: 1,
+};
+
 /**
  * Match quality, 0–100. Deterministic and shared by the SQL planner and the client, so a list does
  * not reorder itself between the optimistic render and the server answer.
@@ -130,21 +164,9 @@ export function scorePlace(query: string, place: PlaceRef): number {
   }
 
   // A city beats a bus stop at equal text quality: it is what people mean most of the time.
-  const KIND_WEIGHT: Partial<Record<PlaceKind, number>> = {
-    city: 6,
-    district_centre: 4,
-    town: 3,
-    landmark: 2,
-    station: 1,
-    airport: 1,
-    port: 1,
-    border_crossing: 1,
-    market: 1,
-    hospital: 1,
-  };
-  // The kind weight is added *after* capping the text score, so it can never be swallowed by the
-  // 100 ceiling — otherwise a city and a bus stop with the same name would tie.
-  return best === 0 ? 0 : best + (KIND_WEIGHT[place.kind] ?? 0);
+  // The weight is added *after* the text score, so it can never be swallowed by the 100 ceiling —
+  // otherwise a city and a bus stop with the same name would tie.
+  return best === 0 ? 0 : best + (PLACE_KIND_WEIGHT[place.kind] ?? 0);
 }
 
 /** Jaccard similarity over character trigrams — the same shape as pg_trgm's `similarity()`. */
@@ -180,13 +202,26 @@ export function rankPlaces(
   filters: SearchFilters = {},
 ): PlaceRef[] {
   const limit = filters.limit ?? 20;
-  return places
-    .filter((place) => {
-      if (filters.governorateId && place.governorateId !== filters.governorateId) return false;
-      if (filters.districtId && place.districtId !== filters.districtId) return false;
-      if (filters.kind && place.kind !== filters.kind) return false;
-      return true;
-    })
+  const filtered = places.filter((place) => {
+    if (filters.governorateId && place.governorateId !== filters.governorateId) return false;
+    if (filters.districtId && place.districtId !== filters.districtId) return false;
+    if (filters.kind && place.kind !== filters.kind) return false;
+    return true;
+  });
+
+  // Browsing: an empty query is not "no results". Picking a governorate must list its places, so
+  // the filtered set is returned in a stable, useful order (importance, then name).
+  if (!normalizeArabic(query)) {
+    return [...filtered]
+      .sort(
+        (a, b) =>
+          (PLACE_KIND_WEIGHT[b.kind] ?? 0) - (PLACE_KIND_WEIGHT[a.kind] ?? 0) ||
+          normalizeArabic(a.nameAr).localeCompare(normalizeArabic(b.nameAr), 'ar'),
+      )
+      .slice(0, limit);
+  }
+
+  return filtered
     .map((place) => ({ place, score: scorePlace(query, place) }))
     .filter((entry) => entry.score > 0)
     .sort(
@@ -206,7 +241,10 @@ const EARTH_RADIUS_KM = 6371.0088;
 
 const toRadians = (degrees: number): number => (degrees * Math.PI) / 180;
 
-/** Great-circle distance. Used for «now at X, 12 km from the nearest stop» (Phase 6). */
+/**
+ * Great-circle distance. Reserved for Phase 6 («now at X, 12 km from the nearest stop»); it lives
+ * here now because the SQL and the client must agree on the formula before tracking exists.
+ */
 export function haversineKm(from: GeoPoint, to: GeoPoint): number {
   const dLat = toRadians(to.lat - from.lat);
   const dLng = toRadians(to.lng - from.lng);
@@ -263,12 +301,19 @@ export type CoverageProblem =
   | { readonly code: 'EMPTY'; readonly message: string }
   | { readonly code: 'UNKNOWN_GOVERNORATE'; readonly id: string }
   | { readonly code: 'UNKNOWN_DISTRICT'; readonly id: string }
-  | { readonly code: 'DISTRICT_OUTSIDE_GOVERNORATE'; readonly id: string };
+  | { readonly code: 'DISTRICT_GOVERNORATE_UNKNOWN'; readonly id: string };
 
 /**
- * A region may hold whole governorates **and** hand-picked districts from other governorates
- * (specs §: «إقليم المرتفعات» = 6 governorates + 4 extra districts). Duplicates are not an error —
- * they are collapsed — but an unknown or misplaced district is.
+ * A region may hold whole governorates **and** hand-picked districts from *any other* governorate
+ * (specs §: «إقليم المرتفعات» = 6 governorates + 4 extra districts). Two rules follow:
+ *
+ *  · a hand-picked district does **not** have to belong to a selected governorate — that is the
+ *    whole point of the second list;
+ *  · it must, however, belong to a governorate that exists in the reference. A district whose
+ *    governorate is missing means stale data (a deleted governorate, a bad import), never a
+ *    deliberate choice.
+ *
+ * Duplicates are not an error — `expandCoverage()` collapses them.
  */
 export function validateCoverage(
   coverage: RegionCoverage,
@@ -294,7 +339,9 @@ export function validateCoverage(
     const district = districtById.get(id);
     if (!district) problems.push({ code: 'UNKNOWN_DISTRICT', id });
     else if (!knownGovernorates.has(district.governorateId)) {
-      problems.push({ code: 'DISTRICT_OUTSIDE_GOVERNORATE', id });
+      // The district survives but its governorate does not: stale reference data, not a mistake by
+      // the admin, so the message names the district rather than blaming the selection.
+      problems.push({ code: 'DISTRICT_GOVERNORATE_UNKNOWN', id });
     }
   }
   return problems;
@@ -374,7 +421,7 @@ export function inScope(districtId: string | null | undefined, scope: readonly s
   return scope.includes(districtId);
 }
 
-/** Bounding box of a set of points — used to centre a map before a user picks anything. */
+/** Bounding box of a set of points — used to centre a map before a user picks anything (Phase 6). */
 export function boundingBox(
   points: readonly GeoPoint[],
 ): { minLat: number; maxLat: number; minLng: number; maxLng: number } | null {

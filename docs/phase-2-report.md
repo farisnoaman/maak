@@ -8,11 +8,15 @@ scope is derived from those regions, never trusted from a token.
 
 Legend: ✅ verified in this environment · ⚠️ code complete, needs Docker/device or external data · ⛔ not done
 
+> **Review pass (2026-10-30).** After the first cut of this phase was merged into the branch, the
+> phase was reviewed again end-to-end. Fourteen defects and dead-ends were found and fixed; §6 lists
+> them with the test or guard that now prevents a repeat. Numbers below are post-review.
+
 ---
 
 ## 1. What was built
 
-### Database (3 migrations, 6 commands, 1 RPC)
+### Database (4 migrations, 8 commands, 1 RPC)
 
 | Object | Purpose |
 |---|---|
@@ -32,6 +36,8 @@ Legend: ✅ verified in this environment · ⚠️ code complete, needs Docker/d
 | `cmd_create_place` | staff → public + verified; everyone else → private + `pending` |
 | `cmd_decide_place` | staff approve/reject (rejection needs ≥10 characters), notifies the submitter |
 | `cmd_import_geo` | governorates/districts import, **dry-run by default**, ≤2000 rows, idempotent |
+| `cmd_set_region_active` | retire / restore a region; refuses while active sub-regions depend on it, notifies the supervisors who lose scope |
+| `cmd_set_place_active` | retire / restore a place; staff may retire anything, a user only the pin they created |
 
 Indexes: GIN trigram on `name_ar_norm`, `name_en_norm`, `aliases_norm` (aliases are flattened into a
 scalar generated column — `gin_trgm_ops` does not accept `text[]`), plus btree on every scope join.
@@ -72,14 +78,14 @@ Both directions are exercised by the a11y smoke (22 routes, RTL + LTR).
 
 | Check | Result |
 |---|---|
-| `npm test` | **260 passed** (15 files) — 27 geo + 19 geography-API assertions added |
-| Coverage | 97.43% statements · 90.88% branches · 98.93% functions |
-| `npm run sql:check` | 10 migrations applied · **108 pgTAP assertions** (9 + 9 + 35 + 55) · types in sync |
+| `npm test` | **268 passed** (15 files) — 29 geo + 23 geography-API + 2 i18n assertions added |
+| Coverage | 97.2% statements · 90.9% branches · 98.9% functions |
+| `npm run sql:check` | 11 migrations applied · **120 pgTAP assertions** (9 + 9 + 35 + 67) · types in sync |
 | `npm run check:a11y` | 22 routes, both directions |
 | `npm run check:functions` | 5 edge bundles, hash-verified |
 | Lint / Prettier / typecheck / guards | clean |
 
-The new pgTAP suite (`supabase/tests/0004_geography.test.sql`, 55 assertions) pins the promises that
+The new pgTAP suite (`supabase/tests/0004_geography.test.sql`, 67 assertions) pins the promises that
 matter: normalisation parity with TypeScript, 22 governorates with codes, the district↔governorate
 trigger, a private gathering point invisible to other users *and* to guests and search, exact-match
 ranking and limit clamping, depth ≤3 and cycle rejection, coverage replacement, scope expansion
@@ -101,6 +107,9 @@ imports, and `42501` when a client session calls any `cmd_*`.
   and the picker works without a map; the map lands with live tracking (Phase 6) where it is needed.
 - ⛔ `app.trip_in_scope()` and `trip_scope_index` wait for the `trips` table (Phase 4). The scope
   helpers they will call already exist and are tested.
+- ⚠️ **Place retirement has no button yet.** `cmd_set_place_active` is complete and tested, but the
+  web surface only exposes it for regions; retiring a reference place currently needs the gateway
+  (staff tooling lands with the Phase 7 staff console).
 - ⚠️ PostGIS geometry columns and a GIST index are not exercised here (no PostGIS in the embedded
   harness); the migration guards them behind an availability check.
 
@@ -133,3 +142,30 @@ npm run geo:import -- --file ocha-districts.csv --out districts.json   # validat
 
 Then re-run `npm run sql:check` (it re-seeds from migrations) and open `/admin/regions` to build the
 first real regions.
+
+---
+
+## 6. Review pass — what was wrong and what changed
+
+Each item is a defect or a dead-end found by re-reading the phase after it "passed", plus the
+mechanism that now stops it from coming back.
+
+| # | Problem | Fix | Prevented by |
+|---|---|---|---|
+| 1 | Three notification keys written by SQL (`notifications.geoAssigned`, `.placeApproved`, `.placeRejected`) did not exist in either dictionary, so the bell rendered raw keys | added all three + `placePending` in `ar` and `en` | new guard #7 scans every `notifications.*` literal in migrations against `dictionaries.ts`; two unit assertions pin the list |
+| 2 | A `cmd_*` name typo would have been a runtime 500 | — | new guard #8 resolves every `cmd_*` string in `packages/core/src/api` and `supabase/functions` against the migrations |
+| 3 | **The region builder could not create the acceptance-criterion region** (6 governorates + 4 districts from *another* governorate): districts were only offered under selected governorates | coverage is now two independent lists; the district panel browses any governorate and marks already-covered ones | core test `builds a region from 6 governorates plus 4 districts from elsewhere` |
+| 4 | The picker showed *nothing* until you typed, because an empty query scored 0 — a user could never pick a place in preview mode | browse mode in `rankPlaces()` **and** `search_places` (empty query → filtered, ordered by kind then name) | unit test + pgTAP `an empty query browses a governorate instead of returning nothing` |
+| 5 | Place kinds rendered as raw enum text (`gathering_point`) | `PLACE_KIND_KEY` in core + 13 localised labels per locale | i18n test asserts every kind key exists in both dictionaries |
+| 6 | A verified account could create a `city`/`airport` — reference data drifting away from staff control | `cmd_create_place` rejects non-user-creatable kinds for non-staff | pgTAP `a verified account cannot invent a reference city` |
+| 7 | Submitting a pin notified nobody | `cmd_create_place` notifies the submitter that it is queued | pgTAP assertion on `notifications.placePending` |
+| 8 | `DISTRICT_OUTSIDE_GOVERNORATE` was named as if a district had to belong to a *selected* governorate — which contradicts the feature (it really meant "the district's governorate is unknown") | renamed `DISTRICT_GOVERNORATE_UNKNOWN`, with the rule spelled out in the doc comment | the 6+4 test above |
+| 9 | **Regions and places could never be retired**, while `regions` is unique on (parent, name) — a typo permanently occupied a name and a wrong place stayed in every picker | `cmd_set_region_active` / `cmd_set_place_active` (soft, audited, idempotent; region refuses while active children exist) | pgTAP section 8b (7 assertions) |
+| 10 | Retiring a region would have hidden it from the loader, making reactivation impossible — the same dead-end one screen later | loader returns retired regions too (`isActive`), UI lists them separately with a reactivate action | `/admin/regions` renders both sections; typecheck enforces the flag |
+| 11 | Supervisor scope was computed over **inactive** regions in the loader, disagreeing with `app.geo_scope_districts` | loader filters to active regions before `supervisorScope()` | same code path as the pgTAP scope assertions |
+| 12 | Supervisor assignment looked blank for an existing supervisor, so re-saving silently revoked the regions not re-checked | selecting a user loads their current regions; revoke clears the checkboxes | reconcile semantics already covered by pgTAP `re-assigning reconciles` |
+| 13 | `staff_place_queue()` was a service-role-only RPC that nothing called (the loader reads the queue through RLS) — surface without a purpose, and staff RLS visibility was untested | removed the RPC; the queue is read via `places_read_staff`, which is now asserted for staff *and* non-staff | pgTAP `staff see the pending user submission through RLS` / `a non-staff account sees no pending place` |
+| 14 | Five Phase 2 i18n keys were never referenced | deleted from both dictionaries | parity test + `keyParity()` |
+
+Not changed, deliberately: the starter district/place data (§3) — inventing 300 district names to
+look complete would be worse than importing the real list, which now has a tested path.

@@ -219,9 +219,10 @@ assertions executed against a real PostgreSQL (`npm run sql:check`), 18 a11y rou
       dry-run by default). Governorates are static in the seed; curated places are still starter data.
 - [x] Commands (edge fn + atomic `cmd_*` SQL): `search_places` (RPC), `cmd_upsert_region`,
       `cmd_assign_geo_supervisor`, `cmd_revoke_geo_supervisor`, `cmd_create_place`, `cmd_decide_place`,
-      `cmd_import_geo` (dry-run + apply). Coverage replacement is part of `cmd_upsert_region`.
-- [x] Admin UI `/admin/regions` (tree + builder + supervisors) and `/admin/places` (review queue,
-      add-place form, picker). `nearest_place` is deferred to the map work in Phase 6.
+      `cmd_import_geo` (dry-run + apply), `cmd_set_region_active`, `cmd_set_place_active`.
+      Coverage replacement is part of `cmd_upsert_region`.
+- [x] Admin UI `/admin/regions` (tree + builder + supervisors + retire/restore) and `/admin/places`
+      (review queue, add-place form, picker). `nearest_place` is deferred to the map work in Phase 6.
 - [x] `<PlacePicker>` (web) + native `/places` screen sharing `reducePicker` / `rankPlaces` /
       `search_places`; labels stay in the RTL flow, numbers and coordinates are `<bdi>`-safe.
 - [x] Scope helpers + pgTAP (55 assertions): scope expansion, immediate revocation, private places,
@@ -235,8 +236,10 @@ assertions executed against a real PostgreSQL (`npm run sql:check`), 18 a11y rou
 - Re-running the districts import changes nothing (`+0 ~0 -0`).
 - Place picker and admin tree render correctly in RTL and LTR; map controls mirrored but map itself is not.
 
-**Evidence:** [`docs/phase-2-report.md`](./docs/phase-2-report.md) — **260 unit tests**, **108 pgTAP
+**Evidence:** [`docs/phase-2-report.md`](./docs/phase-2-report.md) — **268 unit tests**, **120 pgTAP
 assertions** executed against a real PostgreSQL (`npm run sql:check`), 22 a11y routes, 5 edge bundles.
+A post-merge review pass (§6 of the report) fixed 14 defects, including a region builder that could
+not build the acceptance-criterion region and reference data that could never be retired.
 
 **Estimate:** 7 days.
 

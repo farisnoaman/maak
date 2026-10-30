@@ -517,14 +517,17 @@ as $$
         end
     )::real as score
   from scored s
-  where s.text_score > 0
+  -- Browsing: an empty query is not "no results" — an empty search box with a governorate filter
+  -- lists that governorate's places, ordered by kind weight then name. Mirrors rankPlaces().
+  where s.text_score > 0 or (select norm from q) = ''
   order by score desc, s.name_ar asc
   limit greatest(1, least(coalesce(p_limit, 20), 50));
 $$;
 
 comment on function public.search_places is
   'Localised, ranked place search. Read-only and explicitly granted to authenticated; private
-   gathering points are only ever returned to their creator. Mirrors rankPlaces() in @maak/core.';
+   gathering points are only ever returned to their creator. An empty query browses (filtered,
+   ordered by kind then name). Mirrors rankPlaces() in @maak/core.';
 
 -- ---------------------------------------------------------------------------
 -- RLS: reads only. Writes go through cmd_* (Phase 2 commands live in 00009).

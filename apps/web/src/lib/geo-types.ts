@@ -31,6 +31,8 @@ export interface GeoRegion {
   readonly nameEn: string;
   readonly governorateIds: readonly string[];
   readonly districtIds: readonly string[];
+  /** Retired regions stay listed so they can be reactivated; they contribute no scope. */
+  readonly isActive: boolean;
 }
 
 export interface GeoPendingPlace {

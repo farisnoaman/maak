@@ -81,6 +81,7 @@ export type Capability =
   | 'geo.assignSupervisor'
   | 'place.create'
   | 'place.decide'
+  | 'place.setActive'
   | 'payment.submit'
   | 'payment.confirm'
   | 'payment.account.manageOwn'
@@ -185,6 +186,9 @@ const RULES: Record<Capability, Rule> = {
   // The `verified` rule is enforced in SQL because staff are trusted without being verified.
   'place.create': { roles: [...OPERATOR, ...STAFF] },
   'place.decide': { roles: [...STAFF] },
+  // Retiring a place: staff may retire anything; a user may retire only the pin they created
+  // (the ownership rule is enforced in `cmd_set_place_active`, which knows the row).
+  'place.setActive': { roles: [...OPERATOR, ...STAFF] },
 
   'payment.submit': {
     roles: [

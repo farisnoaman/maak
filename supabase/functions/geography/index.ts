@@ -24,6 +24,8 @@ const CAPABILITY: Record<GeoAction['action'], Capability> = {
   'geo.assignSupervisor': 'geo.assignSupervisor',
   'geo.revokeSupervisor': 'geo.assignSupervisor',
   'geo.import': 'geo.manage',
+  'region.setActive': 'geo.manage',
+  'place.setActive': 'place.setActive',
   'place.create': 'place.create',
   'place.decide': 'place.decide',
 };

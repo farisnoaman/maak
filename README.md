@@ -50,7 +50,7 @@ supabase test db            # the same pgTAP suites on the real stack (auth, sto
 ## Status
 
 **Phase 2 complete** — geography, places and supervisor scoping, on top of identity and the
-verification queue. Shared domain, **260 passing tests**, hardened database migrations (10),
+verification queue. Shared domain, **268 passing tests**, hardened database migrations (11),
 edge gateway (auth, validation, rate limits, single-write guard, audit), ESLint + Prettier with five
 custom architecture rules, UI primitives, auth shell and error boundaries.
 

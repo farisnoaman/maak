@@ -2,8 +2,11 @@
 
 import { useState } from 'react';
 import {
+  PLACE_KIND_KEY,
+  USER_CREATABLE_KINDS,
   errorKey,
   geoCommandSpec,
+  isWithinYemen,
   translate,
   type Locale,
   type PlaceKind,
@@ -17,27 +20,12 @@ import { getApiClient } from '@/lib/api';
 import { PlacePicker } from '@/components/geo/PlacePicker';
 import type { GeoDirectory, GeoPendingPlace } from '@/lib/geo-types';
 
-const KINDS: readonly PlaceKind[] = [
-  'gathering_point',
-  'landmark',
-  'station',
-  'market',
-  'city',
-  'town',
-  'village',
-  'hospital',
-  'airport',
-  'port',
-  'border_crossing',
-  'other',
-];
-
 /**
- * Places console: the review queue, the "add a place" form and a live picker.
+ * Places console: the review queue and the "add a place" form, plus a live picker.
  *
- * Deciding a place is staff-only (badge + the command re-checks). Creating one is open to any
- * verified account, but the result starts *private and pending* — which the note under the form says
- * out loud so nobody expects it to appear in search immediately.
+ * Only `USER_CREATABLE_KINDS` are offered to ordinary accounts: a verified user drops a pin for the
+ * street their trip leaves from, not a new "city". Staff may create reference places (city, station,
+ * airport…), which is why the list widens for them — and the command re-checks the same rule.
  */
 export function PlaceConsole({
   locale,
@@ -48,7 +36,8 @@ export function PlaceConsole({
   readonly directory: GeoDirectory;
   readonly canDecide: boolean;
 }) {
-  const t = (key: TranslationKey) => translate(locale, key);
+  const t = (key: TranslationKey, vars?: Record<string, string | number>) =>
+    translate(locale, key, vars);
 
   const [queue, setQueue] = useState<readonly GeoPendingPlace[]>(directory.pendingPlaces);
   const [reasons, setReasons] = useState<Record<string, string>>({});
@@ -56,17 +45,53 @@ export function PlaceConsole({
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const kinds: readonly PlaceKind[] = canDecide
+    ? [
+        'city',
+        'town',
+        'village',
+        'district_centre',
+        'landmark',
+        'station',
+        'airport',
+        'port',
+        'border_crossing',
+        'market',
+        'hospital',
+        'gathering_point',
+        'other',
+      ]
+    : USER_CREATABLE_KINDS;
+
   const [draft, setDraft] = useState({
     kind: 'gathering_point' as PlaceKind,
     nameAr: '',
     nameEn: '',
     governorateId: directory.governorates[0]?.id ?? '',
     districtId: '',
+    lat: '',
+    lng: '',
   });
 
   const districts = directory.districts.filter(
     (district) => district.governorateId === draft.governorateId,
   );
+
+  // Coordinates are optional, but half a coordinate is a mistake, not a partial answer.
+  const lat = draft.lat.trim() === '' ? null : Number(draft.lat);
+  const lng = draft.lng.trim() === '' ? null : Number(draft.lng);
+  const coordsProvided = draft.lat.trim() !== '' || draft.lng.trim() !== '';
+  const coordsValid =
+    !coordsProvided ||
+    (lat !== null &&
+      lng !== null &&
+      Number.isFinite(lat) &&
+      Number.isFinite(lng) &&
+      (draft.lat.trim() === '') === (draft.lng.trim() === ''));
+  const outsideYemen =
+    coordsProvided && coordsValid && lat !== null && lng !== null
+      ? !isWithinYemen({ lat, lng })
+      : false;
 
   async function decide(place: GeoPendingPlace, outcome: 'approve' | 'reject') {
     const reason = (reasons[place.id] ?? '').trim();
@@ -109,6 +134,15 @@ export function PlaceConsole({
     setError(null);
     setMessage(null);
 
+    if (!coordsValid) {
+      setError(`${t('places.latitude')} / ${t('places.longitude')}`);
+      return;
+    }
+    if (outsideYemen) {
+      setError(t('places.outsideYemen'));
+      return;
+    }
+
     if (!directory.configured) {
       setDraft((current) => ({ ...current, nameAr: '', nameEn: '' }));
       setMessage(t('geo.previewNotice'));
@@ -129,6 +163,8 @@ export function PlaceConsole({
       nameEn: draft.nameEn.trim() || undefined,
       governorateId: draft.governorateId || undefined,
       districtId: draft.districtId || undefined,
+      lat: lat ?? undefined,
+      lng: lng ?? undefined,
       aliasesAr: [],
       aliasesEn: [],
     });
@@ -138,7 +174,7 @@ export function PlaceConsole({
       setError(t(errorKey(result.error.code)));
       return;
     }
-    setDraft((current) => ({ ...current, nameAr: '', nameEn: '' }));
+    setDraft((current) => ({ ...current, nameAr: '', nameEn: '', lat: '', lng: '' }));
     setMessage(t('places.created'));
   }
 
@@ -166,10 +202,15 @@ export function PlaceConsole({
                         : ''}
                     </p>
                     <p className="form-hint" style={{ margin: 0 }}>
-                      {place.kind}
-                      {place.lat != null && place.lng != null
-                        ? ` · ${place.lat.toFixed(4)}, ${place.lng.toFixed(4)}`
-                        : ''}
+                      {t(PLACE_KIND_KEY[place.kind as PlaceKind] as TranslationKey)}
+                      {place.lat != null && place.lng != null ? (
+                        <>
+                          {' · '}
+                          <bdi dir="ltr">
+                            {place.lat.toFixed(4)}, {place.lng.toFixed(4)}
+                          </bdi>
+                        </>
+                      ) : null}
                     </p>
                     <Field
                       label={t('places.rejectReason')}
@@ -229,7 +270,10 @@ export function PlaceConsole({
             label={t('places.kind')}
             value={draft.kind}
             onChange={(event) => setDraft({ ...draft, kind: event.target.value as PlaceKind })}
-            options={KINDS.map((kind) => ({ value: kind, label: kind.replace(/_/g, ' ') }))}
+            options={kinds.map((kind) => ({
+              value: kind,
+              label: t(PLACE_KIND_KEY[kind] as TranslationKey),
+            }))}
           />
           <Select
             label={t('places.governorate')}
@@ -254,13 +298,31 @@ export function PlaceConsole({
               })),
             ]}
           />
+          <Field
+            label={t('places.latitude')}
+            inputMode="decimal"
+            dir="ltr"
+            value={draft.lat}
+            onChange={(event) => setDraft({ ...draft, lat: event.target.value })}
+            error={coordsProvided && !coordsValid ? t('places.latitude') : undefined}
+          />
+          <Field
+            label={t('places.longitude')}
+            inputMode="decimal"
+            dir="ltr"
+            value={draft.lng}
+            onChange={(event) => setDraft({ ...draft, lng: event.target.value })}
+            error={outsideYemen ? t('places.outsideYemen') : undefined}
+          />
         </div>
 
         <div className="form-actions">
           <Button
             variant="primary"
             onClick={createPlace}
-            disabled={busy === 'create' || draft.nameAr.trim().length < 3}
+            disabled={
+              busy === 'create' || draft.nameAr.trim().length < 3 || outsideYemen || !coordsValid
+            }
             loading={busy === 'create'}
           >
             {t('common.save')}

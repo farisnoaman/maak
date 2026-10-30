@@ -16,7 +16,7 @@ begin;
 
 create extension if not exists pgtap;
 
-select plan(55);
+select plan(67);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -138,6 +138,20 @@ select throws_ok(
   'an unverified account cannot add a place'
 );
 
+select throws_ok(
+  $$select public.cmd_create_place(
+      'aaaa0003-3333-4333-8333-aaaaaaaaaaaa', 'city', 'مدينة من مستخدم')$$,
+  '42501',
+  'a verified account cannot invent a reference city (staff-only kind)'
+);
+
+select is(
+  (select count(*)::int from public.notifications
+   where user_id = 'aaaa0003-3333-4333-8333-aaaaaaaaaaaa' and title_key = 'notifications.placePending'),
+  1,
+  'submitting a gathering point notifies the submitter that it is queued'
+);
+
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"aaaa0006-6666-4666-8666-aaaaaaaaaaaa","role":"authenticated"}';
 
@@ -210,6 +224,17 @@ select is(
 select ok(
   (select count(*)::int from public.search_places('ا', 'ar', null, null, null, 1000)) <= 50,
   'the result limit is clamped to 50'
+);
+
+select ok(
+  (select count(*)::int from public.search_places('', 'ar', (select aden from t_geo), null, null, 50)) > 0,
+  'an empty query browses a governorate instead of returning nothing'
+);
+
+select is(
+  (select count(*)::int from public.search_places('', 'ar', null, null, null, 1000)),
+  (select count(*)::int from public.search_places('', 'ar', null, null, null, 50)),
+  'browsing is still clamped by the limit'
 );
 
 select is(
@@ -300,6 +325,8 @@ from (select public.cmd_upsert_region(
   'مستوى أول', 'Level One', null, array[(select aden from t_geo)], '{}'::uuid[], 'test-request-4', null
 ) as p) s;
 
+grant select on t_chain to authenticated;
+
 select public.cmd_upsert_region(
   'aaaa0001-1111-4111-8111-aaaaaaaaaaaa', null,
   (select id from t_chain), 'sub_region',
@@ -308,6 +335,8 @@ select public.cmd_upsert_region(
 
 create temporary table t_level2 on commit drop as
 select id, parent_id from public.regions where name_ar = 'مستوى ثانٍ';
+
+grant select on t_level2 to authenticated;
 
 select public.cmd_upsert_region(
   'aaaa0001-1111-4111-8111-aaaaaaaaaaaa', null,
@@ -460,6 +489,8 @@ select public.cmd_create_place(
   '{}'::text[], '{}'::text[], null, 'test-request-13', null
 ) as payload;
 
+grant select on t_staff_place to authenticated;
+
 select is(
   (select p.is_public::text || '/' || p.verification_status::text
    from public.places p
@@ -468,29 +499,30 @@ select is(
   'staff-created reference places are public and verified immediately'
 );
 
+-- The review queue is read through RLS (`places_read_staff`), so the policy is what gets tested.
+set local role authenticated;
 set local request.jwt.claims = '{"sub":"aaaa0002-2222-4222-8222-aaaaaaaaaaaa","role":"authenticated"}';
 
 select is(
-  (select count(*)::int from public.staff_place_queue(50)
-   where id = ((select payload -> 'place' ->> 'id' from t_place)::uuid)),
+  (select count(*)::int from public.places
+   where id = ((select payload -> 'place' ->> 'id' from t_place)::uuid)
+     and verification_status = 'pending'),
   1,
-  'the pending user submission is visible in the staff queue'
+  'staff see the pending user submission through RLS'
 );
+
+reset role;
+
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"aaaa0006-6666-4666-8666-aaaaaaaaaaaa","role":"authenticated"}';
 
 select is(
-  (select count(*)::int from public.staff_place_queue(50)
-   where id = ((select payload -> 'place' ->> 'id' from t_staff_place)::uuid)),
+  (select count(*)::int from public.places where verification_status = 'pending' and not is_public),
   0,
-  'staff-created places never appear in the review queue'
+  'a non-staff account sees no pending private place, not even to review it'
 );
 
-set local request.jwt.claims = '{"sub":"aaaa0003-3333-4333-8333-aaaaaaaaaaaa","role":"authenticated"}';
-
-select is(
-  (select count(*)::int from public.staff_place_queue(50)),
-  0,
-  'a non-staff caller gets an empty queue even when rows are pending'
-);
+reset role;
 
 reset request.jwt.claims;
 
@@ -578,6 +610,121 @@ select throws_ok(
   $$select public.cmd_import_geo('aaaa0001-1111-4111-8111-aaaaaaaaaaaa', 'districts', '{"rows":1}'::jsonb)$$,
   '22023',
   'a payload that is not an array of rows is refused'
+);
+
+-- ---------------------------------------------------------------------------
+-- 8b. Retiring reference data (deactivate / reactivate)
+-- ---------------------------------------------------------------------------
+
+select throws_ok(
+  format(
+    $$select public.cmd_set_region_active('aaaa0001-1111-4111-8111-aaaaaaaaaaaa', %L, false)$$,
+    (select id from public.regions where name_ar = 'مستوى أول')
+  ),
+  '23505',
+  'deactivating a region with an active sub-region is refused (no silent orphan)'
+);
+
+select public.cmd_set_region_active(
+  'aaaa0001-1111-4111-8111-aaaaaaaaaaaa',
+  (select id from public.regions where name_ar = 'مستوى ثالث'),
+  false, 'اختبار', 'test-request-17', null
+);
+
+select is(
+  (select is_active from public.regions where name_ar = 'مستوى ثالث'),
+  false,
+  'a leaf region can be deactivated'
+);
+
+select public.cmd_set_region_active(
+  'aaaa0001-1111-4111-8111-aaaaaaaaaaaa',
+  (select id from public.regions where name_ar = 'مستوى ثانٍ'),
+  false, null, 'test-request-18', null
+);
+
+-- Re-assign the supervisor first: section 6 revoked everything, and retiring a region must tell
+-- whoever still depends on it.
+select public.cmd_assign_geo_supervisor(
+  'aaaa0001-1111-4111-8111-aaaaaaaaaaaa',
+  'aaaa0005-5555-4555-8555-aaaaaaaaaaaa',
+  array[(select id from t_chain)],
+  null, 'test-request-19', null
+);
+
+select public.cmd_set_region_active(
+  'aaaa0001-1111-4111-8111-aaaaaaaaaaaa',
+  (select id from public.regions where name_ar = 'مستوى أول'),
+  false, null, 'test-request-20', null
+);
+
+select is(
+  (select count(*)::int from app.region_descendants((select id from t_chain))),
+  0,
+  'an inactive region contributes no descendants (scope shrinks immediately)'
+);
+
+select is(
+  (public.cmd_set_region_active(
+    'aaaa0001-1111-4111-8111-aaaaaaaaaaaa',
+    (select id from public.regions where name_ar = 'مستوى أول'),
+    false, null, null, null
+  ) ->> 'changed')::boolean,
+  false,
+  'deactivating twice is idempotent, not an error'
+);
+
+select public.cmd_set_region_active(
+  'aaaa0001-1111-4111-8111-aaaaaaaaaaaa',
+  (select id from public.regions where name_ar = 'مستوى أول'),
+  true, null, 'test-request-20', null
+);
+
+select is(
+  (select is_active from public.regions where name_ar = 'مستوى أول'),
+  true,
+  'a region can be reactivated'
+);
+
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"aaaa0006-6666-4666-8666-aaaaaaaaaaaa","role":"authenticated"}';
+
+select throws_ok(
+  format(
+    $$select public.cmd_set_place_active('aaaa0006-6666-4666-8666-aaaaaaaaaaaa', %L, false)$$,
+    (select (payload -> 'place' ->> 'id')::uuid from t_staff_place)
+  ),
+  '42501',
+  'a user cannot retire a place they did not create'
+);
+
+reset role;
+
+select public.cmd_set_place_active(
+  'aaaa0002-2222-4222-8222-aaaaaaaaaaaa',
+  (select (payload -> 'place' ->> 'id')::uuid from t_staff_place),
+  false, 'مكرر', 'test-request-21', null
+);
+
+select is(
+  (select count(*)::int from public.search_places('موقف عدن المركزي', 'ar', null, null, null, 10)),
+  0,
+  'a retired place disappears from search immediately'
+);
+
+select ok(
+  exists (select 1 from audit.log where action = 'place.deactivate')
+  and exists (select 1 from audit.log where action = 'region.deactivate'),
+  'retiring reference data is audited'
+);
+
+select ok(
+  exists (
+    select 1 from public.notifications
+    where user_id = 'aaaa0005-5555-4555-8555-aaaaaaaaaaaa'
+      and title_key = 'notifications.geoRegionRetired'
+  ),
+  'a supervisor is told when the region that gave them scope is retired'
 );
 
 -- ---------------------------------------------------------------------------

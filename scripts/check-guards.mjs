@@ -138,6 +138,52 @@ if (badNames.length > 0) {
   failures.push(`supabase/migrations: bad names ${badNames.join(', ')} (expected 00001_name.sql)`);
 }
 
+/* 7. Every notification title key written by SQL must exist in both dictionaries (BR-43).
+      A missing key renders as "notifications.something" in the bell — a silent, user-visible bug. */
+const dictionariesSource = await readFile(
+  join(root, 'packages', 'core', 'src', 'i18n', 'dictionaries.ts'),
+  'utf8',
+);
+const definedKeys = new Set(
+  [...dictionariesSource.matchAll(/'((?:notifications|errors)\.[A-Za-z]+)':/g)].map((m) => m[1]),
+);
+const sqlSource = (
+  await Promise.all(
+    (await readdir(join(root, 'supabase', 'migrations')))
+      .filter((name) => name.endsWith('.sql'))
+      .map((name) => readFile(join(root, 'supabase', 'migrations', name), 'utf8')),
+  )
+).join('\n');
+
+for (const key of new Set(
+  [...sqlSource.matchAll(/'(notifications\.[A-Za-z]+)'/g)].map((m) => m[1]),
+)) {
+  if (!definedKeys.has(key)) {
+    failures.push(`supabase/migrations: notification key '${key}' is not in dictionaries.ts`);
+  }
+}
+
+/* 8. Every cmd_* a client-facing module can call must exist in a migration.
+      A typo here is a runtime 500 the type system cannot see. */
+const definedCommands = new Set(
+  [...sqlSource.matchAll(/create or replace function public\.(cmd_[a-z0-9_]+)/g)].map((m) => m[1]),
+);
+const callers = [
+  ...(await walk(join(root, 'packages', 'core', 'src', 'api'), (f) => f.endsWith('.ts'))),
+  ...(await walk(
+    join(root, 'supabase', 'functions'),
+    (f) => f.endsWith('.ts') && !f.includes('_bundled'),
+  )),
+];
+for (const file of callers) {
+  const source = await readFile(file, 'utf8');
+  for (const match of source.matchAll(/['"](cmd_[a-z0-9_]+)['"]/g)) {
+    if (!definedCommands.has(match[1])) {
+      failures.push(`${rel(file)}: calls ${match[1]}() which no migration defines`);
+    }
+  }
+}
+
 if (failures.length > 0) {
   console.error(`✗ ${failures.length} guard failure(s):\n`);
   for (const failure of failures) console.error(`  - ${failure}`);
@@ -145,5 +191,5 @@ if (failures.length > 0) {
 }
 
 console.log(
-  `✓ guards passed (${coreFiles.length} core files, ${styleFiles.length} style files, ${migrations.length} migrations)`,
+  `✓ guards passed (${coreFiles.length} core files, ${styleFiles.length} style files, ${migrations.length} migrations, ${definedCommands.size} commands)`,
 );

@@ -322,6 +322,12 @@ begin
     if not app.is_verified_actor(p_actor) then
       raise exception 'NOT_VERIFIED: only verified accounts can add places' using errcode = '42501';
     end if;
+    -- Verified accounts drop pins, they do not edit the reference: «مدينة» and «مطار» are staff
+    -- decisions, otherwise the shared geography slowly fills with duplicates and wrong kinds.
+    -- Keep in sync with USER_CREATABLE_KINDS in @maak/core (which the picker and the form use).
+    if p_kind not in ('gathering_point', 'landmark', 'other') then
+      raise exception 'FORBIDDEN: % is a reference kind; staff only', p_kind using errcode = '42501';
+    end if;
     v_public := false;
     v_status := 'pending';
     if p_org_id is not null and not app.is_org_member(p_org_id, p_actor) then
@@ -342,6 +348,13 @@ begin
     v_status
   )
   returning * into v_place;
+
+  if not v_public then
+    perform app.notify(
+      p_actor, 'verification_submitted', 'notifications.placePending',
+      jsonb_build_object('name', v_place.name_ar), null
+    );
+  end if;
 
   perform app.write_audit(
     p_actor, 'place.create', 'place', v_place.id::text,
@@ -590,35 +603,7 @@ begin
 end
 $$;
 
--- Staff need to see the queue of user-submitted places, with the submitter's name.
-create or replace function public.staff_place_queue(p_limit int default 50)
-returns table (
-  id uuid,
-  kind text,
-  name_ar text,
-  name_en text,
-  governorate_name text,
-  district_name text,
-  lat double precision,
-  lng double precision,
-  created_at timestamptz,
-  submitted_by uuid
-)
-language sql
-stable
-security definer
-set search_path = ''
-as $$
-  select pl.id, pl.kind, pl.name_ar, coalesce(pl.name_en, ''), coalesce(g.name_ar, ''),
-         coalesce(d.name_ar, ''), pl.lat, pl.lng, pl.created_at, pl.created_by
-  from public.places pl
-  left join public.governorates g on g.id = pl.governorate_id
-  left join public.districts d on d.id = pl.district_id
-  where pl.verification_status = 'pending'
-    and app.is_platform_staff()
-  order by pl.created_at asc
-  limit greatest(1, least(coalesce(p_limit, 50), 200));
-$$;
-
-revoke all on function public.staff_place_queue(int) from public, anon, authenticated;
-grant execute on function public.staff_place_queue(int) to service_role;
+-- There is deliberately no `staff_place_queue()` RPC: the queue is read through RLS
+-- (`places_read_staff` in 00008) by the server-side loader, which joins the governorate and district
+-- names in the same round trip. A service-role-only function that nothing calls is surface without a
+-- purpose.

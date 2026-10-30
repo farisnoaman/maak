@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   EMPTY_SELECTION,
+  PLACE_KIND_KEY,
   isSelectionComplete,
   rankPlaces,
   reducePicker,
@@ -22,10 +23,13 @@ import type { GeoDirectory } from '@/lib/geo-types';
 /**
  * The one place picker.
  *
- * State transitions live in `reducePicker()` (@maak/core), so changing the governorate clears the
- * district and the place — the rule is tested there, not re-implemented here. Search goes to
- * `search_places` when a project is configured (server-side ranking, private places included for
- * their creator) and falls back to `rankPlaces()` over the loaded reference set in preview mode.
+ * Behaviour that matters:
+ *  · selecting a governorate **browses** its places instead of showing an empty box, and clears the
+ *    district and place (`reducePicker`, tested in @maak/core);
+ *  · typing searches — `search_places` when a project is configured (server ranking, private places
+ *    for their creator), `rankPlaces()` over the loaded reference set otherwise;
+ *  · a custom name is a first-class answer, so a driver can name a corner the reference has never
+ *    heard of without waiting for a review.
  *
  * Phase 3 (trip creation) consumes this component unchanged for pickup, gathering point and
  * destination.
@@ -47,7 +51,9 @@ export function PlacePicker({
 
   const [selection, setSelection] = useState<PickerSelection>(value ?? EMPTY_SELECTION);
   const [query, setQuery] = useState('');
-  const [remote, setRemote] = useState<readonly { id: string; name: string }[] | null>(null);
+  const [remote, setRemote] = useState<
+    readonly { id: string; name: string; kind: string }[] | null
+  >(null);
   const [searching, setSearching] = useState(false);
 
   const dispatch = (action: Parameters<typeof reducePicker>[1]) => {
@@ -56,6 +62,8 @@ export function PlacePicker({
       onChange?.(next);
       return next;
     });
+    // A stale remote result set would otherwise linger after the filters changed.
+    setRemote(null);
   };
 
   const districts = useMemo(
@@ -68,25 +76,36 @@ export function PlacePicker({
     [directory.districts, selection.governorateId],
   );
 
-  // Local ranking is instant and always available; the RPC adds private places and server ranking.
+  const refs = useMemo<PlaceRef[]>(
+    () => directory.places.map((place) => ({ ...place, kind: place.kind as PlaceKind })),
+    [directory.places],
+  );
+
+  // Local ranking is instant and always available. An empty query still ranks (by kind/name) so
+  // picking a governorate lists its places — a picker that shows nothing until you type is a dead end.
   const localMatches = useMemo(() => {
-    if (!query.trim() && !selection.governorateId) return [];
-    const refs: PlaceRef[] = directory.places.map((place) => ({
-      ...place,
-      kind: place.kind as PlaceKind,
-    }));
-    return rankPlaces(query, refs, {
+    const narrowed = query.trim()
+      ? refs
+      : refs.filter(
+          (place) =>
+            (!selection.governorateId || place.governorateId === selection.governorateId) &&
+            (!selection.districtId || place.districtId === selection.districtId),
+        );
+    return rankPlaces(query, narrowed, {
       governorateId: selection.governorateId ?? undefined,
       districtId: selection.districtId ?? undefined,
       limit: 8,
     }).map((place) => ({
       id: place.id,
       name: locale === 'ar' ? place.nameAr : (place.nameEn ?? place.nameAr),
+      kind: place.kind,
     }));
-  }, [directory.places, locale, query, selection.districtId, selection.governorateId]);
+  }, [locale, query, refs, selection.districtId, selection.governorateId]);
 
   useEffect(() => {
-    if (!directory.configured) {
+    // Search only runs on a real query: an empty query is browsing, which local ranking already does
+    // without a round trip.
+    if (!directory.configured || query.trim().length === 0) {
       setRemote(null);
       return;
     }
@@ -110,7 +129,7 @@ export function PlacePicker({
         setRemote(
           rows.map((row) => {
             const result = toPlaceSearchResult(row as Record<string, unknown>);
-            return { id: result.id, name: result.name };
+            return { id: result.id, name: result.name, kind: result.kind };
           }),
         );
         setSearching(false);
@@ -164,7 +183,7 @@ export function PlacePicker({
           onChange={(event) => setQuery(event.target.value)}
         />
         <Field
-          label={t('picker.custom')}
+          label={t('places.custom')}
           value={selection.customName ?? ''}
           placeholder={t('picker.customPlaceholder')}
           onChange={(event) => dispatch({ type: 'custom', name: event.target.value })}
@@ -185,11 +204,16 @@ export function PlacePicker({
                   onChange={() => dispatch({ type: 'place', id: place.id })}
                 />
                 <span>{place.name}</span>
+                <span className="form-hint">
+                  {t(PLACE_KIND_KEY[place.kind as PlaceKind] as TranslationKey)}
+                </span>
               </label>
             </li>
           ))}
         </ul>
-      ) : null}
+      ) : (
+        <p className="form-hint">{query.trim() ? t('places.noResults') : t('places.browseHint')}</p>
+      )}
 
       <p className={complete ? 'form-success' : 'form-hint'} aria-live="polite">
         {complete

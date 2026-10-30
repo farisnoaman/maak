@@ -61,6 +61,15 @@ export function SupervisorPanel({
     );
   }
 
+  // Selecting a supervisor loads their current regions into the checkboxes. Without this the form
+  // would look empty while a reconcile-style command silently revoked everything not re-checked.
+  function selectUser(nextUserId: string) {
+    setUserId(nextUserId);
+    setRegionIds(supervisors.find((row) => row.userId === nextUserId)?.regionIds ?? []);
+    setMessage(null);
+    setError(null);
+  }
+
   async function submit(kind: 'assign' | 'revoke') {
     setError(null);
     setMessage(null);
@@ -82,6 +91,7 @@ export function SupervisorPanel({
           ? [...current.filter((row) => row.userId !== userId), next]
           : current.filter((row) => row.userId !== userId),
       );
+      if (kind === 'revoke') setRegionIds([]);
       setMessage(t('geo.previewNotice'));
       return;
     }
@@ -113,6 +123,7 @@ export function SupervisorPanel({
         ? [...current.filter((row) => row.userId !== userId), next]
         : current.filter((row) => row.userId !== userId),
     );
+    if (kind === 'revoke') setRegionIds([]);
     setMessage(t('supervisors.assigned'));
   }
 
@@ -153,7 +164,7 @@ export function SupervisorPanel({
         <Select
           label={t('supervisors.user')}
           value={userId}
-          onChange={(event) => setUserId(event.target.value)}
+          onChange={(event) => selectUser(event.target.value)}
           options={
             directory.users.length === 0
               ? [{ value: '', label: t('supervisors.selectUser'), disabled: true }]

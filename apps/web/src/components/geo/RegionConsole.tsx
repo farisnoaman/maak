@@ -23,6 +23,7 @@ interface Draft {
   readonly id: string | null;
   readonly nameAr: string;
   readonly nameEn: string;
+  readonly description: string;
   readonly kind: 'region' | 'sub_region';
   readonly parentId: string | null;
   readonly governorateIds: readonly string[];
@@ -33,6 +34,7 @@ const EMPTY_DRAFT: Draft = {
   id: null,
   nameAr: '',
   nameEn: '',
+  description: '',
   kind: 'region',
   parentId: null,
   governorateIds: [],
@@ -53,9 +55,16 @@ function toNodes(regions: readonly GeoRegion[]): RegionNode[] {
 /**
  * Region builder.
  *
- * Coverage is *validated before it is submitted* with the same function the SQL command mirrors:
- * a district can only be added under a governorate the region already covers, so the form cannot
- * produce the `DISTRICT_OUTSIDE_GOVERNORATE` error the command would reject.
+ * Coverage is the **union** of whole governorates and hand-picked districts, and a hand-picked
+ * district may come from any governorate — that is the «6 governorates + 4 extra districts» case in
+ * the spec. The two lists are therefore edited independently:
+ *
+ *   · the governorate checkboxes select *whole governorates*;
+ *   · the district panel selects *individual districts*, filtered by a governorate that is only a
+ *     browsing aid and never restricts what may be stored.
+ *
+ * `validateCoverage()` (the same predicate the SQL command mirrors) decides what can be submitted;
+ * duplicates are collapsed by `expandCoverage()`, not treated as errors.
  */
 export function RegionConsole({
   locale,
@@ -69,6 +78,7 @@ export function RegionConsole({
 
   const [regions, setRegions] = useState<readonly GeoRegion[]>(directory.regions);
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
+  const [districtFilter, setDistrictFilter] = useState<string>('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -89,6 +99,9 @@ export function RegionConsole({
     directory.districts,
   );
 
+  const activeRegions = regions.filter((region) => region.isActive);
+  const retiredRegions = regions.filter((region) => !region.isActive);
+
   // A region cannot become its own descendant's child: the command would reject it, so the select
   // does not offer it in the first place.
   const forbiddenParents = draft.id
@@ -96,7 +109,7 @@ export function RegionConsole({
     : new Set<string>();
   const parentOptions = [
     { value: '', label: t('geo.parentNone') },
-    ...regions
+    ...activeRegions
       .filter((region) => !forbiddenParents.has(region.id))
       .map((region) => ({
         value: region.id,
@@ -104,9 +117,23 @@ export function RegionConsole({
       })),
   ];
 
-  const visibleDistricts = directory.districts.filter((district) =>
-    draft.governorateIds.includes(district.governorateId),
+  // Browsing filter for the district panel. Defaults to the first covered governorate so the panel
+  // is immediately useful, then follows the admin's choice.
+  const effectiveFilter =
+    districtFilter || draft.governorateIds[0] || directory.governorates[0]?.id || '';
+  const filteredDistricts = directory.districts.filter(
+    (district) => district.governorateId === effectiveFilter,
   );
+  const filterGovernorate = directory.governorates.find(
+    (governorate) => governorate.id === effectiveFilter,
+  );
+  const wholeGovernorateSelected = draft.governorateIds.includes(effectiveFilter);
+  const extraDistricts = draft.districtIds.filter((id) => {
+    const district = districtById.get(id);
+    return district ? !draft.governorateIds.includes(district.governorateId) : false;
+  });
+
+  const nameOf = (region: GeoRegion) => (locale === 'ar' ? region.nameAr : region.nameEn);
 
   function toggle(list: readonly string[], id: string): string[] {
     return list.includes(id) ? list.filter((value) => value !== id) : [...list, id];
@@ -117,6 +144,7 @@ export function RegionConsole({
       id: region.id,
       nameAr: region.nameAr,
       nameEn: region.nameEn,
+      description: '',
       kind: region.kind,
       parentId: region.parentId,
       governorateIds: region.governorateIds,
@@ -126,11 +154,60 @@ export function RegionConsole({
     setError(null);
   }
 
+  async function setActive(region: GeoRegion, active: boolean) {
+    setError(null);
+    setMessage(null);
+
+    if (!directory.configured) {
+      setRegions((current) =>
+        current.map((row) => (row.id === region.id ? { ...row, isActive: active } : row)),
+      );
+      setMessage(t('geo.previewNotice'));
+      return;
+    }
+
+    const client = getApiClient();
+    if (!client) {
+      setError(t('verification.notConfigured'));
+      return;
+    }
+
+    setBusy(true);
+    const result = await client.call(geoCommandSpec, {
+      action: 'region.setActive',
+      regionId: region.id,
+      active,
+    });
+    setBusy(false);
+
+    if (!result.ok) {
+      // The command refuses while active sub-regions depend on it; say so instead of failing flat.
+      setError(
+        result.error.code === 'CONFLICT'
+          ? t('geo.deactivateBlocked')
+          : t(errorKey(result.error.code)),
+      );
+      return;
+    }
+
+    // The row stays, flagged: a retired region must remain reachable to be brought back.
+    setRegions((current) =>
+      current.map((row) => (row.id === region.id ? { ...row, isActive: active } : row)),
+    );
+    if (!active && draft.id === region.id) setDraft(EMPTY_DRAFT);
+    setMessage(active ? t('geo.reactivated') : t('geo.deactivated'));
+  }
+
   async function save() {
     if (problems.length > 0) {
       setError(t('geo.coverageEmpty'));
       return;
     }
+    if (draft.kind === 'sub_region' && !draft.parentId) {
+      setError(t('geo.subRegionNeedsParent'));
+      return;
+    }
+
     setError(null);
     setMessage(null);
 
@@ -142,6 +219,7 @@ export function RegionConsole({
       nameEn: draft.nameEn.trim(),
       governorateIds: draft.governorateIds,
       districtIds: draft.districtIds,
+      isActive: true,
     };
 
     if (!directory.configured) {
@@ -169,6 +247,7 @@ export function RegionConsole({
       kind: draft.kind,
       nameAr: nextRegion.nameAr,
       nameEn: nextRegion.nameEn,
+      description: draft.description.trim() || undefined,
       governorateIds: [...draft.governorateIds],
       districtIds: [...draft.districtIds],
     });
@@ -195,31 +274,31 @@ export function RegionConsole({
           <Badge tone="info">{t('geo.depthWarning')}</Badge>
         </div>
 
-        {regions.length === 0 ? (
+        {activeRegions.length === 0 ? (
           <p className="form-hint">{t('geo.noRegions')}</p>
         ) : (
           <ul className="queue-list" aria-label={t('geo.title')}>
-            {regions.map((region) => {
+            {activeRegions.map((region) => {
               const parent = regions.find((candidate) => candidate.id === region.parentId);
               const districts = expandCoverage(
                 { governorateIds: region.governorateIds, districtIds: region.districtIds },
                 directory.districts,
               );
+              const extra = region.districtIds.filter((id) => {
+                const district = districtById.get(id);
+                return district ? !region.governorateIds.includes(district.governorateId) : false;
+              });
               return (
                 <li key={region.id} className="queue-card">
                   <div>
                     <p style={{ fontWeight: 700, margin: 0 }}>
-                      {locale === 'ar' ? region.nameAr : region.nameEn}
-                      {parent ? (
-                        <span className="form-hint">
-                          {' '}
-                          · {locale === 'ar' ? parent.nameAr : parent.nameEn}
-                        </span>
-                      ) : null}
+                      {nameOf(region)}
+                      {parent ? <span className="form-hint"> · {nameOf(parent)}</span> : null}
                     </p>
                     <p className="form-hint" style={{ margin: 0 }}>
                       {t('geo.districtCount', { count: districts.length })} ·{' '}
-                      {region.governorateIds.length} {t('geo.governorates')}
+                      {t('geo.governorateCount', { count: region.governorateIds.length })}
+                      {extra.length > 0 ? ` · ${t('geo.extraCount', { count: extra.length })}` : ''}
                     </p>
                   </div>
                   <div className="geo-row-actions">
@@ -229,12 +308,46 @@ export function RegionConsole({
                     <Button variant="subtle" size="sm" onClick={() => startEdit(region)}>
                       {t('geo.editRegion')}
                     </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={busy}
+                      onClick={() => setActive(region, false)}
+                    >
+                      {t('geo.deactivate')}
+                    </Button>
                   </div>
                 </li>
               );
             })}
           </ul>
         )}
+
+        {retiredRegions.length > 0 ? (
+          <>
+            <div className="panel-head">
+              <h3 style={{ fontSize: '1rem', margin: 0 }}>{t('geo.retired')}</h3>
+            </div>
+            <ul className="queue-list" aria-label={t('geo.retired')}>
+              {retiredRegions.map((region) => (
+                <li key={region.id} className="queue-card">
+                  <div>
+                    <p style={{ fontWeight: 700, margin: 0 }}>{nameOf(region)}</p>
+                    <p className="form-hint" style={{ margin: 0 }}>
+                      {t('geo.retiredHint')}
+                    </p>
+                  </div>
+                  <div className="geo-row-actions">
+                    <Badge tone="neutral">{t('geo.retired')}</Badge>
+                    <Button variant="subtle" size="sm" onClick={() => setActive(region, true)}>
+                      {t('geo.reactivate')}
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </>
+        ) : null}
       </section>
 
       <section className="card" aria-labelledby="geo-region-form">
@@ -275,64 +388,87 @@ export function RegionConsole({
             value={draft.parentId ?? ''}
             onChange={(event) => setDraft({ ...draft, parentId: event.target.value || null })}
             options={parentOptions}
+            hint={draft.kind === 'sub_region' ? t('geo.subRegionNeedsParent') : undefined}
+          />
+          <Field
+            label={t('geo.description')}
+            value={draft.description}
+            onChange={(event) => setDraft({ ...draft, description: event.target.value })}
           />
         </div>
 
         <fieldset className="geo-coverage">
-          <legend>{t('geo.coverage')}</legend>
+          <legend>{t('geo.governorates')}</legend>
           <p className="form-hint">{t('geo.coverageHint')}</p>
 
           <div className="geo-check-grid">
-            {directory.governorates.map((governorate) => {
-              const checked = draft.governorateIds.includes(governorate.id);
-              return (
-                <label key={governorate.id} className="geo-check">
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() => {
-                      const governorateIds = toggle(draft.governorateIds, governorate.id);
-                      // Removing a governorate must drop its hand-picked districts too, or the
-                      // selection would be invalid the moment it is submitted.
-                      const districtIds = checked
-                        ? draft.districtIds.filter(
-                            (id) => districtById.get(id)?.governorateId !== governorate.id,
-                          )
-                        : draft.districtIds;
-                      setDraft({ ...draft, governorateIds, districtIds });
-                    }}
-                  />
-                  <span>{locale === 'ar' ? governorate.nameAr : governorate.nameEn}</span>
-                  <span className="form-hint">{governorate.code}</span>
-                </label>
-              );
-            })}
+            {directory.governorates.map((governorate) => (
+              <label key={governorate.id} className="geo-check">
+                <input
+                  type="checkbox"
+                  checked={draft.governorateIds.includes(governorate.id)}
+                  onChange={() =>
+                    setDraft({
+                      ...draft,
+                      governorateIds: toggle(draft.governorateIds, governorate.id),
+                    })
+                  }
+                />
+                <span>{locale === 'ar' ? governorate.nameAr : governorate.nameEn}</span>
+                <span className="form-hint">{governorate.code}</span>
+              </label>
+            ))}
           </div>
-
-          {visibleDistricts.length > 0 ? (
-            <div className="geo-check-grid" aria-label={t('geo.districts')}>
-              {visibleDistricts.map((district) => (
-                <label key={district.id} className="geo-check">
-                  <input
-                    type="checkbox"
-                    checked={draft.districtIds.includes(district.id)}
-                    onChange={() =>
-                      setDraft({ ...draft, districtIds: toggle(draft.districtIds, district.id) })
-                    }
-                  />
-                  <span>{locale === 'ar' ? district.nameAr : district.nameEn}</span>
-                </label>
-              ))}
-            </div>
-          ) : null}
-
-          <p className="form-hint" aria-live="polite">
-            {t('geo.districtCount', { count: covered.length })}
-          </p>
         </fieldset>
 
+        <fieldset className="geo-coverage">
+          <legend>{t('geo.extraDistricts')}</legend>
+          <p className="form-hint">{t('geo.extraDistrictsHint')}</p>
+
+          <Select
+            label={t('geo.districtFilter')}
+            value={effectiveFilter}
+            onChange={(event) => setDistrictFilter(event.target.value)}
+            options={directory.governorates.map((governorate) => ({
+              value: governorate.id,
+              label: locale === 'ar' ? governorate.nameAr : governorate.nameEn,
+            }))}
+          />
+
+          <div className="geo-check-grid" aria-label={t('geo.districts')}>
+            {filteredDistricts.map((district) => (
+              <label key={district.id} className="geo-check">
+                <input
+                  type="checkbox"
+                  checked={draft.districtIds.includes(district.id)}
+                  onChange={() =>
+                    setDraft({ ...draft, districtIds: toggle(draft.districtIds, district.id) })
+                  }
+                />
+                <span>{locale === 'ar' ? district.nameAr : district.nameEn}</span>
+                {wholeGovernorateSelected ? (
+                  <span className="form-hint">{t('geo.alreadyCovered')}</span>
+                ) : null}
+              </label>
+            ))}
+          </div>
+          {filteredDistricts.length === 0 ? (
+            <p className="form-hint">
+              {t('geo.noDistricts')} {filterGovernorate ? `(${filterGovernorate.code})` : ''}
+            </p>
+          ) : null}
+        </fieldset>
+
+        <p className="form-hint" aria-live="polite">
+          {t('geo.districtCount', { count: covered.length })} ·{' '}
+          {t('geo.governorateCount', { count: draft.governorateIds.length })}
+          {extraDistricts.length > 0
+            ? ` · ${t('geo.extraCount', { count: extraDistricts.length })}`
+            : ''}
+        </p>
+
         <div className="form-actions">
-          <Button variant="primary" onClick={save} disabled={busy}>
+          <Button variant="primary" onClick={save} disabled={busy} loading={busy}>
             {t('common.save')}
           </Button>
         </div>
@@ -342,9 +478,9 @@ export function RegionConsole({
             {message}
           </p>
         ) : null}
-        {error || problems.some((problem) => problem.code !== 'EMPTY') ? (
+        {error ? (
           <p className="form-error" role="alert">
-            {error ?? t('geo.coverageEmpty')}
+            {error}
           </p>
         ) : null}
       </section>

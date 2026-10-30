@@ -7,6 +7,8 @@ import {
   geoCommandArgs,
   importGeoSchema,
   searchPlacesInputSchema,
+  setPlaceActiveSchema,
+  setRegionActiveSchema,
   toPlaceSearchResult,
   upsertRegionSchema,
 } from '../src/api/geography';
@@ -262,5 +264,48 @@ describe('the policy matrix guards geography', () => {
     expect(can(VERIFIED_OWNER, 'place.create')).toBe(true);
     expect(can(VERIFIED_OWNER, 'place.decide')).toBe(false);
     expect(can(ADMIN, 'place.decide')).toBe(true);
+  });
+});
+
+describe('retiring reference data', () => {
+  it('maps region deactivation to cmd_set_region_active', () => {
+    const action = geoActionSchema.parse({
+      action: 'region.setActive',
+      regionId: GOV,
+      active: false,
+      reason: 'استُبدل بإقليم جديد',
+    });
+    const { fn, args } = geoCommandArgs(action, ADMIN.userId as string, audit);
+    expect(fn).toBe('cmd_set_region_active');
+    expect(args).toMatchObject({ p_region_id: GOV, p_active: false });
+  });
+
+  it('maps place deactivation to cmd_set_place_active', () => {
+    expect(
+      setPlaceActiveSchema.safeParse({ action: 'place.setActive', placeId: PLACE, active: false })
+        .success,
+    ).toBe(true);
+    const action = geoActionSchema.parse({
+      action: 'place.setActive',
+      placeId: PLACE,
+      active: true,
+    });
+    const { fn, args } = geoCommandArgs(action, ADMIN.userId as string, audit);
+    expect(fn).toBe('cmd_set_place_active');
+    expect(args.p_active).toBe(true);
+  });
+
+  it('requires a real uuid, so a stale row cannot address nothing', () => {
+    expect(
+      setRegionActiveSchema.safeParse({ action: 'region.setActive', regionId: 'x', active: false })
+        .success,
+    ).toBe(false);
+  });
+
+  it('lets staff retire places but keeps the ownership rule in SQL', () => {
+    expect(can(ADMIN, 'place.setActive')).toBe(true);
+    expect(can(VERIFIED_OWNER, 'place.setActive')).toBe(true);
+    // A passenger owns nothing, so the gateway stops them before the database is touched.
+    expect(can(PASSENGER, 'place.setActive')).toBe(false);
   });
 });

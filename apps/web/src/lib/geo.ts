@@ -5,6 +5,10 @@
  * the public directory (regions and governorates are reference data) and an empty queue, because
  * `places_read_staff` is the only policy that reveals pending submissions.
  *
+ * The place list is capped at 300 rows: it is the *reference* set used to browse and to rank
+ * locally. Real search (including private gathering points) goes through `search_places`, which is
+ * indexed and unbounded by this cap.
+ *
  * Supervisor scope is computed here with `supervisorScope()` from @maak/core — the same function the
  * edge and the tests use — rather than with a second SQL join that could disagree.
  */
@@ -64,9 +68,8 @@ export async function loadGeoDirectory(context: AccountContext): Promise<GeoDire
       client
         .from('regions')
         .select(
-          'id, parent_id, kind, name_ar, name_en, region_governorates(governorate_id), region_districts(district_id)',
+          'id, parent_id, kind, name_ar, name_en, is_active, region_governorates(governorate_id), region_districts(district_id)',
         )
-        .eq('is_active', true)
         .order('name_ar', { ascending: true }),
       client
         .from('places')
@@ -110,6 +113,7 @@ export async function loadGeoDirectory(context: AccountContext): Promise<GeoDire
     nameEn: String(row.name_en),
     governorateIds: related(row.region_governorates, (item) => String(item.governorate_id)),
     districtIds: related(row.region_districts, (item) => String(item.district_id)),
+    isActive: row.is_active === true,
   }));
 
   const places: GeoPlaceOption[] = rows(placeResult.data).map((row) => ({
@@ -170,14 +174,18 @@ export async function loadGeoDirectory(context: AccountContext): Promise<GeoDire
   }));
   const nameById = new Map(users.map((user) => [user.id, user.name]));
 
-  const nodes: RegionNode[] = regions.map((region) => ({
-    id: region.id,
-    parentId: region.parentId,
-    nameAr: region.nameAr,
-    nameEn: region.nameEn,
-    kind: region.kind,
-    coverage: { governorateIds: region.governorateIds, districtIds: region.districtIds },
-  }));
+  // Only active regions contribute scope — `app.geo_scope_districts` filters on `is_active`, and a
+  // UI that counts retired coverage would quietly disagree with the database.
+  const nodes: RegionNode[] = regions
+    .filter((region) => region.isActive)
+    .map((region) => ({
+      id: region.id,
+      parentId: region.parentId,
+      nameAr: region.nameAr,
+      nameEn: region.nameEn,
+      kind: region.kind,
+      coverage: { governorateIds: region.governorateIds, districtIds: region.districtIds },
+    }));
 
   const byUser = new Map<string, string[]>();
   for (const row of rows(assignmentResult.data)) {

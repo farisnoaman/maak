@@ -56,7 +56,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
               </div>
               <div className="hero__stats">
                 <div>
-                  <div className="stat__value num">260</div>
+                  <div className="stat__value num">268</div>
                   <div className="stat__label">{t('home.statTests')}</div>
                 </div>
                 <div>

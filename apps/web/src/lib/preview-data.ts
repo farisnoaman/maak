@@ -278,6 +278,7 @@ export const previewRegions: readonly GeoRegion[] = [
     nameEn: 'Aden & the Coast',
     governorateIds: [previewGovernorates[0]!.id, previewGovernorates[2]!.id],
     districtIds: [previewDistricts[8]!.id],
+    isActive: true,
   },
   {
     id: '30000000-0000-4000-8000-000000000002',
@@ -287,6 +288,7 @@ export const previewRegions: readonly GeoRegion[] = [
     nameEn: 'Aden Sub-region',
     governorateIds: [previewGovernorates[0]!.id],
     districtIds: [],
+    isActive: true,
   },
   {
     id: '30000000-0000-4000-8000-000000000003',
@@ -296,6 +298,7 @@ export const previewRegions: readonly GeoRegion[] = [
     nameEn: 'Highlands',
     governorateIds: [previewGovernorates[1]!.id],
     districtIds: [],
+    isActive: true,
   },
 ];
 

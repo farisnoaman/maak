@@ -104,6 +104,20 @@ export const decidePlaceSchema = z
     path: ['reason'],
   });
 
+export const setRegionActiveSchema = z.object({
+  action: z.literal('region.setActive'),
+  regionId: uuid,
+  active: z.boolean(),
+  reason: z.string().trim().max(500).optional(),
+});
+
+export const setPlaceActiveSchema = z.object({
+  action: z.literal('place.setActive'),
+  placeId: uuid,
+  active: z.boolean(),
+  reason: z.string().trim().max(500).optional(),
+});
+
 export const geoActionSchema = z.discriminatedUnion('action', [
   upsertRegionSchema,
   assignSupervisorSchema,
@@ -111,6 +125,8 @@ export const geoActionSchema = z.discriminatedUnion('action', [
   importGeoSchema,
   createPlaceSchema,
   decidePlaceSchema,
+  setRegionActiveSchema,
+  setPlaceActiveSchema,
 ]);
 
 export type GeoAction = z.infer<typeof geoActionSchema>;
@@ -256,6 +272,28 @@ export function geoCommandArgs(
           p_aliases_ar: action.aliasesAr,
           p_aliases_en: action.aliasesEn,
           p_org_id: action.orgId ?? null,
+          ...audit,
+        },
+      };
+    case 'region.setActive':
+      return {
+        fn: 'cmd_set_region_active',
+        args: {
+          p_actor: actorId,
+          p_region_id: action.regionId,
+          p_active: action.active,
+          p_reason: action.reason ?? null,
+          ...audit,
+        },
+      };
+    case 'place.setActive':
+      return {
+        fn: 'cmd_set_place_active',
+        args: {
+          p_actor: actorId,
+          p_place_id: action.placeId,
+          p_active: action.active,
+          p_reason: action.reason ?? null,
           ...audit,
         },
       };
