@@ -10,6 +10,8 @@ export default tseslint.config(
       '**/dist/**',
       '**/coverage/**',
       'supabase/functions/_bundled/**',
+      // Local dev backend artefacts (PostgreSQL cluster, esbuild bundle of @maak/core).
+      '.dev/**',
       'package-lock.json',
     ],
   },
@@ -58,6 +60,11 @@ export default tseslint.config(
         Deno: 'readonly',
         crypto: 'readonly',
         fetch: 'readonly',
+        Buffer: 'readonly',
+        Headers: 'readonly',
+        Request: 'readonly',
+        Response: 'readonly',
+        setTimeout: 'readonly',
       },
     },
     rules: {

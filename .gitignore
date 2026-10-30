@@ -25,3 +25,6 @@ coverage/
 
 # edge bundles are build artefacts (CI rebuilds them)
 supabase/functions/_bundled/
+
+# local dev backend cluster, bundles, uploads
+.dev/

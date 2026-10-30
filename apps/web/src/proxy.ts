@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { LOCALES, negotiateLocale } from '@maak/core';
+import { AUTH_COOKIE_NAME, getSupabaseConfig } from './lib/supabase/config';
 
 /**
  * Two jobs, in order:
@@ -26,14 +27,14 @@ export default async function proxy(request: NextRequest) {
 
   const segments = pathname.split('/').filter(Boolean);
   const first = segments[0];
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const config = getSupabaseConfig();
 
-  if (!url || !anonKey) return NextResponse.next();
+  if (!config) return NextResponse.next();
 
   let response = NextResponse.next({ request });
 
-  const supabase = createServerClient(url, anonKey, {
+  const supabase = createServerClient(config.url, config.anonKey, {
+    cookieOptions: { name: AUTH_COOKIE_NAME },
     cookies: {
       getAll() {
         return request.cookies.getAll();
@@ -78,5 +79,7 @@ export default async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next|favicon.ico|robots.txt|sitemap.xml|.*\\..*).*)'],
+  // `supabase` is the same-origin proxy to the API: it must never run session logic, or every
+  // auth call would recurse through `auth.getUser()`.
+  matcher: ['/((?!_next|supabase|favicon.ico|robots.txt|sitemap.xml|.*\\..*).*)'],
 };

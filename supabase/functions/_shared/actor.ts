@@ -43,6 +43,12 @@ export async function resolveActor(userId: string): Promise<ResolvedActor> {
 
   if (profileResult.error) throw internal(profileResult.error.message);
   if (!profileResult.data) throw internal('Profile row missing for authenticated user');
+  // `driver_profiles` is created in Phase 3. Until then the lookup is a tolerated 42P01 rather than
+  // a 500 on every single request — and the day the table lands this starts returning rows with no
+  // code change. Any *other* error is still fatal.
+  if (driverResult.error && driverResult.error.code !== '42P01') {
+    throw internal(driverResult.error.message);
+  }
 
   const profile = profileResult.data as ProfileRow;
   const platformRoles = (rolesResult.data ?? []).map((row) => row.role as Role);

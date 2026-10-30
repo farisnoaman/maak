@@ -13,6 +13,20 @@ const nextConfig = {
   transpilePackages: ['@maak/core', '@maak/design-tokens'],
   poweredByHeader: false,
   allowedDevOrigins: devOrigins,
+
+  /**
+   * Same-origin API proxy for the local dev backend.
+   *
+   * `NEXT_PUBLIC_SUPABASE_URL=/supabase` makes the browser call the very host it was served from,
+   * which is the only way the app works inside the hosted preview's iframe (a browser there cannot
+   * resolve `localhost`). Server-to-server requests skip this rewrite and go straight to
+   * `MAAK_SUPABASE_INTERNAL`. Nothing is proxied when the variable is unset, i.e. in production.
+   */
+  async rewrites() {
+    const upstream = process.env.MAAK_SUPABASE_INTERNAL;
+    if (!upstream) return [];
+    return [{ source: '/supabase/:path*', destination: `${upstream.replace(/\/$/, '')}/:path*` }];
+  },
   // Security headers that cost nothing at this stage and prevent whole classes of bugs later.
   async headers() {
     /**

@@ -1,7 +1,15 @@
 import { cookies } from 'next/headers';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import type { SupabaseClient, User } from '@supabase/supabase-js';
-import { getSupabaseConfig } from './config';
+import { AUTH_COOKIE_NAME, getSupabaseConfig } from './config';
+
+/**
+ * `@supabase/ssr` reads `cookieOptions.name` as the *storage key* for the session, but types it as the
+ * `cookie` serialise options, which have no `name`. Widening the type here is the whole trick, and it
+ * is worth it: deriving the key from the URL host would give the browser and the server different
+ * cookie names behind the same-origin dev proxy.
+ */
+type StorageCookieOptions = CookieOptions & { name?: string };
 
 const COOKIE_OPTIONS: CookieOptions = {
   path: '/',
@@ -22,8 +30,10 @@ export async function getServerClient(): Promise<SupabaseClient | null> {
 
   const cookieStore = await cookies();
 
+  const storageOptions: StorageCookieOptions = { ...COOKIE_OPTIONS, name: AUTH_COOKIE_NAME };
+
   return createServerClient(config.url, config.anonKey, {
-    cookieOptions: COOKIE_OPTIONS,
+    cookieOptions: storageOptions,
     cookies: {
       getAll() {
         return cookieStore.getAll();

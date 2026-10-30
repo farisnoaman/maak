@@ -2,7 +2,7 @@
 
 import { createBrowserClient } from '@supabase/ssr';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { getSupabaseConfig } from './config';
+import { AUTH_COOKIE_NAME, getSupabaseConfig } from './config';
 
 let cached: SupabaseClient | null = null;
 
@@ -16,6 +16,7 @@ export function getBrowserClient(): SupabaseClient | null {
   const config = getSupabaseConfig();
   if (!config) return null;
   cached = createBrowserClient(config.url, config.anonKey, {
+    cookieOptions: { name: AUTH_COOKIE_NAME },
     auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
     global: { headers: { 'X-Maak-Client': 'web' } },
   });

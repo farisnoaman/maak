@@ -14,6 +14,7 @@ Bilingual by design: **Arabic (RTL) and English (LTR) are both first-class**, no
 |---|---|
 | [`specs.md`](./specs.md) | Product & technical specification: roles, domain model, permissions, business rules, payments/finance/subscriptions, architecture, security, NFRs, risks |
 | [`IMPLEMENTATION_PLAN.md`](./IMPLEMENTATION_PLAN.md) | 13 phases with deliverables, tasks, acceptance criteria, dependencies and progress tracker |
+| [`docs/dev-database.md`](./docs/dev-database.md) | Running against a real PostgreSQL + RLS locally, demo accounts, what the dev stack does and does not emulate |
 
 ## Architecture in one line
 
@@ -38,7 +39,12 @@ npm run check:guards        # boundaries, RTL, secrets, migration naming
 npm run test:coverage       # coverage thresholds (98% statements, 99% functions)
 npm run sql:check           # embedded PostgreSQL: migrations + pgTAP + type drift (no Docker)
 npm run build:functions     # bundle edge functions for deploy
-npm run dev                 # web on http://localhost:3000  (/ar and /en)
+
+# Run the app against a real database (no Docker, no Supabase CLI):
+npm run dev:setup           # writes apps/web/.env.local (once)
+npm run dev:api             # terminal 1 — Postgres + auth + REST + functions on :54321
+npm run dev                 # terminal 2 — web on http://localhost:3000  (/ar and /en)
+npm run dev:check           # end-to-end smoke: sign-in, RLS, gateway command
 
 supabase start              # requires Docker
 supabase db reset           # migrations + seed
@@ -46,6 +52,8 @@ supabase test db            # the same pgTAP suites on the real stack (auth, sto
 ```
 
 > No Docker in the build sandbox: `supabase start` and pgTAP run on your machine and in CI.
+> `npm run dev:api` is the way around that — a real PostgreSQL cluster, the real migrations and real
+> RLS, sign in with `admin@maak.test` / `Maak!2026`. Details: [`docs/dev-database.md`](./docs/dev-database.md).
 
 ## Status
 
