@@ -27,6 +27,18 @@ export default async function ConsolePage({ params }: { params: Promise<{ locale
       note: 'console.tileDrivers' as const,
       href: `/${locale}/operator/drivers`,
     },
+    // Phase 9 — money. Two tiles, because they are two different jobs: confirming what arrived, and
+    // asking for what is owed.
+    {
+      key: 'console.navPayments' as const,
+      note: 'console.tilePayments' as const,
+      href: `/${locale}/operator/payments`,
+    },
+    {
+      key: 'console.navPayouts' as const,
+      note: 'console.tilePayouts' as const,
+      href: `/${locale}/operator/payouts`,
+    },
   ];
 
   return (
@@ -43,6 +55,8 @@ export default async function ConsolePage({ params }: { params: Promise<{ locale
           { key: 'console.navVehicles', href: `/${locale}/operator/vehicles` },
           { key: 'console.navFleet', href: `/${locale}/operator/fleet` },
           { key: 'console.navDrivers', href: `/${locale}/operator/drivers` },
+          { key: 'console.navPayments', href: `/${locale}/operator/payments` },
+          { key: 'console.navPayouts', href: `/${locale}/operator/payouts` },
         ]}
       >
         {screens.map((screen) => (

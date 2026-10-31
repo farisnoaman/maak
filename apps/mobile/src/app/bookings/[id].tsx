@@ -37,8 +37,12 @@ import {
   type MobileBooking,
   type MobilePassengerDocument,
 } from '../../lib/bookings';
+import { startPayment } from '../../lib/payments';
 
 const ID_TYPES = ['national_id', 'passport', 'iqama', 'other'] as const;
+
+/** The rails offered on native. The full list lives in `@maak/core`; these are the four people use. */
+const PAY_METHODS = ['jaib', 'kuraimi', 'cash_desk', 'bank_transfer'] as const;
 
 /**
  * One booking, on native: the ticket, the cancellation, and the ID the operator needs to see.
@@ -73,6 +77,9 @@ export default function BookingDetailScreen() {
   const [birthDate, setBirthDate] = useState('');
   const [photoPath, setPhotoPath] = useState<string | null>(null);
 
+  // Phase 9 — the rail the rider picked for this booking's payment.
+  const [payMethod, setPayMethod] = useState<string>(PAY_METHODS[0]);
+
   const refresh = async (bookingId: string) => {
     const result = await loadBooking(bookingId);
     setBooking(result.booking);
@@ -90,6 +97,31 @@ export default function BookingDetailScreen() {
   useEffect(() => {
     if (id) void refresh(String(id));
   }, [id]);
+
+  /**
+   * Opens a payment for this booking and goes to the pay screen.
+   *
+   * `clientReference` is random per tap: two taps are two attempts, and the command's idempotency window is
+   * the client's own token, not the clock. A cash trip never reaches here — the button is not rendered.
+   */
+  async function openPayment() {
+    if (!booking) return;
+    setBusy(true);
+    setNotice(null);
+    const result = await startPayment({
+      bookingId: booking.id,
+      method: payMethod,
+      purpose: booking.trip?.paymentPolicy === 'deposit' ? 'deposit' : 'booking',
+      clientReference: `mob-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`,
+    });
+    setBusy(false);
+    if (!result.ok) {
+      setError(translate(locale, errorKey(result.error.code as never) as TranslationKey));
+      return;
+    }
+    const intent = (result.data as { intent?: { id?: string } }).intent;
+    if (intent?.id) router.push(`/pay/${intent.id}`);
+  }
 
   if (loading) {
     return (
@@ -238,17 +270,37 @@ export default function BookingDetailScreen() {
         </View>
       ) : null}
 
-      {live && booking.paymentStatus !== 'paid' ? (
+      {/* Phase 9: the receipt button stopped being a placeholder. It opens the payment for this booking,
+          with the rail the rider picked — the amount is the command's to compute, never this screen's. */}
+      {live && booking.paymentStatus !== 'paid' && booking.trip?.paymentPolicy !== 'cash' ? (
         <View style={styles.card}>
+          <Text style={styles.label}>{t('pay.method')}</Text>
+          <View style={styles.chips}>
+            {PAY_METHODS.map((value) => (
+              <Pressable
+                key={value}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: payMethod === value }}
+                onPress={() => setPayMethod(value)}
+                style={[styles.chip, payMethod === value && styles.chipOn]}
+              >
+                <Text style={styles.chipText}>
+                  {t(`payments.method.${value}` as TranslationKey)}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
           <Pressable
             accessibilityRole="button"
-            accessibilityState={{ disabled: true }}
-            disabled
-            style={[styles.secondary, styles.secondaryOff]}
+            disabled={busy}
+            style={[styles.secondary, busy && styles.secondaryOff]}
+            onPress={() => void openPayment()}
           >
-            <Text style={styles.secondaryText}>{t('bookings.uploadReceipt')}</Text>
+            <Text style={styles.secondaryText}>
+              {busy ? t('common.loading') : t('bookings.uploadReceipt')}
+            </Text>
           </Pressable>
-          <Text style={styles.hint}>{t('bookings.receiptPending')}</Text>
+          <Text style={styles.hint}>{t('pay.subtitle')}</Text>
         </View>
       ) : null}
 

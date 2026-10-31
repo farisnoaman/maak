@@ -222,13 +222,19 @@ const RULES: Record<Capability, Rule> = {
       'platform_admin',
     ],
   },
-  'payment.confirm': { roles: [...OPERATOR, 'agent', ...FINANCE], verified: true, scoped: 'owner' },
+  // Confirming money received is the operator's job on their own trip and finance's job on anyone's, and
+  // a scoped rule cannot express "somebody else's trip, but only for finance". The command is the
+  // authority: `cmd_confirm_payment` re-derives the trip from the booking and allows exactly
+  // `actor_can_manage_trip(...) or is_finance(...)`.
+  'payment.confirm': { roles: [...OPERATOR, 'agent', ...FINANCE], verified: true },
   'payment.account.manageOwn': { roles: [...OPERATOR, 'agent'], verified: true },
   'payment.account.managePlatform': { roles: [...FINANCE] },
-  'finance.viewOwn': { roles: [...OPERATOR, 'org_accountant', 'agent'], scoped: 'orgMember' },
+  // Seeing your own money is not scoped to an organization: an individual operator has no org and still
+  // has payments. RLS decides which rows come back.
+  'finance.viewOwn': { roles: [...OPERATOR, 'org_accountant', 'agent'] },
   'finance.viewAll': { roles: [...FINANCE] },
   'finance.adjust': { roles: [...FINANCE] },
-  'payout.request': { roles: [...OPERATOR], verified: true, scoped: 'orgMember' },
+  'payout.request': { roles: [...OPERATOR], verified: true },
   'payout.approve': { roles: [...FINANCE] },
   'refund.approve': { roles: [...FINANCE] },
 

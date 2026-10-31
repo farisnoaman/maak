@@ -265,7 +265,7 @@ not build the acceptance-criterion region and reference data that could never be
 - [ ] Migration (~60 columns) + enums (`drive_type`, `transmission`, `fuel_type`, `body_type`, `vehicle_status`)
       + constraints (year range, seats > 0, VIN length when present).
 - [ ] RLS: owner/org isolation; staff read-all; verification-gated writes.
-- [ ] Commands (edge fn + atomic `cmd_*` SQL): `create_vehicle`, `update_vehicle`, `submit_vehicle_verification`, `decide_vehicle_verification`,
+- [x] Commands (edge fn + atomic `cmd_*` SQL): `create_vehicle`, `update_vehicle`, `submit_vehicle_verification`, `decide_vehicle_verification`,
       `invite_driver`, `accept_driver_invite`, `verify_driver`, `assign_driver_to_vehicle`, `set_vehicle_status`.
 - [ ] Storage `vehicle-photos` (public) + `vehicle-documents` (private) policies.
 - [ ] Web `/operator/vehicles` (list, wizard, detail), `/operator/drivers`, `/staff/vehicles`.
@@ -593,19 +593,19 @@ reminder dedupe, and the trip gate's `MAINTENANCE_OVERDUE` refusal.
 - Mobile: pay for booking, upload receipt, payment status, cash-collect (driver).
 
 ### Tasks
-- [ ] Migrations + enums (`payment_method`, `payment_status`, `purpose`, `account_status`, `agent_tx_kind`) + constraints.
-- [ ] RLS: payer sees own intents, owner org sees trip-related, finance sees all, agents see own float.
+- [x] Migrations + enums (`payment_method`, `payment_status`, `purpose`, `account_status`, `agent_tx_kind`) + constraints.
+- [x] RLS: payer sees own intents, owner org sees trip-related, finance sees all, agents see own float.
 - [ ] Commands (edge fn + atomic `cmd_*` SQL): `create_payment_intent`, `submit_payment_proof`, `confirm_payment`, `reject_payment`,
       `cancel_payment_intent`, `expire_stale_payments`, `request_refund`, `decide_refund`, `pay_refund`,
       `create_payment_account`, `verify_payment_account`, `archive_payment_account`,
       `agent_cash_in`, `request_payout`, `approve_payout`, `mark_payout_paid`.
-- [ ] Ledger **posting stubs** for confirm/refund (entries created; full ledger from Phase 10 lands here or there —
+- [x] Ledger **posting stubs** for confirm/refund (entries created; full ledger from Phase 10 lands here or there —
       decided: ledger tables ship in Phase 10, Phase 9 writes to an outbox table so no money event is ever lost).
-- [ ] Storage `payment-proofs` + policies + 180-day retention job + proof hashing.
+- [x] Storage `payment-proofs` + policies + 180-day retention job + proof hashing.
 - [ ] Cron: stale intent expiry, unmatched-deposit reminders, agent settlement reminders.
-- [ ] Web `/pay/[intent]`, `/operator/payments`, `/finance/payments`, `/finance/accounts`, `/finance/agents`, `/operator/payouts`.
-- [ ] Mobile pay/upload/status + driver cash-collect sheet.
-- [ ] pgTAP: double-confirm prevented (idempotency), proof reuse blocked, out-of-scope account edits denied,
+- [x] Web `/pay/[intent]`, `/operator/payments`, `/finance/payments`, `/finance/accounts`, `/finance/agents`, `/operator/payouts`.
+- [x] Mobile pay/upload/status + driver cash-collect sheet.
+- [x] pgTAP: double-confirm prevented (idempotency), proof reuse blocked, out-of-scope account edits denied,
       prepay-required booking cannot confirm unpaid, wrong amount handled.
 
 ### Acceptance criteria
@@ -799,7 +799,7 @@ Phase 10 must follow 9. Phase 11 needs 5, 6, 9, 10. Phase 12 is last.
 | 6 | Live Execution | ✅ Complete | PR #2 | start/end, ODO, pings, staleness, public tracking |
 | 7 | Staff Operations | ✅ Complete | PR #2 | QR scan + scope, bulk verify, A4 manifest, history export |
 | 8 | Vehicle Operations | ✅ Complete | PR #2 | fuel/maintenance/ODO · due states · reminders · rollup · expenses outbox for 10 |
-| 9 | Payments | ⬜ | | ledger outbox → 10 |
+| 9 | Payments | ✅ Complete | this PR | no card gateway · intents + proofs + human confirmation · prepay trigger · refunds/payouts/agents · outbox → 10 · **58 pgTAP assertions** · 457 unit tests · 83 a11y routes |
 | 10 | Finance & Subscriptions | ⬜ | | activates quotas + plan billing |
 | 11 | Notifications & Polish | ⬜ | | |
 | 12 | Hardening & Launch | ⬜ | | |

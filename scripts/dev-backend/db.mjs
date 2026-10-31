@@ -323,6 +323,12 @@ async function seed(client, log = () => {}) {
     log(`  (demo booking skipped: ${error.message})`);
   }
 
+  try {
+    await seedDemoPayments(client, log);
+  } catch (error) {
+    log(`  (demo payments skipped: ${error.message})`);
+  }
+
   await seedExtraFleetOperations(client, log);
 
   await grantDemoScope(client);
@@ -839,6 +845,82 @@ async function seedDemoBooking(client, log = () => {}) {
   ]);
 
   log(`  seeded a passenger booking: ${booking.code}`);
+}
+
+/**
+ * A platform wallet and one receipt waiting for a human.
+ *
+ * Phase 9's screens are all empty states without this: the confirmation queue has nothing to confirm, the
+ * accounts page has no rails to show, and the pay page cannot be reached because no intent exists. Seeded
+ * through the commands — like every other seed — so a reset also re-proves the amount computation, the
+ * one-receipt rule and the notification.
+ */
+async function seedDemoPayments(client, log = () => {}) {
+  const admin = '11111111-1111-4111-8111-111111111111';
+  const owner = '33333333-3333-4333-8333-333333333333';
+
+  const existing = await client.query('select 1 from public.payment_intents limit 1');
+  if (existing.rows.length > 0) return;
+
+  await client.query(
+    `select public.cmd_create_payment_account($1::uuid, $2::jsonb, 'dev-seed', null)`,
+    [
+      admin,
+      JSON.stringify({
+        kind: 'platform',
+        method: 'jaib',
+        accountNumber: '777111222',
+        holderName: 'شركة معك للخدمات اللوجستية',
+        providerLabel: 'Jaib',
+        isDefault: true,
+        instructionsAr: 'حوّل المبلغ إلى محفظة جيب 777111222 ثم أرفق صورة الإيصال.',
+        instructionsEn: 'Transfer to the Jaib wallet 777111222, then attach the receipt.',
+      }),
+    ],
+  );
+
+  const booking = (
+    await client.query(
+      `select b.id, b.total_yer from public.bookings b
+        where b.passenger_id = $1 and b.status = 'accepted'
+        order by b.created_at desc limit 1`,
+      [owner],
+    )
+  ).rows[0];
+  if (!booking) return;
+
+  // `claimedAmountYer` is the real fare, not a guess: a seed that lies about the amount is a seed that
+  // proves `PRICE_CHANGED` works rather than that payments do.
+  const created = await client.query(
+    `select public.cmd_create_payment_intent($1::uuid, $2::jsonb, 'dev-seed', null) as result`,
+    [
+      owner,
+      JSON.stringify({
+        bookingId: booking.id,
+        method: 'jaib',
+        purpose: 'booking',
+        claimedAmountYer: booking.total_yer,
+        clientReference: 'dev-seed-payment',
+      }),
+    ],
+  );
+  const intent = created.rows[0].result.intent;
+
+  await client.query(
+    `select public.cmd_submit_payment_proof(
+       $1::uuid, $2::uuid, $3, $4, $5, $6, 'dev-seed', null
+     )`,
+    [
+      owner,
+      intent.id,
+      `${intent.id}/dev-receipt.jpg`,
+      'f'.repeat(64),
+      'JAIB-DEV-1001',
+      booking.total_yer,
+    ],
+  );
+
+  log(`  seeded a payment receipt awaiting confirmation: ${intent.code}`);
 }
 
 /**

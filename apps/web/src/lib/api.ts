@@ -150,8 +150,25 @@ export async function uploadPassengerId(
   return uploadToBucket('passenger-ids', file, bookingId);
 }
 
+/**
+ * A payment receipt. Keyed by intent, not by user: the storage policy reads the first folder segment and
+ * asks `app.is_payment_payer(...)`, so the same folder rule that protects ID photos protects money — and a
+ * receipt can only ever land on the payment it belongs to.
+ */
+export async function uploadPaymentProof(
+  file: File,
+  intentId: string,
+): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
+  return uploadToBucket('payment-proofs', file, intentId);
+}
+
 async function uploadToBucket(
-  bucket: 'vehicle-photos' | 'vehicle-documents' | 'driver-documents' | 'passenger-ids',
+  bucket:
+    | 'vehicle-photos'
+    | 'vehicle-documents'
+    | 'driver-documents'
+    | 'passenger-ids'
+    | 'payment-proofs',
   file: File,
   folder: string,
 ): Promise<{ ok: true; path: string } | { ok: false; error: string }> {

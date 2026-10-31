@@ -1,5 +1,5 @@
-// migrations-sha256: 8d7b3703859a15b7f2edc9e83ede6505e76b495c2813396c38048f7a11100242
-/* Generated from 29 migrations. Run `npm run db:types` after changing the schema. */
+// migrations-sha256: f65d815fbb7ce02f51bc20ce57297d9b38018ac80d2ebcfb0f6bb785913753a5
+/* Generated from 30 migrations. Run `npm run db:types` after changing the schema. */
 
 /**
  * Schema types for RLS-filtered reads (Phase 0 subset).
@@ -623,6 +623,178 @@ export interface FleetSettings {
   updated_at: string;
 }
 
+/* ---------------------------------------------------------------------------------------------
+ * Phase 9 — payments
+ *
+ * Hand-maintained to mirror `supabase/migrations/00030_payments.sql`: the Supabase CLI is not available
+ * in this environment, so `npm run db:types` re-stamps the hash instead of regenerating. The drift check
+ * in `npm run sql:check` is what keeps these honest — it compares this file against the live schema, so a
+ * column that exists in SQL and not here fails the build, not the browser.
+ * ------------------------------------------------------------------------------------------- */
+
+export type PaymentMethod =
+  | 'jaib'
+  | 'cash_one'
+  | 'mfloos'
+  | 'yempay'
+  | 'kuraimi'
+  | 'tadhamon'
+  | 'cash_desk'
+  | 'bank_transfer'
+  | 'other';
+
+export type PaymentAccountKind = 'platform' | 'owner' | 'agent';
+export type PaymentAccountStatus = 'pending_verification' | 'active' | 'archived';
+
+export type PaymentIntentStatus =
+  'awaiting_proof' | 'awaiting_confirmation' | 'confirmed' | 'rejected' | 'expired' | 'cancelled';
+
+export type PaymentIntentPurpose = 'booking' | 'deposit' | 'balance' | 'subscription';
+export type RefundStatus = 'requested' | 'approved' | 'rejected' | 'paid';
+export type AgentTxKind = 'cash_in' | 'settlement' | 'adjustment' | 'refund_out';
+export type PayoutStatus = 'requested' | 'approved' | 'paid' | 'rejected';
+export type PaymentOutboxKind =
+  'payment_confirmed' | 'payment_reversed' | 'refund_paid' | 'payout_paid';
+
+export interface PaymentAccount {
+  id: string;
+  kind: PaymentAccountKind;
+  method: PaymentMethod;
+  owner_user_id: string | null;
+  owner_org_id: string | null;
+  provider_label: string | null;
+  account_number: string;
+  holder_name: string;
+  instructions_ar: string | null;
+  instructions_en: string | null;
+  status: PaymentAccountStatus;
+  is_default: boolean;
+  verification_document_path: string | null;
+  verified_by: string | null;
+  verified_at: string | null;
+  archived_at: string | null;
+  archive_reason: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PaymentIntent {
+  id: string;
+  code: string;
+  purpose: PaymentIntentPurpose;
+  booking_id: string | null;
+  payer_id: string;
+  payee_account_id: string | null;
+  method: PaymentMethod;
+  currency: string;
+  amount_yer: number;
+  status: PaymentIntentStatus;
+  client_reference: string | null;
+  reference_no: string | null;
+  proof_path: string | null;
+  proof_hash: string | null;
+  proof_uploaded_at: string | null;
+  expires_at: string | null;
+  confirmed_by: string | null;
+  confirmed_at: string | null;
+  rejected_by: string | null;
+  rejected_at: string | null;
+  rejected_reason: string | null;
+  cancelled_at: string | null;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Refund {
+  id: string;
+  code: string;
+  booking_id: string;
+  intent_id: string | null;
+  amount_yer: number;
+  status: RefundStatus;
+  reason: string;
+  requested_by: string;
+  requested_at: string;
+  decided_by: string | null;
+  decided_at: string | null;
+  decision_note: string | null;
+  paid_by: string | null;
+  paid_at: string | null;
+  payment_reference: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Agent {
+  id: string;
+  user_id: string;
+  org_id: string | null;
+  float_balance_yer: number;
+  credit_limit_yer: number;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AgentTransaction {
+  id: string;
+  agent_id: string;
+  kind: AgentTxKind;
+  amount_yer: number;
+  balance_after_yer: number;
+  intent_id: string | null;
+  actor_id: string | null;
+  note: string | null;
+  created_at: string;
+}
+
+export interface Payout {
+  id: string;
+  code: string;
+  owner_user_id: string | null;
+  owner_org_id: string | null;
+  amount_yer: number;
+  status: PayoutStatus;
+  method: PaymentMethod;
+  destination_account_id: string | null;
+  requested_by: string;
+  requested_at: string;
+  approved_by: string | null;
+  approved_at: string | null;
+  rejected_reason: string | null;
+  paid_by: string | null;
+  paid_at: string | null;
+  payment_reference: string | null;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PayoutItem {
+  id: string;
+  payout_id: string;
+  source_kind: 'booking' | 'agent' | 'adjustment';
+  source_id: string | null;
+  amount_yer: number;
+}
+
+export interface PaymentOutboxRow {
+  id: string;
+  kind: PaymentOutboxKind;
+  source_table: 'payment_intents' | 'refunds' | 'payouts';
+  source_id: string;
+  amount_yer: number;
+  currency: string;
+  owner_user_id: string | null;
+  owner_org_id: string | null;
+  actor_id: string | null;
+  payload: Json;
+  created_at: string;
+  consumed_at: string | null;
+}
+
 export interface Trip {
   id: string;
   code: string;
@@ -646,6 +818,8 @@ export interface Trip {
   discount_scope: TripDiscountScope;
   gender_policy: TripGenderPolicy;
   payment_policy: TripPaymentPolicy;
+  /** Only read when `payment_policy = 'deposit'`: the share of the fare due before the seat is held. */
+  deposit_percent: number;
   luggage_allowance_kg: number | null;
   policies: Json;
   notes: string | null;
@@ -1033,6 +1207,78 @@ export interface Database {
         Insert: Partial<FleetSettings>;
         Update: Partial<FleetSettings>;
       };
+      payment_accounts: {
+        Row: PaymentAccount;
+        Insert: Partial<PaymentAccount> & {
+          kind: PaymentAccountKind;
+          method: PaymentMethod;
+          account_number: string;
+          holder_name: string;
+        };
+        Update: Partial<PaymentAccount>;
+      };
+      payment_intents: {
+        Row: PaymentIntent;
+        Insert: Partial<PaymentIntent> & {
+          purpose: PaymentIntentPurpose;
+          payer_id: string;
+          method: PaymentMethod;
+          amount_yer: number;
+        };
+        Update: Partial<PaymentIntent>;
+      };
+      refunds: {
+        Row: Refund;
+        Insert: Partial<Refund> & {
+          booking_id: string;
+          amount_yer: number;
+          reason: string;
+          requested_by: string;
+        };
+        Update: Partial<Refund>;
+      };
+      agents: {
+        Row: Agent;
+        Insert: Partial<Agent> & { user_id: string };
+        Update: Partial<Agent>;
+      };
+      agent_transactions: {
+        Row: AgentTransaction;
+        Insert: Partial<AgentTransaction> & {
+          agent_id: string;
+          kind: AgentTxKind;
+          amount_yer: number;
+          balance_after_yer: number;
+        };
+        Update: Partial<AgentTransaction>;
+      };
+      payouts: {
+        Row: Payout;
+        Insert: Partial<Payout> & {
+          amount_yer: number;
+          requested_by: string;
+        };
+        Update: Partial<Payout>;
+      };
+      payout_items: {
+        Row: PayoutItem;
+        Insert: Partial<PayoutItem> & {
+          payout_id: string;
+          source_kind: 'booking' | 'agent' | 'adjustment';
+          amount_yer: number;
+        };
+        Update: Partial<PayoutItem>;
+      };
+      payment_outbox: {
+        Row: PaymentOutboxRow;
+        Insert: Partial<PaymentOutboxRow> & {
+          kind: PaymentOutboxKind;
+          source_table: 'payment_intents' | 'refunds' | 'payouts';
+          source_id: string;
+          amount_yer: number;
+        };
+        Update: Partial<PaymentOutboxRow>;
+      };
       trips: {
         Row: Trip;
         Insert: Partial<Trip> & {
@@ -1179,6 +1425,14 @@ export interface Database {
       get_trip_progress: {
         Args: { p_code: string };
         Returns: Json;
+      };
+      /**
+       * Phase 9. The payout cap, with the owner derived from the session rather than from an argument —
+       * the one money helper a signed-in user may call (`app.owner_available_yer` stays service-only).
+       */
+      my_available_payout_yer: {
+        Args: { p_org_id?: string | null };
+        Returns: number;
       };
       staff_scan: {
         Args: { p_token: string };

@@ -18,6 +18,8 @@ export interface MobileBookingTrip {
   readonly departureAt: string;
   readonly originName: string | null;
   readonly destinationName: string | null;
+  /** Phase 9: `transfer`/`deposit` ask for money up front; `cash` is collected on boarding. */
+  readonly paymentPolicy: string;
 }
 
 export interface MobileBooking {
@@ -74,7 +76,9 @@ async function tripsById(ids: readonly string[]): Promise<Map<string, MobileBook
 
   const { data } = await supabase
     .from('trips')
-    .select('id, code, departure_at, origin_governorate_id, destination_governorate_id')
+    .select(
+      'id, code, departure_at, origin_governorate_id, destination_governorate_id, payment_policy',
+    )
     .in('id', [...ids]);
 
   const rows = (data ?? []) as Row[];
@@ -96,6 +100,7 @@ async function tripsById(ids: readonly string[]): Promise<Map<string, MobileBook
       departureAt: str(row.departure_at) ?? '',
       originName: origin ? (names.get(origin) ?? null) : null,
       destinationName: destination ? (names.get(destination) ?? null) : null,
+      paymentPolicy: str(row.payment_policy) ?? 'cash',
     });
   }
   return trips;

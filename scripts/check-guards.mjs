@@ -210,8 +210,10 @@ for (const file of await walk(join(root, 'apps', 'web', 'src'), (f) => /\.(tsx|t
 // FORBIDDEN locally while the SQL was correct. A missing key is invisible to types in one file and to
 // tests that talk to the other, so it is checked here, by name.
 const GATEWAY_MAP = {
+  bookings: 'BOOKINGS_CAPABILITY',
   fleet: 'FLEET_CAPABILITY',
   geography: 'GEO_CAPABILITY',
+  payments: 'PAYMENTS_CAPABILITY',
   trips: 'TRIPS_CAPABILITY',
 };
 const gatewaySource = await readFile(join(root, 'scripts', 'dev-backend', 'gateway.mjs'), 'utf8');
