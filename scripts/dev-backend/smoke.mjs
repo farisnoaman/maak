@@ -163,16 +163,42 @@ if (!useApi) {
     String(hostile.location),
   );
 
+  // Two legitimate shapes: a real 3xx, or a self-navigating document when the proxy hides the host and
+  // the browser has said nothing yet. Both must land on the sign-in page.
   const redirect = await fetch(`${BASE}/ar/account`, { redirect: 'manual' });
+  const redirectBody = await redirect.text();
+  const location = redirect.headers.get('location');
+  const selfNavigating = /url=\/[a-z]{2}\/auth\/sign-in/.test(redirectBody);
   check(
-    'a protected page still redirects when signed out',
-    redirect.status === 307 || redirect.status === 303,
+    'a protected page still sends you to sign-in',
+    Boolean(location) || selfNavigating,
+    `status ${redirect.status}`,
   );
-  const bounced = new URL(redirect.headers.get('location') ?? '/', BASE);
+  if (location) {
+    const bounced = new URL(location, BASE);
+    check(
+      'and the bounce keeps the browser on a reachable host',
+      bounced.host === new URL(BASE).host && !bounced.host.includes('0.0.0.0'),
+      location,
+    );
+  }
+
+  // The preview proxy may rewrite every Host header. The browser still says where it is: `Origin`.
+  const viaPreview = await signInThroughForm('admin@maak.test', 'https://3000-preview.e2b.app', {
+    'x-forwarded-host': '0.0.0.0:3000',
+    'x-forwarded-proto': 'http',
+  });
+  const previewTarget = new URL(viaPreview.location ?? '/', 'https://3000-preview.e2b.app');
   check(
-    'and the bounce keeps the browser on a reachable host',
-    bounced.host === new URL(BASE).host && !bounced.host.includes('0.0.0.0'),
-    String(redirect.headers.get('location')),
+    'a rewritten Host still redirects to the real browser origin',
+    previewTarget.origin === 'https://3000-preview.e2b.app' &&
+      previewTarget.pathname === '/ar/account',
+    String(viaPreview.location),
+  );
+  check(
+    'and the cookie is cross-site capable (Secure, SameSite=None)',
+    viaPreview.setCookie.some((line) => /SameSite=none/i.test(line) && /Secure/i.test(line)),
+    viaPreview.setCookie.join(' | ').slice(0, 100),
   );
 }
 

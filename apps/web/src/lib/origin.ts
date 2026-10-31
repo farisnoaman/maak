@@ -1,45 +1,154 @@
 /**
- * Same-origin check for state-changing route handlers (CSRF defence).
+ * Where the browser actually is, and what it is allowed to do.
  *
- * The naive version compares `Origin` with `request.nextUrl.origin`, and it fails in exactly the place
- * that matters: behind a proxy, `nextUrl.origin` is the address the server was reached on internally
- * (`http://localhost:3000`), while the browser honestly says `https://3000-abc.e2b.app`. Every form post
- * in the hosted preview then came back `403 FORBIDDEN`.
+ * Everything that depended on `request.url` was wrong behind the preview proxy: the server is reached
+ * on `0.0.0.0:3000`, so redirects pointed at an address no browser can resolve and the session cookie
+ * was written `SameSite=Lax` into an https page (where a cross-site iframe silently drops it).
  *
- * So the expectation is built from the headers the proxy preserves — `Host` and `x-forwarded-host` —
- * and compared by **host only**. Scheme and port are deliberately not compared: TLS usually terminates
- * in front of us, and a mismatch there would reject good requests for no security gain. An attacker's
- * page cannot forge either header, so the check still does its job.
- *
- * A request without an `Origin` header is allowed: that is a same-origin navigation, a `curl`, or a
- * server-to-server call — none of them a cross-site form post.
+ * The fix is to ask the browser instead of guessing: a form POST carries `Origin`, a navigation carries
+ * `Referer`. Those cannot be forged by a third-party page for our own host, so they are the strongest
+ * evidence available. Proxy headers come next, then a value remembered for this host, then `Host`
+ * itself.
  */
-const LOOPBACK = /^(localhost|127\.0\.0\.1|\[::1\]|0\.0\.0\.0)(:\d+)?$/i;
 
-export function isSameOriginRequest(request: { headers: Headers }): boolean {
-  const origin = request.headers.get('origin');
-  if (!origin) return true;
+export const LOOPBACK = /^(localhost|127\.0\.0\.1|\[::1\]|0\.0\.0\.0)(:\d+)?$/i;
 
-  let originHost: string;
+/**
+ * True when the resolved origin can be trusted in a `Location` header.
+ */
+export function isTrustedOrigin(context: RequestContext): boolean {
+  // `Origin`/`Referer` are first-hand evidence even on loopback — that is the local case and it is
+  // exactly right. A non-loopback host is trustworthy because a proxy forwarded it. Only "a loopback
+  // `Host` and nothing else" is a guess, and there the path goes back to the browser to resolve.
+  if (context.evidence === 'origin' || context.evidence === 'referer') return true;
+  return !LOOPBACK.test(context.host);
+}
+
+/**
+ * Last known public origin per (loopback) `Host` header, plus per public host.
+ *
+ * One navigation usually carries a `Referer`, but a bookmark or a typed URL does not — and by then the
+ * browser has already told us where it is at least once (the sign-in POST always does). Remembering it
+ * keeps the session cookie's attributes stable instead of flipping between `Lax` and `None` and
+ * invalidating the session on a refresh.
+ */
+const remembered = new Map<string, string>();
+
+export type OriginEvidence =
+  'origin' | 'referer' | 'forwarded' | 'remembered' | 'host' | 'fallback';
+
+export interface RequestContext {
+  /** e.g. `https://3000-abc123.e2b.app` — safe to use in `Location` and as a cookie `Domain`-free base. */
+  readonly origin: string;
+  /** `https:` or `http:`. */
+  readonly protocol: string;
+  readonly host: string;
+  /** Which signal decided it. Surfaced by `/api/auth/status` so a failure is diagnosable. */
+  readonly evidence: OriginEvidence;
+}
+
+function parseUrl(value: string | null | undefined): URL | null {
+  if (!value || value === 'null') return null;
   try {
-    originHost = new URL(origin).host.toLowerCase();
+    const url = new URL(value);
+    return url.protocol === 'http:' || url.protocol === 'https:' ? url : null;
   } catch {
-    return false;
+    return null;
+  }
+}
+
+function firstHeader(value: string | null): string {
+  return (value ?? '').split(',')[0]?.trim() ?? '';
+}
+
+function protocolFor(host: string, forwardedProto: string): string {
+  if (process.env.MAAK_COOKIE_SECURE === 'true') return 'https:';
+  if (process.env.MAAK_COOKIE_SECURE === 'false') return 'http:';
+  if (host && !LOOPBACK.test(host)) return 'https:';
+  const proto = forwardedProto.endsWith(':') ? forwardedProto : `${forwardedProto}:`;
+  if (forwardedProto && (proto === 'https:' || proto === 'http:')) return proto;
+  return process.env.NODE_ENV === 'production' ? 'https:' : 'http:';
+}
+
+export function resolveRequest(request: { headers: Headers }): RequestContext {
+  const headers = request.headers;
+  const host = firstHeader(headers.get('host'));
+  const forwardedHost = firstHeader(headers.get('x-forwarded-host'));
+  const forwardedProto = firstHeader(headers.get('x-forwarded-proto')).replace(/:$/, '');
+
+  // 1. The browser's own testimony. A form POST always sends `Origin`; a navigation sends `Referer`.
+  const signed = parseUrl(headers.get('origin')) ?? parseUrl(headers.get('referer'));
+  if (signed) {
+    // The scheme is the browser's, even when the `Host` we see is the proxy's internal address.
+    const protocol = protocolFor(signed.host, signed.protocol);
+    const origin = `${protocol}//${signed.host}`;
+    if (host) remembered.set(host.toLowerCase(), origin);
+    return {
+      origin,
+      protocol,
+      host: signed.host,
+      evidence: headers.get('origin') ? 'origin' : 'referer',
+    };
   }
 
-  const hosts = [request.headers.get('x-forwarded-host'), request.headers.get('host')]
+  // 2. A proxy that forwards the original host.
+  const forwarded = forwardedHost || (LOOPBACK.test(host) ? '' : host);
+  if (forwarded) {
+    const protocol = protocolFor(forwarded, forwardedProto);
+    const origin = `${protocol}//${forwarded}`;
+    if (host) remembered.set(host.toLowerCase(), origin);
+    return { origin, protocol, host: forwarded, evidence: 'forwarded' };
+  }
+
+  // 3. Something we learned earlier for this host.
+  const memory = remembered.get(host.toLowerCase());
+  const memo = parseUrl(memory);
+  if (memo) {
+    return {
+      origin: memo.origin,
+      protocol: memo.protocol,
+      host: memo.host,
+      evidence: 'remembered',
+    };
+  }
+
+  // 4. Local development, or a proxy that forwards nothing at all.
+  const protocol = protocolFor(host, forwardedProto);
+  const localHost = host || 'localhost:3000';
+  return {
+    origin: `${protocol}//${localHost}`,
+    protocol,
+    host: localHost,
+    evidence: host ? 'host' : 'fallback',
+  };
+}
+
+/**
+ * Same-origin check for state-changing handlers (CSRF defence), compared by **host only**.
+ *
+ * Scheme and port are deliberately ignored: TLS usually terminates in front of us, and a mismatch
+ * there would reject good requests for no security gain. A request with no `Origin` is a same-origin
+ * navigation or a server-to-server call, not a cross-site form post.
+ */
+export function isSameOriginRequest(request: { headers: Headers }): boolean {
+  const rawOrigin = request.headers.get('origin');
+  if (!rawOrigin) return true;
+
+  const origin = parseUrl(rawOrigin);
+  if (!origin) return false;
+
+  const known = [request.headers.get('x-forwarded-host'), request.headers.get('host')]
     .flatMap((value) => (value ?? '').split(','))
     .map((value) => value.trim().toLowerCase())
     .filter(Boolean);
 
-  if (hosts.includes(originHost)) return true;
+  if (known.includes(origin.host.toLowerCase())) return true;
 
-  // Every host we can see is loopback, which means a proxy in front of us did not forward the
-  // original host and the request cannot be verified at all. Refusing here would break sign-in for
-  // every browser behind such a proxy; the attacker's page still cannot forge `Origin` to match a
-  // *public* host, which is the case that matters. Log it rather than fail silently.
-  if (hosts.every((host) => LOOPBACK.test(host))) {
-    console.warn(`[auth] cannot verify the request origin (host ${hosts.join(', ')}); allowing`);
+  // Every host we can see is loopback, so the request cannot be verified at all. Refusing would break
+  // sign-in behind any proxy that rewrites `Host`; an attacker still cannot make `Origin` match a
+  // public host, which is the case that matters.
+  if (known.length > 0 && known.every((value) => LOOPBACK.test(value))) {
+    console.warn(`[auth] cannot verify the request origin (host ${known.join(', ')}); allowing`);
     return true;
   }
 

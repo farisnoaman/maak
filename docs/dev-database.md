@@ -10,9 +10,13 @@ real `cmd_*` commands, started by one command on any machine that can run Node 2
 ```bash
 npm install
 npm run dev:setup     # writes apps/web/.env.local (once)
-npm run dev:api       # terminal 1 — Postgres + auth + REST + functions on :54321
-npm run dev           # terminal 2 — Next on :3000
+npm run dev           # database + API + web, one command, Ctrl-C stops all three
 ```
+
+`npm run dev` starts PostgreSQL and the API on `:54321`, waits for the port, then starts Next on
+`:3000`. They are three processes, and the app is only usable when all three are alive — starting them
+separately meant a resumed sandbox could serve a working site that silently could not sign anyone in.
+The pieces are still available on their own: `npm run dev:api` and `npm run dev:web`.
 
 Open <http://localhost:3000/ar> and sign in with a demo account below.
 
@@ -99,6 +103,29 @@ schemas, the command→argument map or the policy matrix. If a change lands in t
 not here, the dev stack is wrong in the same way a stale client would be — not "correct but
 different".
 
+## Where the browser is (and why the server must not guess)
+
+Every redirect target and every cookie attribute depends on one question: **what address is the
+browser using?** The server cannot answer it from `request.url` — that is the address it *listens* on
+(`0.0.0.0:3000`), and the preview proxy may rewrite `Host` too. Getting it wrong produced, in order:
+a `403 FORBIDDEN`, a redirect to an unreachable `0.0.0.0`, and a `SameSite=Lax` cookie that a
+cross-site iframe never sends back.
+
+`lib/origin.ts` answers it from the strongest available evidence:
+
+| # | Evidence | Example | Used for |
+|---|---|---|---|
+| 1 | `Origin` header | `https://3000-abc.e2b.app` on a form POST | redirect target, cookie `Secure`/`SameSite` |
+| 2 | `Referer` header | same, on any navigation | same |
+| 3 | `x-forwarded-host` / `x-forwarded-proto` | a proxy that forwards properly | same |
+| 4 | remembered value for this `Host` | what we learned earlier | keeps the cookie stable across a refresh |
+| 5 | `Host` header | `127.0.0.1:3000` locally | local development |
+
+When only (5) is available **and** it is a loopback address, nobody knows the public origin. Rather
+than guess, such a redirect returns a tiny document that navigates itself with a **relative** URL — the
+browser resolves it against the address it actually used. That is why a cold start always lands
+somewhere sensible, even behind a proxy that forwards nothing.
+
 ## How sign-in works
 
 Sign-in is a **plain form POST** to `/api/auth/sign-in`. The route handler calls the auth API from the
@@ -145,11 +172,22 @@ A refusal is a redirect back to the form with a localized message, never a raw J
 Check what the server knows about your session at any time: <http://localhost:3000/api/auth/status>
 
 ```json
-{ "configured": true, "sessionCookiePresent": true, "user": "admin@maak.test" }
+{
+  "configured": true,
+  "sessionCookiePresent": true,
+  "user": "admin@maak.test",
+  "browser": { "resolvedOrigin": "https://3000-abc.e2b.app", "scheme": "https:", "evidence": "origin" },
+  "received": { "host": "0.0.0.0:3000", "forwardedHost": "0.0.0.0:3000", "forwardedProto": "http", "origin": "https://3000-abc.e2b.app", "referer": null }
+}
 ```
 
+`evidence` says which signal decided the browser's origin; `received` echoes the raw headers the proxy
+preserved. Together they explain any redirect or cookie oddity in one request.
+
 `sessionCookiePresent: false` means the browser never sent the cookie (blocked or cross-site);
-`true` with `user: null` means it arrived and was rejected — very different bugs.
+`true` with `user: null` means it arrived and was rejected — very different bugs. If the API is not
+running at all, sign-in says so explicitly ("could not reach the database") instead of blaming the
+password.
 
 ## Signing in inside a preview frame
 

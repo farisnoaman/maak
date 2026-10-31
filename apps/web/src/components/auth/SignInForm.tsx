@@ -40,7 +40,9 @@ export function SignInForm({ locale, configured, next, tab, phone, error }: Sign
               ? t('auth.sessionBlocked')
               : error === 'origin'
                 ? t('auth.originMismatch')
-                : null;
+                : error === 'backend'
+                  ? t('auth.backendDown')
+                  : null;
 
   return (
     <div className="card auth-card">

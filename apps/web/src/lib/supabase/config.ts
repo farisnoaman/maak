@@ -50,40 +50,6 @@ export function authCookieFlags(protocol: string): AuthCookieFlags {
     : { sameSite: 'lax', secure: false };
 }
 
-const LOOPBACK = /^(localhost|127\.0\.0\.1|\[::1\]|0\.0\.0\.0)(:\d+)?$/i;
-
-/** `http` in, `http:` out; tolerates a comma-separated proxy chain and a missing colon. */
-function normalizeProto(value: string): string {
-  const first = value.split(',')[0] ?? 'https';
-  return `${first.trim().replace(/:$/, '')}:`;
-}
-
-/**
- * The scheme this request was *browser-visible* on.
- *
- * Order matters, because getting it wrong silently breaks every protected page: the cookie is then
- * written `SameSite=Lax` and, inside the preview's cross-site iframe, is never sent back.
- *
- *  1. the browser knows, if there is one;
- *  2. a **non-loopback `Host` is https**. It beats `x-forwarded-proto` on purpose: in `next dev` the
- *     framework itself supplies `x-forwarded-proto: http`, describing the hop to the dev server rather
- *     than the browser's connection — trusting it wrote `SameSite=Lax` cookies into an https preview,
- *     where they are then never sent back. A public host on plain http is rare enough to be an
- *     explicit override (`MAAK_COOKIE_SECURE=false`);
- *  3. otherwise `x-forwarded-proto`;
- *  4. otherwise local: http in development, https in production.
- *
- * `MAAK_COOKIE_SECURE` overrides all of it for unusual deployments (plain http on a LAN IP).
- */
-export function requestProtocol(forwardedProto?: string | null, host?: string | null): string {
-  if (process.env.MAAK_COOKIE_SECURE === 'true') return 'https:';
-  if (process.env.MAAK_COOKIE_SECURE === 'false') return 'http:';
-  if (typeof window !== 'undefined') return window.location.protocol;
-  if (host && !LOOPBACK.test(host)) return 'https:';
-  if (forwardedProto) return normalizeProto(forwardedProto);
-  return process.env.NODE_ENV === 'production' ? 'https:' : 'http:';
-}
-
 /**
  * Resolves the API base URL for the current runtime.
  *

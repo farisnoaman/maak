@@ -1,7 +1,8 @@
 import { cookies, headers } from 'next/headers';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import type { SupabaseClient, User } from '@supabase/supabase-js';
-import { AUTH_COOKIE_NAME, authCookieFlags, getSupabaseConfig, requestProtocol } from './config';
+import { AUTH_COOKIE_NAME, authCookieFlags, getSupabaseConfig } from './config';
+import { resolveRequest } from '../origin';
 
 /**
  * `@supabase/ssr` reads `cookieOptions.name` as the *storage key* for the session, but types it as the
@@ -36,9 +37,9 @@ export async function getServerClient(): Promise<SupabaseClient | null> {
   if (!config) return null;
 
   const [cookieStore, requestHeaders] = await Promise.all([cookies(), headers()]);
-  const cookieOptions = cookieOptionsFor(
-    requestProtocol(requestHeaders.get('x-forwarded-proto'), requestHeaders.get('host')),
-  );
+  // Same evidence the redirects use: whatever the browser said about itself (`Origin`/`Referer`),
+  // then the proxy headers. Guessing from `Host` alone writes `SameSite=Lax` into an https preview.
+  const cookieOptions = cookieOptionsFor(resolveRequest({ headers: requestHeaders }).protocol);
 
   const storageOptions: StorageCookieOptions = { ...cookieOptions, name: AUTH_COOKIE_NAME };
 

@@ -2,12 +2,8 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { redirectTo } from './lib/redirect';
 import { createServerClient } from '@supabase/ssr';
 import { LOCALES, negotiateLocale } from '@maak/core';
-import {
-  AUTH_COOKIE_NAME,
-  authCookieFlags,
-  getSupabaseConfig,
-  requestProtocol,
-} from './lib/supabase/config';
+import { AUTH_COOKIE_NAME, authCookieFlags, getSupabaseConfig } from './lib/supabase/config';
+import { resolveRequest } from './lib/origin';
 
 /**
  * Two jobs, in order:
@@ -37,9 +33,7 @@ export default async function proxy(request: NextRequest) {
 
   let response = NextResponse.next({ request });
 
-  const flags = authCookieFlags(
-    requestProtocol(request.headers.get('x-forwarded-proto'), request.headers.get('host')),
-  );
+  const flags = authCookieFlags(resolveRequest(request).protocol);
   const supabase = createServerClient(config.url, config.anonKey, {
     cookieOptions: { name: AUTH_COOKIE_NAME, ...flags },
     cookies: {

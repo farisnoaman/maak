@@ -42,8 +42,7 @@ npm run build:functions     # bundle edge functions for deploy
 
 # Run the app against a real database (no Docker, no Supabase CLI):
 npm run dev:setup           # writes apps/web/.env.local (once)
-npm run dev:api             # terminal 1 — Postgres + auth + REST + functions on :54321
-npm run dev                 # terminal 2 — web on http://localhost:3000  (/ar and /en)
+npm run dev                 # database + API + web in one go; http://localhost:3000/ar
 npm run dev:check           # end-to-end smoke: form sign-in, cookie, RLS, gateway command
 
 supabase start              # requires Docker

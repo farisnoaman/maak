@@ -25,6 +25,20 @@ function safeNext(value: FormDataEntryValue | null, locale: string): string {
   return /^\/[a-z]{2}(\/|$)/.test(candidate) ? candidate : `/${locale}/account`;
 }
 
+/**
+ * "Could not reach the auth server" is not "wrong password", and telling them apart is the difference
+ * between a user retrying a typo and a user staring at a login screen while the database is down.
+ */
+function isUnreachable(
+  error: { status?: number; message?: string; name?: string } | null,
+): boolean {
+  if (!error) return false;
+  if (error.status === 0) return true;
+  return /fetch|network|failed to fetch|ECONNREFUSED|ENOTFOUND/i.test(
+    `${error.name ?? ''} ${error.message ?? ''}`,
+  );
+}
+
 function failure(request: NextRequest, locale: string, error: string, query = '') {
   const params = new URLSearchParams(query);
   params.set('error', error);
@@ -57,7 +71,12 @@ export async function POST(request: NextRequest) {
     if (!email || !password) return failure(request, locale, 'invalid');
 
     const { error } = await client.auth.signInWithPassword({ email, password });
-    if (error) return failure(request, locale, 'invalid');
+    if (error) {
+      console.warn(
+        `[auth] sign-in failed: ${error.name ?? 'error'} ${error.status ?? ''} ${error.message}`,
+      );
+      return failure(request, locale, isUnreachable(error) ? 'backend' : 'invalid');
+    }
     return redirectTo(request, next, 303);
   }
 
@@ -66,7 +85,7 @@ export async function POST(request: NextRequest) {
   if (mode === 'otp-send') {
     if (!phone) return failure(request, locale, 'invalid');
     const { error } = await client.auth.signInWithOtp({ phone });
-    if (error) return failure(request, locale, 'otp-send');
+    if (error) return failure(request, locale, isUnreachable(error) ? 'backend' : 'otp-send');
 
     const params = new URLSearchParams({ step: 'code', phone });
     if (next !== `/${locale}/account`) params.set('next', next);

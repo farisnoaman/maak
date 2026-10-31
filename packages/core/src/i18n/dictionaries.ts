@@ -104,6 +104,8 @@ export const ar = {
   'auth.openInTab': 'افتح التطبيق في تبويب مستقل',
   'auth.originMismatch':
     'رُفض الطلب لأنه جاء من مصدر غير معروف. أعد تحميل الصفحة ثم حاول مرة أخرى.',
+  'auth.backendDown':
+    'تعذّر الوصول إلى قاعدة البيانات. شغّل الخادم المحلي بالأمر npm run dev:api ثم أعد المحاولة.',
 
   'console.subtitle.operator': 'إدارة المركبات والسائقين والرحلات والحجوزات.',
   'console.subtitle.staff': 'التحقق من الحسابات والمركبات والرحلات، ومسح رموز QR.',
@@ -533,6 +535,8 @@ export const en: Record<TranslationKey, string> = {
   'auth.openInTab': 'Open the app in its own tab',
   'auth.originMismatch':
     'The request came from an unrecognised origin, so it was rejected. Reload the page and try again.',
+  'auth.backendDown':
+    'Could not reach the database. Start the local backend with `npm run dev:api`, then try again.',
 
   'console.subtitle.operator': 'Manage vehicles, drivers, trips and bookings.',
   'console.subtitle.staff': 'Verify accounts, vehicles and trips; scan QR codes.',
