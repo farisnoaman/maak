@@ -212,6 +212,7 @@ for (const file of await walk(join(root, 'apps', 'web', 'src'), (f) => /\.(tsx|t
 const GATEWAY_MAP = {
   fleet: 'FLEET_CAPABILITY',
   geography: 'GEO_CAPABILITY',
+  trips: 'TRIPS_CAPABILITY',
 };
 const gatewaySource = await readFile(join(root, 'scripts', 'dev-backend', 'gateway.mjs'), 'utf8');
 

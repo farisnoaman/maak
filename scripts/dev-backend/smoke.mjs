@@ -345,6 +345,69 @@ if (useApi) {
     { headers: { authorization: `Bearer ${owner}` } },
   );
   check('and the object is gone', afterDelete.status === 400, `status ${afterDelete.status}`);
+
+  // ---------------------------------------------------------------------------
+  // Trips. The marketplace is anonymous by design, so these checks deliberately run without a token —
+  // a public search that needs a session is not a marketplace. The two write calls are refusals on
+  // purpose: a smoke run must not spend the owner's monthly trip quota (Basic allows five).
+  // ---------------------------------------------------------------------------
+  const publicSearch = await call('/rest/v1/rpc/search_public_trips', {
+    method: 'POST',
+    body: { p_locale: 'ar', p_filters: {}, p_sort: 'soonest', p_cursor: null, p_limit: 6 },
+  });
+  check(
+    'the marketplace answers without a session',
+    publicSearch.status === 200 && Array.isArray(publicSearch.body?.items),
+    `status ${publicSearch.status}`,
+  );
+  check(
+    'and every card carries its price and route',
+    (publicSearch.body?.items ?? []).every(
+      (item) => item.code && item.origin?.code && item.destination?.code,
+    ),
+  );
+
+  const missingTrip = await call('/rest/v1/rpc/get_trip_public', {
+    method: 'POST',
+    body: { p_code: 'XX-XX-XXXX', p_locale: 'ar' },
+  });
+  check(
+    'an unknown trip code is a null detail page, not an error',
+    missingTrip.status === 200 && missingTrip.body === null,
+    `status ${missingTrip.status}`,
+  );
+
+  const sameRoute = await call('/functions/v1/trips', {
+    method: 'POST',
+    token: owner,
+    body: {
+      action: 'trip.create',
+      trip: {
+        vehicleId: '11111111-1111-4111-8111-111111111111',
+        originGovernorateId: '11111111-1111-4111-8111-111111111111',
+        destinationGovernorateId: '11111111-1111-4111-8111-111111111111',
+        departureAt: new Date(Date.now() + 86_400_000).toISOString(),
+        seatsTotal: 12,
+        pricePerSeatYer: 9000,
+      },
+    },
+  });
+  check(
+    'a trip that leaves and arrives in the same governorate is a 422 with a field',
+    sameRoute.status === 422,
+    `status ${sameRoute.status}`,
+  );
+
+  const publishMissing = await call('/functions/v1/trips', {
+    method: 'POST',
+    token: owner,
+    body: { action: 'trip.publish', tripId: '11111111-1111-4111-8111-111111111111' },
+  });
+  check(
+    'publishing a trip that does not exist is a 404, not a 500',
+    publishMissing.status === 404,
+    `status ${publishMissing.status}`,
+  );
 }
 
 const write = await call('/rest/v1/governorates', { method: 'POST', body: {} });

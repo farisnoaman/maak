@@ -20,6 +20,7 @@ export * from './api/errors';
 export * from './api/gateway';
 export * from './api/identity';
 export * from './api/fleet';
+export * from './api/trips';
 export * from './api/quota';
 export * from './api/geography';
 export * from './api/client';

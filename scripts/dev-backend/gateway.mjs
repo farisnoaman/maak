@@ -136,6 +136,16 @@ const GEO_CAPABILITY = {
   'place.setActive': 'place.setActive',
 };
 
+const TRIPS_CAPABILITY = {
+  'trip.create': 'trip.create',
+  'trip.update': 'trip.update',
+  'trip.setStops': 'trip.update',
+  'trip.publish': 'trip.update',
+  'trip.submitVerification': 'trip.update',
+  'trip.decideVerification': 'trip.verify',
+  'trip.cancel': 'trip.cancel',
+};
+
 const FLEET_CAPABILITY = {
   'vehicle.create': 'vehicle.create',
   'vehicle.update': 'vehicle.update',
@@ -243,6 +253,42 @@ export async function handleFunction({ name, body, userId, client, core, request
     }
 
     const { fn, args } = core.fleetCommandArgs(parsed.data, userId, {
+      p_request_id: requestId,
+      p_ip: null,
+    });
+    try {
+      const result = await runCommand(client, fn, args);
+      return { status: 200, body: { ...result, requestId } };
+    } catch (error) {
+      const mapped = mapDbError(error, core);
+      return { ...mapped, body: { ...mapped.body, requestId } };
+    }
+  }
+
+  if (name === 'trips') {
+    const parsed = core.tripsActionSchema.safeParse(body);
+    if (!parsed.success) return mapZod(parsed.error);
+
+    const resolved = await resolveActor(client, userId);
+    const denial = core.policyDenial(
+      resolved.actor,
+      TRIPS_CAPABILITY[parsed.data.action],
+      core.tripsScope(parsed.data),
+    );
+    if (denial) {
+      return {
+        status: denial === 'UNAUTHENTICATED' ? 401 : 403,
+        body: {
+          code: denial,
+          detail:
+            denial === 'NOT_VERIFIED'
+              ? 'Account is not verified'
+              : 'You do not have permission to perform this action',
+        },
+      };
+    }
+
+    const { fn, args } = core.tripsCommandArgs(parsed.data, userId, {
       p_request_id: requestId,
       p_ip: null,
     });

@@ -307,8 +307,23 @@ export async function handleRpc({ client, mutex, url, body, claims }) {
         `select * from public.${quote(fn)}(${args})`,
         entries.map(([, value]) => value),
       );
+      // PostgREST returns a scalar-returning function's value *directly* (`{"items":[…]}`), and only a
+      // set-returning one as an array of rows (`[{"region_upsert":{…}}]`). Returning `rows` for both
+      // meant a client that read `body.items` worked in production and saw `undefined` in development —
+      // the kind of difference that gets debugged twice. Ask the catalog which shape applies.
+      const meta = await client.query(
+        `select p.proretset
+           from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+          where n.nspname = 'public' and p.proname = $1
+          limit 1`,
+        [fn],
+      );
+      const setReturning = meta.rows[0]?.proretset === true;
       await client.query('commit');
-      return { status: 200, body: result.rows };
+      return {
+        status: 200,
+        body: setReturning ? result.rows : (result.rows[0]?.[fn] ?? null),
+      };
     } catch (error) {
       try {
         await client.query('rollback');
