@@ -239,6 +239,27 @@ export const recordPingSchema = z.object({
   source: z.enum(['app', 'background', 'web', 'manual']).default('app'),
 });
 
+/**
+ * Phase 7 — verify or reject a batch, one row at a time.
+ *
+ * The cap of 50 is the database's, mirrored here so a caller learns about it before the round trip.
+ * The answer is `{ results: [...], verified, failed }`: nine done and one refused, with the reason on
+ * that row, is the whole point of a bulk action.
+ */
+export const bulkVerifyTripsSchema = z.object({
+  action: z.literal('trip.bulkVerify'),
+  tripIds: z.array(uuid).min(1).max(50),
+  outcome: z.enum(['approve', 'reject']),
+  /** Required for a rejection by the command; optional in the schema so one call shape serves both. */
+  reason: z.string().trim().max(500).optional(),
+});
+
+/** Re-issue the code a checkpoint scans. The old sticker stops working immediately. */
+export const rotateTripQrSchema = z.object({
+  action: z.literal('trip.rotateQr'),
+  tripId: uuid,
+});
+
 export const tripsActionSchema = z.discriminatedUnion('action', [
   createTripSchema,
   updateTripSchema,
@@ -251,6 +272,8 @@ export const tripsActionSchema = z.discriminatedUnion('action', [
   markStopReachedSchema,
   endTripSchema,
   recordPingSchema,
+  bulkVerifyTripsSchema,
+  rotateTripQrSchema,
 ]);
 
 export type TripsAction = z.infer<typeof tripsActionSchema>;
@@ -272,6 +295,12 @@ export function tripsScope(input: TripsAction) {
     case 'trip.end':
     case 'trip.recordPing':
       return { isAssignedDriver: true, isOwner: true, isOrgMember: true };
+    // Verification is geo-scoped: a supervisor with a patch may verify inside it, and the SQL
+    // re-derives the patch from `geo_assignments` rather than trusting this claim.
+    case 'trip.bulkVerify':
+      return { inGeoScope: true };
+    case 'trip.rotateQr':
+      return { isOwner: true, isOrgMember: true, inGeoScope: true };
     default:
       return { isOwner: true, isOrgMember: true };
   }
@@ -294,6 +323,11 @@ export const tripsResultSchema = z
     flagged: z.boolean().optional(),
     alreadyReached: z.boolean().optional(),
     recordedAt: z.string().optional(),
+    results: z.array(z.record(z.string(), z.unknown())).optional(),
+    verified: z.number().optional(),
+    failed: z.number().optional(),
+    outcome: z.string().optional(),
+    qrToken: z.string().optional(),
     progress: z.record(z.string(), z.unknown()).optional(),
     reverificationRequired: z.boolean().optional(),
     tripId: uuid.optional(),
@@ -405,6 +439,22 @@ export function tripsCommandArgs(
           ...audit,
         },
       };
+    case 'trip.bulkVerify':
+      return {
+        fn: 'cmd_bulk_verify_trips',
+        args: {
+          p_actor: actorId,
+          p_trip_ids: action.tripIds,
+          p_outcome: action.outcome,
+          p_reason: action.reason ?? null,
+          ...audit,
+        },
+      };
+    case 'trip.rotateQr':
+      return {
+        fn: 'cmd_rotate_trip_qr',
+        args: { p_actor: actorId, p_trip_id: action.tripId, ...audit },
+      };
   }
 }
 
@@ -472,7 +522,21 @@ export const staffTripFiltersSchema = z.object({
     .array(z.enum(['draft', 'pending', 'published', 'cancelled', 'completed']))
     .max(5)
     .optional(),
+  verificationStatus: z
+    .array(z.enum(['unverified', 'pending', 'verified', 'rejected']))
+    .max(4)
+    .optional(),
   q: z.string().trim().max(80).optional(),
+  /** Calendar days in Aden time, `YYYY-MM-DD`: a supervisor searching "last Tuesday", not an instant. */
+  from: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+  to: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+  governorateId: z.string().uuid().optional(),
 });
 
 export function staffTripsArgs(
@@ -482,7 +546,11 @@ export function staffTripsArgs(
 ): { fn: 'staff_search_trips'; args: Record<string, unknown> } {
   const compact: Record<string, unknown> = {};
   if (filters.status?.length) compact.status = filters.status;
+  if (filters.verificationStatus?.length) compact.verificationStatus = filters.verificationStatus;
   if (filters.q) compact.q = filters.q;
+  if (filters.from) compact.from = filters.from;
+  if (filters.to) compact.to = filters.to;
+  if (filters.governorateId) compact.governorateId = filters.governorateId;
   return {
     fn: 'staff_search_trips',
     args: { p_actor: actorId, p_filters: JSON.stringify(compact), p_limit: limit },

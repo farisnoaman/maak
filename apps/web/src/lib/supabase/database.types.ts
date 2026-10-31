@@ -1,5 +1,5 @@
-// migrations-sha256: 8ac89e5a4ef9b60f521544d385612703cf95e60de159924f782a4d9d21cdaaeb
-/* Generated from 23 migrations. Run `npm run db:types` after changing the schema. */
+// migrations-sha256: 49f0a0a72f5b806c8014560bf0fe7c186641f17395977d1a5051a06c93b02bbb
+/* Generated from 25 migrations. Run `npm run db:types` after changing the schema. */
 
 /**
  * Schema types for RLS-filtered reads (Phase 0 subset).
@@ -519,6 +519,8 @@ export interface Trip {
   last_stop_seq: number | null;
   /** Newest position report (monotonic). Staleness is `now() - last_ping_at > 21 min`. */
   last_ping_at: string | null;
+  /** The 24-hex code a checkpoint scans (`get_trip_for_staff`). Issued on verification. */
+  qr_token: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -566,6 +568,16 @@ export interface TripProgress {
   eta_next_seconds: number | null;
   eta_destination_seconds: number | null;
   updated_at: string;
+}
+
+export interface TripScanLog {
+  id: number;
+  trip_id: string | null;
+  token: string | null;
+  actor_id: string | null;
+  allowed: boolean;
+  reason: string | null;
+  created_at: string;
 }
 
 export interface TripRouteGeometry {
@@ -864,6 +876,11 @@ export interface Database {
         Insert: Partial<TripProgress> & { trip_id: string };
         Update: Partial<TripProgress>;
       };
+      trip_scan_log: {
+        Row: TripScanLog;
+        Insert: Partial<TripScanLog> & { allowed: boolean };
+        Update: Partial<TripScanLog>;
+      };
       trip_route_geometry: {
         Row: TripRouteGeometry;
         Insert: Partial<TripRouteGeometry> & {
@@ -969,6 +986,18 @@ export interface Database {
     Functions: {
       get_trip_progress: {
         Args: { p_code: string };
+        Returns: Json;
+      };
+      staff_scan: {
+        Args: { p_token: string };
+        Returns: Json;
+      };
+      staff_summary: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
+      staff_manifest: {
+        Args: { p_trip_id: string };
         Returns: Json;
       };
       search_public_trips: {

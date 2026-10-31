@@ -13,6 +13,16 @@ export default async function ConsolePage({ params }: { params: Promise<{ locale
   // The staff fleet queue lives under the same shell as the account queue: one console, two doors.
   const screens = [
     {
+      key: 'ops.dashboardTitle' as const,
+      note: 'console.subtitle.staff' as const,
+      href: `/${locale}/staff/dashboard`,
+    },
+    {
+      key: 'ops.scanTitle' as const,
+      note: 'ops.scanHint' as const,
+      href: `/${locale}/staff/scan`,
+    },
+    {
       key: 'staff.trips.title' as const,
       note: 'staff.trips.subtitle' as const,
       href: `/${locale}/staff/trips`,
@@ -39,6 +49,8 @@ export default async function ConsolePage({ params }: { params: Promise<{ locale
         phase="7"
         items={[
           { key: 'console.navOverview', href: `/${locale}/staff` },
+          { key: 'ops.dashboard', href: `/${locale}/staff/dashboard` },
+          { key: 'ops.scan', href: `/${locale}/staff/scan` },
           { key: 'staff.trips.title', href: `/${locale}/staff/trips` },
           { key: 'console.navVehicles', href: `/${locale}/staff/vehicles` },
           { key: 'nav.verificationQueue', href: `/${locale}/staff/verifications` },

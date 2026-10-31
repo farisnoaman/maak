@@ -409,8 +409,9 @@ not build the acceptance-criterion region and reference data that could never be
       `trip_route_geometry` seam exist; no provider is called yet.
 - [x] Commands (edge fn + atomic `cmd_*` SQL): `start_trip`, `end_trip`, `mark_stop_reached`, `record_ping`,
       and the visibility-checked read `get_trip_progress`. (`check_in_passenger` and a dedicated
-      `get_driver_trips_today` are folded into the read policy + `/driver` for now; the former arrives with
-      the Phase 7 manifest.)
+      `get_driver_trips_today` are folded into the read policy + `/driver` for now. **`check_in_passenger` did
+      not land in Phase 7 either** — the manifest is the sheet the conductor reads; marking a seat boarded
+      waits for the booking-state slice that gives `accepted` a `boarded` successor.)
 - [x] Realtime: the private `trip:<id>` publication is added when the deployment has it (00023), and the live
       screen polls every 30 s — the transport that exists in *both* environments is the one that ships.
 - [~] Mobile: the web driver console covers start / position / stop / end. `expo-task-manager` background
@@ -446,15 +447,26 @@ not build the acceptance-criterion region and reference data that could never be
 - Supervisor dashboard: pending verifications in scope, live trips in scope, stale trips, recent scans.
 
 ### Tasks
-- [ ] `qr_token` generation + `GET /api/qr/trip/:token` resolver + rate limiting.
-- [ ] Scanner UI (web: `barcode-detector`/zxing; mobile: `expo-camera`) with permission prompts localized.
-- [ ] Commands (edge fn + atomic `cmd_*` SQL): `bulk_verify_trips`, `bulk_verify_trips_with_passengers`, `bulk_verify_passengers`,
-      `bulk_verify_entities`, `get_trip_for_staff(token)`, `staff_search_trips`, `log_document_access`.
-- [ ] PDF route `GET /api/trips/:id/manifest.pdf?locale=ar|en` + Arabic font subset; layout tests at 4/14/30 passengers.
-- [ ] Staff web `/staff/scans`, `/staff/trips/[id]` (manifest + bulk passengers), `/staff/dashboard`, `/supervisor/*`.
-- [ ] Mobile scanner screen + manifest link.
-- [ ] pgTAP: out-of-scope verification blocked; passenger detail respects `can_view_passengers`; PDF forbidden for passengers.
-- [ ] PDF snapshot tests (text extraction, page count) in both locales.
+- [x] `qr_token` generation + resolver + rate limiting. — `00025`: token on `verified`/`published`/`in_progress`/`completed`
+      by trigger, backfilled; resolved by `get_trip_for_staff(actor, token, ip)` behind the session-bound
+      `staff_scan(text)`, rate-limited in the function and logged either way. No `GET /api/qr/...` route: the scan is
+      an authenticated staff read, not a public URL.
+- [x] Scanner UI (web: `BarcodeDetector`; mobile: token entry — `expo-camera` deferred, see `docs/phase-7-report.md` §6)
+      with permission prompts localized (§`ops.scanCameraUnsupported`, `ops.scanCameraOff`).
+- [x] Commands (edge fn + atomic `cmd_*` SQL): `cmd_bulk_verify_trips`, `cmd_rotate_trip_qr`, `get_trip_for_staff`,
+      `get_trip_manifest`, `staff_scope_summary`, `staff_search_trips` (now ops-scoped with history filters).
+      **Not built:** `bulk_verify_trips_with_passengers`, `bulk_verify_passengers`, `bulk_verify_entities`,
+      `log_document_access` (already shipped in 00019) — see the report §6.
+- [x] A4 manifest + layout tests at 4/14/30 passengers. — Print-optimised HTML with `@page size: A4` and
+      `manifestColumns()`; **no server-side PDF binary** (pdfkit + Noto Naskh WOFF was prototyped and rejected:
+      woff/woff2 only, second layout engine). Layout is asserted by `packages/core/tests/manifest.test.ts`.
+- [x] Staff web `/staff/scan`, `/staff/dashboard`, `/staff/trips/[id]/manifest`, history filters + CSV export on
+      `/staff/trips`. (The dashboard lives inside the staff console instead of a separate `/supervisor/*` area.)
+- [x] Mobile scanner screen + manifest link (`apps/mobile/src/app/staff/scan.tsx`, token entry).
+- [x] pgTAP: out-of-scope verification blocked; manifest refused for a passenger (403/`42501`); scan audit written
+      on both allowed and refused attempts. (`can_view_passengers` was not needed: the manifest read *is* the gate.)
+- [x] Manifest format tests replace PDF snapshots: CSV (BOM/quoting/CRLF/Aden offsets) and column splitting at
+      14/30 passengers, both locales — `packages/core/tests/manifest.test.ts` (16 tests).
 
 ### Acceptance criteria
 - Aden-scoped supervisor scanning an Aden trip sees it; an out-of-scope supervisor sees «خارج نطاقك» / “Outside your scope”.
@@ -462,6 +474,12 @@ not build the acceptance-criterion region and reference data that could never be
 - 14-passenger manifest fits one A4 page; Arabic renders correctly (no tofu) and English renders LTR cleanly.
 - Passenger cannot download the manifest (`403`); generation is audited and visible in the audit explorer.
 - Historical search finds last month's completed trip by date range + governorate; CSV matches the filtered rows.
+
+**Evidence:** 36 pgTAP assertions (`0011_staff_operations.test.sql`) and 16 unit tests
+(`packages/core/tests/manifest.test.ts`); probed end to end on the running stack — the Aden/Sanaa patch split,
+`9 verified, 1 failed (OUT_OF_SCOPE)`, a 14-passenger sheet on one column, `403` for a passenger and `404` for a
+missing trip, and a history export that matches the table row for row. What was decided differently (no PDF
+binary, trips-only bulk, no native camera) is argued in `docs/phase-7-report.md` §2 and §6.
 
 **Estimate:** 8 days.
 

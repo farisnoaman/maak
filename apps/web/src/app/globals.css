@@ -3094,3 +3094,323 @@ input[type='file']::file-selector-button {
     transition: none;
   }
 }
+
+/* ---------------------------------------------------------------------------------------------
+   Phase 7 — staff operations: the dashboard, the scanner, and the sheet that goes on the clipboard.
+
+   The manifest is the only screen in the product that is *designed to leave* the app. Everything else
+   here is a console; this is a page that gets printed, folded and handed to a driver, so it is written
+   in physical units (mm) and the screen version is the preview of the paper.
+   --------------------------------------------------------------------------------------------- */
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
+  gap: var(--space-3);
+  margin-block-end: var(--space-5);
+}
+
+.stat {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-4);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+}
+
+.stat__value--text {
+  font-size: 0.95rem;
+}
+
+.ops-scan {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.ops-scan__manual {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.ops-scan__input {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1.1rem;
+  letter-spacing: 0.08em;
+}
+
+.ops-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.ops-facts dt {
+  font-size: 0.8rem;
+  color: var(--ink-500);
+}
+
+.ops-facts dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.ops-picklist,
+.ops-results,
+.ops-scanlist {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ops-pick {
+  display: flex;
+  gap: var(--space-2);
+  align-items: start;
+  padding: var(--space-2);
+  border-block-end: 1px solid var(--surface-sunken);
+}
+
+.ops-pick input {
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+  margin-block-start: 0.15rem;
+}
+
+.ops-results li,
+.ops-scanlist li {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+  padding-block: var(--space-1);
+  border-block-end: 1px solid var(--surface-sunken);
+}
+
+.ops-ok {
+  color: var(--state-success);
+}
+
+.ops-deny {
+  color: var(--state-danger);
+}
+
+.ops-bulk {
+  display: grid;
+  gap: var(--space-3);
+}
+
+/* ---------- the sheet ---------- */
+
+.manifest {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.manifest__bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.manifest__sheet {
+  margin-inline: auto;
+  inline-size: 210mm;
+  max-inline-size: 100%;
+  min-block-size: 297mm;
+  padding: 12mm 10mm;
+  /* Paper is white in both themes: a manifest printed from dark mode is unreadable. */
+  background: #ffffff;
+  color: #111111;
+  border: 1px solid var(--surface-sunken);
+  font-size: 10.5pt;
+  line-height: 1.45;
+}
+
+.manifest__head {
+  display: flex;
+  gap: var(--space-4);
+  align-items: start;
+  justify-content: space-between;
+  padding-block-end: 4mm;
+  border-block-end: 2px solid #111111;
+}
+
+.manifest__eyebrow {
+  margin: 0 0 1mm;
+  font-size: 8pt;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #444444;
+}
+
+.manifest__head h1 {
+  margin: 0;
+  font-size: 16pt;
+  line-height: 1.2;
+}
+
+.manifest__route {
+  margin: 1mm 0 0;
+  font-size: 12pt;
+  font-weight: 700;
+}
+
+.manifest__meta {
+  margin: 1mm 0 0;
+  font-size: 9.5pt;
+  color: #333333;
+}
+
+.manifest__qr {
+  margin: 0;
+  text-align: center;
+}
+
+.manifest__qr-code {
+  inline-size: 34mm;
+  block-size: 34mm;
+}
+
+.manifest__qr-code svg {
+  inline-size: 100%;
+  block-size: 100%;
+  display: block;
+}
+
+.manifest__qr-token {
+  display: inline-block;
+  margin-block-start: 1mm;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 6.5pt;
+  letter-spacing: 0.02em;
+  color: #444444;
+}
+
+.manifest__blocks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2mm 6mm;
+  margin: 4mm 0;
+  padding: 3mm 0;
+  border-block-end: 1px solid #bbbbbb;
+}
+
+.manifest__blocks dt {
+  font-size: 7.5pt;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #555555;
+}
+
+.manifest__blocks dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+.manifest__stops {
+  margin: 0 0 3mm;
+  font-size: 9pt;
+  color: #333333;
+}
+
+.manifest__columns {
+  display: block;
+}
+
+.manifest__columns--split {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 6mm;
+}
+
+.manifest__table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-size: 8.5pt;
+}
+
+.manifest__columns--split .manifest__table {
+  font-size: 7.5pt;
+}
+
+.manifest__table th {
+  text-align: start;
+  font-size: 7.5pt;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #555555;
+  border-block-end: 1px solid #111111;
+  padding: 1mm 1.5mm;
+}
+
+.manifest__table td {
+  padding: 1.2mm 1.5mm;
+  border-block-end: 1px solid #e2e2e2;
+  /* A long Arabic name wraps; it must not push the column into its neighbour. */
+  overflow-wrap: anywhere;
+}
+
+.manifest__num {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.manifest__note {
+  font-size: 0.85em;
+  color: #555555;
+}
+
+.manifest__empty {
+  margin: 6mm 0;
+  padding: 4mm;
+  border: 1px dashed #999999;
+  text-align: center;
+  color: #444444;
+}
+
+.manifest__foot {
+  display: flex;
+  gap: var(--space-4);
+  justify-content: space-between;
+  margin-block-start: 4mm;
+  padding-block-start: 2mm;
+  border-block-start: 1px solid #bbbbbb;
+  font-size: 7.5pt;
+  color: #555555;
+}
+
+@media print {
+  /* The document is the page: no shell, no chrome, no second sheet from a stray margin. */
+  body:has(.manifest) .site-header,
+  body:has(.manifest) .mobile-tabbar,
+  .no-print {
+    display: none !important;
+  }
+
+  .manifest {
+    display: block;
+  }
+
+  .manifest__sheet {
+    inline-size: auto;
+    min-block-size: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  /* Page geometry in millimetres, not `A4` by name: a printer with a 6 mm non-printable edge still
+     fits the sheet, because the margins are the sheet's own padding. */
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
+
+  .manifest__table tr {
+    break-inside: avoid;
+  }
+}

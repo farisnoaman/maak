@@ -1008,7 +1008,13 @@ select is(
       -- Two Phase 5 writes whose names the implementation plan fixes: both are commands in every
       -- sense that matters (one transaction, audited, reachable only through the gateway), so they are
       -- service-only exactly like `cmd_*`.
-      and p.proname not in ('create_id_share_link', 'get_trip_manifest_data')
+      -- Phase 7's staff reads take the actor explicitly because the gateway resolves it from the
+      -- bearer token and the service role does the work — a client with a session cannot call them
+      -- with somebody else's id, because it cannot call them at all.
+      and p.proname not in (
+        'create_id_share_link', 'get_trip_manifest_data',
+        'get_trip_for_staff', 'get_trip_manifest', 'staff_scope_summary'
+      )
       and not exists (
         select 1
         from pg_depend d

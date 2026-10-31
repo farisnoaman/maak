@@ -183,6 +183,8 @@ describe('trip action contract', () => {
         lat: 13.55,
         lng: 44.05,
         source: 'app',
+        tripIds: [TRIP],
+        outcome: 'approve',
       };
       return tripsCommandArgs(sample as never, 'u-1', audit);
     });
@@ -199,6 +201,8 @@ describe('trip action contract', () => {
       'cmd_mark_stop_reached',
       'cmd_end_trip',
       'cmd_record_ping',
+      'cmd_bulk_verify_trips',
+      'cmd_rotate_trip_qr',
     ]);
     for (const entry of map) {
       expect(entry.args.p_actor).toBe('u-1');
@@ -312,5 +316,21 @@ describe('marketplace reads', () => {
       status: ['cancelled'],
       q: 'SA',
     });
+
+    // Phase 7: the history filters. Absent keys stay absent — an empty `from` in the payload would be
+    // parsed as a date and throw inside the database.
+    const history = staffTripsArgs('u-1', {
+      from: '2026-01-01',
+      to: '2026-01-31',
+      governorateId: SOURCE,
+      verificationStatus: ['verified'],
+    });
+    expect(JSON.parse(history.args.p_filters as string)).toEqual({
+      from: '2026-01-01',
+      to: '2026-01-31',
+      governorateId: SOURCE,
+      verificationStatus: ['verified'],
+    });
+    expect(staffTripsArgs('u-1', { from: '' as never }).args.p_filters).toBe('{}');
   });
 });

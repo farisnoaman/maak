@@ -80,6 +80,18 @@ const ROUTES = [
   { path: '/ar/staff/trips', lang: 'ar', dir: 'rtl', account: 'staff' },
   { path: '/en/staff/trips', lang: 'en', dir: 'ltr', account: 'staff' },
   { path: '/ar/staff/trips?q=SA&status=published', lang: 'ar', dir: 'rtl', account: 'staff' },
+  // Phase 7: the supervisor's two new screens, plus the history filters in both directions.
+  { path: '/ar/staff/dashboard', lang: 'ar', dir: 'rtl', account: 'staff' },
+  { path: '/en/staff/dashboard', lang: 'en', dir: 'ltr', account: 'staff' },
+  { path: '/ar/staff/scan', lang: 'ar', dir: 'rtl', account: 'staff' },
+  { path: '/en/staff/scan', lang: 'en', dir: 'ltr', account: 'staff' },
+  {
+    path: '/ar/staff/trips?from=2026-01-01&to=2026-12-31',
+    lang: 'ar',
+    dir: 'rtl',
+    account: 'staff',
+  },
+  { path: '/en/staff/trips?verification=verified', lang: 'en', dir: 'ltr', account: 'staff' },
 ];
 
 const failures = [];
@@ -317,6 +329,16 @@ if (sessions.staff) {
     if (!href) continue;
     await checkRoute({
       path: `/${locale}/staff/trips/${href[2]}`,
+      lang: locale,
+      dir: locale === 'ar' ? 'rtl' : 'ltr',
+      account: 'staff',
+    });
+    detailRoutes += 1;
+
+    // The manifest is the page that gets printed, so it is the one where a missing label or a table
+    // without a caption is worth catching before it reaches a printer.
+    await checkRoute({
+      path: `/${locale}/staff/trips/${href[2]}/manifest`,
       lang: locale,
       dir: locale === 'ar' ? 'rtl' : 'ltr',
       account: 'staff',

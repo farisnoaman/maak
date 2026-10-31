@@ -739,6 +739,10 @@ export interface StaffTripRow {
   /** Governorate *names*, not ids: this read is for a human scanning a table. */
   readonly origin: string;
   readonly destination: string;
+  /** Phase 7: the ids are what the history filter round-trips, the names are what the table shows. */
+  readonly originId: string | null;
+  readonly destinationId: string | null;
+  readonly qrToken: string | null;
 }
 
 /**
@@ -750,7 +754,14 @@ export interface StaffTripRow {
  */
 export async function loadStaffTrips(
   actorId: string,
-  filters: { status?: readonly string[]; q?: string },
+  filters: {
+    status?: readonly string[];
+    verificationStatus?: readonly string[];
+    q?: string;
+    from?: string;
+    to?: string;
+    governorateId?: string;
+  },
 ): Promise<{ configured: boolean; items: readonly StaffTripRow[]; error?: string }> {
   const client = await getServerClient();
   if (!client) return { configured: false, items: [] };
@@ -761,7 +772,13 @@ export async function loadStaffTrips(
       status: filters.status?.length
         ? (filters.status as ('draft' | 'pending' | 'published' | 'cancelled' | 'completed')[])
         : undefined,
+      verificationStatus: filters.verificationStatus?.length
+        ? (filters.verificationStatus as ('unverified' | 'pending' | 'verified' | 'rejected')[])
+        : undefined,
       q: filters.q,
+      from: filters.from,
+      to: filters.to,
+      governorateId: filters.governorateId,
     },
     50,
   );
@@ -787,6 +804,9 @@ export async function loadStaffTrips(
       cancelReason: str(row.cancelReason),
       origin: String(row.origin ?? '—'),
       destination: String(row.destination ?? '—'),
+      originId: str(row.originId),
+      destinationId: str(row.destinationId),
+      qrToken: str(row.qrToken),
     })),
   };
 }

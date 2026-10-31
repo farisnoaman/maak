@@ -18,6 +18,7 @@ export * from './domain/geo';
 export * from './domain/trip';
 export * from './domain/booking';
 export * from './domain/tracking';
+export * from './domain/manifest';
 
 export * from './api/errors';
 export * from './api/gateway';

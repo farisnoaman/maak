@@ -148,6 +148,8 @@ const TRIPS_CAPABILITY = {
   'trip.stopReached': 'trip.start',
   'trip.end': 'trip.start',
   'trip.recordPing': 'trip.start',
+  'trip.bulkVerify': 'trip.verify',
+  'trip.rotateQr': 'trip.update',
 };
 
 const BOOKINGS_CAPABILITY = {

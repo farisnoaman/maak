@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { departureLabel, isLocale, translate, type Locale, type TranslationKey } from '@maak/core';
 import { SiteHeader } from '@/components/SiteHeader';
@@ -38,12 +39,14 @@ export default async function StaffTripPage({
   const isStaff =
     !loaded.configured ||
     loaded.roles.includes('platform_staff') ||
-    loaded.roles.includes('platform_admin');
+    loaded.roles.includes('platform_admin') ||
+    loaded.roles.includes('geo_supervisor');
 
   const nav = [
     { key: 'console.navOverview' as TranslationKey, href: `/${locale}/staff` },
     { key: 'staff.trips.title' as TranslationKey, href: `/${locale}/staff/trips` },
     { key: 'fleet.staffQueue' as TranslationKey, href: `/${locale}/staff/vehicles` },
+    { key: 'ops.scan' as TranslationKey, href: `/${locale}/staff/scan` },
   ];
 
   if (!isStaff) {
@@ -107,6 +110,17 @@ export default async function StaffTripPage({
         {detail.trip.verificationStatus === 'pending' ? (
           <StaffTripReview locale={locale} trips={[detail.trip]} />
         ) : null}
+
+        {/* The manifest is the other door out of this page: a supervisor at a checkpoint is here to
+            count heads, not to read events. */}
+        <p className="ops-detail__links">
+          <Link className="ui-btn ui-btn--primary" href={`/${locale}/staff/trips/${id}/manifest`}>
+            {t('ops.manifest')}
+          </Link>
+          <Link className="ui-btn ui-btn--ghost" href={`/${locale}/staff/scan`}>
+            {t('ops.scan')}
+          </Link>
+        </p>
 
         <TripDetail
           locale={locale}
