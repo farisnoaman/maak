@@ -63,7 +63,7 @@ can call any of the three commands.
 | `npm test` | **391** tests / 19 files |
 | `npm run check:guards` | 24 core · 108 style · **22 migrations** · **57 commands** |
 | `npm run sql:check` | 22 migrations · **9** pgTAP suites · **449** assertions |
-| `npm run check:a11y` | 51 routes (two fewer than usual: the probe left the demo trip completed) |
+| `npm run check:a11y` | 54 routes, both directions (re-run after a clean `--reset`, so the demo trip was on sale again) |
 | `npm run check:functions` | 8 bundles, no drift |
 
 Probed on the running stack, as the seeded driver, against the seeded trip:
