@@ -94,7 +94,9 @@ button is at the bottom. On a phone the honest reading of that screen is "the bu
 fixes, one for each layer: `cmd_create_booking` now checks for a live booking first and raises
 `ALREADY_BOOKED` naming it; the retry loop re-raises anything that is not a code collision; and the form
 renders the failure directly above the button, styled, announced, scrolled into view, with a link to My
-bookings. The native screen had the mirror-image hole — it printed `error.detail`, which is English
+bookings. The booking page now asks the database first: a passenger who already holds a seat on the trip
+sees that booking's code and a way into it instead of a form whose only possible answer is a refusal.
+The native screen had the mirror-image hole — it printed `error.detail`, which is English
 support text, instead of a translation — and now calls `errorKey()`. The demo seed also gained a
 published trip, because an empty marketplace is the same bug with a different cause.
 

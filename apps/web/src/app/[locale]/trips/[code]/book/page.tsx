@@ -6,6 +6,7 @@ import { PreviewBanner } from '@/components/PreviewBanner';
 import { EmptyState } from '@/components/ui/Feedback';
 import { BookingForm, type BookableStop } from '@/components/bookings/BookingForm';
 import { loadAccountContext } from '@/lib/account';
+import { loadMyBookings } from '@/lib/bookings';
 import { getServerClient } from '@/lib/supabase/server';
 import { loadPublicTrip } from '@/lib/trips';
 
@@ -61,6 +62,18 @@ export default async function BookTripPage({
 
   const closed = trip.hasDeparted || trip.seatsAvailable < 1 || trip.status !== 'published';
 
+  // One live booking per passenger per trip is a database rule (`bookings_one_active_per_trip`). Asking
+  // the question here means the passenger is never handed a form whose only possible answer is
+  // `ALREADY_BOOKED` — the mistake stays a refusal in the API, but the page says it first, with the code
+  // and a way into the booking they already have.
+  const existing = loaded.user
+    ? (await loadMyBookings()).find(
+        (booking) =>
+          booking.trip?.id === trip.id &&
+          (booking.status === 'pending' || booking.status === 'accepted'),
+      )
+    : undefined;
+
   return (
     <>
       <SiteHeader locale={locale} pathname="/trips" />
@@ -72,7 +85,28 @@ export default async function BookTripPage({
         <p className="trip-form__hint">{t('bookings.bookSubtitle')}</p>
         {!loaded.configured ? <PreviewBanner locale={locale} /> : null}
 
-        {closed ? (
+        {existing ? (
+          <EmptyState
+            title={t('errors.ALREADY_BOOKED')}
+            description={t('bookings.holdExplain', { minutes: 30 })}
+            action={
+              <div className="form-actions">
+                <Link
+                  className="ui-btn ui-btn--primary ui-btn--md"
+                  href={`/${locale}/account/bookings/${existing.id}`}
+                >
+                  {existing.code}
+                </Link>
+                <Link
+                  className="ui-btn ui-btn--ghost ui-btn--md"
+                  href={`/${locale}/account/bookings`}
+                >
+                  {t('bookings.myTitle')}
+                </Link>
+              </div>
+            }
+          />
+        ) : closed ? (
           <EmptyState
             title={t('bookings.closedTitle')}
             description={t('bookings.closedBody')}
