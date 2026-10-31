@@ -6,6 +6,9 @@ import type { Locale } from './locale';
  */
 export const ar = {
   'common.appName': 'معك',
+  'common.staleBuild':
+    'هذه الصفحة من نسخة أقدم مما يعمل الآن على الخادم — أعِد التحميل عند انتهائك.',
+  'common.reload': 'إعادة التحميل',
   'common.brandMark': 'م',
   'common.footerStack': 'المرحلة 2 · Next.js · Expo · Supabase',
   'common.tagline': 'منصة إدارة الرحلات في اليمن',
@@ -442,6 +445,9 @@ export type TranslationKey = keyof typeof ar;
 
 export const en: Record<TranslationKey, string> = {
   'common.appName': 'Maak',
+  'common.staleBuild':
+    'This page is from an older build than the server is running — reload when you are ready.',
+  'common.reload': 'Reload',
   'common.brandMark': 'M',
   'common.footerStack': 'Phase 2 · Next.js · Expo · Supabase',
   'common.tagline': 'Trip management for Yemen',

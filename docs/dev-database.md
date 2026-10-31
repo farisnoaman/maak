@@ -244,6 +244,12 @@ simply being carried by the token.
   `next.config.mjs` therefore prefixes every dev asset with the build stamp
   (`/__build/<stamp>/_next/…`, rewritten to `/_next/…`) and sends `Cache-Control: no-store` for them.
   Each run gets a fresh asset URL space, and a fresh document can never pull yesterday's modules.
+· **Never reload a page automatically.** A tab that reloads itself destroys whatever is typed into a
+  form, and the symptom does not look like reloading at all — it looks like "the login screen clears
+  itself" or "sign-in does nothing", because the form POST is thrown away mid-flight by the navigation.
+  An early version of the build check reloaded on mismatch and did exactly that on every page, every
+  couple of seconds. `StaleBuildBanner` now only *reports* a mismatch, with a button; `check-guards`
+  fails any `location.reload()` that is not inside an event handler.
 · **Dead HMR.** A tab left open while `npm run dev` restarts keeps its old modules forever: the HMR
   socket is gone, so every navigation hydrates fresh server HTML with stale client code, and React
   reports a mismatch about attributes that no longer exist in the source. `scripts/dev.mjs` stamps each

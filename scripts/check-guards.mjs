@@ -184,6 +184,26 @@ for (const file of callers) {
   }
 }
 
+// --- 9. No page may reload itself ---------------------------------------------------------------
+// A reload loop is destructive in a way that is hard to notice from a screenshot: it wipes whatever is
+// typed into a form, so the user reports "the login screen clears itself" rather than "the page
+// reloads". Auto-reloading was added once to recover from stale dev chunks and did exactly that. A
+// reload must therefore be a user's action — triggered from a click handler, never from an effect.
+for (const file of await walk(join(root, 'apps', 'web', 'src'), (f) => /\.(tsx|ts)$/.test(f))) {
+  const source = await readFile(file, 'utf8');
+  const lines = source.split('\n');
+  lines.forEach((line, index) => {
+    if (!/location\.reload\(|location\.reload\b/.test(line)) return;
+    // Allowed only when the surrounding statement is an event handler.
+    const window = lines.slice(Math.max(0, index - 4), index + 2).join('\n');
+    if (/onClick|onSubmit|onChange|addEventListener/.test(window)) return;
+    failures.push(
+      `${rel(file)}:${index + 1}: reloads the page outside an event handler — a self-reloading page ` +
+        `destroys typed input; show a banner and let the user click instead`,
+    );
+  });
+}
+
 if (failures.length > 0) {
   console.error(`✗ ${failures.length} guard failure(s):\n`);
   for (const failure of failures) console.error(`  - ${failure}`);

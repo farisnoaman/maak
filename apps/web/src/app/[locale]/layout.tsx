@@ -6,7 +6,7 @@ import '@maak/design-tokens/tokens.css';
 import '../globals.css';
 import { ToastProvider } from '@/components/ui/Toast';
 import { SessionTokenKeeper } from '@/components/SessionTokenKeeper';
-import { StaleBuildGuard } from '@/components/StaleBuildGuard';
+import { StaleBuildBanner } from '@/components/StaleBuildBanner';
 import { BUILD } from '@/lib/build';
 
 export const metadata: Metadata = {
@@ -36,7 +36,7 @@ export default async function LocaleLayout({
           {locale === 'ar' ? 'تخطَّ إلى المحتوى' : 'Skip to content'}
         </a>
         <SessionTokenKeeper />
-        <StaleBuildGuard build={BUILD} />
+        <StaleBuildBanner build={BUILD} locale={locale as Locale} />
         <ToastProvider>{children}</ToastProvider>
       </body>
     </html>
