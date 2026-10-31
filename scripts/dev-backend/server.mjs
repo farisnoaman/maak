@@ -86,11 +86,18 @@ function parseJson(buffer) {
 /** Minimal object storage. Paths are confined to `.dev/storage`, so `..` cannot escape. */
 async function handleStorage({ request, url, claims }) {
   const parts = url.pathname.split('/').filter(Boolean); // storage, v1, object, ...
-  const [, , kind, bucket, ...rest] = parts;
-  const objectPath = rest.join('/');
+  // Supabase serves three object shapes: `/object/<bucket>/<path>` for writes, and the
+  // `public` / `authenticated` prefixes for reads. Dropping the prefix keeps one handler for all three
+  // — and means the web app can use the *real* URLs for both a public bucket and a private one.
+  const [, , kind, ...tail] = parts;
+  const access = tail[0] === 'public' || tail[0] === 'authenticated' ? tail.shift() : null;
+  const bucket = tail.shift();
+  const objectPath = tail.join('/');
 
   if (kind !== 'object' || !bucket) return { status: 404, body: { message: 'not found' } };
-  if (claims.role !== 'authenticated') {
+  // A public bucket is readable without a session, exactly like the real thing; writes never are.
+  const publicRead = access === 'public' && request.method === 'GET';
+  if (claims.role !== 'authenticated' && !publicRead) {
     return {
       status: 401,
       body: { statusCode: '401', error: 'Unauthorized', message: 'Unauthorized' },

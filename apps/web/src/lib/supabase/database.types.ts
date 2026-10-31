@@ -19,6 +19,27 @@ export type VerificationSubject = 'individual' | 'organization';
 export type VerificationRequestStatus = 'pending' | 'approved' | 'rejected' | 'withdrawn';
 export type VerificationOutcome = 'approve' | 'reject';
 export type RegionKind = 'region' | 'sub_region';
+export type VehicleBodyType =
+  | 'sedan'
+  | 'hatchback'
+  | 'suv'
+  | 'pickup'
+  | 'van'
+  | 'minibus'
+  | 'bus'
+  | 'coach'
+  | 'truck'
+  | 'other';
+export type DriveType =
+  'front_wheel_drive' | 'rear_wheel_drive' | 'four_wheel_drive' | 'all_wheel_drive';
+export type Transmission = 'manual' | 'automatic' | 'cvt' | 'dual_clutch';
+export type FuelType = 'petrol' | 'diesel' | 'hybrid' | 'electric' | 'lpg';
+export type VehicleCondition = 'new' | 'used' | 'refurbished';
+export type VehicleConditionRating = 'excellent' | 'good' | 'fair' | 'poor';
+export type VehicleOwnershipKind = 'owned' | 'leased' | 'financed';
+export type VehicleStatus = 'draft' | 'active' | 'suspended' | 'retired';
+export type DriverStatus = 'invited' | 'active' | 'suspended' | 'revoked';
+export type OdometerKind = 'baseline' | 'trip_start' | 'trip_end' | 'service';
 export type PlaceKind =
   | 'city'
   | 'town'
@@ -255,6 +276,159 @@ export interface AuditLogRow {
   created_at: string;
 }
 
+export interface Plan {
+  code: PlanCode;
+  name_ar: string;
+  name_en: string;
+  price_yer: number;
+  trial_days: number;
+  soft_limit: boolean;
+  features: Json;
+  updated_at: string;
+}
+
+export interface PlanLimit {
+  plan_code: PlanCode;
+  metric: 'vehicles' | 'trips' | 'staff' | 'drivers' | 'active_trips' | 'featured_listings';
+  limit_value: number | null;
+}
+
+export interface Vehicle {
+  id: string;
+  owner_user_id: string | null;
+  owner_org_id: string | null;
+  make: string;
+  model: string;
+  model_year: number;
+  trim: string | null;
+  plate_number: string;
+  plate_norm: string;
+  plate_governorate_id: string | null;
+  vin: string | null;
+  chassis_no: string | null;
+  color: string | null;
+  body_type: VehicleBodyType;
+  drive_type: DriveType | null;
+  transmission: Transmission | null;
+  fuel_type: FuelType;
+  engine_cc: number | null;
+  cylinders: number | null;
+  fuel_tank_l: number | null;
+  tyre_size: string | null;
+  tyre_count: number | null;
+  spare_tyre: boolean;
+  vehicle_condition: VehicleCondition;
+  ownership_kind: VehicleOwnershipKind;
+  seats_passenger: number;
+  seats_total: number;
+  luggage_capacity_l: number | null;
+  roof_rack: boolean;
+  air_conditioning: boolean;
+  heating: boolean;
+  reclining_seats: boolean;
+  usb_charging: boolean;
+  wifi: boolean;
+  entertainment: boolean;
+  curtains: boolean;
+  reading_lights: boolean;
+  airbags: number;
+  abs: boolean;
+  esp: boolean;
+  seatbelts_all: boolean;
+  fire_extinguisher: boolean;
+  first_aid: boolean;
+  emergency_exit: boolean;
+  gps_device: boolean;
+  speed_limiter: boolean;
+  child_seat: boolean;
+  wheelchair_accessible: boolean;
+  step_assist: boolean;
+  insurance_company: string | null;
+  insurance_policy_no: string | null;
+  insurance_expiry: string | null;
+  inspection_expiry: string | null;
+  registration_expiry: string | null;
+  transport_permit_expiry: string | null;
+  exterior_condition: VehicleConditionRating;
+  interior_condition: VehicleConditionRating;
+  odometer_km: number;
+  status: VehicleStatus;
+  verification_status: VerificationStatus;
+  verified_by: string | null;
+  verified_at: string | null;
+  verification_note: string | null;
+  is_active: boolean;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface VehiclePhoto {
+  id: string;
+  vehicle_id: string;
+  storage_path: string;
+  caption: string | null;
+  is_primary: boolean;
+  sort_order: number;
+  uploaded_by: string | null;
+  created_at: string;
+}
+
+export interface VehicleDocument {
+  id: string;
+  vehicle_id: string;
+  kind: 'insurance' | 'registration' | 'inspection' | 'permit' | 'other';
+  storage_path: string;
+  mime: string | null;
+  size_bytes: number | null;
+  uploaded_by: string | null;
+  created_at: string;
+}
+
+export interface DriverProfile {
+  id: string;
+  user_id: string | null;
+  invited_phone: string;
+  full_name: string;
+  org_id: string | null;
+  invited_by: string | null;
+  licence_no: string | null;
+  licence_class: string | null;
+  licence_expiry: string | null;
+  licence_photo_path: string | null;
+  status: DriverStatus;
+  verification_status: VerificationStatus;
+  verified_by: string | null;
+  verified_at: string | null;
+  verification_note: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface VehicleDriverAssignment {
+  id: string;
+  vehicle_id: string;
+  driver_id: string;
+  assigned_by: string | null;
+  assigned_at: string;
+  unassigned_at: string | null;
+  unassigned_by: string | null;
+  note: string | null;
+}
+
+export interface OdometerReading {
+  id: string;
+  vehicle_id: string;
+  reading_km: number;
+  kind: OdometerKind;
+  driver_id: string | null;
+  recorded_by: string | null;
+  recorded_at: string;
+  note: string | null;
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -315,6 +489,61 @@ export interface Database {
         Row: Region;
         Insert: Partial<Region> & { name_ar: string; name_en: string };
         Update: Partial<Region>;
+      };
+      plans: {
+        Row: Plan;
+        Insert: Partial<Plan> & { code: PlanCode; name_ar: string; name_en: string };
+        Update: Partial<Plan>;
+      };
+      plan_limits: {
+        Row: PlanLimit;
+        Insert: PlanLimit;
+        Update: Partial<PlanLimit>;
+      };
+      vehicles: {
+        Row: Vehicle;
+        Insert: Partial<Vehicle> & {
+          make: string;
+          model: string;
+          model_year: number;
+          plate_number: string;
+          seats_passenger: number;
+          seats_total: number;
+        };
+        Update: Partial<Vehicle>;
+      };
+      vehicle_photos: {
+        Row: VehiclePhoto;
+        Insert: Partial<VehiclePhoto> & { vehicle_id: string; storage_path: string };
+        Update: Partial<VehiclePhoto>;
+      };
+      vehicle_documents: {
+        Row: VehicleDocument;
+        Insert: Partial<VehicleDocument> & {
+          vehicle_id: string;
+          kind: VehicleDocument['kind'];
+          storage_path: string;
+        };
+        Update: Partial<VehicleDocument>;
+      };
+      driver_profiles: {
+        Row: DriverProfile;
+        Insert: Partial<DriverProfile> & { invited_phone: string; full_name: string };
+        Update: Partial<DriverProfile>;
+      };
+      vehicle_driver_assignments: {
+        Row: VehicleDriverAssignment;
+        Insert: Partial<VehicleDriverAssignment> & { vehicle_id: string; driver_id: string };
+        Update: Partial<VehicleDriverAssignment>;
+      };
+      odometer_readings: {
+        Row: OdometerReading;
+        Insert: Partial<OdometerReading> & {
+          vehicle_id: string;
+          reading_km: number;
+          kind: OdometerKind;
+        };
+        Update: Partial<OdometerReading>;
       };
       region_governorates: {
         Row: RegionGovernorate;

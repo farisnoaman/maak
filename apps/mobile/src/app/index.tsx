@@ -76,8 +76,17 @@ export default function HomeScreen() {
         <Text style={styles.linkText}>{t('picker.title')}</Text>
       </Pressable>
 
+      {/* Phase 3: the driver's own screens. A driver is invited by phone, so this is the entry point. */}
+      <Pressable
+        accessibilityRole="link"
+        onPress={() => router.push('/driver/profile')}
+        style={styles.link}
+      >
+        <Text style={styles.linkText}>{t('fleet.driverProfile')}</Text>
+      </Pressable>
+
       <Text style={styles.note}>
-        {LOCALE_LABEL[locale]} · {t('common.phase')} 2
+        {LOCALE_LABEL[locale]} · {t('common.phase')} 3
       </Text>
     </ScrollView>
   );

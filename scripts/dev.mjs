@@ -16,6 +16,12 @@ import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const webOnly = process.argv.includes('--web-only');
+/**
+ * `--reset` drops the dev database and replays every migration. Editing an already-applied migration
+ * is otherwise invisible: the ledger records file *names*, so a changed file is neither re-run nor
+ * noticed — and schema and code silently disagree.
+ */
+const reset = process.argv.includes('--reset');
 const children = [];
 let shuttingDown = false;
 
@@ -86,7 +92,7 @@ async function waitForPort(port, timeoutMs = 90_000) {
 
 if (!webOnly) {
   console.log('▸ starting the dev database and API …');
-  run('db', process.execPath, ['scripts/dev-backend/server.mjs']);
+  run('db', process.execPath, ['scripts/dev-backend/server.mjs', ...(reset ? ['--reset'] : [])]);
 
   // Next must not compile before the API exists, or the first sign-in is the thing that discovers it.
   const ready = await waitForPort(54321);

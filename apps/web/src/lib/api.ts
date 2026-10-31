@@ -73,3 +73,50 @@ export async function uploadVerificationDocument(
   }
   return { ok: true, path };
 }
+
+/**
+ * Uploads one vehicle photo into `<vehicleId>/…` in the public `vehicle-photos` bucket.
+ *
+ * The folder is the vehicle id because the storage policy authorises the write by *which vehicle the
+ * first path segment names* (`app.owns_vehicle(app.safe_uuid(folder))`). Guessing a different layout
+ * would be refused by the database, so the folder is not configurable.
+ */
+export async function uploadVehiclePhoto(
+  file: File,
+  vehicleId: string,
+): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
+  return uploadToBucket('vehicle-photos', file, vehicleId);
+}
+
+/** Same contract, private bucket: insurance, registration, inspection, permit scans. */
+export async function uploadVehicleDocument(
+  file: File,
+  vehicleId: string,
+): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
+  return uploadToBucket('vehicle-documents', file, vehicleId);
+}
+
+async function uploadToBucket(
+  bucket: 'vehicle-photos' | 'vehicle-documents',
+  file: File,
+  vehicleId: string,
+): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
+  if (!getSupabaseConfig()) return { ok: false, error: 'not-configured' };
+
+  // A file name is user-controlled: strip everything that is not safe in a URL path, and keep the tail
+  // so the extension survives. The timestamp keeps two photos of the same name apart.
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-60) || 'upload';
+  const path = `${vehicleId}/${Date.now()}-${safeName}`;
+
+  const response = await fetch(`/api/data/storage/v1/object/${bucket}/${path}`, {
+    method: 'POST',
+    headers: { 'content-type': file.type || 'application/octet-stream', 'x-upsert': 'false' },
+    body: file,
+  });
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => 'upload failed');
+    return { ok: false, error: detail || 'upload failed' };
+  }
+  return { ok: true, path };
+}

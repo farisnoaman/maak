@@ -45,6 +45,15 @@ const ROUTES = [
   { path: '/en/admin/regions', lang: 'en', dir: 'ltr' },
   { path: '/ar/admin/places', lang: 'ar', dir: 'rtl' },
   { path: '/en/admin/places', lang: 'en', dir: 'ltr' },
+  // Phase 3 surfaces
+  { path: '/ar/operator/vehicles', lang: 'ar', dir: 'rtl' },
+  { path: '/en/operator/vehicles', lang: 'en', dir: 'ltr' },
+  { path: '/ar/operator/vehicles/new', lang: 'ar', dir: 'rtl' },
+  { path: '/en/operator/vehicles/new', lang: 'en', dir: 'ltr' },
+  { path: '/ar/operator/drivers', lang: 'ar', dir: 'rtl' },
+  { path: '/en/operator/drivers', lang: 'en', dir: 'ltr' },
+  { path: '/ar/staff/vehicles', lang: 'ar', dir: 'rtl' },
+  { path: '/en/staff/vehicles', lang: 'en', dir: 'ltr' },
 ];
 
 const failures = [];

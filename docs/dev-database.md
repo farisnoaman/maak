@@ -312,3 +312,17 @@ rejected, which is a completely different bug.
 - **Arabic comes out as `?`** — the cluster must be UTF8; `db.mjs` passes
   `--encoding=UTF8 --locale=C` and `client_encoding=UTF8`. A SQL_ASCII cluster cannot store the
   schema's Arabic text.
+
+## Replaying migrations after editing one
+
+`db.mjs` keeps a per-file ledger (`dev.meta.applied_files`), so a migration that has already run is
+**not** re-run when its contents change — the file name is unchanged, so nothing notices. A schema fix
+edited into an old migration therefore stays invisible until the database is rebuilt:
+
+```bash
+npm run dev -- --reset   # drops the dev database and replays bootstrap + every migration + the seed
+```
+
+The symptom of forgetting this is a stack that answers `42883 function public.cmd_… does not exist` (or
+silently runs yesterday's policy) while `npm run sql:check` is green — sql-check builds its **own**
+throwaway database, so it proves the migrations apply, not that the running one has them.

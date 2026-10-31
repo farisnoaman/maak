@@ -73,8 +73,12 @@ export type Capability =
   | 'booking.cancelAsPassenger'
   | 'booking.viewLive'
   | 'vehicle.create'
+  | 'vehicle.update'
+  | 'vehicle.setStatus'
   | 'vehicle.verify'
   | 'driver.invite'
+  | 'driver.accept'
+  | 'driver.assign'
   | 'driver.verify'
   | 'entity.verify'
   | 'geo.manage'
@@ -175,8 +179,15 @@ const RULES: Record<Capability, Rule> = {
   },
 
   'vehicle.create': { roles: OPERATOR, verified: true },
+  // Editing and retirement are ownership-scoped rather than verification-scoped: an owner whose
+  // verification lapses must still be able to retire a vehicle and correct its mileage.
+  'vehicle.update': { roles: [...OPERATOR, ...STAFF], scoped: 'owner' },
+  'vehicle.setStatus': { roles: [...OPERATOR, ...STAFF], scoped: 'owner' },
   'vehicle.verify': { roles: [...STAFF] },
-  'driver.invite': { roles: ['org_owner', 'org_manager'], verified: true, scoped: 'orgMember' },
+  // A personal driver is legitimate (an individual owner with one vehicle), so `individual` is in.
+  'driver.invite': { roles: OPERATOR, verified: true, scoped: 'orgMember' },
+  'driver.accept': { roles: AUTHENTICATED },
+  'driver.assign': { roles: [...OPERATOR, ...STAFF], scoped: 'owner' },
   'driver.verify': { roles: [...STAFF] },
   'entity.verify': { roles: [...STAFF] },
 
@@ -252,6 +263,32 @@ export class PolicyError extends Error {
     super(message);
     this.name = 'PolicyError';
   }
+}
+
+export type PolicyDenial = 'UNAUTHENTICATED' | 'NOT_VERIFIED' | 'FORBIDDEN';
+
+/**
+ * *Why* a capability was refused, not just that it was.
+ *
+ * `FORBIDDEN` for an account that merely has not finished verification is the wrong answer twice over:
+ * the user is told they lack permission for a thing they are entitled to, and the UI cannot offer the
+ * one action that would fix it. Commands raise `NOT_VERIFIED` for exactly this case, so the gateway now
+ * answers the same way.
+ */
+export function policyDenial(
+  actor: Actor,
+  capability: Capability,
+  resource: Resource = {},
+): PolicyDenial | null {
+  if (can(actor, capability, resource)) return null;
+  if (actor.roles.includes('platform_admin')) return null;
+
+  const rule = RULES[capability];
+  if (!rule) return 'FORBIDDEN';
+  if (!actor.userId) return 'UNAUTHENTICATED';
+  if (!actor.roles.some((r) => rule.roles.includes(r))) return 'FORBIDDEN';
+  if (rule.verified && actor.verification !== 'verified') return 'NOT_VERIFIED';
+  return 'FORBIDDEN';
 }
 
 export function requirePolicy(actor: Actor, capability: Capability, resource: Resource = {}): void {

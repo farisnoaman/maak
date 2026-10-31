@@ -136,6 +136,20 @@ const GEO_CAPABILITY = {
   'place.setActive': 'place.setActive',
 };
 
+const FLEET_CAPABILITY = {
+  'vehicle.create': 'vehicle.create',
+  'vehicle.update': 'vehicle.update',
+  'vehicle.submitVerification': 'vehicle.update',
+  'vehicle.decide': 'vehicle.verify',
+  'vehicle.setStatus': 'vehicle.setStatus',
+  'vehicle.setPhotos': 'vehicle.update',
+  'driver.invite': 'driver.invite',
+  'driver.accept': 'driver.accept',
+  'driver.verify': 'driver.verify',
+  'driver.assign': 'driver.assign',
+  'driver.unassign': 'driver.assign',
+};
+
 function invalid(fields) {
   return { status: 422, body: { code: 'VALIDATION_FAILED', fields } };
 }
@@ -191,6 +205,43 @@ export async function handleFunction({ name, body, userId, client, core, request
     }
 
     const { fn, args } = core.geoCommandArgs(parsed.data, userId, {
+      p_request_id: requestId,
+      p_ip: null,
+    });
+    try {
+      const result = await runCommand(client, fn, args);
+      return { status: 200, body: { ...result, requestId } };
+    } catch (error) {
+      const mapped = mapDbError(error, core);
+      return { ...mapped, body: { ...mapped.body, requestId } };
+    }
+  }
+
+  if (name === 'fleet') {
+    const parsed = core.fleetActionSchema.safeParse(body);
+    if (!parsed.success) return mapZod(parsed.error);
+
+    const resolved = await resolveActor(client, userId);
+    const denial = core.policyDenial(
+      resolved.actor,
+      FLEET_CAPABILITY[parsed.data.action],
+      core.fleetScope(parsed.data),
+    );
+    if (denial) {
+      // The same code the SQL command raises, so the client's message is the same either way.
+      return {
+        status: denial === 'UNAUTHENTICATED' ? 401 : 403,
+        body: {
+          code: denial,
+          detail:
+            denial === 'NOT_VERIFIED'
+              ? 'Account is not verified'
+              : 'You do not have permission to perform this action',
+        },
+      };
+    }
+
+    const { fn, args } = core.fleetCommandArgs(parsed.data, userId, {
       p_request_id: requestId,
       p_ip: null,
     });
