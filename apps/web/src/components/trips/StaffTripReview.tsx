@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   errorKey,
@@ -110,6 +111,9 @@ export function StaffTripReview({
               {trip.driverName ? ` · ${trip.driverName}` : ''}
             </p>
             <div className="trip-form__actions">
+              <Link className="btn" href={`/${locale}/staff/trips/${trip.id}`}>
+                {t('console.open')}
+              </Link>
               <Button
                 loading={busyId === trip.id}
                 onClick={() => {

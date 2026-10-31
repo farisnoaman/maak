@@ -51,7 +51,8 @@ from `app.uid()` and re-asserting ownership, verification and quota from the row
 Web (`apps/web`): `/operator/trips` (list by status, context switcher), `/operator/trips/new` (five-step
 wizard), `/operator/trips/[id]` (detail, edit-in-place, publish / submit / cancel), `/operator/trips/calendar`
 (month grid in Aden time), `/trips` (marketplace with cascading facets, sort, cursor paging),
-`/trips/[code]` (public detail + JSON-LD + share), `/staff/trips` (review queue), `/account/trips`
+`/trips/[code]` (public detail + JSON-LD + share), `/staff/trips` (review queue + staff search),
+`/staff/trips/[id]` (one trip as staff see it, with the verification decision), `/account/trips`
 (passenger shell).
 
 Mobile (`apps/mobile`): `/trips` (search, filter sheet, infinite scroll) and `/trips/[code]`.
@@ -100,10 +101,10 @@ read that ships revoked fails the suite instead of a console.
 
 | Gate | Result |
 | --- | --- |
-| `npm run sql:check` | 16 migrations applied; 7 pgTAP suites green; **83** trip assertions; no type drift; no client write grants |
+| `npm run sql:check` | 16 migrations applied; 7 pgTAP suites green; **92** trip assertions; no type drift; no client write grants |
 | `npm test` | 18 files, **365** tests (33 of them the Phase 4 domain/contract tests) |
 | `npm run check:guards` | 22 core files · 88 style files · 16 migrations · 43 commands |
-| `npm run check:a11y` | **50** routes, both directions, **5** discovered detail pages |
+| `npm run check:a11y` | **52** routes, both directions, **7** discovered detail pages |
 | `npm run check:responsive` | viewport exported, no unguarded grid tracks, every wide table scrollable |
 | `npm run dev:check -- --api` | 16/16, including the marketplace without a session and a trip-code lookup |
 | `npm run check:functions`, `db:types:check` | bundles current; types match 15 migrations |

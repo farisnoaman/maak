@@ -294,6 +294,30 @@ if (sessions.owner) {
   }
 }
 
+/**
+ * The staff trip detail — discovered from the staff *search* rather than from the queue, because the
+ * queue is empty on a healthy database and an unexercised screen is the one that breaks. The page shows
+ * the operator's trip through the same component as `/operator/trips/[id]`, plus the one action staff own.
+ */
+if (sessions.staff) {
+  for (const locale of ['ar', 'en']) {
+    const listHtml = await fetch(`${BASE}/${locale}/staff/trips?status=published`, {
+      headers: { cookie: sessions.staff },
+    })
+      .then((response) => (response.ok ? response.text() : ''))
+      .catch(() => '');
+    const href = listHtml.match(/href="\/(ar|en)\/staff\/trips\/([0-9a-f-]{36})"/);
+    if (!href) continue;
+    await checkRoute({
+      path: `/${locale}/staff/trips/${href[2]}`,
+      lang: locale,
+      dir: locale === 'ar' ? 'rtl' : 'ltr',
+      account: 'staff',
+    });
+    detailRoutes += 1;
+  }
+}
+
 {
   const publicHtml = await fetch(`${BASE}/ar/trips`)
     .then((response) => (response.ok ? response.text() : ''))

@@ -197,7 +197,9 @@ export default async function StaffTripsPage({
                       const when = departureLabel(row.departureAt, locale);
                       return (
                         <tr key={row.id}>
-                          <td>{row.code}</td>
+                          <td>
+                            <Link href={`/${locale}/staff/trips/${row.id}`}>{row.code}</Link>
+                          </td>
                           <td>
                             {row.origin} ← {row.destination}
                             {row.cancelReason ? (

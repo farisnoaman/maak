@@ -20,7 +20,7 @@ begin;
 
 create extension if not exists pgtap;
 
-select plan(83);
+select plan(92);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -948,6 +948,98 @@ select is(
   ),
   0,
   'every non-command public function is callable by a signed-in user'
+);
+
+-- ---------------------------------------------------------------------------
+-- 10. The fare is the JavaScript fare, in SQL
+-- ---------------------------------------------------------------------------
+-- `app.trip_total` is the number the screen renders and the number the booking command will charge. The
+-- market it prices is a market of trust, so "the card said 24 300 and the ticket said 27 000" is not a
+-- cosmetic bug. Every case below is also asserted by `packages/core/tests/pricing.test.ts`; if the two
+-- implementations drift, one side of this block fails.
+create function pg_temp.trip_total(p jsonb)
+returns jsonb
+language sql
+stable
+as $$
+  select app.trip_total(
+    jsonb_populate_record(null::public.trips, p - 'seats'),
+    null,
+    (p ->> 'seats')::int
+  );
+$$;
+
+select is(
+  pg_temp.trip_total(
+    '{"booking_mode":"per_seat","pricing_mode":"flat","price_per_seat_yer":9000,"discount_kind":"none","discount_value":0,"discount_scope":"all","seats":3}'
+  ),
+  '{"currency":"YER","unitFareMinor":9000,"seats":3,"subtotalMinor":27000,"discountMinor":0,"totalMinor":27000}'::jsonb,
+  'three seats at 9 000 is 27 000'
+);
+
+select is(
+  pg_temp.trip_total(
+    '{"booking_mode":"per_seat","pricing_mode":"flat","price_per_seat_yer":9000,"discount_kind":"percent","discount_value":1000,"discount_scope":"all","seats":3}'
+  ) ->> 'totalMinor',
+  '24300',
+  'and a 10% discount takes 2 700 off the subtotal, not off one seat'
+);
+
+select is(
+  pg_temp.trip_total(
+    '{"booking_mode":"per_seat","pricing_mode":"flat","price_per_seat_yer":9000,"discount_kind":"fixed","discount_value":100000,"discount_scope":"all","seats":3}'
+  ) ->> 'discountMinor',
+  '27000',
+  'a fixed discount larger than the fare is clamped to the fare, never a negative total'
+);
+
+select is(
+  pg_temp.trip_total(
+    '{"booking_mode":"whole_trip","pricing_mode":"flat","price_per_seat_yer":9000,"whole_trip_price_yer":45000,"discount_kind":"none","discount_value":0,"discount_scope":"all","seats":3}'
+  ),
+  '{"currency":"YER","unitFareMinor":45000,"seats":3,"subtotalMinor":45000,"discountMinor":0,"totalMinor":45000}'::jsonb,
+  'a whole-trip booking costs the whole-trip price whatever the seat count'
+);
+
+select is(
+  pg_temp.trip_total(
+    '{"booking_mode":"whole_trip","pricing_mode":"flat","price_per_seat_yer":9000,"whole_trip_price_yer":45000,"discount_kind":"percent","discount_value":1000,"discount_scope":"per_seat","seats":3}'
+  ) ->> 'discountMinor',
+  '0',
+  'a per-seat discount does not apply to a whole-trip booking'
+);
+
+select is(
+  pg_temp.trip_total(
+    '{"booking_mode":"per_seat","pricing_mode":"flat","price_per_seat_yer":9000,"discount_kind":"percent","discount_value":1000,"discount_scope":"whole_trip","seats":3}'
+  ) ->> 'discountMinor',
+  '0',
+  'and a whole-trip discount does not apply to a per-seat booking'
+);
+
+select is(
+  pg_temp.trip_total(
+    '{"booking_mode":"whole_trip","pricing_mode":"flat","price_per_seat_yer":9000,"whole_trip_price_yer":45000,"discount_kind":"fixed","discount_value":4500,"discount_scope":"whole_trip","seats":3}'
+  ) ->> 'totalMinor',
+  '40500',
+  'a whole-trip discount does apply to a whole-trip booking'
+);
+
+select is(
+  pg_temp.trip_total(
+    '{"booking_mode":"per_seat","pricing_mode":"flat","price_per_seat_yer":5,"discount_kind":"percent","discount_value":1000,"discount_scope":"all","seats":1}'
+  ),
+  '{"currency":"YER","unitFareMinor":5,"seats":1,"subtotalMinor":5,"discountMinor":1,"totalMinor":4}'::jsonb,
+  'half a minor unit rounds up, exactly as Math.round does in TypeScript'
+);
+
+select throws_ok(
+  $$ select pg_temp.trip_total(
+       '{"booking_mode":"per_seat","pricing_mode":"flat","price_per_seat_yer":9000,"discount_kind":"none","discount_value":0,"discount_scope":"all","seats":0}'
+     ) $$,
+  '22023',
+  null,
+  'a fare for zero seats is an error, not a free ride'
 );
 
 select * from finish();
