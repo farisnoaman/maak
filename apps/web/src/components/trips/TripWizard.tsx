@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { navigateWithSession } from '@/lib/session-token';
 import { useMemo, useState } from 'react';
 import {
   adenLocalToIso,
@@ -327,7 +328,7 @@ export function TripWizard({
       } as never);
       if (!stopsResult.ok) {
         reportFailure(stopsResult.error);
-        router.push(`/${locale}/operator/trips/${tripId}`);
+        navigateWithSession(`/${locale}/operator/trips/${tripId}`);
         return;
       }
 
@@ -338,7 +339,7 @@ export function TripWizard({
         } as never);
         if (!published.ok) {
           reportFailure(published.error);
-          router.push(`/${locale}/operator/trips/${tripId}`);
+          navigateWithSession(`/${locale}/operator/trips/${tripId}`);
           return;
         }
         setMessage(t('trips.published'));
@@ -349,7 +350,7 @@ export function TripWizard({
         } as never);
         if (!submitted.ok) {
           reportFailure(submitted.error);
-          router.push(`/${locale}/operator/trips/${tripId}`);
+          navigateWithSession(`/${locale}/operator/trips/${tripId}`);
           return;
         }
         setMessage(t('trips.reviewSubmitted'));
@@ -358,7 +359,7 @@ export function TripWizard({
       }
 
       if (onSaved) onSaved(tripId);
-      else router.push(`/${locale}/operator/trips/${tripId}`);
+      else navigateWithSession(`/${locale}/operator/trips/${tripId}`);
       router.refresh();
     } finally {
       setBusy(false);

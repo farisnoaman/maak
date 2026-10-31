@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import {
   DRIVE_TYPE_KEY,
   FUEL_TYPE_KEY,
@@ -24,6 +23,7 @@ import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
 import { Select } from '@/components/ui/Select';
 import { getApiClient, uploadVehicleDocument, uploadVehiclePhoto } from '@/lib/api';
+import { navigateWithSession } from '@/lib/session-token';
 
 /**
  * The seven-step vehicle wizard.
@@ -399,7 +399,6 @@ export function VehicleWizard({
   readonly canSubmitForReview?: boolean;
   readonly onSaved?: (vehicleId: string) => void;
 }) {
-  const router = useRouter();
   const t = (key: TranslationKey, vars?: Record<string, string | number>) =>
     translate(locale, key, vars);
 
@@ -632,7 +631,7 @@ export function VehicleWizard({
 
       if (onSaved) onSaved(vehicleId);
       else if (duplicateNotice) setDuplicate(duplicateNotice);
-      else router.push(`/${locale}/operator/vehicles/${vehicleId}`);
+      else navigateWithSession(`/${locale}/operator/vehicles/${vehicleId}`);
     } finally {
       setBusy(false);
     }

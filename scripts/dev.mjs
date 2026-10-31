@@ -11,6 +11,7 @@
  */
 
 import { spawn } from 'node:child_process';
+import { ensureWebEnv } from './dev-backend/setup-env.mjs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -102,6 +103,11 @@ if (!webOnly) {
   }
   console.log('▸ API ready on http://0.0.0.0:54321');
 }
+
+// Next reads `apps/web/.env.local` at boot. It is git-ignored, so a resumed sandbox or a fresh clone
+// has no Supabase URL — and an app with no backend is an app whose sign-in does nothing. Write it here,
+// in the one place that starts the web app.
+await ensureWebEnv({ quiet: true });
 
 console.log('▸ starting the web app …');
 

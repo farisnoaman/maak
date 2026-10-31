@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   bookingsCommandSpec,
   computePrice,
@@ -64,6 +64,7 @@ export function BookingForm({
   const t = (key: TranslationKey, vars?: Record<string, string | number>) =>
     translate(locale, key, vars);
   const router = useRouter();
+  const pathname = usePathname() ?? `/${locale}/trips/${trip.code}/book`;
 
   const wholeTrip = trip.bookingMode === 'whole_trip';
   const maxSeats = wholeTrip ? 1 : Math.min(8, Math.max(trip.seatsAvailable, 0));
@@ -153,6 +154,14 @@ export function BookingForm({
     setBusy(false);
 
     if (!result.ok) {
+      if ((result.error as Failure).code === 'UNAUTHENTICATED') {
+        // This page rendered signed in — otherwise it would have redirected already — so an anonymous
+        // write means the session did not travel: no cookie sent, no preview token attached. Telling
+        // somebody who just signed in to "sign in first" is the least useful sentence in the app.
+        // Send them back through sign-in with this page as the destination instead.
+        router.push(`/${locale}/auth/sign-in?error=expired&next=${encodeURIComponent(pathname)}`);
+        return;
+      }
       setFailure(result.error as Failure);
       const fields = (result.error as Failure).fields ?? {};
       const mapped: Record<string, string> = {};

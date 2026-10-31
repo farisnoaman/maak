@@ -9,11 +9,16 @@
 
 import { ApiClient } from '@maak/core';
 import { getSupabaseConfig } from './supabase/config';
+import { sessionHeaders } from './session-token';
 
 /**
- * Marker, not a credential. The session cookie is httpOnly, so this file cannot read a token — and
- * must not. `/api/data/...` runs on the server, swaps this header for the caller's real token, and
- * streams the answer back. `ApiClient` only needs a truthy value to know a session exists.
+ * Marker, not a credential. The session cookie is httpOnly, so this file cannot read it — and must
+ * not. `/api/data/...` runs on the server, swaps this header for the caller's real token, and streams
+ * the answer back. `ApiClient` only needs a truthy value to know a session exists.
+ *
+ * The one credential this file *does* handle is the preview's `?st=` token (see `session-token.ts`):
+ * when the browser cannot keep a cookie, the token is the only thing that makes a write belong to
+ * anybody, and every call below attaches it.
  */
 const SESSION_MARKER = 'session-cookie';
 
@@ -25,7 +30,7 @@ export function getApiClient(): ApiClient | null {
     transport: async ({ method, path, body, headers }) => {
       const response = await fetch(path, {
         method,
-        headers,
+        headers: { ...headers, ...sessionHeaders() },
         body: JSON.stringify(body),
         // `same-origin`, never `omit`: the session is an httpOnly cookie, and omitting credentials
         // would make every authenticated call look anonymous.
@@ -63,7 +68,11 @@ export async function uploadVerificationDocument(
 
   const response = await fetch(`/api/data/storage/v1/object/verification-docs/${path}`, {
     method: 'POST',
-    headers: { 'content-type': file.type || 'application/octet-stream', 'x-upsert': 'false' },
+    headers: {
+      'content-type': file.type || 'application/octet-stream',
+      'x-upsert': 'false',
+      ...sessionHeaders(),
+    },
     body: file,
   });
 
@@ -139,7 +148,11 @@ async function uploadToBucket(
 
   const response = await fetch(`/api/data/storage/v1/object/${bucket}/${path}`, {
     method: 'POST',
-    headers: { 'content-type': file.type || 'application/octet-stream', 'x-upsert': 'false' },
+    headers: {
+      'content-type': file.type || 'application/octet-stream',
+      'x-upsert': 'false',
+      ...sessionHeaders(),
+    },
     body: file,
   });
 

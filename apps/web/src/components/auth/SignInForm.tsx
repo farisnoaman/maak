@@ -42,7 +42,9 @@ export function SignInForm({ locale, configured, next, tab, phone, error }: Sign
                 ? t('auth.originMismatch')
                 : error === 'backend'
                   ? t('auth.backendDown')
-                  : null;
+                  : error === 'expired'
+                    ? t('auth.sessionExpired')
+                    : null;
 
   return (
     <div className="card auth-card">

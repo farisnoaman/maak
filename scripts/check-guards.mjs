@@ -293,6 +293,29 @@ if (/gen_random_bytes\s*\(/.test(stripComments(sqlSource))) {
   );
 }
 
+// --- 12b. Every call to `/api/data` carries the preview session token ------------------------------
+// The `?st=` fallback exists for browsers that will not keep a cookie. It covered *rendering* from the
+// day it shipped and silently did not cover *writing*: the booking form posted through `/api/data`,
+// which authenticates with a cookie that this browser did not have, and answered `401 UNAUTHENTICATED`
+// — "Please sign in first." — to somebody who was, on that very page, signed in. Client fetches must
+// therefore go through `lib/api.ts`, which attaches the token, and every fetch inside that file must
+// attach it. A new ad-hoc `fetch('/api/data/…')` somewhere else is how that bug comes back.
+const webSrc = join(root, 'apps', 'web', 'src');
+for (const file of await walk(webSrc, (f) => /\.(tsx|ts)$/.test(f))) {
+  const source = await readFile(file, 'utf8');
+  const calls = source.split(/fetch\(/).slice(1);
+  for (const call of calls) {
+    if (!call.slice(0, 120).includes('/api/data')) continue;
+    // Only *calls* matter: a signed URL re-rooted onto `/api/data` for an <img> carries its own token.
+    if (!/^\s*[`'"]\/api\/data/.test(call)) continue;
+    if (call.slice(0, 900).includes('sessionHeaders()')) continue;
+    failures.push(
+      `${rel(file)}: fetch('/api/data…') does not attach sessionHeaders() — in a preview where the ` +
+        'browser keeps no cookie this call arrives anonymous, and a signed-in user is told to sign in',
+    );
+  }
+}
+
 // --- 13. Every screen is reachable ---------------------------------------------------------------
 // A page that exists but that nothing links to is indistinguishable, from the user's side, from a page
 // that was never built: the Phase 4 marketplace shipped at `/trips` while the home page's "Explore
