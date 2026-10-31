@@ -238,6 +238,15 @@ export const verifyDriverSchema = z.object({
   reason: z.string().trim().max(500).optional(),
 });
 
+export const setDriverLicenceSchema = z.object({
+  action: z.literal('driver.setLicence'),
+  driverId: uuid,
+  licenceNo: z.string().trim().min(3).max(60).nullish(),
+  licenceExpiry: isoDate.nullish(),
+  licenceClass: z.string().trim().max(10).nullish(),
+  photoPath: z.string().trim().max(300).nullish(),
+});
+
 export const assignDriverSchema = z.object({
   action: z.literal('driver.assign'),
   vehicleId: uuid,
@@ -258,6 +267,7 @@ export const fleetActionSchema = z.discriminatedUnion('action', [
   setVehiclePhotosSchema,
   inviteDriverSchema,
   acceptDriverInviteSchema,
+  setDriverLicenceSchema,
   verifyDriverSchema,
   assignDriverSchema,
   unassignDriverSchema,
@@ -278,6 +288,7 @@ export function fleetScope(input: FleetAction): Resource {
     case 'driver.invite':
       return input.orgId ? { isOrgMember: true } : { isOwner: true };
     case 'driver.accept':
+    case 'driver.setLicence':
       return {};
     default:
       return { isOwner: true, isOrgMember: true };
@@ -425,6 +436,19 @@ export function fleetCommandArgs(
           p_driver_id: action.driverId,
           p_outcome: action.outcome,
           p_reason: action.reason ?? null,
+          ...audit,
+        },
+      };
+    case 'driver.setLicence':
+      return {
+        fn: 'cmd_set_driver_licence',
+        args: {
+          p_actor: actorId,
+          p_driver_id: action.driverId,
+          p_licence_no: action.licenceNo ?? null,
+          p_licence_expiry: action.licenceExpiry ?? null,
+          p_licence_class: action.licenceClass ?? null,
+          p_photo_path: action.photoPath ?? null,
           ...audit,
         },
       };

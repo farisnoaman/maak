@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { getLocales } from 'expo-localization';
+import * as ImagePicker from 'expo-image-picker';
 import {
   DRIVER_STATUS_KEY,
   VERIFICATION_KEY,
@@ -13,7 +14,7 @@ import {
   type Locale,
   type TranslationKey,
 } from '@maak/core';
-import { getApiClient, isBackendConfigured } from '../../lib/api';
+import { getApiClient, isBackendConfigured, uploadDriverLicence } from '../../lib/api';
 import { getMobileClient } from '../../lib/supabase';
 
 interface DriverRow {
@@ -22,6 +23,7 @@ interface DriverRow {
   invited_phone: string;
   licence_no: string | null;
   licence_expiry: string | null;
+  licence_photo_path: string | null;
   status: string;
   verification_status: string;
   verification_note: string | null;
@@ -53,6 +55,7 @@ export default function DriverProfileScreen() {
   const [driver, setDriver] = useState<DriverRow | null>(null);
   const [assignment, setAssignment] = useState<AssignmentRow | null>(null);
   const [busy, setBusy] = useState(false);
+  const [photoBusy, setPhotoBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -74,7 +77,7 @@ export default function DriverProfileScreen() {
     const { data: driverRows } = await supabase
       .from('driver_profiles')
       .select(
-        'id, full_name, invited_phone, licence_no, licence_expiry, status, verification_status, verification_note',
+        'id, full_name, invited_phone, licence_no, licence_expiry, licence_photo_path, status, verification_status, verification_note',
       )
       .eq('user_id', userId)
       .eq('is_active', true)
@@ -115,6 +118,54 @@ export default function DriverProfileScreen() {
       return;
     }
     setNotice(t('fleet.accepted'));
+    void load();
+  }
+
+  /**
+   * Photograph the licence, push it to private storage, then record the path through the one command
+   * that may write it. The order matters: the command refuses a path to a file that was never uploaded,
+   * so a failed upload cannot leave a driver "verified" against a document that does not exist.
+   */
+  async function captureLicence() {
+    const client = getApiClient();
+    if (!client || !driver) {
+      setError(t('verification.notConfigured'));
+      return;
+    }
+
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      setError(t('errors.FORBIDDEN'));
+      return;
+    }
+    const shot = await ImagePicker.launchCameraAsync({ quality: 0.7, allowsEditing: false });
+    if (shot.canceled || !shot.assets[0]) return;
+
+    setPhotoBusy(true);
+    setError(null);
+    setNotice(null);
+
+    const upload = await uploadDriverLicence(shot.assets[0].uri);
+    if (!upload.ok) {
+      setPhotoBusy(false);
+      setError(t('errors.NETWORK'));
+      return;
+    }
+
+    const result = await client.call(fleetCommandSpec, {
+      action: 'driver.setLicence',
+      driverId: driver.id,
+      licenceNo: driver.licence_no,
+      licenceExpiry: driver.licence_expiry,
+      photoPath: upload.path,
+    } as never);
+    setPhotoBusy(false);
+
+    if (!result.ok) {
+      setError(t(errorKey(result.error.code as never)));
+      return;
+    }
+    setNotice(t('fleet.licenceUploaded'));
     void load();
   }
 
@@ -166,6 +217,24 @@ export default function DriverProfileScreen() {
               <Text style={styles.primaryText}>{t('fleet.acceptInvite')}</Text>
             </Pressable>
           ) : null}
+
+          <Text style={[styles.hint, align]}>
+            {driver.licence_photo_path
+              ? t('fleet.licenceUploaded')
+              : t('fleet.licencePhotoMissing')}
+          </Text>
+          <Pressable
+            style={styles.secondary}
+            onPress={() => void captureLicence()}
+            disabled={photoBusy}
+            accessibilityRole="button"
+            accessibilityLabel={t('fleet.uploadLicence')}
+          >
+            <Text style={styles.secondaryText}>
+              {photoBusy ? t('common.loading') : t('fleet.uploadLicence')}
+            </Text>
+          </Pressable>
+          <Text style={[styles.hint, align]}>{t('fleet.licenceNeedsReview')}</Text>
           {driver.verification_note ? (
             <Text style={[styles.error, align]}>
               {t('fleet.rejectReason')}: {driver.verification_note}
@@ -236,6 +305,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   primaryText: { color: '#fff', fontWeight: '700' },
+  secondary: {
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#0d7a5f',
+    alignItems: 'center',
+  },
+  secondaryText: { color: '#0d7a5f', fontWeight: '700' },
   success: { color: '#0a6550', fontSize: 13, fontWeight: '700' },
   error: { color: '#8c1d1d', fontSize: 13 },
 });

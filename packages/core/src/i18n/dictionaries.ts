@@ -329,6 +329,7 @@ export const ar = {
   'notifications.driverAssigned': 'أُسندت إليك المركبة «{name}».',
   'notifications.driverApproved': 'تم توثيق السائق «{name}».',
   'notifications.driverRejected': 'رُفض توثيق السائق «{name}». السبب: {reason}',
+  'notifications.driverPending': 'السائق «{name}» بانتظار مراجعة الرخصة.',
   'notifications.tripPending': 'رحلة «{code}» بانتظار مراجعة المنصة.',
   'notifications.tripApproved': 'تم اعتماد رحلة «{code}» وأصبحت ظاهرة في السوق.',
   'notifications.tripRejected': 'رُفضت رحلة «{code}». السبب: {reason}',
@@ -695,6 +696,11 @@ export const ar = {
   'fleet.driverProfileSubtitle': 'دعواتك ورخصتك والمركبة المسندة إليك.',
   'fleet.noDriverProfile': 'لا توجد دعوة باسمك بعد.',
   'fleet.tripComingSoon': 'إدارة الرحلات من الجوال في المرحلة الرابعة.',
+  'fleet.licencePhoto': 'صورة الرخصة',
+  'fleet.uploadLicence': 'تصوير الرخصة',
+  'fleet.licenceUploaded': 'تم رفع صورة الرخصة، وهي بانتظار المراجعة.',
+  'fleet.licencePhotoMissing': 'لم تُرفع صورة الرخصة بعد.',
+  'fleet.licenceNeedsReview': 'أي تعديل على الرخصة يعيدها إلى المراجعة.',
 } as const;
 
 export type TranslationKey = keyof typeof ar;
@@ -1031,6 +1037,7 @@ export const en: Record<TranslationKey, string> = {
   'notifications.driverAssigned': 'Vehicle “{name}” was assigned to you.',
   'notifications.driverApproved': 'Driver “{name}” was verified.',
   'notifications.driverRejected': 'Driver “{name}” was rejected. Reason: {reason}',
+  'notifications.driverPending': 'Driver “{name}” is awaiting licence review.',
   'notifications.tripPending': 'Trip “{code}” is awaiting platform review.',
   'notifications.tripApproved': 'Trip “{code}” was approved and is now in the marketplace.',
   'notifications.tripRejected': 'Trip “{code}” was rejected. Reason: {reason}',
@@ -1405,6 +1412,11 @@ export const en: Record<TranslationKey, string> = {
   'fleet.driverProfileSubtitle': 'Your invitations, your licence and the vehicle assigned to you.',
   'fleet.noDriverProfile': 'No invitation has been sent to you yet.',
   'fleet.tripComingSoon': 'Running trips from the phone arrives in Phase 4.',
+  'fleet.licencePhoto': 'Licence photo',
+  'fleet.uploadLicence': 'Photograph the licence',
+  'fleet.licenceUploaded': 'Licence photo uploaded — it is now awaiting review.',
+  'fleet.licencePhotoMissing': 'No licence photo has been uploaded yet.',
+  'fleet.licenceNeedsReview': 'Any change to the licence sends it back for review.',
 };
 
 export const dictionaries: Record<Locale, Record<TranslationKey, string>> = { ar, en };

@@ -98,6 +98,11 @@ export default async function StaffVehiclesPage({
               phone: driver.phone,
               licenceNo: driver.licenceNo,
               licenceExpiry: driver.licenceExpiry,
+              // Same pattern as vehicle documents: the app proxies the private bucket, so storage RLS
+              // decides who may look, not this page.
+              licencePhotoUrl: driver.licencePhotoPath
+                ? `/api/data/storage/v1/object/authenticated/driver-documents/${driver.licencePhotoPath}`
+                : null,
               status: driver.status,
             }))}
           />

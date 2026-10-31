@@ -78,6 +78,7 @@ export type Capability =
   | 'vehicle.verify'
   | 'driver.invite'
   | 'driver.accept'
+  | 'driver.setLicence'
   | 'driver.assign'
   | 'driver.verify'
   | 'entity.verify'
@@ -187,6 +188,8 @@ const RULES: Record<Capability, Rule> = {
   // A personal driver is legitimate (an individual owner with one vehicle), so `individual` is in.
   'driver.invite': { roles: OPERATOR, verified: true, scoped: 'orgMember' },
   'driver.accept': { roles: AUTHENTICATED },
+  // Every account may be a driver, and the SQL command decides whose licence it may touch.
+  'driver.setLicence': { roles: AUTHENTICATED },
   'driver.assign': { roles: [...OPERATOR, ...STAFF], scoped: 'owner' },
   'driver.verify': { roles: [...STAFF] },
   'entity.verify': { roles: [...STAFF] },

@@ -83,8 +83,16 @@ function parseJson(buffer) {
   }
 }
 
-/** Minimal object storage. Paths are confined to `.dev/storage`, so `..` cannot escape. */
-async function handleStorage({ request, url, claims }) {
+/**
+ * Minimal object storage. Paths are confined to `.dev/storage`, so `..` cannot escape.
+ *
+ * It is a mock, not a Supabase: bucket **policies are not evaluated here** (the pgTAP suites assert the
+ * policy definitions, and the real platform enforces them). What it does faithfully is keep
+ * `storage.objects` in step with the files on disk — `cmd_set_driver_licence`, for one, refuses a path
+ * that has no object row, so a mock that wrote files without rows would make a correct command look
+ * broken.
+ */
+async function handleStorage({ request, url, claims, body, client }) {
   const parts = url.pathname.split('/').filter(Boolean); // storage, v1, object, ...
   // Supabase serves three object shapes: `/object/<bucket>/<path>` for writes, and the
   // `public` / `authenticated` prefixes for reads. Dropping the prefix keeps one handler for all three
@@ -108,9 +116,31 @@ async function handleStorage({ request, url, claims }) {
   const file = join(storageDir, bucket, safe);
 
   if (request.method === 'POST' || request.method === 'PUT') {
-    const body = await readBody(request);
+    // One policy this mock does enforce, because a misleading "uploaded" here would hide a bug rather
+    // than show one: a driver may only write inside their own folder. The rest of the bucket rules are
+    // asserted by pgTAP and enforced by the platform.
+    if (bucket === 'driver-documents' && safe.split('/')[0] !== claims.sub) {
+      return {
+        status: 403,
+        body: {
+          statusCode: '403',
+          error: 'Unauthorized',
+          message: 'new row violates row-level security policy',
+        },
+      };
+    }
+
+    // The router already consumed the stream once (`readBody` cannot run twice), so the buffer it read
+    // is what gets written.
+    const bytes = body ?? Buffer.alloc(0);
     await mkdir(dirname(file), { recursive: true });
-    await writeFile(file, body);
+    await writeFile(file, bytes);
+    await client.query(
+      `insert into storage.objects (bucket_id, name, owner)
+       values ($1, $2, $3)
+       on conflict do nothing`,
+      [bucket, safe, claims.sub ?? null],
+    );
     return { status: 200, body: { Key: `${bucket}/${safe}`, Id: randomUUID() } };
   }
 
@@ -128,6 +158,10 @@ async function handleStorage({ request, url, claims }) {
 
   if (request.method === 'DELETE') {
     await rm(file, { force: true });
+    await client.query('delete from storage.objects where bucket_id = $1 and name = $2', [
+      bucket,
+      safe,
+    ]);
     return { status: 200, body: { message: 'Successfully deleted' } };
   }
 
@@ -255,7 +289,7 @@ async function main() {
       }
 
       if (url.pathname.startsWith('/storage/v1/')) {
-        send(await handleStorage({ request: webRequest, url, claims }));
+        send(await handleStorage({ request: webRequest, url, claims, body: bodyBuffer, client }));
         return;
       }
 

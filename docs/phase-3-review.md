@@ -18,9 +18,8 @@ state machine, plan quotas and the RLS story are all real and all pinned by test
 acceptance criteria, four are fully proven, two are proven at the API/database layer but not on a
 device or in a browser.
 
-Three deliverables were not fully met. Four of the six findings are closed on this branch (§6); one
-substantive gap remains and is described in §4.1 (driver licence photo / mobile licence capture). That
-is the only thing I would not ship Phase 4 on top of without deciding.
+Three deliverables were not fully met. All six findings are now closed on this branch: four in §6, the
+driver licence photo in §9, and the a11y gate itself in §8. Phase 3 can be built on.
 
 A second pass (§8) then found that the a11y guard was itself not guarding: it reported 30 routes while
 parsing 6, because it never signed in. Fixed, and the vehicle detail page it could not reach is now
@@ -31,10 +30,10 @@ parsed on every run.
 | Deliverables listed in the plan | 7 |
 | Fully met as merged | 2 (the data model, the quota hook) |
 | Fully met after this branch | 4 (wizard warning and badges close too) |
-| Still partly met | 3 (driver licence capture, staff document viewer for drivers, mobile licence upload — all three the same missing feature) |
+| Still partly met | 0 — driver licence capture, its staff viewer and the mobile upload were one missing feature, closed in §9 |
 | Plan tasks (7) | 7 attempted · 6 fully met · 1 partly (driver licence capture) |
 | Acceptance criteria (6) | 4 fully verified · 2 layer-verified only |
-| Findings | 6 — 4 fixed on this branch, 1 open (licence photo), 1 cosmetic |
+| Findings | 6 — 5 fixed on this branch, 1 cosmetic (naming drift) |
 | Follow-up findings (second pass) | 1 — the a11y gate was not authenticated, so 24 of its 30 “routes” were never parsed; fixed (see §8) |
 
 ---
@@ -72,7 +71,7 @@ parsed on every run.
 
 ## 4. Gaps
 
-### 4.1 ⛔ Driver licence photo is a dead column (open — the one real gap)
+### 4.1 ✅ Driver licence photo was a dead column — fixed (§9)
 
 `driver_profiles.licence_photo_path` is declared (`00013_fleet.sql:360`) and generated into
 `apps/web/src/lib/supabase/database.types.ts:399`, and **nothing in the repository reads or writes it**:
@@ -87,16 +86,16 @@ verification” and “Mobile: driver profile + **licence upload**”):
 - the driver cannot correct their own licence number or expiry: there is no `driver.updateLicence`
   action, and `driver_profiles` has no self-update policy (correctly — writes go through commands).
 
-**Shape of the fix (not done here, ~½–1 day):** one migration adding a private `driver-documents`
-bucket with `<auth.uid()>/…` write and owner-or-staff read policies; `cmd_set_driver_licence(actor,
-licence_no, licence_expiry, photo_path)` that is ownership-scoped, re-opens verification when a
-verified driver changes the licence, and writes an audit row; a `driver.setLicence` action in
-`fleetActionSchema`; the upload on `/driver/profile` (`expo-image-picker` is already a dependency);
-the image in the staff driver row; and 4–6 pgTAP assertions including “staff can read it, another
-driver cannot”.
+**Fixed in `00015_driver_licence.sql` + the mobile and staff screens (§9).** One private
+`driver-documents` bucket with `<driver-user-id>/…` write and owner-or-company-or-staff read policies;
+`cmd_set_driver_licence`, ownership-scoped, which refuses a path that was never uploaded, refuses an
+expired licence, re-opens verification when the licence changes, and audits the before/after;
+`driver.setLicence` in `fleetActionSchema`; the camera upload on `/driver/profile`; the image in the
+staff driver row; and 27 pgTAP assertions in `0006_driver_licence.test.sql`.
 
-I would close this before Phase 4 rather than after, because Phase 4's trip assignment starts asking
-“is this driver entitled to drive this vehicle?” and the answer currently rests on an unchecked string.
+This was closed before Phase 4 rather than after, because Phase 4's trip assignment starts asking “is
+this driver entitled to drive this vehicle?” and the answer would otherwise rest on an unchecked
+string.
 
 ### 4.2 ✅ Duplicate-plate warning was never displayed — fixed (§6.1)
 
@@ -171,9 +170,7 @@ The mobile gap in §4.1 is untouched.
 
 ## 7. Recommendation
 
-1. **Close §4.1 (driver licence photo) before Phase 4.** It is the only item where the plan's wording
-   (“licence capture”, “licence upload”) is not met at all, and where a later phase will start relying
-   on data that is currently a text field nobody checked.
+1. ~~Close §4.1 (driver licence photo) before Phase 4.~~ Done in §9.
 2. ~~Add `/operator/vehicles/[id]` to `scripts/check-a11y.mjs` with a seeded vehicle.~~ Done in §8.2,
    along with the larger problem that hid it: the gate was not authenticated at all.
 3. Then proceed to Phase 4. Everything Phase 4 needs from Phase 3 — a verified vehicle, an operational
@@ -232,3 +229,43 @@ trail, search projection + refresh triggers, rules, commands, read APIs, RLS and
 — `npm run sql:check` builds a database from all 14 migrations, and `database.types.ts` was refreshed
 for the six new tables. It has **no pgTAP suite yet** and no TypeScript/web surface; Phase 4 is
 schema-complete and untested below that line, which this document does not claim otherwise.
+
+---
+
+## 9. Driver licence capture — the gap, closed
+
+`00015_driver_licence.sql` (plus the phone and staff screens) is the whole of §4.1. What it establishes:
+
+| Rule | Where | Asserted by |
+|---|---|---|
+| One private bucket, one folder per driver account | `driver-documents`, `app.can_read_driver_documents()` | pgTAP §1, §5 (bucket private, predicate reachable) |
+| The driver writes only into their own folder | `driver_documents_write_self` policy | pgTAP (policy definition) and the dev mock, which enforces this one rule |
+| One writer: `cmd_set_driver_licence`, not executable by a client | `00015` §2–3 | pgTAP §1 (`has_function_privilege`) |
+| A recorded path must point at an object that exists | `cmd_set_driver_licence` | pgTAP §3; live stack returned 422 `VALIDATION_FAILED: licence photo is not uploaded` |
+| An expired licence cannot be uploaded as evidence of a valid one | same | pgTAP §3 |
+| Changing the licence re-opens verification and clears the approver | same | pgTAP §2 (status `pending`, `verified_by` null), §4 (a no-op save is not an event) |
+| Staff are notified, the change is audited | `app.notify` + `app.write_audit` | pgTAP §2 |
+| The company owner may correct it; a stranger may not | `app.manages_driver()` | pgTAP §3 |
+
+Screens: `/driver/profile` (mobile) photographs the licence with `expo-image-picker`, uploads it to the
+private bucket, then records the path through the command — in that order, because the command refuses
+a path that was never uploaded. `/staff/vehicles` shows the image next to the driver it belongs to, via
+the same authenticated proxy the vehicle documents use.
+
+**Two defects found while wiring it, both fixed:**
+
+1. `scripts/dev-backend/gateway.mjs` keeps its own capability map, separate from the edge function's.
+   Without `driver.setLicence` there, every call was `403 FORBIDDEN` in development while the SQL was
+   correct. The two maps are now in step (this is a drift risk worth remembering for Phase 4's `trips`).
+2. **Uploads never worked in the dev backend.** The router reads the request body once, and
+   `handleStorage` tried to read the same stream again — every upload died with “request is not async
+   iterable”, and the mock never recorded a `storage.objects` row. Both are fixed: the buffer is passed
+   through, rows are written and deleted with the files. This also unblocks the verification-document
+   upload that Phase 1 shipped.
+
+**Verified end to end on the live stack** (as `new@maak.test`, bound to the seeded driver): upload `200`
+→ `driver.setLicence` `200 { verificationStatus: "pending", reverificationRequired: true }` → the staff
+queue renders the licence link → the link downloads `200` for staff and for the company owner, and the
+command refuses a path that does not exist. **Not verified:** the phone screen itself (no simulator in
+this environment) — the upload and command it performs were, through the same HTTP endpoints the app
+uses.

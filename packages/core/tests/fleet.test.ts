@@ -147,6 +147,13 @@ describe('fleet actions', () => {
       { action: 'driver.invite', phone: '+967733111222', fullName: 'سالم' },
       { action: 'driver.accept' },
       {
+        action: 'driver.setLicence',
+        driverId: '11111111-1111-4111-8111-111111111111',
+        licenceNo: 'YE-DL-4411',
+        licenceExpiry: '2030-01-01',
+        photoPath: '22222222-2222-4222-8222-222222222222/licence.jpg',
+      },
+      {
         action: 'driver.verify',
         driverId: '11111111-1111-4111-8111-111111111111',
         outcome: 'approve',

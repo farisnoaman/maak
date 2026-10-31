@@ -75,3 +75,38 @@ export async function uploadDocument(
     return { ok: false, error: error instanceof Error ? error.message : 'upload failed' };
   }
 }
+
+/**
+ * Uploads a captured licence to the driver's own folder in the private `driver-documents` bucket.
+ *
+ * The folder is the caller's *user* id, which is what the storage policy checks: the bucket only lets
+ * an account write inside its own prefix, so knowing another driver's id buys nothing. The command
+ * `driver.setLicence` then records the path and puts the driver back in the review queue.
+ */
+export async function uploadDriverLicence(
+  uri: string,
+): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
+  const supabase = getMobileClient();
+  if (!supabase) return { ok: false, error: 'not-configured' };
+
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  const userId = userData?.user?.id;
+  if (userError || !userId) return { ok: false, error: 'UNAUTHENTICATED' };
+
+  const extension = uri.split('.').pop()?.toLowerCase() ?? 'jpg';
+  const path = `${userId}/licence-${Date.now()}.${extension}`;
+
+  try {
+    // React Native cannot hand a `File` to storage, so the image is fetched as an ArrayBuffer.
+    const response = await fetch(uri);
+    const buffer = await response.arrayBuffer();
+    const { error } = await supabase.storage.from('driver-documents').upload(path, buffer, {
+      contentType: extension === 'png' ? 'image/png' : 'image/jpeg',
+      upsert: false,
+    });
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, path };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : 'upload failed' };
+  }
+}
