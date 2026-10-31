@@ -350,15 +350,20 @@ not build the acceptance-criterion region and reference data that could never be
 - Mobile: booking wizard, my bookings, ticket; receipt upload placeholder for Phase 9.
 
 ### Tasks
-- [ ] Migrations + enums (`booking_status`, `id_type`, `payment_status`) + constraints (identity fields required).
-- [ ] Commands (edge fn + atomic `cmd_*` SQL): `create_booking`, `accept_booking`, `reject_booking`, `cancel_booking_by_passenger`,
+- [x] Migrations + enums (`booking_status`, `id_type`, `payment_status`) + constraints (identity fields required)
+      — `00019_bookings.sql`; five enums, one document per booking, hold-while-pending and code-shape checks.
+- [x] Commands (edge fn + atomic `cmd_*` SQL): `create_booking`, `accept_booking`, `reject_booking`, `cancel_booking_by_passenger`,
       `cancel_booking_by_operator`, `expire_booking_holds`, `get_trip_manifest_data`, `create_id_share_link`,
       `resolve_id_share_token`, `compute_refund`.
-- [ ] Storage `passenger-ids` (private) + policies + 5-min signed URLs + watermark on preview.
-- [ ] Cron: `expire_holds`, `auto_complete_bookings`, `purge_expired_id_documents`.
-- [ ] Web `/trips/[code]/book`, `/operator/trips/[id]/bookings`, `/me/bookings`, `/s/[token]`.
-- [ ] Mobile booking wizard, my bookings, ticket.
-- [ ] pgTAP: parallel last-seat bookings (exactly one wins), cutoff enforcement, cross-org access denied, refund math.
+- [x] Storage `passenger-ids` (private) + policies + 5-min signed URLs (`lib/storage.ts`) + watermarked preview
+      (`/[locale]/s/[token]`, operator-only, audited reads).
+- [x] Cron: `expire_holds`, `auto_complete_bookings` (`job_finalize_trips`), `purge_expired_id_documents` —
+      `00020_booking_jobs.sql`, `pg_cron` where present, a dev timer where not.
+- [x] Web `/trips/[code]/book`, `/operator/trips/[id]/bookings`, `/account/bookings` (+ `/[id]`), `/s/[token]`
+      — `/account` rather than `/me`, because the account area already existed.
+- [x] Mobile booking wizard, my bookings, ticket — implemented and typechecked, **not run on a device**.
+- [x] pgTAP: last seat sold once, cutoff enforcement, cross-org access denied, refund math — 91 assertions in
+      `0008_bookings.test.sql` (the last-seat case is sequential: pgTAP has one session per file).
 
 ### Acceptance criteria
 - Two simultaneous last-seat bookings: exactly one succeeds, the other gets `NO_SEATS_LEFT`.

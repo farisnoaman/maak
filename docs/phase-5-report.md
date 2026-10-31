@@ -51,12 +51,12 @@ difference in *when*, not in *what*.
 | Surface | Route | Notes |
 | --- | --- | --- |
 | Booking wizard (web) | `/[locale]/trips/[code]/book` | Seats, stop, contact, gender when the trip demands it, live total, hold explanation |
-| My bookings (web) | `/[locale]/account/bookings` + `/[id]` | Upcoming/past split, ticket QR, identity form, cancel, refund line |
+| My bookings (web) | `/[locale]/account/bookings` + `/[id]` | Upcoming/past split, ticket QR, identity form, cancel, refund line, **re-book** a closed booking while its trip is still ahead |
 | Operator inbox (web) | `/[locale]/operator/trips/[id]/bookings` | Pending list with bulk accept, rejected-with-reason, manifest, share-link generation, booking code on every card and manifest row |
 | Share preview (web) | `/[locale]/s/[token]` (+ `/s/[token]` → locale) | Watermarked, 72-hour, operator-only, signed 5-minute photo URL |
 | Driver licence (web) | `/[locale]/account/licence` | Camera/file capture, `driver.setLicence`, five-minute signed read (see `docs/phase-3-review.md` §9.1) |
 | Booking wizard (native) | `app/book/[code].tsx` | One screen: seats, traveller, price, submit |
-| My bookings (native) | `app/bookings/index.tsx` + `[id].tsx` | Ticket code, cancel with confirmation, ID capture via camera |
+| My bookings (native) | `app/bookings/index.tsx` + `[id].tsx` | Ticket code, cancel with confirmation, ID capture via camera, a disabled **receipt** control that Phase 9 wires up |
 
 ### The rest of the branch
 
@@ -83,6 +83,16 @@ gets a code it can act on.
 `FORBIDDEN`: the policy is booker-scoped, and `bookingsScope()` was claiming nothing for the passenger's
 own actions. The fix claims `isBooker`; the command still re-reads `bookings.passenger_id`, so a forged
 claim buys nothing. This is exactly the class of bug a gate cannot find and a transcript can.
+
+**A form refuses before it asks.** The booking wizard runs the same rules as the schema — name, phone,
+gender when the trip demands one — and puts the localized message on the input (`aria-invalid`,
+`aria-describedby`, `role="alert"`), because "check the required fields" at the top of a form makes a
+person hunt. The server still validates: this only decides whether there is any point asking it.
+
+**The demo account is on Pro, on purpose.** A Basic organization may hold one vehicle, one driver and
+five trips, which turned every console into a demonstration of empty states and made the second-invite
+and second-vehicle paths impossible to exercise without hand-editing rows. The seed promotes the demo
+company to `pro`; nothing is sold to it, it exists to be exercised.
 
 **A refusal has to say what happened, and be visible where the thumb is.** The second booking on one
 trip was refused all along — by `bookings_one_active_per_trip`, a partial unique index. What a passenger
@@ -186,6 +196,9 @@ accounts:
 | force a hold into the past, then `app.job_expire_holds(500)` | `{"expired": 1}`, status `expired`, seats 12 → 14, an `expired` event |
 | `booking.cancelByPassenger` 39 h out | `cancelled_by_passenger`, refund **75 %** (3,750 of 5,000), seat back |
 | the same share link after cancellation | resolves to "not found" — 0 mentions of the ID number in the HTML |
+| `driver.invite` for a phone whose only profile is `revoked` (carried from Phase 3) | `200`, a new profile — the re-invite path the report used to list as untested |
+| `driver.invite` for a phone that already has an account | `200`, `linkedImmediately: true` — invited and addressed without a second sign-up |
+| the booking form, submitted with a one-letter name | the field itself refuses, in Arabic, before any request is sent |
 
 Four defects were found and fixed by this probe: the booker-scope denial (§2), link revocation after
 cancellation (§2), the unexplained duplicate refusal and its invisible rendering (§2), and — found by
@@ -204,4 +217,6 @@ untestable without a hand-written fixture.
 - **Device testing.** No simulator or handset in this environment: the native screens are type-checked and
   share their data layer with the web, but nobody has tapped them.
 - **QR on native** — see §2.
-- **`cmd_accept_driver_invite` re-invite path** (carried from Phase 3) is still untested.
+- **Nothing from Phase 3 is carried over any more.** The re-invite path is exercised in §5; revocation
+  still has no command of its own (the database models `revoked`, staff tooling sets it), which is a
+  Phase 3 scope note rather than a Phase 5 gap.

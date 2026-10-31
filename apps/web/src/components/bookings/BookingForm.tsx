@@ -75,6 +75,7 @@ export function BookingForm({
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<Failure | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const alertRef = useRef<HTMLDivElement | null>(null);
   const [done, setDone] = useState<{ code: string; holdExpiresAt: string | null } | null>(null);
 
@@ -109,8 +110,28 @@ export function BookingForm({
     if (failure) alertRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }, [failure]);
 
+  /**
+   * The same rules the schema enforces, checked before the round trip.
+   *
+   * The server still validates — this only decides whether there is any point asking it. `validation`
+   * is localized and attached to the input it belongs to (`aria-invalid` + `aria-describedby`), because
+   * "check the required fields" at the top of a form is a message that makes a person hunt.
+   */
+  function validate(): Record<string, string> {
+    const errors: Record<string, string> = {};
+    if (contactName.trim().length < 2) errors.contactName = t('bookings.nameRequired');
+    if (contactPhone.replace(/[^0-9]/g, '').length < 6)
+      errors.contactPhone = t('bookings.phoneRequired');
+    if (trip.genderPolicy !== 'any' && gender === '') errors.gender = t('bookings.genderRequired');
+    return errors;
+  }
+
   async function submit() {
     setFailure(null);
+    const local = validate();
+    setFieldErrors(local);
+    if (Object.keys(local).length > 0) return;
+
     const client = getApiClient();
     if (!client) {
       setFailure({ code: 'INTERNAL', detail: t('verification.notConfigured') });
@@ -133,6 +154,10 @@ export function BookingForm({
 
     if (!result.ok) {
       setFailure(result.error as Failure);
+      const fields = (result.error as Failure).fields ?? {};
+      const mapped: Record<string, string> = {};
+      for (const key of Object.keys(fields)) mapped[key] = t('errors.VALIDATION_FAILED');
+      setFieldErrors(mapped);
       return;
     }
 
@@ -215,6 +240,7 @@ export function BookingForm({
 
       <Field
         label={t('bookings.contactName')}
+        error={fieldErrors.contactName}
         value={contactName}
         onChange={(event) => setContactName(event.target.value)}
         autoComplete="name"
@@ -222,6 +248,7 @@ export function BookingForm({
       />
       <Field
         label={t('bookings.contactPhone')}
+        error={fieldErrors.contactPhone}
         type="tel"
         dir="ltr"
         value={contactPhone}
@@ -239,12 +266,18 @@ export function BookingForm({
           value={gender}
           onChange={(event) => setGender(event.target.value as '' | 'male' | 'female')}
           required={trip.genderPolicy !== 'any'}
+          aria-invalid={fieldErrors.gender ? true : undefined}
+          aria-describedby={fieldErrors.gender ? 'booking-gender-error' : undefined}
         >
           <option value="">{t('bookings.genderUnset')}</option>
           <option value="male">{t('bookings.genderMale')}</option>
           <option value="female">{t('bookings.genderFemale')}</option>
         </select>
-        {trip.genderPolicy !== 'any' ? (
+        {fieldErrors.gender ? (
+          <p className="ui-field__error" id="booking-gender-error" role="alert">
+            {fieldErrors.gender}
+          </p>
+        ) : trip.genderPolicy !== 'any' ? (
           <p className="ui-field__hint">{t('bookings.genderRequired')}</p>
         ) : null}
       </div>

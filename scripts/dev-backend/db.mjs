@@ -258,6 +258,14 @@ async function seed(client, log = () => {}) {
      on conflict do nothing`,
   );
 
+  // Pro, not Basic, and deliberately: a Basic organization may hold one vehicle, one driver and five
+  // trips, which turns every console into a demo of empty states and — worse — makes the second-invite,
+  // second-vehicle and quota-refusal paths untestable without hand-editing the database. The demo
+  // account is not sold anything; it exists to be exercised.
+  await client.query(
+    `update public.organizations set plan = 'pro' where id = 'aaaaaaaa-0000-4000-8000-000000000001'`,
+  );
+
   await seedDemoFleet(client);
 
   // Bookable inventory, created through the same three commands the console uses. Without it the

@@ -174,6 +174,19 @@ export default async function BookingDetailPage({
             <Link href={`/${locale}/trips/${booking.trip.code}`}>{t('bookings.viewTrip')}</Link>
           </p>
         ) : null}
+
+        {/* A cancelled or finished booking is a dead end unless it leads somewhere: the trip it was
+            for is still on sale, and the passenger has already typed this journey once. */}
+        {!live && booking.trip && new Date(booking.trip.departureAt) > new Date() ? (
+          <p>
+            <Link
+              className="ui-btn ui-btn--primary ui-btn--md"
+              href={`/${locale}/trips/${booking.trip.code}/book`}
+            >
+              {t('bookings.rebook')}
+            </Link>
+          </p>
+        ) : null}
       </main>
     </>
   );

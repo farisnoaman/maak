@@ -26,6 +26,7 @@ import {
   type BookingStatus,
   type Locale,
   type TranslationKey,
+  errorKey,
 } from '@maak/core';
 import {
   cancelBooking,
@@ -137,7 +138,7 @@ export default function BookingDetailScreen() {
     });
     setBusy(false);
     if (!result.ok) {
-      setError(result.error.detail ?? result.error.code);
+      setError(t(errorKey(result.error.code)));
       return;
     }
     await refresh(booking.id);
@@ -150,7 +151,7 @@ export default function BookingDetailScreen() {
     const result = await createShareLink({ action: 'booking.shareLink', bookingId: booking.id });
     setBusy(false);
     if (!result.ok) {
-      setError(result.error.detail ?? result.error.code);
+      setError(t(errorKey(result.error.code)));
       return;
     }
     const path = (result.data as { path?: string }).path ?? '';
@@ -207,7 +208,7 @@ export default function BookingDetailScreen() {
     });
     setBusy(false);
     if (!result.ok) {
-      setError(result.error.detail ?? result.error.code);
+      setError(t(errorKey(result.error.code)));
       return;
     }
     await refresh(booking.id);
@@ -234,6 +235,20 @@ export default function BookingDetailScreen() {
           <Text style={styles.label}>{t('bookings.ticket')}</Text>
           <Text style={styles.code}>{booking.code}</Text>
           <Text style={styles.hint}>{t('bookings.ticketHint')}</Text>
+        </View>
+      ) : null}
+
+      {live && booking.paymentStatus !== 'paid' ? (
+        <View style={styles.card}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ disabled: true }}
+            disabled
+            style={[styles.secondary, styles.secondaryOff]}
+          >
+            <Text style={styles.secondaryText}>{t('bookings.uploadReceipt')}</Text>
+          </Pressable>
+          <Text style={styles.hint}>{t('bookings.receiptPending')}</Text>
         </View>
       ) : null}
 
@@ -437,6 +452,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 14,
   },
+  // A control that exists to be discoverable, not to be used yet: still 44pt, visibly inert.
+  secondaryOff: { borderColor: '#c9d2dd', opacity: 0.6 },
   secondaryText: { color: '#0b7a5a', fontWeight: '700' },
   danger: {
     marginTop: 12,
