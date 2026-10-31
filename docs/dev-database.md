@@ -191,6 +191,26 @@ password.
 
 ## When the browser refuses to keep the session at all
 
+**This is the supported escape hatch, and it is on by default outside production.**
+
+If the preview cannot store a cookie — a third-party iframe whose browser blocks third-party storage, or
+a proxy that drops `Set-Cookie` — sign-in would otherwise be impossible, and `/api/auth/status` would
+report `sessionCookiePresent: false` no matter what you do.
+
+So sign-in also returns the session token *in the redirect* (`/ar/account?st=…`). The proxy forwards it
+to the renderer as a request header, which is enough for server-side rendering, the data proxy, RLS and
+the gateway — the cookie is never required. A small client component keeps `st` attached to internal
+links and forms, so navigating does not silently sign you out.
+
+| | |
+|---|---|
+| Enabled | everywhere except `NODE_ENV=production` |
+| Disable | `MAAK_IFRAME_SESSION=0` |
+| Cost | the token appears in the URL (history, logs) — acceptable for a dev preview, not for production |
+| Production path | cookies only (`SameSite=None; Secure; Partitioned`); the app must not be embedded, or it must use the Storage Access API |
+
+## Older notes on third-party cookie blocking
+
 Some browsers (Safari and Firefox by default, Chrome for some users) block third-party storage
 outright. Inside the preview's iframe that means the session cookie is stored and never sent back, and
 nothing server-side can change that — `/api/auth/status` shows it as

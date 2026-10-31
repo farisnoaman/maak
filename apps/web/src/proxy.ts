@@ -3,6 +3,7 @@ import { redirectTo } from './lib/redirect';
 import { createServerClient } from '@supabase/ssr';
 import { LOCALES, negotiateLocale } from '@maak/core';
 import { AUTH_COOKIE_NAME, authCookieFlags, getSupabaseConfig } from './lib/supabase/config';
+import { TOKEN_HEADER, URL_SESSION_ENABLED } from './lib/supabase/server';
 import { resolveRequest } from './lib/origin';
 
 /**
@@ -57,7 +58,22 @@ export default async function proxy(request: NextRequest) {
     },
   });
 
-  const { data } = await supabase.auth.getUser();
+  const cookieSession = await supabase.auth.getUser();
+  const data = cookieSession.data;
+
+  /**
+   * Token in the URL (`?st=`) is the fallback for an embedded preview where cookies cannot work: a
+   * third-party iframe whose browser blocks third-party storage, or a proxy that drops `Set-Cookie`.
+   * The token is forwarded to the render as a request header instead of being stored anywhere, so no
+   * component has to know the difference between the two mechanisms.
+   */
+  const urlToken = URL_SESSION_ENABLED ? request.nextUrl.searchParams.get('st') : null;
+  const bearer = data.user ? null : urlToken;
+  if (bearer) {
+    const forwarded = new Headers(request.headers);
+    forwarded.set(TOKEN_HEADER, bearer);
+    response = NextResponse.next({ request: { headers: forwarded } });
+  }
   const isLocaleSegment = first !== undefined && (LOCALES as readonly string[]).includes(first);
 
   if (!isLocaleSegment) return response;
@@ -68,7 +84,7 @@ export default async function proxy(request: NextRequest) {
     (prefix) => rest === prefix || rest.startsWith(`${prefix}/`),
   );
 
-  if (needsAuth && !data.user) {
+  if (needsAuth && !data.user && !bearer) {
     // The single most useful line when a sign-in "does nothing": it says whether the cookie arrived at
     // all, which separates a blocked/cross-site cookie from a rejected token.
     const cookieState = request.cookies.has(AUTH_COOKIE_NAME) ? 'present' : 'absent';

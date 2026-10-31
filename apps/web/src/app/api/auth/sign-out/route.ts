@@ -15,11 +15,13 @@ export async function POST(request: NextRequest) {
 
   // Same rule as sign-in: only this site may sign you out of this site.
   if (!isSameOriginRequest(request)) {
+    // Dropping `st` is what actually ends a cookie-less session.// The redirect target carries no token, so the next request is anonymous.
     return redirectTo(request, `/${locale}`, 303);
   }
 
   const client = await getServerClient();
   await client?.auth.signOut();
 
+  // Dropping `st` is what actually ends a cookie-less session.// The redirect target carries no token, so the next request is anonymous.
   return redirectTo(request, `/${locale}`, 303);
 }

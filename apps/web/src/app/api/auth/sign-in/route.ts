@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server';
 import { redirectTo } from '@/lib/redirect';
 import { isSameOriginRequest } from '@/lib/origin';
+import { URL_SESSION_ENABLED } from '@/lib/supabase/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { getSupabaseConfig } from '@/lib/supabase/config';
 
@@ -39,6 +40,20 @@ function isUnreachable(
   );
 }
 
+/**
+ * Appends the session token to the redirect target — the cookie-less path for an embedded preview.
+ *
+ * This is a deliberate trade: a URL token can leak through history and logs, so it is development-only
+ * (`URL_SESSION_ENABLED`) and the cookie, when accepted, remains the primary mechanism. The alternative
+ * was an app that cannot be signed into inside the preview at all.
+ */
+function withToken(path: string, token: string | undefined): string {
+  if (!URL_SESSION_ENABLED || !token) return path;
+  const [withoutHash, hash] = path.split('#');
+  const separator = (withoutHash ?? '').includes('?') ? '&' : '?';
+  return `${withoutHash}${separator}st=${encodeURIComponent(token)}${hash ? `#${hash}` : ''}`;
+}
+
 function failure(request: NextRequest, locale: string, error: string, query = '') {
   const params = new URLSearchParams(query);
   params.set('error', error);
@@ -70,14 +85,14 @@ export async function POST(request: NextRequest) {
     const password = String(form.get('password') ?? '');
     if (!email || !password) return failure(request, locale, 'invalid');
 
-    const { error } = await client.auth.signInWithPassword({ email, password });
+    const { data, error } = await client.auth.signInWithPassword({ email, password });
     if (error) {
       console.warn(
         `[auth] sign-in failed: ${error.name ?? 'error'} ${error.status ?? ''} ${error.message}`,
       );
       return failure(request, locale, isUnreachable(error) ? 'backend' : 'invalid');
     }
-    return redirectTo(request, next, 303);
+    return redirectTo(request, withToken(next, data.session?.access_token), 303);
   }
 
   const phone = String(form.get('phone') ?? '').trim();
@@ -95,7 +110,7 @@ export async function POST(request: NextRequest) {
   if (mode === 'otp-verify') {
     const token = String(form.get('code') ?? '').trim();
     if (!phone || !token) return failure(request, locale, 'otp-invalid', 'step=code');
-    const { error } = await client.auth.verifyOtp({ phone, token, type: 'sms' });
+    const { data, error } = await client.auth.verifyOtp({ phone, token, type: 'sms' });
     if (error)
       return failure(
         request,
@@ -103,7 +118,7 @@ export async function POST(request: NextRequest) {
         'otp-invalid',
         `step=code&phone=${encodeURIComponent(phone)}`,
       );
-    return redirectTo(request, next, 303);
+    return redirectTo(request, withToken(next, data.session?.access_token), 303);
   }
 
   return failure(request, locale, 'invalid');

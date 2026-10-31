@@ -5,6 +5,7 @@ import { DIRECTION, LOCALES, isLocale, type Locale } from '@maak/core';
 import '@maak/design-tokens/tokens.css';
 import '../globals.css';
 import { ToastProvider } from '@/components/ui/Toast';
+import { SessionTokenKeeper } from '@/components/SessionTokenKeeper';
 
 export const metadata: Metadata = {
   title: 'Maak — إدارة الرحلات',
@@ -32,6 +33,7 @@ export default async function LocaleLayout({
         <a className="skip-link" href="#main">
           {locale === 'ar' ? 'تخطَّ إلى المحتوى' : 'Skip to content'}
         </a>
+        <SessionTokenKeeper />
         <ToastProvider>{children}</ToastProvider>
       </body>
     </html>

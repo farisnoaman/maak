@@ -109,6 +109,40 @@ if (!useApi) {
   );
   check('and shows the signed-in user', account.text.includes('فارس'));
 
+  // The preview's situation: the browser refuses to store any cookie. The token in the redirect is
+  // then the only session, and every screen must still work.
+  const token = signIn.location ? new URL(signIn.location, BASE).searchParams.get('st') : null;
+  check('sign-in hands back a cookie-less session token', Boolean(token));
+
+  if (token) {
+    const viaToken = await call(`/ar/account?st=${encodeURIComponent(token)}`, {
+      headers: { accept: 'text/html' },
+    });
+    check(
+      'the protected page renders with the token alone',
+      viaToken.status === 200,
+      `status ${viaToken.status}`,
+    );
+    check('and shows the signed-in user', viaToken.text.includes('فارس'));
+
+    const meViaToken = await call(`/api/data/functions/v1/me?st=${encodeURIComponent(token)}`, {
+      method: 'POST',
+      body: {},
+    });
+    check(
+      'the data proxy works with the token alone',
+      meViaToken.body?.user?.roles?.includes('platform_admin'),
+    );
+
+    const placesViaToken = await call(`/ar/admin/places?st=${encodeURIComponent(token)}`, {
+      headers: { accept: 'text/html' },
+    });
+    check(
+      'RLS-filtered content renders with the token alone',
+      placesViaToken.status === 200 && placesViaToken.text.includes('نقطة تجمع'),
+    );
+  }
+
   const status = await call('/api/auth/status', { cookie: signIn.cookie });
   check(
     'the session probe sees the user',

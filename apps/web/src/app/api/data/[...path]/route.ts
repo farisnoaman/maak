@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { getServerClient } from '@/lib/supabase/server';
+import { resolveAccessToken } from '@/lib/supabase/server';
 import { getSupabaseConfig } from '@/lib/supabase/config';
 
 /**
@@ -31,9 +31,9 @@ async function forward(request: NextRequest, path: string[]) {
   if (!config)
     return NextResponse.json({ code: 'INTERNAL', detail: 'not configured' }, { status: 500 });
 
-  const client = await getServerClient();
-  const { data } = client ? await client.auth.getSession() : { data: { session: null } };
-  const token = data.session?.access_token ?? config.anonKey;
+  // One answer for both session mechanisms: a cookie session, or the token the proxy recovered from
+  // `?st=` for a preview where cookies cannot be stored.
+  const token = (await resolveAccessToken()) ?? config.anonKey;
 
   const headers = new Headers({ apikey: config.anonKey, authorization: `Bearer ${token}` });
   for (const name of PASS_THROUGH) {
