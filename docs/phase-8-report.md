@@ -220,3 +220,57 @@ lint ✓ · format ✓ · a11y ✓ **68 routes, 9 discovered detail pages** · r
   is a screen, not a spreadsheet; if an accountant asks for it, it is a second `kind`.
 - **The printed report has no logo per organization.** It prints the organization's name, which is what a
   driver hands over; branding is a settings concern nobody has asked for yet.
+
+---
+
+## 8. Phase 8.2 — the fleet dashboard, made to fit the screen it is on
+
+The dashboard worked and read badly. Two stylesheet defects were doing most of the damage, and neither was
+a matter of taste:
+
+1. **`.fleet-grid` meant two different things.** Phase 3 defined it as the card grid
+   (`display: grid; repeat(auto-fill, minmax(…280px…))`); the Phase 8 tables reused the name. The later rule
+   never reset `display`, so **every fleet table — the rollup and the four tables on the health card — was
+   laid out as a grid of 280px columns instead of a table**. The table styles now live on `.fleet-ledger`,
+   which nothing else owns.
+2. **`.console-grid` was a tile grid applied to every console page.** `repeat(auto-fill, minmax(220px, 1fr))`
+   with a single child puts that child in the *first* 220px track, so `/operator/fleet` (and vehicles,
+   drivers, health, trips…) rendered as a narrow strip beside a row of empty tracks. `.console-grid` is now
+   one full-width column, and the three overview screens opt into the tile grid with `layout="tiles"`, which
+   is the only place a wall of 220px tiles was ever wanted.
+
+With the page finally the width of the page, the layout work was worth doing:
+
+| At 320–719px | At 720px and up |
+| --- | --- |
+| Five totals as a 2-up card row (accent bar per state: red overdue, amber due soon, green clear) | The same five across one row, money cards widest |
+| One sentence under the totals — *"Vehicles needing attention: 2"*, or *"Every vehicle is within its maintenance window"* | Same sentence; it is a fact, not a screen-width feature |
+| Filters as chips with live counts (`All 3 · Overdue 1 · Due soon 1 · OK 1`), one tap target each | Same chips, right-aligned on the section heading |
+| The fleet as a **list of cards**: plate as the title, state badge, then `label → value` rows drawn from `data-label`; the action gets the full width | A real table: aligned numeric columns, tabular figures, hover row, actions right-aligned |
+| Export and report buttons side by side, full width; the date range stacks; the save button spans | Buttons inline; dates in a row; save right-aligned |
+
+Rows are sorted by severity (overdue → due soon → OK), then by plate, so the first row is the one that needs
+the workshop. That is presentation only: the totals above the list are always the whole fleet, whichever chip
+is pressed.
+
+**The guard grew a rule for the failure this invites.** Stacking a table hides its header, so every value must
+carry its own label: `check:responsive` now fails a table whose `--cards`/`table-cards` class has more value
+cells than `data-label`s. It was proved by deleting one label — `4 value cell(s) but only 3 carry data-label` —
+and restoring it.
+
+### Demo data, so the layout has something to lay out
+
+The seed had one van, which made a fleet dashboard a single row: no filter, no card stack, nothing to
+compare. Two more vans are seeded — a Coaster that is **1 550 km overdue** on its oil and a County that is
+**healthy** — with their fills dated **last month**, deliberately. The dashboard's month figures are the
+plan's acceptance numbers (**59 500** fuel, **18 000** maintenance) and they are quoted in §3 and in the PR;
+adding this month's fuel would have quietly changed the evidence. Verified after a reset: the three rows read
+`8-4471 overdue · 341 550 km · 11.78 L/100km`, `12345-ع due soon · 185 670 km · 8.44 L/100km`,
+`5-2210 OK · 96 240 km · 7.5 L/100km`, and the totals are still 59 500 / 18 000.
+
+### Gates after 8.2
+
+`check:all` ✓ (guards 27 / 127 / 29 / 66 · responsive 42 media queries, the new label rule · lint · format ·
+typecheck ×3 · 451 tests · coverage 95.84 % / 87.1 % · db types · edge bundle · 29 migrations, 13 suites) ·
+`check:a11y` ✓ **68 routes**, including the fleet page in both directions · both locales render the new
+copy (`مركبات تحتاج إلى انتباهك: 2`).

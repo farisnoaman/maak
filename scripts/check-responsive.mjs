@@ -20,7 +20,9 @@
  *      than the column it is in;
  *   4. the classes that act as buttons are at least `var(--tap-target)` tall;
  *   5. every `<table>` sits inside a `.table-scroll` box, so a five-column table scrolls in its own
- *      region instead of widening the document.
+ *      region instead of widening the document;
+ *   6. a table that becomes a stack of cards on a phone has a `data-label` on every cell, because the
+ *      header is hidden at that width and an unlabelled value is a number nobody can name.
  *
  * Usage: node scripts/check-responsive.mjs
  */
@@ -194,6 +196,29 @@ for (const file of tables) {
 }
 
 // ---------------------------------------------------------------------------
+// 6. A card-stacked table labels every cell
+// ---------------------------------------------------------------------------
+
+const CARD_TABLE = /<table[^>]*className="[^"]*(table-cards|--cards)[^"]*"[\s\S]*?<\/table>/g;
+
+for (const file of tables) {
+  const source = readFileSync(file, 'utf8');
+  for (const match of source.matchAll(CARD_TABLE)) {
+    const block = match[0];
+    const cells = (block.match(/<td\b/g) ?? []).length;
+    const labelled = (block.match(/<td\b[^>]*data-label=/g) ?? []).length;
+    // The last cell is the row's action button; it is a target, not a value, and needs no label.
+    if (cells - 1 > labelled) {
+      fail(
+        file.slice(root.length + 1),
+        1,
+        `${cells - 1} value cell(s) but only ${labelled} carry data-label — stacked cards would show unlabelled numbers`,
+      );
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Report
 // ---------------------------------------------------------------------------
 
@@ -209,5 +234,5 @@ const mediaCount = mediaBlocks(css).length;
 console.log(
   `✓ responsive check passed (viewport exported, ${mediaCount} media queries, ` +
     `no hidden navigation, no unguarded grid tracks, ${TARGETS.length} tap targets, ` +
-    `every wide table scrollable)`,
+    `every wide table scrollable, stacked card tables labelled)`,
 );

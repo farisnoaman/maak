@@ -16,6 +16,7 @@ export default async function ConsolePage({ params }: { params: Promise<{ locale
         locale={locale}
         title="console.admin"
         subtitle="console.subtitle.admin"
+        layout="tiles"
         phase="10"
         items={[
           { key: 'console.navOverview', href: `/${locale}/admin` },

@@ -243,7 +243,7 @@ export default async function VehicleHealthPage({
           <h2 id="health-monthly-heading">{t('fleetOps.monthlyTrend')}</h2>
           <p className="fleet-hint">{t('fleetOps.monthlyHint')}</p>
           <div className="table-scroll">
-            <table className="fleet-grid">
+            <table className="fleet-ledger">
               <thead>
                 <tr>
                   <th scope="col">{t('fleetOps.month')}</th>
@@ -286,7 +286,7 @@ export default async function VehicleHealthPage({
             <EmptyState title={t('fleetOps.noTrips')} />
           ) : (
             <div className="table-scroll">
-              <table className="fleet-grid">
+              <table className="fleet-ledger">
                 <thead>
                   <tr>
                     <th scope="col">{t('ops.tripCode')}</th>
@@ -330,7 +330,7 @@ export default async function VehicleHealthPage({
             <EmptyState title={t('fleetOps.noSegments')} />
           ) : (
             <div className="table-scroll">
-              <table className="fleet-grid">
+              <table className="fleet-ledger">
                 <thead>
                   <tr>
                     <th scope="col">{t('ops.departure')}</th>
@@ -372,7 +372,7 @@ export default async function VehicleHealthPage({
             <EmptyState title={t('fleetOps.noWork')} />
           ) : (
             <div className="table-scroll">
-              <table className="fleet-grid">
+              <table className="fleet-ledger">
                 <thead>
                   <tr>
                     <th scope="col">{t('fleetOps.kind')}</th>

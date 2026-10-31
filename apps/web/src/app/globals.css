@@ -996,10 +996,20 @@ a {
   color: var(--ink-600);
   font-size: 0.9rem;
 }
+/*
+ * One column by default, and that default is the fix for a real defect: `auto-fill` with a single child
+ * puts that child in the first 220px track, so every console *content* page (fleet, vehicles, health…)
+ * rendered as a narrow strip beside a row of empty tracks. Only the three overview screens are tile
+ * grids, and they say so (`layout="tiles"`).
+ */
 .console-grid {
   display: grid;
   gap: var(--space-4);
   margin-block-start: var(--space-6);
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.console-grid--tiles {
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
 }
 .console-tile {
@@ -2020,9 +2030,10 @@ input[type='file']::file-selector-button {
 }
 
 .fleet-context a[aria-current='page'] {
-  background: var(--brand-50);
+  background: var(--brand-100);
   border-color: var(--brand-300);
-  color: var(--brand-700);
+  /* `--brand-700` is not remapped for dark mode; the ink token is, so the current context stays legible. */
+  color: var(--ink-900);
   font-weight: 700;
 }
 
@@ -3423,34 +3434,170 @@ input[type='file']::file-selector-button {
    decoration: a state has to be readable across a workshop forecourt (`--state-*` on a badge), and a
    table has to survive 320px without becoming a spreadsheet you scroll sideways.                     */
 
+/*
+ * The fleet dashboard (Phase 8.2).
+ *
+ * Mobile first, and the mobile shape is not a shrunken desktop: the five totals become two columns of
+ * cards, the fleet stops being a table and becomes a list of cards with labelled values, and every
+ * action is a full-width target. Above 720px the same markup spreads into a five-column stat row and a
+ * table whose numbers line up. Nothing is hidden at any width — a narrow screen reflows, it does not
+ * lose the overdue count.
+ */
+
+.fleet-ops {
+  display: grid;
+  gap: var(--space-6);
+  min-inline-size: 0;
+}
+
+/* The page head already closes with a rule; a second one 24px below it reads as a mistake. */
+.fleet-ops > .fleet-section:first-of-type {
+  border-block-start: 0;
+  padding-block-start: 0;
+}
+
+/* Count and context on one line, the switcher on the next when there is no room for both. */
+.fleet-page-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+  padding-block-end: var(--space-3);
+  border-block-end: 1px solid var(--surface-sunken);
+}
+
+.fleet-page-head__count {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: baseline;
+  margin: 0;
+  font-weight: 700;
+}
+
+.fleet-page-head__context {
+  color: var(--ink-500);
+  font-weight: 500;
+  font-size: 0.85rem;
+}
+
+/* A wide row of organization chips is a horizontal scroll on a phone, not a wrapped mess of pills. */
+@media (max-width: 719.98px) {
+  .fleet-page-head .fleet-context {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin-inline: calc(var(--space-4) * -1);
+    padding-inline: var(--space-4);
+    inline-size: calc(100% + var(--space-4) * 2);
+  }
+
+  .fleet-page-head .fleet-context::-webkit-scrollbar {
+    display: none;
+  }
+
+  .fleet-page-head .fleet-context a {
+    flex: 0 0 auto;
+  }
+}
+
+.fleet-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: start;
+  justify-content: space-between;
+}
+
+.fleet-head__text {
+  display: grid;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+.fleet-head__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* On a phone the two exports sit side by side and share the width; they are the page's primary verbs. */
+@media (max-width: 719.98px) {
+  .fleet-head__actions {
+    inline-size: 100%;
+  }
+
+  .fleet-head__actions .ui-btn {
+    flex: 1 1 8rem;
+    justify-content: center;
+  }
+}
+
 .fleet-stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
-  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 128px), 1fr));
+  gap: var(--space-2);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.fleet-stats > div {
-  padding: var(--space-3);
+.fleet-stat {
+  /* The accent is a custom property so one ruleset colours every state card. */
+  --fleet-tone: var(--surface-sunken);
+  display: grid;
+  gap: var(--space-1);
+  align-content: start;
+  padding: var(--space-3) var(--space-4);
   border: 1px solid var(--surface-sunken);
+  border-inline-start: 3px solid var(--fleet-tone);
   border-radius: var(--radius-md);
-  background: var(--surface-muted);
+  background: var(--surface-base);
 }
 
-.fleet-stats dt {
+.fleet-stat[data-tone='danger'] {
+  --fleet-tone: var(--state-danger);
+}
+
+.fleet-stat[data-tone='warning'] {
+  --fleet-tone: var(--state-warning);
+}
+
+.fleet-stat[data-tone='ok'] {
+  --fleet-tone: var(--state-success);
+}
+
+.fleet-stat[data-tone='brand'] {
+  --fleet-tone: var(--brand-500);
+}
+
+/* Money reads as the biggest number on the page after the state counts. */
+.fleet-stat--money dd {
+  font-size: 1.05rem;
+}
+
+.fleet-stat dt {
   color: var(--ink-500);
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   letter-spacing: 0.01em;
 }
 
-.fleet-stats dd {
-  margin: var(--space-1) 0 0;
-  font-size: 1.15rem;
-  font-weight: 700;
+.fleet-stat dd {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+  line-height: 1.1;
   /* A plate, a kilometre figure and a riyal total are Latin digits inside Arabic text. */
   font-variant-numeric: tabular-nums;
+}
+
+/* A secondary line inside a cell or a card: the model under the plate, km/L under L/100km. */
+.fleet-model {
+  display: block;
+  color: var(--ink-500);
+  font-size: 0.8rem;
+  font-weight: 400;
 }
 
 .fleet-stat-suffix {
@@ -3459,55 +3606,260 @@ input[type='file']::file-selector-button {
   font-weight: 500;
 }
 
-/* A real <table>, unlike `.fleet-table` (which is a definition list). */
-.fleet-grid-wrap {
-  overflow-x: auto;
-  border: 1px solid var(--surface-sunken);
-  border-radius: var(--radius-md);
-}
-
-.fleet-grid {
-  inline-size: 100%;
-  min-inline-size: 34rem;
-  border-collapse: collapse;
-  font-size: 0.9rem;
-}
-
-.fleet-grid th,
-.fleet-grid td {
+/* One sentence where the numbers are, so "3" means something without reading a legend. */
+.fleet-callout {
+  --fleet-tone: var(--state-warning);
+  margin: 0;
   padding: var(--space-2) var(--space-3);
-  text-align: start;
-  vertical-align: top;
+  border: 1px solid var(--surface-sunken);
+  border-inline-start: 3px solid var(--fleet-tone);
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+  color: var(--ink-700);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.fleet-callout[data-tone='danger'] {
+  --fleet-tone: var(--state-danger);
+}
+
+.fleet-list__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Filter chips: as wide as their text, and a full target height on a phone. */
+.fleet-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.fleet-filter {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+  min-block-size: var(--tap-target);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-pill);
+  background: var(--surface-base);
+  color: var(--ink-600);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.fleet-filter:hover {
+  border-color: var(--brand-300);
+  color: var(--ink-900);
+}
+
+.fleet-filter[aria-pressed='true'] {
+  border-color: var(--brand-500);
+  background: var(--brand-100);
+  color: var(--ink-900);
+}
+
+.fleet-filter__count {
+  padding-inline: var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--surface-sunken);
+  color: var(--ink-600);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.fleet-filter[aria-pressed='true'] .fleet-filter__count {
+  background: var(--surface-base);
+  color: var(--ink-700);
+}
+
+.fleet-ledger tbody th .ui-badge {
+  margin-block-start: var(--space-1);
+}
+
+.fleet-ledger__plate {
+  display: block;
+  font-weight: 800;
+  /* A plate is a Latin string inside Arabic text; it must not be reordered by the bidi algorithm. */
+  font-variant-numeric: tabular-nums;
+}
+
+.fleet-cost {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: space-between;
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-.fleet-grid thead th {
+.fleet-cost__label {
+  color: var(--ink-500);
+  font-size: 0.75rem;
+}
+
+.fleet-ledger__actions {
+  text-align: end;
+}
+
+/*
+ * Below 720px the ledger becomes a list of cards. The header moves into each cell as `data-label`, so
+ * "8.44 L/100km" still says what it is; the plate becomes the card's title and the action button gets
+ * the full width. The markup stays a real <table>, so a screen reader keeps its row and column headers.
+ */
+@media (max-width: 719.98px) {
+  .fleet-ledger--cards {
+    min-inline-size: 0;
+    font-size: 0.95rem;
+  }
+
+  .fleet-ledger--cards thead {
+    display: none;
+  }
+
+  .fleet-ledger--cards,
+  .fleet-ledger--cards tbody {
+    display: block;
+    inline-size: 100%;
+  }
+
+  .fleet-ledger--cards tbody tr {
+    display: grid;
+    gap: var(--space-1);
+    margin-block-end: var(--space-3);
+    padding: var(--space-3);
+    border: 1px solid var(--surface-sunken);
+    border-radius: var(--radius-md);
+    background: var(--surface-base);
+  }
+
+  .fleet-ledger--cards tbody tr:last-child {
+    margin-block-end: 0;
+  }
+
+  .fleet-ledger--cards tbody th,
+  .fleet-ledger--cards tbody td {
+    display: grid;
+    grid-template-columns: 7.5rem minmax(0, 1fr);
+    gap: var(--space-2);
+    align-items: baseline;
+    padding: 0;
+    border: 0;
+    white-space: normal;
+    text-align: start;
+  }
+
+  /* The plate cell is the card's heading: no label, and a rule under it. */
+  .fleet-ledger--cards tbody th {
+    grid-template-columns: minmax(0, 1fr);
+    padding-block-end: var(--space-2);
+    border-block-end: 1px solid var(--surface-sunken);
+    margin-block-end: var(--space-2);
+  }
+
+  .fleet-ledger--cards tbody td::before {
+    content: attr(data-label);
+    color: var(--ink-500);
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+
+  /* The value is one grid item, so a cell with two lines (L/100km above km/L) keeps both beside its
+     label instead of dropping the second one back under it. */
+  .fleet-ledger--cards .fleet-cell {
+    display: grid;
+    gap: 2px;
+  }
+
+  .fleet-ledger--cards tbody td.fleet-ledger__actions {
+    display: block;
+    margin-block-start: var(--space-2);
+  }
+
+  .fleet-ledger--cards tbody td.fleet-ledger__actions::before {
+    content: none;
+  }
+
+  .fleet-ledger--cards tbody td.fleet-ledger__actions .ui-btn {
+    inline-size: 100%;
+    justify-content: center;
+  }
+}
+
+/* The date-range export: two dates and a verb, stacked on a phone. */
+.fleet-range {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: end;
+}
+
+.fleet-range__fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+  flex: 1 1 20rem;
+  gap: var(--space-3);
+  min-inline-size: 0;
+}
+
+.fleet-range .ui-field {
+  min-inline-size: 0;
+}
+
+@media (max-width: 719.98px) {
+  .fleet-range .ui-btn {
+    inline-size: 100%;
+    justify-content: center;
+  }
+}
+
+/* Thresholds: a two-column form on a tablet, one column on a phone. */
+.fleet-settings {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: var(--space-3);
+}
+
+.fleet-settings .ui-field {
+  min-inline-size: 0;
+}
+
+.fleet-check--card {
+  grid-column: 1 / -1;
+  align-items: start;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-md);
   background: var(--surface-muted);
-  color: var(--ink-500);
-  font-size: 0.78rem;
-  font-weight: 600;
-  text-transform: none;
 }
 
-.fleet-grid tbody tr + tr th,
-.fleet-grid tbody tr + tr td {
-  border-block-start: 1px solid var(--surface-sunken);
+.fleet-check--card input {
+  margin-block-start: 3px;
 }
 
-.fleet-grid tbody th {
-  font-weight: 600;
-  white-space: normal;
-}
-
-.fleet-model {
+.fleet-check--card .fleet-hint {
   display: block;
-  color: var(--ink-500);
-  font-size: 0.8rem;
+  margin-block-start: var(--space-1);
   font-weight: 400;
 }
 
-.fleet-grid .ui-badge {
-  margin-inline-start: var(--space-2);
+.fleet-settings__foot {
+  display: flex;
+  justify-content: end;
+}
+
+@media (max-width: 719.98px) {
+  .fleet-settings__foot .ui-btn {
+    inline-size: 100%;
+    justify-content: center;
+  }
 }
 
 .fleet-check {
@@ -3554,11 +3906,6 @@ input[type='file']::file-selector-button {
   flex: 1 1 220px;
 }
 
-.fleet-ops {
-  display: grid;
-  gap: var(--space-4);
-}
-
 /* The printable fleet report reuses the manifest's paper geometry and its print rules; these are the two
    pieces that are report-specific. Paper is white in both themes for the same reason a manifest is. */
 .fleet-report {
@@ -3597,17 +3944,4 @@ input[type='file']::file-selector-button {
     border: 0;
     padding: 0;
   }
-}
-
-/* The export form: two dates and a button, aligned on the baseline of the inputs rather than the page. */
-.fleet-range {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  align-items: end;
-}
-
-.fleet-range .ui-field {
-  flex: 1 1 10rem;
-  min-inline-size: 0;
 }

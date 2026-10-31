@@ -509,6 +509,11 @@ binary, trips-only bulk, no native camera) is argued in `docs/phase-7-report.md`
 - [x] Web `/operator/vehicles/[id]/health`, `/operator/fleet`, CSV export.
 - [x] Mobile fuel/ODO quick action (`/driver/fuel`).
 - [x] Tests: consumption math, due-date math, timezone-safe date handling (Vitest + pgTAP — 52 pgTAP assertions)
+- [x] 8.2 — the dashboard itself: `.fleet-grid` meant two things (a card grid and a table) and `.console-grid`
+      was a tile grid on every content page, so the fleet screen rendered its tables as columns of cards
+      inside a 220px strip. Renamed the table class, made the console grid one column, and rebuilt the page
+      around a stat row with state tones, filter chips and a fleet table that becomes labelled cards below
+      720px.
 - [x] 8.1 — the gaps the first pass left: per-trip and monthly fuel analytics, km/L alongside L/100km, station
       linking, receipt/odometer photos for the assigned driver, fuel-anomaly notifications, attachment read
       links, the plan-gated A4 report, and a date-ranged cost ledger for the CSV (`0013`, 41 assertions)

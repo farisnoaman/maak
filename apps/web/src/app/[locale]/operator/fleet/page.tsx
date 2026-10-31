@@ -69,10 +69,14 @@ export default async function OperatorFleetPage({
       >
         {!loaded.configured ? <PreviewBanner locale={locale} /> : null}
 
-        <div className="fleet-toolbar">
-          <p>
+        {/* The context bar, and the one number that answers "whose fleet am I looking at". Kept out of
+            `FleetRollup` because it is a property of the screen, not of the rollup. */}
+        <div className="fleet-page-head">
+          <p className="fleet-page-head__count">
             {t('fleetOps.vehiclesCount', { count: summary.vehicles.length })}
-            {org ? ` · ${org.name}` : ` · ${t('fleet.personalOwner')}`}
+            <span className="fleet-page-head__context">
+              {org ? org.name : t('fleet.personalOwner')}
+            </span>
           </p>
           {/* The console works on one context at a time (see `/operator/vehicles`), and the same rule
               applies here: thresholds are per context, so switching is a real switch, not a filter. */}

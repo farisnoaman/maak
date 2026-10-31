@@ -286,6 +286,32 @@ async function seed(client, log = () => {}) {
     log(`  (demo trip skipped: ${error.message})`);
   }
 
+  // Two more vans, so the fleet dashboard is a fleet and not a single row: one overdue, one healthy, one
+  // due soon. Seeded after the primary van so the phase-8 acceptance numbers on 7925cdf3 stay identical.
+  await client.query(
+    `insert into public.vehicles (
+       id, owner_org_id, make, model, model_year, plate_number, plate_governorate_id,
+       fuel_type, seats_passenger, seats_total, odometer_km, status, verification_status,
+       insurance_expiry, inspection_expiry, registration_expiry, created_by
+     )
+     values
+       ('7925cdf3-0000-4000-8000-00000000c001', 'aaaaaaaa-0000-4000-8000-000000000001',
+        'Toyota', 'Coaster', 2017, '8-4471',
+        (select id from public.governorates where code = 'YE-AD'),
+        'diesel', 22, 23, 340_900, 'active', 'verified',
+        current_date + 120, current_date + 60, current_date + 200,
+        '33333333-3333-4333-8333-333333333333'),
+       ('7925cdf3-0000-4000-8000-00000000c002', 'aaaaaaaa-0000-4000-8000-000000000001',
+        'Hyundai', 'County', 2021, '5-2210',
+        (select id from public.governorates where code = 'YE-AD'),
+        'diesel', 25, 26, 95_400, 'active', 'verified',
+        current_date + 260, current_date + 310, current_date + 340,
+        '33333333-3333-4333-8333-333333333333')
+     on conflict (id) do nothing`,
+  );
+
+  await seedExtraFleetOperations(client, log);
+
   await grantDemoScope(client);
   log(`  demo sign-in: admin@maak.test · owner@maak.test · driver@maak.test / ${DEMO_PASSWORD}`);
 }
@@ -651,4 +677,75 @@ async function grantDemoScope(client) {
         and title_key = 'notifications.placePending'
     )
   `);
+}
+
+/**
+ * The other two vans: an overdue service and a healthy one.
+ *
+ * Everything here is dated **last month**, which is the point — the fleet dashboard's month columns must
+ * keep showing the phase-8 acceptance numbers (59 500 fuel, 18 000 maintenance) while the *list* has
+ * enough rows to be worth laying out. A demo with one row cannot show a filter, a stacked card, or a
+ * three-state column, and every screenshot of this page would be a single line of table.
+ *
+ * Written through the commands, like every other seed, so a reset also re-proves them.
+ */
+async function seedExtraFleetOperations(client, log = () => {}) {
+  const owner = '33333333-3333-4333-8333-333333333333';
+  const dueVan = '7925cdf3-0000-4000-8000-00000000c001';
+  const fineVan = '7925cdf3-0000-4000-8000-00000000c002';
+
+  const existing = await client.query(
+    'select 1 from public.fuel_logs where vehicle_id = $1 limit 1',
+    [dueVan],
+  );
+  if (existing.rows.length > 0) return;
+
+  log('  seeding the rest of the fleet…');
+
+  const fill = async (vehicle, odometerKm, litres, daysAgo, station) => {
+    await client.query('select public.cmd_log_fuel($1::uuid, $2::uuid, $3::jsonb, $4, null)', [
+      owner,
+      vehicle,
+      JSON.stringify({
+        odometerKm,
+        litres,
+        pricePerLitreYer: 500,
+        isFullTank: true,
+        filledAt: new Date(Date.now() - daysAgo * 86_400_000).toISOString(),
+        stationName: station,
+      }),
+      `dev-seed-fuel-${vehicle.slice(-4)}-${odometerKm}`,
+    ]);
+  };
+
+  // 900 km on 108 litres across two tanks — about 12 L/100km, which is what an old Coaster does.
+  await fill(dueVan, 341_100, 55, 46, 'محطة الروضة — عدن');
+  await fill(dueVan, 341_550, 53, 39, 'محطة النور — الزنجبار');
+  // 640 km on 52 litres — a newer van, better economy, the contrast the list is meant to show. Dated two
+  // months back on purpose: anything inside the current month moves the dashboard's month totals, and the
+  // phase-8 acceptance figures (59 500 / 18 000) are quoted in the report.
+  await fill(fineVan, 95_600, 52, 60, 'محطة الروضة — عدن');
+  await fill(fineVan, 96_240, 48, 52, 'محطة الروضة — عدن');
+
+  // Due at 340 000 with the van at 341 550: overdue by 1 550 km, so the red badge, the filter chip and
+  // the callout all have a real vehicle behind them.
+  await client.query(
+    'select public.cmd_upsert_maintenance_schedule($1::uuid, $2::uuid, $3::jsonb, $4, null)',
+    [
+      owner,
+      dueVan,
+      JSON.stringify({ kind: 'oil_change', intervalKm: 5000, lastDoneKm: 335_000 }),
+      'dev-seed-schedule-due',
+    ],
+  );
+  // And one that is comfortably inside its interval, so "ok" is not an empty state either.
+  await client.query(
+    'select public.cmd_upsert_maintenance_schedule($1::uuid, $2::uuid, $3::jsonb, $4, null)',
+    [
+      owner,
+      fineVan,
+      JSON.stringify({ kind: 'oil_change', intervalKm: 5000, lastDoneKm: 94_000 }),
+      'dev-seed-schedule-fine',
+    ],
+  );
 }

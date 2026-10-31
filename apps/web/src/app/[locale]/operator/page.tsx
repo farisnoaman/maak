@@ -36,6 +36,7 @@ export default async function ConsolePage({ params }: { params: Promise<{ locale
         locale={locale}
         title="console.operator"
         subtitle="console.subtitle.operator"
+        layout="tiles"
         phase="3"
         items={[
           { key: 'console.navOverview', href: `/${locale}/operator` },
