@@ -1,8 +1,11 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { translate, isLocale, type Locale, type TranslationKey } from '@maak/core';
 import { SiteHeader } from '@/components/SiteHeader';
 import { FareCalculator } from '@/components/FareCalculator';
+import { TripSearchForm } from '@/components/TripSearchForm';
+import { loadPublicGovernorates } from '@/lib/trips';
 
 export const metadata: Metadata = {
   alternates: {
@@ -10,14 +13,18 @@ export const metadata: Metadata = {
   },
 };
 
-const CONSOLES: { key: TranslationKey; phase: string; note: TranslationKey }[] = [
-  { key: 'console.public', phase: '4', note: 'home.verified' },
-  { key: 'console.operator', phase: '3', note: 'home.verified' },
-  { key: 'console.staff', phase: '7', note: 'home.verified' },
-  { key: 'console.admin', phase: '10', note: 'home.verified' },
-  { key: 'console.finance', phase: '10', note: 'home.verified' },
-  { key: 'console.driver', phase: '6', note: 'home.verified' },
-  { key: 'console.passenger', phase: '5', note: 'home.verified' },
+/**
+ * `href` means the console exists: the card becomes a door. The rest are plans, and say so — a card
+ * that looks clickable but is not is worse than a card marked "coming soon".
+ */
+const CONSOLES: { key: TranslationKey; phase: string; href?: string }[] = [
+  { key: 'console.public', phase: '4', href: '/trips' },
+  { key: 'console.operator', phase: '3', href: '/operator' },
+  { key: 'console.staff', phase: '3', href: '/staff' },
+  { key: 'console.admin', phase: '10' },
+  { key: 'console.finance', phase: '10' },
+  { key: 'console.driver', phase: '6' },
+  { key: 'console.passenger', phase: '5' },
 ];
 
 const FOUNDATIONS: { icon: string; title: TranslationKey; body: TranslationKey }[] = [
@@ -31,6 +38,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
   if (!isLocale(raw)) notFound();
   const locale: Locale = raw;
   const t = (key: TranslationKey) => translate(locale, key);
+  const governorates = await loadPublicGovernorates();
 
   return (
     <>
@@ -46,17 +54,22 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
               </span>
               <h1>{t('home.heroTitle')}</h1>
               <p className="lead">{t('home.heroSubtitle')}</p>
+              {/* Above the buttons, because on a phone this is the whole page: pick where from, where to,
+                  when — and the result is a URL, not a modal. */}
+              <TripSearchForm locale={locale} governorates={governorates} />
               <div className="hero__actions">
-                <a className="btn btn--primary" href="#consoles">
+                {/* "Explore trips" used to be an in-page anchor to the console grid — a button that
+                    promises the marketplace and scrolls. It now opens the marketplace. */}
+                <Link className="btn btn--primary" href={`/${locale}/trips`}>
                   {t('home.ctaExplore')}
-                </a>
-                <a className="btn btn--ghost" href="#foundations">
+                </Link>
+                <Link className="btn btn--ghost" href={`/${locale}/operator`}>
                   {t('home.ctaOperator')}
-                </a>
+                </Link>
               </div>
               <div className="hero__stats">
                 <div>
-                  <div className="stat__value num">268</div>
+                  <div className="stat__value num">367</div>
                   <div className="stat__label">{t('home.statTests')}</div>
                 </div>
                 <div>
@@ -106,7 +119,13 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
                       {t('common.phase')} {consoleItem.phase}
                     </span>
                   </div>
-                  <p>{t('common.comingSoon')}</p>
+                  {consoleItem.href ? (
+                    <Link className="btn btn--ghost" href={`/${locale}${consoleItem.href}`}>
+                      {t('console.open')}
+                    </Link>
+                  ) : (
+                    <p>{t('common.comingSoon')}</p>
+                  )}
                 </article>
               ))}
             </div>

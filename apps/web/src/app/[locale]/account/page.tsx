@@ -86,6 +86,22 @@ export default async function AccountPage({
             >
               {t('nav.verification')}
             </Link>
+            {/* A driver's licence is a document about the person, so it lives with the account — and it
+                must be reachable from the account, or the only way to add one is to know the URL. */}
+            <Link
+              className="ui-btn ui-btn--primary ui-btn--md"
+              href={`/${locale}/account/bookings`}
+            >
+              {t('bookings.myTitle')}
+            </Link>
+            <Link className="ui-btn ui-btn--ghost ui-btn--md" href={`/${locale}/account/licence`}>
+              {t('fleet.accountLicence')}
+            </Link>
+            {/* The driver's console lives at `/driver`, which is a different audience from this page —
+                but a driver who is never shown the door will drive without logging the trip. */}
+            <Link className="ui-btn ui-btn--ghost ui-btn--md" href={`/${locale}/driver`}>
+              {t('driver.title')}
+            </Link>
             <Link
               className="ui-btn ui-btn--ghost ui-btn--md"
               href={`/${locale}/staff/verifications`}

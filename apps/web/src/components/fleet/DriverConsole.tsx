@@ -24,6 +24,7 @@ export interface ConsoleDriver {
   readonly phone: string;
   readonly licenceNo: string | null;
   readonly licenceExpiry: string | null;
+  readonly licencePhotoUrl: string | null;
   readonly status: string;
   readonly verificationStatus: string;
   readonly vehicleName: string | null;
@@ -209,6 +210,16 @@ export function DriverConsole({
                   <p className="fleet-row__meta">
                     {t('fleet.driverLicence')}: {driver.licenceNo ?? t('fleet.unknown')}
                     {driver.licenceExpiry ? ` · ${driver.licenceExpiry}` : ''}
+                  </p>
+                  <p className="fleet-row__meta">
+                    {t('fleet.licencePhoto')}:{' '}
+                    {driver.licencePhotoUrl ? (
+                      <a href={driver.licencePhotoUrl} target="_blank" rel="noreferrer">
+                        {t('fleet.viewPhoto')}
+                      </a>
+                    ) : (
+                      t('fleet.licencePhotoMissing')
+                    )}
                   </p>
                   <p className="fleet-row__meta">
                     {t('fleet.currentDriver')}: {driver.vehicleName ?? t('fleet.notAssigned')}

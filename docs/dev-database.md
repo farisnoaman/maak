@@ -9,7 +9,7 @@ real `cmd_*` commands, started by one command on any machine that can run Node 2
 
 ```bash
 npm install
-npm run dev:setup     # writes apps/web/.env.local (once)
+npm run dev:setup     # writes apps/web/.env.local if it is missing (`npm run dev` now does this too)
 npm run dev           # database + API + web, one command, Ctrl-C stops all three
 ```
 
@@ -58,7 +58,12 @@ bypassed.
 
 ## How the browser reaches it
 
-`apps/web/.env.local` sets `NEXT_PUBLIC_SUPABASE_URL=/supabase`, a **same-origin** mount:
+`apps/web/.env.local` is git-ignored, so it exists in neither a fresh clone nor a restored sandbox
+snapshot. Without it the app boots in preview-fixture mode, where every sign-in looks like it did
+nothing — so `npm run dev` writes it before starting Next (`ensureWebEnv()` in
+`scripts/dev-backend/setup-env.mjs`), and says so in one line.
+
+It sets `NEXT_PUBLIC_SUPABASE_URL=/supabase`, a **same-origin** mount:
 
 ```
 browser ──► https://<host>/supabase/auth/v1/...   (relative to whatever host served the app)
@@ -214,6 +219,15 @@ So sign-in also returns the session token *in the redirect* (`/ar/account?st=…
 to the renderer as a request header, which is enough for server-side rendering, the data proxy, RLS and
 the gateway — the cookie is never required. A small client component keeps `st` attached to internal
 links and forms, so navigating does not silently sign you out.
+
+For a while that covered rendering and **not** writing, which is the worst possible half: a page that
+knew exactly who you were submitted an anonymous `fetch` to `/api/data`, and the answer was
+`401 UNAUTHENTICATED` — "Please sign in first." to somebody who had just signed in, looking at their own
+name in the header. Every call now goes through `lib/api.ts`, which attaches the token as
+`x-maak-token` (kept in `sessionStorage` for the tab); `check:guards` §12b fails when a new
+`fetch('/api/data…')` forgets it. Redirects that follow a successful save go through
+`navigateWithSession()` rather than `router.push()`, because an RSC navigation carries no custom headers
+either — the same bug one screen later.
 
 | | |
 |---|---|

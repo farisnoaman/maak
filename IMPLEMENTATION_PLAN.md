@@ -305,19 +305,19 @@ not build the acceptance-criterion region and reference data that could never be
 - Mobile: search + filter sheet + trip detail.
 
 ### Tasks
-- [ ] Migrations: trips/trip_stops + enums (`trip_status`, verification status, `booking_mode`, `discount_kind`,
+- [x] Migrations: trips/trip_stops + enums (`trip_status`, verification status, `booking_mode`, `discount_kind`,
       `pricing_mode`, `gender_policy`, `payment_policy`) + constraints (seats, ordering, no duplicate consecutive stops).
-- [ ] `app.assert_trip_editable()`, `app.actor_can_manage_trip()`, `app.recompute_seats_available()`,
+- [x] `app.assert_trip_editable()`, `app.actor_can_manage_trip()`, `app.recompute_seats_available()`,
       `app.set_trip_visibility()`.
-- [ ] `trips_search` refresh triggers + indexes (GIN stop ids, btree date/price, trigram names, featured boost).
-- [ ] Commands (edge fn + atomic `cmd_*` SQL): `create_trip`, `update_trip`, `set_trip_stops`, `publish_trip`, `submit_trip_verification`,
+- [x] `trips_search` refresh triggers + indexes (GIN stop ids, btree date/price, trigram names, featured boost).
+- [x] Commands (edge fn + atomic `cmd_*` SQL): `create_trip`, `update_trip`, `set_trip_stops`, `publish_trip`, `submit_trip_verification`,
       `decide_trip_verification`, `cancel_trip`, `search_public_trips(locale, filters, sort, cursor)`,
       `get_trip_public`, `staff_search_trips`.
-- [ ] Facets (`{ items, facets, total }`) + 30 s cache + k6 benchmark script.
-- [ ] Pricing engine in `@maak/core/pricing.ts` mirroring DB math + Vitest parity tests against RPC fixtures.
-- [ ] Web `/operator/trips/*`, `/trips`, `/trips/[code]`, `/staff/trips`; localized forms with `Asia/Aden` timezone.
-- [ ] Mobile search/filter/results/detail.
-- [ ] pgTAP: unverified cannot create; edit blocked at 1h59m (frozen clock); drafts/rejected/completed hidden publicly.
+- [~] Facets (`{ items, facets, total }`) + 30 s cache done; **k6 benchmark not written or run** (no k6, no 50k-trip seed).
+- [x] Pricing engine in `@maak/core/pricing.ts` mirroring DB math + Vitest parity tests against RPC fixtures.
+- [x] Web `/operator/trips/*`, `/trips`, `/trips/[code]`, `/staff/trips`; localized forms with `Asia/Aden` timezone.
+- [x] Mobile search/filter/results/detail — implemented and typechecked, **not run on a device**.
+- [x] pgTAP: unverified cannot create; edit blocked at 1h59m (frozen clock); drafts/rejected/completed hidden publicly.
 
 ### Acceptance criteria
 - Verified operator creates Sana'a → Aden with 2 stops, per-stop pricing, 10% discount, publishes → visible publicly in < 1 s.
@@ -350,15 +350,20 @@ not build the acceptance-criterion region and reference data that could never be
 - Mobile: booking wizard, my bookings, ticket; receipt upload placeholder for Phase 9.
 
 ### Tasks
-- [ ] Migrations + enums (`booking_status`, `id_type`, `payment_status`) + constraints (identity fields required).
-- [ ] Commands (edge fn + atomic `cmd_*` SQL): `create_booking`, `accept_booking`, `reject_booking`, `cancel_booking_by_passenger`,
+- [x] Migrations + enums (`booking_status`, `id_type`, `payment_status`) + constraints (identity fields required)
+      — `00019_bookings.sql`; five enums, one document per booking, hold-while-pending and code-shape checks.
+- [x] Commands (edge fn + atomic `cmd_*` SQL): `create_booking`, `accept_booking`, `reject_booking`, `cancel_booking_by_passenger`,
       `cancel_booking_by_operator`, `expire_booking_holds`, `get_trip_manifest_data`, `create_id_share_link`,
       `resolve_id_share_token`, `compute_refund`.
-- [ ] Storage `passenger-ids` (private) + policies + 5-min signed URLs + watermark on preview.
-- [ ] Cron: `expire_holds`, `auto_complete_bookings`, `purge_expired_id_documents`.
-- [ ] Web `/trips/[code]/book`, `/operator/trips/[id]/bookings`, `/me/bookings`, `/s/[token]`.
-- [ ] Mobile booking wizard, my bookings, ticket.
-- [ ] pgTAP: parallel last-seat bookings (exactly one wins), cutoff enforcement, cross-org access denied, refund math.
+- [x] Storage `passenger-ids` (private) + policies + 5-min signed URLs (`lib/storage.ts`) + watermarked preview
+      (`/[locale]/s/[token]`, operator-only, audited reads).
+- [x] Cron: `expire_holds`, `auto_complete_bookings` (`job_finalize_trips`), `purge_expired_id_documents` —
+      `00020_booking_jobs.sql`, `pg_cron` where present, a dev timer where not.
+- [x] Web `/trips/[code]/book`, `/operator/trips/[id]/bookings`, `/account/bookings` (+ `/[id]`), `/s/[token]`
+      — `/account` rather than `/me`, because the account area already existed.
+- [x] Mobile booking wizard, my bookings, ticket — implemented and typechecked, **not run on a device**.
+- [x] pgTAP: last seat sold once, cutoff enforcement, cross-org access denied, refund math — 91 assertions in
+      `0008_bookings.test.sql` (the last-seat case is sequential: pgTAP has one session per file).
 
 ### Acceptance criteria
 - Two simultaneous last-seat bookings: exactly one succeeds, the other gets `NO_SEATS_LEFT`.
@@ -377,6 +382,12 @@ not build the acceptance-criterion region and reference data that could never be
 
 **Goal:** the trip actually runs: verified-only start, odometer discipline, 10-minute location, meaningful progress.
 
+> **Mostly done.** Part one: start / stop-reached / end, odometer discipline, status machine. Part two:
+> pings (partitioned), derived progress with ETA, the driver's web console and the passenger's live
+> screen with polling and staleness. See `docs/phase-6-report.md`. What remains is listed at the end of
+> that report: the native background-location cadence, a routing provider, the realtime channel and
+> per-passenger check-in.
+
 ### Deliverables
 - Driver console (mobile): today's trips, start (blocked unless verified, BR-05), ODO + photo, running screen,
   "reached stop", end with ODO, per-passenger check-in, cash-collection prompt (wired in Phase 9).
@@ -390,15 +401,24 @@ not build the acceptance-criterion region and reference data that could never be
 - Cron: auto `in_progress` at departure, auto-complete rules, stale-trip alerts.
 
 ### Tasks
-- [ ] Migrations: pings (partitioned), progress, route geometry, odometer readings, richer trip_events.
-- [ ] `app.recompute_trip_progress`: nearest upcoming stop (KNN), polyline or haversine distance, ETA from rolling speed.
-- [ ] Routing provider at publish (cached; OSRM/ORS) + graceful fallback.
-- [ ] Commands (edge fn + atomic `cmd_*` SQL): `start_trip`, `end_trip`, `record_trip_ping`, `mark_stop_reached`, `report_incident`,
-      `get_trip_progress`, `get_driver_trips_today`, `check_in_passenger`.
-- [ ] Realtime publication + private-channel policy + `useTripProgress()` hook in core.
-- [ ] Mobile: driver flow, `expo-task-manager` background location, queue, permission UX (iOS/Android), bilingual prompts.
-- [ ] Web passenger live page `/trips/[code]/live`, stale states, route map.
-- [ ] pgTAP: start blocked when unverified/early; monotonic ODO; out-of-order pings; visibility limited to accepted passengers.
+- [x] Migrations: odometer readings, `trip_events`, `trip_status.in_progress` (`00021`, `00022`); pings
+      (monthly partitions), `trip_progress`, `trip_route_geometry` and the driver's read policy (`00023`, `00024`).
+- [x] `app.recompute_trip_progress`: nearest upcoming stop, haversine chain, ETA from rolling speed with a
+      timetable fallback — `supabase/migrations/00023_trip_tracking.sql`.
+- [ ] Routing provider at publish (cached; OSRM/ORS) + graceful fallback — the straight-line fallback and the
+      `trip_route_geometry` seam exist; no provider is called yet.
+- [x] Commands (edge fn + atomic `cmd_*` SQL): `start_trip`, `end_trip`, `mark_stop_reached`, `record_ping`,
+      and the visibility-checked read `get_trip_progress`. (`check_in_passenger` and a dedicated
+      `get_driver_trips_today` are folded into the read policy + `/driver` for now. **`check_in_passenger` did
+      not land in Phase 7 either** — the manifest is the sheet the conductor reads; marking a seat boarded
+      waits for the booking-state slice that gives `accepted` a `boarded` successor.)
+- [x] Realtime: the private `trip:<id>` publication is added when the deployment has it (00023), and the live
+      screen polls every 30 s — the transport that exists in *both* environments is the one that ships.
+- [~] Mobile: the web driver console covers start / position / stop / end. `expo-task-manager` background
+      location, the offline queue and the iOS/Android permission UX are not built.
+- [x] Web passenger live page `/trips/[code]/live`, stale states, route strip.
+- [x] pgTAP: 30 assertions in `0009_trip_execution.test.sql` (start, ODO, stops, end) and 39 in
+      `0010_trip_tracking.test.sql` (pings, out-of-order timestamps, progress, staleness, visibility, grants).
 
 ### Acceptance criteria
 - Start 3 h early → `TOO_EARLY`; unverified trip → `TRIP_NOT_VERIFIED`; wrong driver → `FORBIDDEN` unless audited override.
@@ -427,15 +447,26 @@ not build the acceptance-criterion region and reference data that could never be
 - Supervisor dashboard: pending verifications in scope, live trips in scope, stale trips, recent scans.
 
 ### Tasks
-- [ ] `qr_token` generation + `GET /api/qr/trip/:token` resolver + rate limiting.
-- [ ] Scanner UI (web: `barcode-detector`/zxing; mobile: `expo-camera`) with permission prompts localized.
-- [ ] Commands (edge fn + atomic `cmd_*` SQL): `bulk_verify_trips`, `bulk_verify_trips_with_passengers`, `bulk_verify_passengers`,
-      `bulk_verify_entities`, `get_trip_for_staff(token)`, `staff_search_trips`, `log_document_access`.
-- [ ] PDF route `GET /api/trips/:id/manifest.pdf?locale=ar|en` + Arabic font subset; layout tests at 4/14/30 passengers.
-- [ ] Staff web `/staff/scans`, `/staff/trips/[id]` (manifest + bulk passengers), `/staff/dashboard`, `/supervisor/*`.
-- [ ] Mobile scanner screen + manifest link.
-- [ ] pgTAP: out-of-scope verification blocked; passenger detail respects `can_view_passengers`; PDF forbidden for passengers.
-- [ ] PDF snapshot tests (text extraction, page count) in both locales.
+- [x] `qr_token` generation + resolver + rate limiting. — `00025`: token on `verified`/`published`/`in_progress`/`completed`
+      by trigger, backfilled; resolved by `get_trip_for_staff(actor, token, ip)` behind the session-bound
+      `staff_scan(text)`, rate-limited in the function and logged either way. No `GET /api/qr/...` route: the scan is
+      an authenticated staff read, not a public URL.
+- [x] Scanner UI (web: `BarcodeDetector`; mobile: token entry — `expo-camera` deferred, see `docs/phase-7-report.md` §6)
+      with permission prompts localized (§`ops.scanCameraUnsupported`, `ops.scanCameraOff`).
+- [x] Commands (edge fn + atomic `cmd_*` SQL): `cmd_bulk_verify_trips`, `cmd_rotate_trip_qr`, `get_trip_for_staff`,
+      `get_trip_manifest`, `staff_scope_summary`, `staff_search_trips` (now ops-scoped with history filters).
+      **Not built:** `bulk_verify_trips_with_passengers`, `bulk_verify_passengers`, `bulk_verify_entities`,
+      `log_document_access` (already shipped in 00019) — see the report §6.
+- [x] A4 manifest + layout tests at 4/14/30 passengers. — Print-optimised HTML with `@page size: A4` and
+      `manifestColumns()`; **no server-side PDF binary** (pdfkit + Noto Naskh WOFF was prototyped and rejected:
+      woff/woff2 only, second layout engine). Layout is asserted by `packages/core/tests/manifest.test.ts`.
+- [x] Staff web `/staff/scan`, `/staff/dashboard`, `/staff/trips/[id]/manifest`, history filters + CSV export on
+      `/staff/trips`. (The dashboard lives inside the staff console instead of a separate `/supervisor/*` area.)
+- [x] Mobile scanner screen + manifest link (`apps/mobile/src/app/staff/scan.tsx`, token entry).
+- [x] pgTAP: out-of-scope verification blocked; manifest refused for a passenger (403/`42501`); scan audit written
+      on both allowed and refused attempts. (`can_view_passengers` was not needed: the manifest read *is* the gate.)
+- [x] Manifest format tests replace PDF snapshots: CSV (BOM/quoting/CRLF/Aden offsets) and column splitting at
+      14/30 passengers, both locales — `packages/core/tests/manifest.test.ts` (16 tests).
 
 ### Acceptance criteria
 - Aden-scoped supervisor scanning an Aden trip sees it; an out-of-scope supervisor sees «خارج نطاقك» / “Outside your scope”.
@@ -443,6 +474,12 @@ not build the acceptance-criterion region and reference data that could never be
 - 14-passenger manifest fits one A4 page; Arabic renders correctly (no tofu) and English renders LTR cleanly.
 - Passenger cannot download the manifest (`403`); generation is audited and visible in the audit explorer.
 - Historical search finds last month's completed trip by date range + governorate; CSV matches the filtered rows.
+
+**Evidence:** 36 pgTAP assertions (`0011_staff_operations.test.sql`) and 16 unit tests
+(`packages/core/tests/manifest.test.ts`); probed end to end on the running stack — the Aden/Sanaa patch split,
+`9 verified, 1 failed (OUT_OF_SCOPE)`, a 14-passenger sheet on one column, `403` for a passenger and `404` for a
+missing trip, and a history export that matches the table row for row. What was decided differently (no PDF
+binary, trips-only bulk, no native camera) is argued in `docs/phase-7-report.md` §2 and §6.
 
 **Estimate:** 8 days.
 
@@ -463,14 +500,15 @@ not build the acceptance-criterion region and reference data that could never be
 - Mobile: fuel/ODO quick log from the running trip screen.
 
 ### Tasks
-- [ ] Migrations + generated columns + `app.vehicle_odometer_guard()` + `app.recompute_maintenance_status()`.
-- [ ] Cron: daily maintenance scan → reminders; overdue escalation.
-- [ ] Commands (edge fn + atomic `cmd_*` SQL): `log_fuel`, `log_maintenance`, `upsert_maintenance_schedule`, `mark_maintenance_done`,
-      `record_manual_odometer`, `get_vehicle_health`, `get_fleet_summary`.
-- [ ] Expense sync triggers (fuel/maintenance → `expenses`, soft-delete → reversing entry stub for Phase 10).
-- [ ] Web `/operator/vehicles/[id]/health`, `/operator/fleet`, exports.
-- [ ] Mobile fuel/ODO quick actions.
-- [ ] Tests: consumption math, due-date math, timezone-safe date handling (Vitest + pgTAP).
+- [x] Migrations + generated columns + `app.assert_odometer_advance()` (the BR-16 guard, in front of every write
+      path) + `app.recompute_maintenance_status()`.
+- [x] Cron: daily maintenance scan → reminders, deduped per state change.
+- [x] Commands (edge fn + atomic `cmd_*` SQL): `log_fuel`, `log_maintenance`, `upsert_maintenance_schedule`,
+      `mark_maintenance_done`, `record_manual_odometer`, `get_vehicle_health`, `get_fleet_summary`.
+- [x] Expense sync triggers (fuel/maintenance → `expenses`, soft-delete → `expense.reversePending` audit stub for Phase 10).
+- [x] Web `/operator/vehicles/[id]/health`, `/operator/fleet`, CSV export.
+- [x] Mobile fuel/ODO quick action (`/driver/fuel`).
+- [x] Tests: consumption math, due-date math, timezone-safe date handling (Vitest + pgTAP — 52 pgTAP assertions)
 
 ### Acceptance criteria
 - Two full-tank logs 450 km / 38 L apart → dashboard shows 8.4 L/100km.
@@ -482,6 +520,29 @@ not build the acceptance-criterion region and reference data that could never be
 - Fuel/maintenance costs appear as expenses ready for the finance module.
 
 **Estimate:** 6 days.
+
+### As built (deliberate deviations)
+
+- **`app.vehicle_odometer_guard()` is `app.assert_odometer_advance()`.** Named for what it does, and a
+  function the commands *call* rather than a trigger: the one legal backwards step (an owner correcting a
+  replaced odometer) has to be expressible, and a trigger cannot tell a correction from a mistake. The
+  high-water mark on `vehicles.odometer_km` is what keeps both honest.
+- **`get_vehicle_health` / `get_fleet_summary` are reads, not edge-function actions.** They follow the same
+  rule as `get_trip_manifest` and `staff_summary`: the session-bound wrappers (`vehicle_health`,
+  `fleet_summary`) are what the UI calls, so the client never holds an actor id it could lie about. The
+  commands themselves take `p_actor` and stay service-role.
+- **`maintenance_status` is a table, not a view.** The reminder job needs to remember *what it already told
+  somebody*; a view cannot. It is recomputed by triggers on schedules, records, readings and the vehicle's
+  odometer, so no screen ever shows a state the trip gate would disagree with.
+- **Anomaly detection reports, it never refuses.** A fill 30% above the average returns `anomaly: true`; the
+  receipt is still recorded. Refusing it would hide the symptom and lose the cost.
+
+**Changelog:** Phase 8 adds six tables, four enums, six commands, two reads, a nightly reminder job and the
+expenses outbox Phase 10 will post from. Fleet odometers now advance from fuel, maintenance, manual readings
+and trip ends through one guard; schedules carry generated due points; `/operator/fleet` renders a rollup
+whose totals are the same rows each vehicle card shows. 52 pgTAP assertions and 22 Vitest cases cover the
+acceptance numbers (8.44 L/100km, 120 000 → 125 000), the monotonic guard and its one audited override, the
+reminder dedupe, and the trip gate's `MAINTENANCE_OVERDUE` refusal.
 
 ---
 
@@ -706,13 +767,13 @@ Phase 10 must follow 9. Phase 11 needs 5, 6, 9, 10. Phase 12 is last.
 |---|---|---|---|---|
 | 0 | Foundations & bilingual shell | ✅ Complete (audited) | — | 117 tests · lint+guards green · `/ar` + `/en` live · 2 edge functions · 5 migrations · auth shell · pgTAP written (needs Docker) |
 | 1 | Identity & Trust | ✅ Complete | — | 214 tests · orgs + membership + roles · 16 commands · verification queue with signed docs · **53 pgTAP assertions executed** (`npm run sql:check`) |
-| 2 | Geography & Places | ⬜ | | |
-| 3 | Fleet | ⬜ | | quota hooks wired (Basic defaults) |
-| 4 | Trips & Marketplace | ⬜ | | quota hooks wired |
-| 5 | Bookings | ⬜ | | refund math ready for 9/10 |
-| 6 | Live Execution | ⬜ | | |
-| 7 | Staff Operations | ⬜ | | |
-| 8 | Vehicle Operations | ⬜ | | feeds expenses into 10 |
+| 2 | Geography & Places | ✅ Complete | PR #2 | governorates/districts/regions · places + moderation · supervisor scoping |
+| 3 | Fleet | ✅ Complete | PR #2 | vehicles, photos, documents, drivers, assignments · quota hooks live |
+| 4 | Trips & Marketplace | ✅ Complete | PR #2 | publish → search → book · pricing + discounts |
+| 5 | Bookings | ✅ Complete | PR #2 | requests, seats, passengers, refund math ready for 9/10 |
+| 6 | Live Execution | ✅ Complete | PR #2 | start/end, ODO, pings, staleness, public tracking |
+| 7 | Staff Operations | ✅ Complete | PR #2 | QR scan + scope, bulk verify, A4 manifest, history export |
+| 8 | Vehicle Operations | ✅ Complete | PR #2 | fuel/maintenance/ODO · due states · reminders · rollup · expenses outbox for 10 |
 | 9 | Payments | ⬜ | | ledger outbox → 10 |
 | 10 | Finance & Subscriptions | ⬜ | | activates quotas + plan billing |
 | 11 | Notifications & Polish | ⬜ | | |

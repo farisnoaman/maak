@@ -48,6 +48,8 @@ export default async function OperatorVehiclesPage({
   const nav = [
     { key: 'console.navOverview' as TranslationKey, href: `/${locale}/operator` },
     { key: 'console.navVehicles' as TranslationKey, href: `/${locale}/operator/vehicles` },
+
+    { key: 'console.navFleet' as TranslationKey, href: `/${locale}/operator/fleet` },
     { key: 'console.navDrivers' as TranslationKey, href: `/${locale}/operator/drivers` },
     { key: 'org.team' as TranslationKey, href: `/${locale}/operator/team` },
   ];

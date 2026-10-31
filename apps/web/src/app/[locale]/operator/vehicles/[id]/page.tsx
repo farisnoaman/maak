@@ -70,6 +70,8 @@ export default async function VehicleDetailPage({
         items={[
           { key: 'console.navOverview', href: `/${locale}/operator` },
           { key: 'console.navVehicles', href: `/${locale}/operator/vehicles` },
+
+          { key: 'console.navFleet', href: `/${locale}/operator/fleet` },
           { key: 'console.navDrivers', href: `/${locale}/operator/drivers` },
         ]}
       >

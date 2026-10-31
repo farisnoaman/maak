@@ -15,11 +15,18 @@ export * from './domain/finance';
 export * from './domain/policy';
 export * from './domain/identity';
 export * from './domain/geo';
+export * from './domain/trip';
+export * from './domain/booking';
+export * from './domain/tracking';
+export * from './domain/manifest';
+export * from './domain/fleet-ops';
 
 export * from './api/errors';
 export * from './api/gateway';
 export * from './api/identity';
 export * from './api/fleet';
+export * from './api/trips';
+export * from './api/bookings';
 export * from './api/quota';
 export * from './api/geography';
 export * from './api/client';

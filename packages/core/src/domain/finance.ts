@@ -59,6 +59,25 @@ export interface RefundDecision {
 
 export const DEFAULT_REFUND_POLICY: RefundPolicy = { cutoffHours: 2, kind: 'full' };
 
+/**
+ * The booking policy the database mirrors in `app.compute_refund()`.
+ *
+ * ≥ 48 h → 100 %, ≥ 24 h → 75 %, ≥ 2 h → 50 %, inside 2 h → nothing. Operator cancellations do not use
+ * this ladder: the passenger did nothing wrong, so they get everything back.
+ *
+ * `supabase/tests/0008_bookings.test.sql` asserts the same five numbers against the SQL function, so a
+ * change on one side without the other fails a suite instead of shipping a wrong refund.
+ */
+export const BOOKING_REFUND_POLICY: RefundPolicy = {
+  cutoffHours: 2,
+  kind: 'tiered',
+  tiers: [
+    { hoursBeforeStart: 48, basisPoints: 10_000 },
+    { hoursBeforeStart: 24, basisPoints: 7_500 },
+    { hoursBeforeStart: 2, basisPoints: 5_000 },
+  ],
+};
+
 export class RefundPolicyError extends Error {
   readonly code = 'INVALID_REFUND_POLICY';
   constructor(message: string) {

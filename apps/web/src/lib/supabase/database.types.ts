@@ -1,5 +1,5 @@
-// migrations-sha256: 8e8e38ab3038848b8b64ea7230e7d27d34f2f31ebf711f058cd0033d01ef8ce8
-/* Generated from 12 migrations. Run `npm run db:types` after changing the schema. */
+// migrations-sha256: 6c0f1b298fce7254a568626f9c0dbefaaf56e43a7626f05828bf9df946727243
+/* Generated from 27 migrations. Run `npm run db:types` after changing the schema. */
 
 /**
  * Schema types for RLS-filtered reads (Phase 0 subset).
@@ -40,6 +40,85 @@ export type VehicleOwnershipKind = 'owned' | 'leased' | 'financed';
 export type VehicleStatus = 'draft' | 'active' | 'suspended' | 'retired';
 export type DriverStatus = 'invited' | 'active' | 'suspended' | 'revoked';
 export type OdometerKind = 'baseline' | 'trip_start' | 'trip_end' | 'service';
+
+export type MaintenanceKind =
+  | 'oil_change'
+  | 'oil_filter'
+  | 'air_filter'
+  | 'fuel_filter'
+  | 'cabin_filter'
+  | 'tyres'
+  | 'brakes'
+  | 'battery'
+  | 'timing_belt'
+  | 'coolant'
+  | 'transmission'
+  | 'suspension'
+  | 'electrical'
+  | 'bodywork'
+  | 'inspection'
+  | 'other';
+
+export type MaintenanceState = 'ok' | 'due_soon' | 'overdue';
+
+export type ExpenseCategory =
+  | 'fuel'
+  | 'maintenance'
+  | 'insurance'
+  | 'registration'
+  | 'permit'
+  | 'salary'
+  | 'toll'
+  | 'parking'
+  | 'fine'
+  | 'other';
+
+export type ExpenseSource = 'fuel_log' | 'maintenance_record' | 'manual';
+
+export type BookingStatus =
+  | 'pending'
+  | 'accepted'
+  | 'rejected'
+  | 'expired'
+  | 'cancelled_by_passenger'
+  | 'cancelled_by_operator'
+  | 'no_show'
+  | 'completed';
+export type IdDocumentType = 'national_id' | 'passport' | 'iqama' | 'other';
+export type BookingPaymentStatus = 'unpaid' | 'deposit_paid' | 'paid' | 'refunded';
+export type BookingEventKind =
+  | 'created'
+  | 'accepted'
+  | 'rejected'
+  | 'cancelled'
+  | 'expired'
+  | 'no_show'
+  | 'completed'
+  | 'document_shared';
+export type DocumentAccessKind = 'owner' | 'operator' | 'staff' | 'share_link';
+
+export type TripStatus =
+  'draft' | 'pending' | 'published' | 'in_progress' | 'cancelled' | 'completed';
+export type TripEventKind =
+  | 'created'
+  | 'updated'
+  | 'stops_changed'
+  | 'submitted'
+  | 'approved'
+  | 'rejected'
+  | 'published'
+  | 'unpublished'
+  | 'cancelled'
+  | 'completed'
+  | 'started'
+  | 'stop_reached'
+  | 'ended';
+export type TripBookingMode = 'per_seat' | 'whole_trip' | 'both';
+export type TripPricingMode = 'flat' | 'per_stop';
+export type TripDiscountKind = 'none' | 'fixed' | 'percent';
+export type TripDiscountScope = 'per_seat' | 'whole_trip' | 'all';
+export type TripGenderPolicy = 'any' | 'women_only' | 'men_only';
+export type TripPaymentPolicy = 'cash' | 'transfer' | 'deposit';
 export type PlaceKind =
   | 'city'
   | 'town'
@@ -151,7 +230,13 @@ export type NotificationKind =
   | 'member_joined'
   | 'member_removed'
   | 'role_granted'
-  | 'role_revoked';
+  | 'role_revoked'
+  | 'booking_requested'
+  | 'booking_accepted'
+  | 'booking_rejected'
+  | 'booking_cancelled'
+  | 'vehicle_maintenance_due'
+  | 'vehicle_maintenance_overdue';
 
 export type PlatformRole =
   'platform_admin' | 'platform_staff' | 'finance_officer' | 'geo_supervisor';
@@ -427,6 +512,362 @@ export interface OdometerReading {
   recorded_by: string | null;
   recorded_at: string;
   note: string | null;
+  /** The trip this reading belongs to (`trip_start` / `trip_end`), from migration 00022. */
+  trip_id: string | null;
+}
+
+/** Money is integer minor units (fils) throughout, including `total_cost_yer`. */
+export interface FuelLog {
+  id: string;
+  vehicle_id: string;
+  trip_id: string | null;
+  driver_id: string | null;
+  filled_at: string;
+  odometer_km: number;
+  litres: number;
+  price_per_litre_yer: number;
+  total_cost_yer: number;
+  is_full_tank: boolean;
+  station_name: string | null;
+  station_place_id: string | null;
+  receipt_path: string | null;
+  note: string | null;
+  recorded_by: string | null;
+  created_at: string;
+  deleted_at: string | null;
+  deleted_by: string | null;
+}
+
+export interface MaintenanceSchedule {
+  id: string;
+  vehicle_id: string;
+  kind: MaintenanceKind;
+  interval_km: number | null;
+  interval_days: number | null;
+  last_done_km: number | null;
+  last_done_on: string | null;
+  /** Generated: `last_done_km + interval_km`. */
+  due_km: number | null;
+  /** Generated: `last_done_on + interval_days`. */
+  due_on: string | null;
+  is_active: boolean;
+  note: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MaintenanceRecord {
+  id: string;
+  vehicle_id: string;
+  schedule_id: string | null;
+  kind: MaintenanceKind;
+  performed_on: string;
+  odometer_km: number | null;
+  cost_yer: number;
+  vendor: string | null;
+  note: string | null;
+  attachment_path: string | null;
+  recorded_by: string | null;
+  created_at: string;
+  deleted_at: string | null;
+  deleted_by: string | null;
+}
+
+export interface VehicleMaintenanceStatus {
+  vehicle_id: string;
+  state: MaintenanceState;
+  worst_schedule_id: string | null;
+  next_due_km: number | null;
+  next_due_on: string | null;
+  due_count: number;
+  overdue_count: number;
+  last_notified_state: MaintenanceState | null;
+  last_notified_at: string | null;
+  computed_at: string;
+}
+
+export interface Expense {
+  id: string;
+  owner_user_id: string | null;
+  owner_org_id: string | null;
+  vehicle_id: string | null;
+  trip_id: string | null;
+  category: ExpenseCategory;
+  amount_yer: number;
+  incurred_on: string;
+  description: string | null;
+  source: ExpenseSource;
+  source_id: string | null;
+  /** Filled by the Phase 10 ledger when the source row is deleted. */
+  reversal_entry_id: string | null;
+  recorded_by: string | null;
+  created_at: string;
+  deleted_at: string | null;
+  deleted_by: string | null;
+  delete_reason: string | null;
+}
+
+export interface FleetSettings {
+  id: string;
+  owner_user_id: string | null;
+  owner_org_id: string | null;
+  remind_km: number;
+  remind_days: number;
+  block_overdue_assignment: boolean;
+  fuel_anomaly_percent: number;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Trip {
+  id: string;
+  code: string;
+  owner_user_id: string | null;
+  owner_org_id: string | null;
+  vehicle_id: string;
+  driver_id: string | null;
+  origin_governorate_id: string;
+  destination_governorate_id: string;
+  departure_at: string;
+  departure_date: string | null;
+  arrive_estimate_minutes: number;
+  seats_total: number;
+  seats_available: number;
+  booking_mode: TripBookingMode;
+  pricing_mode: TripPricingMode;
+  price_per_seat_yer: number | null;
+  whole_trip_price_yer: number | null;
+  discount_kind: TripDiscountKind;
+  discount_value: number;
+  discount_scope: TripDiscountScope;
+  gender_policy: TripGenderPolicy;
+  payment_policy: TripPaymentPolicy;
+  luggage_allowance_kg: number | null;
+  policies: Json;
+  notes: string | null;
+  status: TripStatus;
+  verification_status: VerificationStatus;
+  verified_by: string | null;
+  verified_at: string | null;
+  verification_note: string | null;
+  published_at: string | null;
+  featured_until: string | null;
+  cancelled_at: string | null;
+  cancelled_by: string | null;
+  cancel_reason: string | null;
+  completed_at: string | null;
+  /** Set by `cmd_start_trip`; a trip cannot be `in_progress` without it. */
+  started_at: string | null;
+  /** The highest stop the driver has announced reaching (`cmd_mark_stop_reached`). */
+  last_stop_seq: number | null;
+  /** Newest position report (monotonic). Staleness is `now() - last_ping_at > 21 min`. */
+  last_ping_at: string | null;
+  /** The 24-hex code a checkpoint scans (`get_trip_for_staff`). Issued on verification. */
+  qr_token: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TripStop {
+  id: string;
+  trip_id: string;
+  seq: number;
+  place_id: string | null;
+  governorate_id: string | null;
+  name_ar: string | null;
+  name_en: string | null;
+  arrive_offset_minutes: number;
+  price_from_origin_yer: number | null;
+  created_at: string;
+}
+
+export type PingSource = 'app' | 'background' | 'web' | 'manual';
+
+export interface TripLocationPing {
+  id: string;
+  trip_id: string;
+  driver_id: string | null;
+  recorded_at: string;
+  latitude: number;
+  longitude: number;
+  accuracy_m: number | null;
+  speed_kmh: number | null;
+  source: PingSource;
+  created_at: string;
+}
+
+export interface TripProgress {
+  trip_id: string;
+  last_ping_at: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  accuracy_m: number | null;
+  nearest_stop_seq: number | null;
+  distance_to_next_km: number | null;
+  distance_remaining_km: number | null;
+  total_distance_km: number | null;
+  progress_pct: number | null;
+  speed_kmh: number | null;
+  eta_next_seconds: number | null;
+  eta_destination_seconds: number | null;
+  updated_at: string;
+}
+
+export interface TripScanLog {
+  id: number;
+  trip_id: string | null;
+  token: string | null;
+  actor_id: string | null;
+  allowed: boolean;
+  reason: string | null;
+  created_at: string;
+}
+
+export interface TripRouteGeometry {
+  trip_id: string;
+  provider: string;
+  polyline: Json;
+  distance_km: number;
+  computed_at: string;
+}
+
+export interface TripEvent {
+  id: number;
+  trip_id: string;
+  kind: TripEventKind;
+  actor_id: string | null;
+  detail: Json;
+  created_at: string;
+}
+
+export interface TripVerification {
+  id: string;
+  trip_id: string;
+  submitted_by: string | null;
+  submitted_at: string;
+  snapshot: Json;
+  outcome: unknown /* USER-DEFINED verification_outcome */ | null;
+  decided_by: string | null;
+  decided_at: string | null;
+  note: string | null;
+}
+
+export interface TripSearchRow {
+  trip_id: string;
+  owner_user_id: string | null;
+  owner_org_id: string | null;
+  status: TripStatus;
+  verification_status: VerificationStatus;
+  is_public: boolean;
+  departure_at: string;
+  departure_date: string;
+  seats_available: number;
+  seats_total: number;
+  price_from_yer: number;
+  price_per_seat_yer: number | null;
+  discount_kind: TripDiscountKind;
+  discount_value: number;
+  booking_mode: TripBookingMode;
+  pricing_mode: TripPricingMode;
+  origin_governorate_id: string;
+  destination_governorate_id: string;
+  stop_governorate_ids: string[];
+  stop_place_ids: string[];
+  stop_count: number;
+  gender_policy: TripGenderPolicy;
+  payment_policy: TripPaymentPolicy;
+  operator_name_ar: string | null;
+  operator_name_en: string | null;
+  vehicle_label: string | null;
+  featured_until: string | null;
+  is_featured: boolean;
+  search_text: string;
+  updated_at: string;
+}
+
+export interface SearchCacheRow {
+  key: string;
+  payload: Json;
+  expires_at: string;
+}
+
+export interface Booking {
+  id: string;
+  code: string;
+  trip_id: string;
+  passenger_id: string;
+  booked_by: string;
+  status: BookingStatus;
+  seats: number;
+  origin_stop_id: string | null;
+  destination_stop_id: string | null;
+  destination_seq: number | null;
+  currency: string;
+  unit_price_yer: number;
+  subtotal_yer: number;
+  discount_yer: number;
+  total_yer: number;
+  refund_yer: number;
+  payment_status: BookingPaymentStatus;
+  contact_name: string;
+  contact_phone: string;
+  passenger_gender: 'male' | 'female' | null;
+  note: string | null;
+  hold_expires_at: string | null;
+  accepted_at: string | null;
+  decided_by: string | null;
+  reject_reason: string | null;
+  cancelled_at: string | null;
+  cancelled_by: string | null;
+  cancel_reason: string | null;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PassengerDocument {
+  id: string;
+  booking_id: string;
+  id_type: IdDocumentType;
+  id_number: string;
+  birth_place: string | null;
+  birth_date: string | null;
+  photo_path: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DocumentAccessLog {
+  id: number;
+  booking_id: string;
+  actor_id: string | null;
+  kind: DocumentAccessKind;
+  ip: string | null;
+  user_agent: string | null;
+  created_at: string;
+}
+
+export interface BookingEvent {
+  id: number;
+  booking_id: string;
+  kind: BookingEventKind;
+  actor_id: string | null;
+  detail: Json;
+  created_at: string;
+}
+
+export interface BookingShareToken {
+  id: string;
+  booking_id: string;
+  token: string;
+  created_by: string;
+  expires_at: string;
+  revoked_at: string | null;
+  view_count: number;
+  last_viewed_at: string | null;
+  created_at: string;
 }
 
 export interface Database {
@@ -545,6 +986,162 @@ export interface Database {
         };
         Update: Partial<OdometerReading>;
       };
+      fuel_logs: {
+        Row: FuelLog;
+        Insert: Partial<FuelLog> & {
+          vehicle_id: string;
+          odometer_km: number;
+          litres: number;
+          price_per_litre_yer: number;
+        };
+        Update: Partial<FuelLog>;
+      };
+      maintenance_schedules: {
+        Row: MaintenanceSchedule;
+        Insert: Partial<MaintenanceSchedule> & {
+          vehicle_id: string;
+          kind: MaintenanceKind;
+        };
+        Update: Partial<MaintenanceSchedule>;
+      };
+      maintenance_records: {
+        Row: MaintenanceRecord;
+        Insert: Partial<MaintenanceRecord> & {
+          vehicle_id: string;
+          kind: MaintenanceKind;
+        };
+        Update: Partial<MaintenanceRecord>;
+      };
+      vehicle_maintenance_status: {
+        Row: VehicleMaintenanceStatus;
+        Insert: Partial<VehicleMaintenanceStatus> & { vehicle_id: string };
+        Update: Partial<VehicleMaintenanceStatus>;
+      };
+      expenses: {
+        Row: Expense;
+        Insert: Partial<Expense> & {
+          category: ExpenseCategory;
+          amount_yer: number;
+          incurred_on: string;
+        };
+        Update: Partial<Expense>;
+      };
+      fleet_settings: {
+        Row: FleetSettings;
+        Insert: Partial<FleetSettings>;
+        Update: Partial<FleetSettings>;
+      };
+      trips: {
+        Row: Trip;
+        Insert: Partial<Trip> & {
+          vehicle_id: string;
+          origin_governorate_id: string;
+          destination_governorate_id: string;
+          departure_at: string;
+        };
+        Update: Partial<Trip>;
+      };
+      trip_stops: {
+        Row: TripStop;
+        Insert: Partial<TripStop> & { trip_id: string; seq: number };
+        Update: Partial<TripStop>;
+      };
+      trip_events: {
+        Row: TripEvent;
+        Insert: Partial<TripEvent> & { trip_id: string; kind: TripEventKind };
+        Update: Partial<TripEvent>;
+      };
+      trip_location_pings: {
+        Row: TripLocationPing;
+        Insert: Partial<TripLocationPing> & {
+          trip_id: string;
+          recorded_at: string;
+          latitude: number;
+          longitude: number;
+        };
+        Update: Partial<TripLocationPing>;
+      };
+      trip_progress: {
+        Row: TripProgress;
+        Insert: Partial<TripProgress> & { trip_id: string };
+        Update: Partial<TripProgress>;
+      };
+      trip_scan_log: {
+        Row: TripScanLog;
+        Insert: Partial<TripScanLog> & { allowed: boolean };
+        Update: Partial<TripScanLog>;
+      };
+      trip_route_geometry: {
+        Row: TripRouteGeometry;
+        Insert: Partial<TripRouteGeometry> & {
+          trip_id: string;
+          provider: string;
+          polyline: Json;
+          distance_km: number;
+        };
+        Update: Partial<TripRouteGeometry>;
+      };
+      bookings: {
+        Row: Booking;
+        Insert: Partial<Booking> & {
+          trip_id: string;
+          passenger_id: string;
+          booked_by: string;
+          unit_price_yer: number;
+          subtotal_yer: number;
+          total_yer: number;
+          contact_name: string;
+          contact_phone: string;
+        };
+        Update: Partial<Booking>;
+      };
+      passenger_documents: {
+        Row: PassengerDocument;
+        Insert: Partial<PassengerDocument> & {
+          booking_id: string;
+          id_type: IdDocumentType;
+          id_number: string;
+        };
+        Update: Partial<PassengerDocument>;
+      };
+      document_access_log: {
+        Row: DocumentAccessLog;
+        Insert: Partial<DocumentAccessLog> & {
+          booking_id: string;
+          kind: DocumentAccessKind;
+        };
+        Update: Partial<DocumentAccessLog>;
+      };
+      booking_events: {
+        Row: BookingEvent;
+        Insert: Partial<BookingEvent> & { booking_id: string; kind: BookingEventKind };
+        Update: Partial<BookingEvent>;
+      };
+      booking_share_tokens: {
+        Row: BookingShareToken;
+        Insert: Partial<BookingShareToken> & {
+          booking_id: string;
+          token: string;
+          created_by: string;
+          expires_at: string;
+        };
+        Update: Partial<BookingShareToken>;
+      };
+      trip_verifications: {
+        Row: TripVerification;
+        Insert: Partial<TripVerification> & { trip_id: string };
+        Update: Partial<TripVerification>;
+      };
+      trips_search: {
+        Row: TripSearchRow;
+        Insert: Partial<TripSearchRow> & { trip_id: string };
+        Update: Partial<TripSearchRow>;
+      };
+      search_cache: {
+        Row: SearchCacheRow;
+        Insert: Partial<SearchCacheRow> & { key: string; payload: Json };
+        Update: Partial<SearchCacheRow>;
+      };
       region_governorates: {
         Row: RegionGovernorate;
         Insert: RegionGovernorate;
@@ -571,7 +1168,75 @@ export interface Database {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    /**
+     * The three trip RPCs. They are `security definer` functions granted to `anon` (the marketplace) and
+     * to `authenticated` (the review queue), so they are part of the API surface the web reads — typed
+     * here rather than cast away at every call site.
+     */
+    Functions: {
+      get_trip_progress: {
+        Args: { p_code: string };
+        Returns: Json;
+      };
+      staff_scan: {
+        Args: { p_token: string };
+        Returns: Json;
+      };
+      staff_summary: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
+      staff_manifest: {
+        Args: { p_trip_id: string };
+        Returns: Json;
+      };
+      search_public_trips: {
+        Args: {
+          p_locale: string;
+          p_filters: Json;
+          p_sort: string;
+          p_cursor: string | null;
+          p_limit: number;
+        };
+        Returns: Json;
+      };
+      get_trip_public: {
+        Args: { p_code: string; p_locale: string };
+        Returns: Json;
+      };
+      staff_search_trips: {
+        Args: { p_actor: string; p_filters: Json; p_limit: number };
+        Returns: Json;
+      };
+      vehicle_health: {
+        Args: { p_vehicle_id: string };
+        Returns: Json;
+      };
+      fleet_summary: {
+        Args: { p_org_id?: string | null };
+        Returns: Json;
+      };
+      cmd_log_fuel: {
+        Args: {
+          p_actor: string;
+          p_vehicle_id: string;
+          p_log: Json;
+          p_request_id?: string | null;
+          p_ip?: string | null;
+        };
+        Returns: Json;
+      };
+      cmd_record_manual_odometer: {
+        Args: {
+          p_actor: string;
+          p_vehicle_id: string;
+          p_reading: Json;
+          p_request_id?: string | null;
+          p_ip?: string | null;
+        };
+        Returns: Json;
+      };
+    };
     Enums: {
       verification_status: VerificationStatus;
       platform_role: PlatformRole;
@@ -584,6 +1249,18 @@ export interface Database {
       verification_outcome: VerificationOutcome;
       notification_kind: NotificationKind;
       region_kind: RegionKind;
+      trip_status: TripStatus;
+      trip_event_kind: TripEventKind;
+      trip_booking_mode: TripBookingMode;
+      trip_pricing_mode: TripPricingMode;
+      trip_discount_kind: TripDiscountKind;
+      trip_discount_scope: TripDiscountScope;
+      trip_gender_policy: TripGenderPolicy;
+      trip_payment_policy: TripPaymentPolicy;
+      maintenance_kind: MaintenanceKind;
+      maintenance_state: MaintenanceState;
+      expense_category: ExpenseCategory;
+      expense_source: ExpenseSource;
     };
   };
 }

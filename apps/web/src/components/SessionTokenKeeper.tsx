@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { forgetSessionToken, rememberSessionToken } from '@/lib/session-token';
 
 /**
  * Keeps `?st=` (the cookie-less session token) on internal navigations.
@@ -19,6 +20,9 @@ import { useEffect } from 'react';
 export function SessionTokenKeeper() {
   useEffect(() => {
     const token = new URLSearchParams(window.location.search).get('st');
+    // Keep a copy for this tab before anything else: `lib/api.ts` reads it on every write, and the
+    // address bar is the only place the token exists until somebody navigates away from this URL.
+    if (token) rememberSessionToken(token);
     if (!token) return;
 
     const withToken = (raw: string | null): string | null => {
@@ -53,6 +57,9 @@ export function SessionTokenKeeper() {
     const onSubmit = (event: SubmitEvent) => {
       const form = event.target;
       if (!(form instanceof HTMLFormElement) || event.defaultPrevented) return;
+      // Signing out must forget the stored copy too, or the tab stays signed in for writes after the
+      // POST has cleared the cookie — the mirror image of the bug this whole mechanism exists for.
+      if ((form.getAttribute('action') ?? '').includes('/api/auth/sign-out')) forgetSessionToken();
       const next = withToken(form.getAttribute('action') ?? window.location.pathname);
       if (!next) return;
       // Set at submit time, after hydration — never during render.

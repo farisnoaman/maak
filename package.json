@@ -27,8 +27,9 @@
     "geo:import": "node scripts/geo/import-districts.mjs",
     "test:coverage": "npm --workspace @maak/core run test:coverage",
     "check:a11y": "node scripts/check-a11y.mjs",
+    "check:responsive": "node scripts/check-responsive.mjs",
     "sql:check": "node scripts/sql-check.mjs",
-    "check:all": "npm run check:guards && npm run lint && npm run format:check && npm run typecheck && npm test && npm run test:coverage && npm run db:types:check && npm run check:functions && npm run sql:check",
+    "check:all": "npm run check:guards && npm run check:responsive && npm run lint && npm run format:check && npm run typecheck && npm test && npm run test:coverage && npm run db:types:check && npm run check:functions && npm run sql:check",
     "ci:install": "node scripts/install-ci.mjs"
   },
   "devDependencies": {

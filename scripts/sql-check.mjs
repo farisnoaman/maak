@@ -125,7 +125,12 @@ async function main() {
           pass(`${file}: ${ran} assertions`);
         }
       } catch (error) {
-        fail(`${file}: ${error.message}`);
+        // `position` is the character offset into the multi-statement string, so it maps back to the
+        // line of the test file that failed — without it a 900-line suite says only "syntax error".
+        const position = Number(error.position);
+        const line = Number.isFinite(position) ? sql.slice(0, position).split('\n').length : null;
+        const detail = error.detail ? ` [${error.detail}]` : '';
+        fail(`${file}: ${error.message}${detail}${line === null ? '' : ` (line ${line})`}`);
         // The file opens a transaction; an error leaves it aborted, which would poison everything
         // that follows (including the type check).
         await client.query('rollback').catch(() => {});
@@ -175,11 +180,15 @@ async function main() {
  * reimplementing the Supabase type generator.
  */
 async function checkTypes(client) {
+  // Partitions are excluded: `trip_location_pings_202611` and `_default` are storage for one logical
+  // table, and a monthly cron would otherwise turn into a weekly types edit.
   const { rows } = await client.query(`
-    select table_name, column_name
-    from information_schema.columns
-    where table_schema = 'public'
-    order by table_name, ordinal_position
+    select c.table_name, c.column_name
+    from information_schema.columns c
+    join pg_class k on k.relname = c.table_name and k.relnamespace = 'public'::regnamespace
+    where c.table_schema = 'public'
+      and not k.relispartition
+    order by c.table_name, c.ordinal_position
   `);
 
   const live = new Map();

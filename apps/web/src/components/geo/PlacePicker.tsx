@@ -1,5 +1,6 @@
 'use client';
 
+import { sessionHeaders } from '@/lib/session-token';
 import { useEffect, useMemo, useState } from 'react';
 import {
   EMPTY_SELECTION,
@@ -112,11 +113,12 @@ export function PlacePicker({
     setSearching(true);
     const timer = setTimeout(() => {
       void (async () => {
-        // Same-origin proxy: the session cookie travels automatically, and the token never reaches
-        // this bundle (see app/api/data/[...path]/route.ts).
+        // Same-origin proxy (see app/api/data/[...path]/route.ts). The cookie travels by itself when
+        // the browser keeps one; in a cookie-less preview the session token has to be attached by
+        // hand, exactly as `lib/api.ts` does for every gateway call.
         const response = await fetch('/api/data/rest/v1/rpc/search_places', {
           method: 'POST',
-          headers: { 'content-type': 'application/json' },
+          headers: { 'content-type': 'application/json', ...sessionHeaders() },
           body: JSON.stringify({
             p_query: query,
             p_locale: locale,

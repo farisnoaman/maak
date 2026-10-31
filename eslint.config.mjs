@@ -42,6 +42,22 @@ export default tseslint.config(
   },
 
   {
+    // The service worker is not a module in a page: it has no `window` and does have `self`. Browsers run
+    // it in a worker scope, so the rules that guess a browser environment are wrong here.
+    files: ['apps/web/public/**/*.js'],
+    languageOptions: {
+      globals: {
+        self: 'readonly',
+        fetch: 'readonly',
+        Response: 'readonly',
+        caches: 'readonly',
+        clients: 'readonly',
+      },
+    },
+    rules: { 'no-undef': 'off' },
+  },
+
+  {
     // Edge functions run on Deno: globals and npm: specifiers are legitimate there.
     files: ['supabase/functions/**/*.ts'],
     rules: {
@@ -67,6 +83,8 @@ export default tseslint.config(
         Request: 'readonly',
         Response: 'readonly',
         setTimeout: 'readonly',
+        setInterval: 'readonly',
+        clearInterval: 'readonly',
       },
     },
     rules: {

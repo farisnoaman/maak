@@ -12,6 +12,7 @@
 --   8. one driver per vehicle: assigning a second closes the first in the same transaction
 --   9. a driver sees exactly the vehicle assigned to them, and nothing else
 --  10. clients cannot call any cmd_* directly (write lockdown), and photos must live under the vehicle
+--  11. two organizations cannot see each other's vehicles, photos or documents
 --
 -- Run with: supabase test db   (requires Docker)
 
@@ -19,7 +20,7 @@ begin;
 
 create extension if not exists pgtap;
 
-select plan(64);
+select plan(72);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -769,6 +770,114 @@ select ok(
   exists (select 1 from storage.buckets where id = 'vehicle-documents' and not public),
   'documents live in a private bucket'
 );
+
+-- ---------------------------------------------------------------------------
+-- 11. Organization isolation: org A cannot read org B's vehicles
+--
+-- The vehicle above belongs to a *person*. This section gives two verified companies one vehicle
+-- each and asks the policy the only question that matters for a multi-tenant fleet: can a member of
+-- one company read another company's vehicle, its photos or its documents?
+-- ---------------------------------------------------------------------------
+
+insert into public.organizations (id, name, owner_id, verification_status, plan)
+values
+  ('cccc00a0-0000-4000-8000-cccccccccccc', 'Org A', 'cccc0003-3333-4333-8333-cccccccccccc', 'verified', 'basic'),
+  ('cccc00b0-0000-4000-8000-cccccccccccc', 'Org B', 'cccc0006-6666-4666-8666-cccccccccccc', 'verified', 'basic');
+
+insert into public.organization_members (org_id, user_id, role, status, joined_at)
+values
+  ('cccc00a0-0000-4000-8000-cccccccccccc', 'cccc0003-3333-4333-8333-cccccccccccc', 'owner', 'active', now()),
+  ('cccc00b0-0000-4000-8000-cccccccccccc', 'cccc0006-6666-4666-8666-cccccccccccc', 'owner', 'active', now());
+
+select throws_ok(
+  $$ select public.cmd_create_vehicle(
+       'cccc0003-3333-4333-8333-cccccccccccc', 'cccc00b0-0000-4000-8000-cccccccccccc',
+       pg_temp.vehicle('88888-ج'), null, null
+     ) $$,
+  '42501',
+  null,
+  'an owner of org A cannot add a vehicle to org B — membership is checked, not assumed'
+);
+
+create temp table created_b as
+select public.cmd_create_vehicle(
+  'cccc0006-6666-4666-8666-cccccccccccc',
+  'cccc00b0-0000-4000-8000-cccccccccccc',
+  pg_temp.vehicle('99999-ب'),
+  'test-request-org-b',
+  null
+) as result;
+
+select is(
+  (
+    select v.owner_org_id::text from public.vehicles v
+    where v.id = ((select result from created_b) -> 'vehicle' ->> 'id')::uuid
+  ),
+  'cccc00b0-0000-4000-8000-cccccccccccc',
+  'the org B vehicle is owned by org B, not by the person who typed it in'
+);
+
+-- Org A's owner: a member of A, the owner of the personal vehicle above, and a stranger to B.
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"cccc0003-3333-4333-8333-cccccccccccc","role":"authenticated"}';
+
+select is(
+  (
+    select count(*)::int from public.vehicles
+    where owner_org_id = 'cccc00b0-0000-4000-8000-cccccccccccc'
+  ),
+  0,
+  'org A cannot read org B vehicles'
+);
+
+select is(
+  (
+    select count(*)::int
+    from public.vehicle_photos p
+    join public.vehicles v on v.id = p.vehicle_id
+    where v.owner_org_id = 'cccc00b0-0000-4000-8000-cccccccccccc'
+  ),
+  0,
+  'nor org B photos — a photo is as private as the vehicle it belongs to'
+);
+
+select is(
+  (
+    select count(*)::int
+    from public.vehicle_documents d
+    join public.vehicles v on v.id = d.vehicle_id
+    where v.owner_org_id = 'cccc00b0-0000-4000-8000-cccccccccccc'
+  ),
+  0,
+  'nor org B documents'
+);
+
+select is(
+  (select count(*)::int from public.vehicles),
+  1,
+  'org A sees exactly its own personal vehicle — not the two rows that exist'
+);
+
+set local request.jwt.claims = '{"sub":"cccc0006-6666-4666-8666-cccccccccccc","role":"authenticated"}';
+
+select is(
+  (
+    select count(*)::int from public.vehicles
+    where owner_org_id = 'cccc00b0-0000-4000-8000-cccccccccccc'
+  ),
+  1,
+  'and a member of org B does see it — the policy isolates, it does not blind everyone'
+);
+
+set local request.jwt.claims = '{"sub":"cccc0002-2222-4222-8222-cccccccccccc","role":"authenticated"}';
+
+select is(
+  (select count(*)::int from public.vehicles),
+  2,
+  'staff still read every organization, because reviewing is the job'
+);
+
+reset role;
 
 select * from finish();
 

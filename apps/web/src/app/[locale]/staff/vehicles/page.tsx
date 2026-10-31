@@ -6,6 +6,7 @@ import { ConsoleShell } from '@/components/ConsoleShell';
 import { EmptyState } from '@/components/ui/Feedback';
 import { StaffReview } from '@/components/fleet/StaffReview';
 import { loadAccountContext } from '@/lib/account';
+import { signedObjectUrl } from '@/lib/storage';
 import { loadFleet } from '@/lib/fleet';
 
 /** Staff-only: the vehicle and driver queues, with the documents inline. */
@@ -92,14 +93,21 @@ export default async function StaffVehiclesPage({
               inspectionExpiry: vehicle.inspectionExpiry,
               documents: documentsByVehicle.get(vehicle.id) ?? [],
             }))}
-            drivers={fleet.pendingDrivers.map((driver) => ({
-              id: driver.id,
-              fullName: driver.fullName,
-              phone: driver.phone,
-              licenceNo: driver.licenceNo,
-              licenceExpiry: driver.licenceExpiry,
-              status: driver.status,
-            }))}
+            drivers={await Promise.all(
+              fleet.pendingDrivers.map(async (driver) => ({
+                id: driver.id,
+                fullName: driver.fullName,
+                phone: driver.phone,
+                licenceNo: driver.licenceNo,
+                licenceExpiry: driver.licenceExpiry,
+                // Same pattern as vehicle documents, with a clock: storage RLS decides who may look, and
+                // the signature decides for how long.
+                licencePhotoUrl: driver.licencePhotoPath
+                  ? await signedObjectUrl('driver-documents', driver.licencePhotoPath)
+                  : null,
+                status: driver.status,
+              })),
+            )}
           />
         )}
       </ConsoleShell>

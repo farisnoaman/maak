@@ -78,6 +78,7 @@ export type Capability =
   | 'vehicle.verify'
   | 'driver.invite'
   | 'driver.accept'
+  | 'driver.setLicence'
   | 'driver.assign'
   | 'driver.verify'
   | 'entity.verify'
@@ -98,7 +99,15 @@ export type Capability =
   | 'refund.approve'
   | 'plan.subscribe'
   | 'plan.manage'
-  | 'commission.manage';
+  | 'commission.manage'
+  // Phase 8 — vehicle operations.
+  | 'fuel.log'
+  | 'odometer.record'
+  | 'maintenance.log'
+  | 'maintenance.schedule'
+  | 'maintenance.complete'
+  | 'maintenance.view'
+  | 'fleet.settings';
 
 interface Rule {
   readonly roles: readonly Role[];
@@ -187,6 +196,8 @@ const RULES: Record<Capability, Rule> = {
   // A personal driver is legitimate (an individual owner with one vehicle), so `individual` is in.
   'driver.invite': { roles: OPERATOR, verified: true, scoped: 'orgMember' },
   'driver.accept': { roles: AUTHENTICATED },
+  // Every account may be a driver, and the SQL command decides whose licence it may touch.
+  'driver.setLicence': { roles: AUTHENTICATED },
   'driver.assign': { roles: [...OPERATOR, ...STAFF], scoped: 'owner' },
   'driver.verify': { roles: [...STAFF] },
   'entity.verify': { roles: [...STAFF] },
@@ -224,6 +235,19 @@ const RULES: Record<Capability, Rule> = {
   'plan.subscribe': { roles: [...OPERATOR], verified: true, scoped: 'orgMember' },
   'plan.manage': { roles: ['platform_admin'] },
   'commission.manage': { roles: ['platform_admin'] },
+
+  // Phase 8 — vehicle operations. Logging fuel and work is the driver's job as much as the owner's
+  // (the person at the pump is usually the driver), so `driver` is in all three; the `cmd_*` re-derives
+  // which vehicle the actor may touch, which is the part policy cannot know here.
+  'fuel.log': { roles: ['driver', ...OPERATOR, ...STAFF] },
+  'odometer.record': { roles: ['driver', ...OPERATOR, ...STAFF] },
+  'maintenance.log': { roles: ['driver', ...OPERATOR, ...STAFF] },
+  // Setting the interval and closing it are the owner's decisions: a driver reporting that the oil
+  // was changed must not move the rule that decides when it is due again.
+  'maintenance.schedule': { roles: [...OPERATOR, ...STAFF], scoped: 'owner' },
+  'maintenance.complete': { roles: [...OPERATOR, ...STAFF], scoped: 'owner' },
+  'maintenance.view': { roles: ['driver', ...OPERATOR, ...STAFF] },
+  'fleet.settings': { roles: [...OPERATOR, ...STAFF], scoped: 'owner' },
 };
 
 export function can(actor: Actor, capability: Capability, resource: Resource = {}): boolean {
