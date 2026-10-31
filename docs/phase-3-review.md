@@ -263,6 +263,11 @@ the same authenticated proxy the vehicle documents use.
    through, rows are written and deleted with the files. This also unblocks the verification-document
    upload that Phase 1 shipped.
 
+Both are now pinned so they cannot come back quietly: `npm run check:guards` compares the edge
+function's capability map with the dev gateway's by name (removing one key reproduces the 403 and fails
+the gate), and `npm run dev:check -- --api` uploads, downloads, refuses a foreign folder and deletes an
+object against the running backend.
+
 **Verified end to end on the live stack** (as `new@maak.test`, bound to the seeded driver): upload `200`
 → `driver.setLicence` `200 { verificationStatus: "pending", reverificationRequired: true }` → the staff
 queue renders the licence link → the link downloads `200` for staff and for the company owner, and the

@@ -204,6 +204,57 @@ for (const file of await walk(join(root, 'apps', 'web', 'src'), (f) => /\.(tsx|t
   });
 }
 
+// --- 10. The dev gateway and the edge functions must agree on every action's capability -----------
+// The two gateways are intentionally separate (one runs on Deno, one on Node), and that is exactly how
+// `driver.setLicence` shipped into the edge function but not into the dev map: every call answered 403
+// FORBIDDEN locally while the SQL was correct. A missing key is invisible to types in one file and to
+// tests that talk to the other, so it is checked here, by name.
+const GATEWAY_MAP = {
+  fleet: 'FLEET_CAPABILITY',
+  geography: 'GEO_CAPABILITY',
+};
+const gatewaySource = await readFile(join(root, 'scripts', 'dev-backend', 'gateway.mjs'), 'utf8');
+
+function objectKeys(source, header) {
+  const start = source.indexOf(header);
+  if (start === -1) return null;
+  const open = source.indexOf('{', start);
+  const close = source.indexOf('\n};', open);
+  if (open === -1 || close === -1) return null;
+  const body = source.slice(open, close);
+  return new Set([...body.matchAll(/^\s*'([a-zA-Z.]+)':/gm)].map((match) => match[1]));
+}
+
+for (const [fn, mapName] of Object.entries(GATEWAY_MAP)) {
+  const edgePath = join(root, 'supabase', 'functions', fn, 'index.ts');
+  const edgeSource = await readFile(edgePath, 'utf8').catch(() => null);
+  if (!edgeSource) continue;
+
+  const edgeKeys = objectKeys(edgeSource, 'const CAPABILITY');
+  const gatewayKeys = objectKeys(gatewaySource, `const ${mapName} =`);
+  if (!edgeKeys || !gatewayKeys) {
+    failures.push(
+      `${fn}: could not read the capability map (${edgeKeys ? mapName : 'edge CAPABILITY'})`,
+    );
+    continue;
+  }
+
+  for (const key of edgeKeys) {
+    if (!gatewayKeys.has(key)) {
+      failures.push(
+        `scripts/dev-backend/gateway.mjs: ${mapName} is missing '${key}', which supabase/functions/${fn} accepts — every such call is 403 in development`,
+      );
+    }
+  }
+  for (const key of gatewayKeys) {
+    if (!edgeKeys.has(key)) {
+      failures.push(
+        `supabase/functions/${fn}/index.ts: CAPABILITY is missing '${key}', which the dev gateway routes`,
+      );
+    }
+  }
+}
+
 if (failures.length > 0) {
   console.error(`✗ ${failures.length} guard failure(s):\n`);
   for (const failure of failures) console.error(`  - ${failure}`);

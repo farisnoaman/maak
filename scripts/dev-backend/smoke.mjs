@@ -290,6 +290,61 @@ if (useApi) {
     forbidden.status === 403,
     `status ${forbidden.status}`,
   );
+
+  // ---------------------------------------------------------------------------
+  // Storage. This exists because uploads were broken for weeks without a single test noticing: the
+  // router consumed the request body and the upload handler tried to read the same stream again, so
+  // every upload answered 500 "request is not async iterable" and no `storage.objects` row was ever
+  // written. A command that refuses a path with no object behind it then looked like the bug.
+  // ---------------------------------------------------------------------------
+  const claims = (token) =>
+    JSON.parse(Buffer.from(token.split('.')[1] ?? '', 'base64url').toString('utf8'));
+  const ownerId = claims(owner).sub;
+
+  const put = async (bucket, name, token, bytes) => {
+    const response = await fetch(urlFor(`/storage/v1/object/${bucket}/${name}`), {
+      method: 'POST',
+      headers: {
+        'content-type': 'image/jpeg',
+        authorization: `Bearer ${token}`,
+      },
+      body: bytes,
+    });
+    return response.status;
+  };
+
+  const objectName = `${ownerId}/smoke-${Date.now()}.jpg`;
+  const bytes = Buffer.from([0xff, 0xd8, 0xff, 0xd9]);
+
+  check('an upload succeeds', (await put('driver-documents', objectName, owner, bytes)) === 200);
+
+  const downloaded = await fetch(
+    urlFor(`/storage/v1/object/authenticated/driver-documents/${objectName}`),
+    { headers: { authorization: `Bearer ${owner}` } },
+  );
+  check(
+    'and the object comes back byte for byte',
+    downloaded.status === 200 && (await downloaded.arrayBuffer()).byteLength === bytes.length,
+    `status ${downloaded.status}`,
+  );
+
+  check(
+    "a driver cannot write into another account's folder",
+    (await put('driver-documents', `11111111-1111-4111-8111-111111111111/x.jpg`, owner, bytes)) ===
+      403,
+  );
+
+  const removed = await fetch(urlFor(`/storage/v1/object/driver-documents/${objectName}`), {
+    method: 'DELETE',
+    headers: { authorization: `Bearer ${owner}` },
+  });
+  check('a delete succeeds', removed.status === 200);
+
+  const afterDelete = await fetch(
+    urlFor(`/storage/v1/object/authenticated/driver-documents/${objectName}`),
+    { headers: { authorization: `Bearer ${owner}` } },
+  );
+  check('and the object is gone', afterDelete.status === 400, `status ${afterDelete.status}`);
 }
 
 const write = await call('/rest/v1/governorates', { method: 'POST', body: {} });
