@@ -60,6 +60,7 @@ export const ar = {
   'calc.note': 'هذه معاينة فقط؛ السعر النهائي يُحتسب ويُتحقق منه على الخادم.',
 
   'nav.home': 'الرئيسية',
+  'nav.menu': 'القائمة',
   'nav.trips': 'الرحلات',
   'nav.styleguide': 'دليل المكوّنات',
   'nav.signIn': 'تسجيل الدخول',
@@ -751,6 +752,7 @@ export const en: Record<TranslationKey, string> = {
   'calc.note': 'Preview only — the final price is recomputed and verified on the server.',
 
   'nav.home': 'Home',
+  'nav.menu': 'Menu',
   'nav.trips': 'Trips',
   'nav.styleguide': 'Component guide',
   'nav.signIn': 'Sign in',

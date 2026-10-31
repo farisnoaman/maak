@@ -211,49 +211,51 @@ export function TeamPanel({
     <div className="card console-panel">
       <h2 style={{ fontSize: '1.05rem' }}>{t('org.members')}</h2>
 
-      <table className="data-table">
-        <caption className="visually-hidden">{t('org.members')}</caption>
-        <thead>
-          <tr>
-            <th scope="col">{t('org.inviteEmail')}</th>
-            <th scope="col">{t('org.role')}</th>
-            <th scope="col">{t('common.status')}</th>
-            <th scope="col">
-              <span className="visually-hidden">{t('org.remove')}</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {members.map((member) => (
-            <tr key={member.id}>
-              <td dir="ltr">{member.email ?? member.phone ?? member.userId ?? '—'}</td>
-              <td>
-                {t(ROLE_LABEL[member.role])}
-                {member.userId === actorId ? (
-                  <span className="form-hint"> · {t('org.you')}</span>
-                ) : null}
-              </td>
-              <td>
-                {member.status === 'invited' ? (
-                  <Badge tone="warning">{t('org.pending')}</Badge>
-                ) : member.status === 'removed' ? (
-                  <Badge tone="danger">{t('org.removed')}</Badge>
-                ) : (
-                  <Badge tone="success">{t('org.active')}</Badge>
-                )}
-              </td>
-              <td>
-                {member.status !== 'removed' &&
-                canRemoveMember(actorRole, member.role, member.userId === actorId) ? (
-                  <Button variant="ghost" size="sm" onClick={() => remove(member.id)}>
-                    {t('org.remove')}
-                  </Button>
-                ) : null}
-              </td>
+      <div className="table-scroll" tabIndex={0}>
+        <table className="data-table">
+          <caption className="visually-hidden">{t('org.members')}</caption>
+          <thead>
+            <tr>
+              <th scope="col">{t('org.inviteEmail')}</th>
+              <th scope="col">{t('org.role')}</th>
+              <th scope="col">{t('common.status')}</th>
+              <th scope="col">
+                <span className="visually-hidden">{t('org.remove')}</span>
+              </th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {members.map((member) => (
+              <tr key={member.id}>
+                <td dir="ltr">{member.email ?? member.phone ?? member.userId ?? '—'}</td>
+                <td>
+                  {t(ROLE_LABEL[member.role])}
+                  {member.userId === actorId ? (
+                    <span className="form-hint"> · {t('org.you')}</span>
+                  ) : null}
+                </td>
+                <td>
+                  {member.status === 'invited' ? (
+                    <Badge tone="warning">{t('org.pending')}</Badge>
+                  ) : member.status === 'removed' ? (
+                    <Badge tone="danger">{t('org.removed')}</Badge>
+                  ) : (
+                    <Badge tone="success">{t('org.active')}</Badge>
+                  )}
+                </td>
+                <td>
+                  {member.status !== 'removed' &&
+                  canRemoveMember(actorRole, member.role, member.userId === actorId) ? (
+                    <Button variant="ghost" size="sm" onClick={() => remove(member.id)}>
+                      {t('org.remove')}
+                    </Button>
+                  ) : null}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       {invitable.length > 0 ? (
         <fieldset className="invite-box">
