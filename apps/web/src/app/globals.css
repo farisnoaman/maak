@@ -2980,3 +2980,117 @@ input[type='file']::file-selector-button {
   color: color-mix(in srgb, currentColor 72%, transparent);
   max-inline-size: 16rem;
 }
+
+/* ---------- the live trip screen (Phase 6.2) ---------- */
+
+.live-panel {
+  display: grid;
+  gap: var(--space-4);
+  margin-block-start: var(--space-5);
+  padding: var(--space-5);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-md);
+}
+
+.live-panel__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.live-panel__code {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-500);
+}
+
+.live-panel__now {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.live-panel__meta {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--ink-500);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A native progress element would be styled differently by every browser; this is a bar the page can
+   label properly (`role="progressbar"` with the percentage as its value). */
+.live-bar {
+  block-size: 0.7rem;
+  border-radius: 999px;
+  background: var(--surface-sunken);
+  overflow: hidden;
+}
+
+.live-bar__fill {
+  display: block;
+  block-size: 100%;
+  background: var(--brand-500);
+  /* `inline-size`, not `width`: the bar grows towards the end of the line, whichever direction that is. */
+  transition: inline-size 600ms ease;
+}
+
+/* ---------- the driver's console (Phase 6.2) ---------- */
+
+.trip-run {
+  display: grid;
+  gap: var(--space-4);
+  margin-block-start: var(--space-5);
+  padding: var(--space-5);
+}
+
+.trip-run h2 {
+  font-size: 1.05rem;
+  margin-block-end: var(--space-2);
+}
+
+.trip-run h3 {
+  font-size: 0.95rem;
+  margin-block: var(--space-4) var(--space-2);
+}
+
+.trip-timeline li.is-reached .trip-timeline__marker {
+  background: var(--state-success, #1c7a4d);
+}
+
+.trip-timeline li.is-reached .trip-timeline__name {
+  color: var(--ink-500);
+}
+
+/* ---------- the driver's trip list ---------- */
+
+.card-list {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card-list .card {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+.card__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-bar__fill {
+    transition: none;
+  }
+}

@@ -44,6 +44,7 @@ const CAPABILITY: Record<TripsAction['action'], Capability> = {
   'trip.start': 'trip.start',
   'trip.stopReached': 'trip.start',
   'trip.end': 'trip.start',
+  'trip.recordPing': 'trip.start',
 };
 
 export default defineCommand({ schema }, async (ctx) => {

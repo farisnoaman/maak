@@ -16,7 +16,7 @@ import { resolveRequest } from './lib/origin';
  * Next 16 file convention: `proxy.ts` (formerly `middleware.ts`).
  */
 
-const PROTECTED_PREFIXES = ['/account', '/operator', '/staff', '/admin', '/finance'];
+const PROTECTED_PREFIXES = ['/account', '/operator', '/staff', '/admin', '/finance', '/driver'];
 
 export default async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;

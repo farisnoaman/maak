@@ -17,6 +17,7 @@ export * from './domain/identity';
 export * from './domain/geo';
 export * from './domain/trip';
 export * from './domain/booking';
+export * from './domain/tracking';
 
 export * from './api/errors';
 export * from './api/gateway';

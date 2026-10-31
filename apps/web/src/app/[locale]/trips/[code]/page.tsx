@@ -251,6 +251,9 @@ export default async function PublicTripPage({
               )}
               <div className="trip-form__actions">
                 <ShareTrip locale={locale} url={`/${locale}/trips/${trip.code}`} />
+                <Link className="btn btn--ghost" href={`/${locale}/trips/${trip.code}/live`}>
+                  {t('live.open')}
+                </Link>
                 <Link className="btn btn--ghost" href={`/${locale}/trips`}>
                   {t('trips.search.title')}
                 </Link>

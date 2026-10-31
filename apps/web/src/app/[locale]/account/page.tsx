@@ -97,6 +97,11 @@ export default async function AccountPage({
             <Link className="ui-btn ui-btn--ghost ui-btn--md" href={`/${locale}/account/licence`}>
               {t('fleet.accountLicence')}
             </Link>
+            {/* The driver's console lives at `/driver`, which is a different audience from this page —
+                but a driver who is never shown the door will drive without logging the trip. */}
+            <Link className="ui-btn ui-btn--ghost ui-btn--md" href={`/${locale}/driver`}>
+              {t('driver.title')}
+            </Link>
             <Link
               className="ui-btn ui-btn--ghost ui-btn--md"
               href={`/${locale}/staff/verifications`}

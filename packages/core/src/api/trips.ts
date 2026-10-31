@@ -221,6 +221,24 @@ export const endTripSchema = z.object({
   odoKm: z.number().int().min(0).max(3_000_000),
 });
 
+/**
+ * Phase 6 — one position report from the road.
+ *
+ * `recordedAt` is the *phone's* clock, and it is optional because the common case is "now". It matters
+ * when a queue flushes: an hour of driving should not all be stamped at the moment the tunnel ended.
+ * The database clamps it into `[started_at, now()]`, so a wrong clock costs a bad point, not a bad trip.
+ */
+export const recordPingSchema = z.object({
+  action: z.literal('trip.recordPing'),
+  tripId: uuid,
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
+  accuracyM: z.number().min(0).max(100_000).nullish(),
+  speedKmh: z.number().min(0).max(250).nullish(),
+  recordedAt: timestamp.nullish(),
+  source: z.enum(['app', 'background', 'web', 'manual']).default('app'),
+});
+
 export const tripsActionSchema = z.discriminatedUnion('action', [
   createTripSchema,
   updateTripSchema,
@@ -232,6 +250,7 @@ export const tripsActionSchema = z.discriminatedUnion('action', [
   startTripSchema,
   markStopReachedSchema,
   endTripSchema,
+  recordPingSchema,
 ]);
 
 export type TripsAction = z.infer<typeof tripsActionSchema>;
@@ -251,6 +270,7 @@ export function tripsScope(input: TripsAction) {
     case 'trip.start':
     case 'trip.stopReached':
     case 'trip.end':
+    case 'trip.recordPing':
       return { isAssignedDriver: true, isOwner: true, isOrgMember: true };
     default:
       return { isOwner: true, isOrgMember: true };
@@ -273,6 +293,8 @@ export const tripsResultSchema = z
     distanceKm: z.number().optional(),
     flagged: z.boolean().optional(),
     alreadyReached: z.boolean().optional(),
+    recordedAt: z.string().optional(),
+    progress: z.record(z.string(), z.unknown()).optional(),
     reverificationRequired: z.boolean().optional(),
     tripId: uuid.optional(),
     verificationStatus: z.string().optional(),
@@ -367,6 +389,21 @@ export function tripsCommandArgs(
       return {
         fn: 'cmd_end_trip',
         args: { p_actor: actorId, p_trip_id: action.tripId, p_odo_km: action.odoKm, ...audit },
+      };
+    case 'trip.recordPing':
+      return {
+        fn: 'cmd_record_ping',
+        args: {
+          p_actor: actorId,
+          p_trip_id: action.tripId,
+          p_lat: action.lat,
+          p_lng: action.lng,
+          p_recorded_at: action.recordedAt ?? null,
+          p_accuracy_m: action.accuracyM ?? null,
+          p_speed_kmh: action.speedKmh ?? null,
+          p_source: action.source,
+          ...audit,
+        },
       };
   }
 }

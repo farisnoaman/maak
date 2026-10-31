@@ -422,15 +422,41 @@ async function seedDemoTrip(client, log = () => {}) {
   );
   const tripId = created.rows[0].result.trip.id;
 
+  // The stops are gazetteer places, not free text, so the demo trip has coordinates: without them the
+  // live screen can say which stop is next but never how far away it is, and Phase 6's distance story
+  // would be invisible in every demo. The ids are looked up by name rather than hard-coded, because the
+  // geography seed owns them.
+  const { rows: cityRows } = await client.query(
+    `select id, name_ar from public.places
+      where name_ar = any($1::text[]) and lat is not null and lng is not null`,
+    [['عدن', 'تعز', 'صنعاء']],
+  );
+  const placeId = new Map(cityRows.map((row) => [row.name_ar, row.id]));
+
   await client.query(
     `select public.cmd_set_trip_stops($1::uuid, $2::uuid, $3::jsonb, 'dev-seed', null)`,
     [
       owner,
       tripId,
       JSON.stringify([
-        { nameAr: 'عدن', nameEn: 'Aden', arriveOffsetMinutes: 0 },
-        { nameAr: 'تعز', nameEn: 'Taiz', arriveOffsetMinutes: 240 },
-        { nameAr: 'صنعاء', nameEn: 'Sanaa', arriveOffsetMinutes: 480 },
+        {
+          placeId: placeId.get('عدن') ?? null,
+          nameAr: 'عدن',
+          nameEn: 'Aden',
+          arriveOffsetMinutes: 0,
+        },
+        {
+          placeId: placeId.get('تعز') ?? null,
+          nameAr: 'تعز',
+          nameEn: 'Taiz',
+          arriveOffsetMinutes: 240,
+        },
+        {
+          placeId: placeId.get('صنعاء') ?? null,
+          nameAr: 'صنعاء',
+          nameEn: 'Sanaa',
+          arriveOffsetMinutes: 480,
+        },
       ]),
     ],
   );

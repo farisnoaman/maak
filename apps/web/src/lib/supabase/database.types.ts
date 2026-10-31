@@ -1,5 +1,5 @@
-// migrations-sha256: f182ba7dbc2025bab40e095dd4b70cdee97525794efc9d01ae7b9466f03401af
-/* Generated from 20 migrations. Run `npm run db:types` after changing the schema. */
+// migrations-sha256: 8ac89e5a4ef9b60f521544d385612703cf95e60de159924f782a4d9d21cdaaeb
+/* Generated from 23 migrations. Run `npm run db:types` after changing the schema. */
 
 /**
  * Schema types for RLS-filtered reads (Phase 0 subset).
@@ -517,6 +517,8 @@ export interface Trip {
   started_at: string | null;
   /** The highest stop the driver has announced reaching (`cmd_mark_stop_reached`). */
   last_stop_seq: number | null;
+  /** Newest position report (monotonic). Staleness is `now() - last_ping_at > 21 min`. */
+  last_ping_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -532,6 +534,46 @@ export interface TripStop {
   arrive_offset_minutes: number;
   price_from_origin_yer: number | null;
   created_at: string;
+}
+
+export type PingSource = 'app' | 'background' | 'web' | 'manual';
+
+export interface TripLocationPing {
+  id: string;
+  trip_id: string;
+  driver_id: string | null;
+  recorded_at: string;
+  latitude: number;
+  longitude: number;
+  accuracy_m: number | null;
+  speed_kmh: number | null;
+  source: PingSource;
+  created_at: string;
+}
+
+export interface TripProgress {
+  trip_id: string;
+  last_ping_at: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  accuracy_m: number | null;
+  nearest_stop_seq: number | null;
+  distance_to_next_km: number | null;
+  distance_remaining_km: number | null;
+  total_distance_km: number | null;
+  progress_pct: number | null;
+  speed_kmh: number | null;
+  eta_next_seconds: number | null;
+  eta_destination_seconds: number | null;
+  updated_at: string;
+}
+
+export interface TripRouteGeometry {
+  trip_id: string;
+  provider: string;
+  polyline: Json;
+  distance_km: number;
+  computed_at: string;
 }
 
 export interface TripEvent {
@@ -807,6 +849,31 @@ export interface Database {
         Insert: Partial<TripEvent> & { trip_id: string; kind: TripEventKind };
         Update: Partial<TripEvent>;
       };
+      trip_location_pings: {
+        Row: TripLocationPing;
+        Insert: Partial<TripLocationPing> & {
+          trip_id: string;
+          recorded_at: string;
+          latitude: number;
+          longitude: number;
+        };
+        Update: Partial<TripLocationPing>;
+      };
+      trip_progress: {
+        Row: TripProgress;
+        Insert: Partial<TripProgress> & { trip_id: string };
+        Update: Partial<TripProgress>;
+      };
+      trip_route_geometry: {
+        Row: TripRouteGeometry;
+        Insert: Partial<TripRouteGeometry> & {
+          trip_id: string;
+          provider: string;
+          polyline: Json;
+          distance_km: number;
+        };
+        Update: Partial<TripRouteGeometry>;
+      };
       bookings: {
         Row: Booking;
         Insert: Partial<Booking> & {
@@ -900,6 +967,10 @@ export interface Database {
      * here rather than cast away at every call site.
      */
     Functions: {
+      get_trip_progress: {
+        Args: { p_code: string };
+        Returns: Json;
+      };
       search_public_trips: {
         Args: {
           p_locale: string;

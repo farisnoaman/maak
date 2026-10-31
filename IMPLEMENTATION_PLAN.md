@@ -382,9 +382,11 @@ not build the acceptance-criterion region and reference data that could never be
 
 **Goal:** the trip actually runs: verified-only start, odometer discipline, 10-minute location, meaningful progress.
 
-> **In progress.** Part one (start / stop-reached / end, odometer discipline, status machine) is
-> implemented and tested — see `docs/phase-6-report.md`. Pings, progress, realtime and the driver
-> console are the next slice.
+> **Mostly done.** Part one: start / stop-reached / end, odometer discipline, status machine. Part two:
+> pings (partitioned), derived progress with ETA, the driver's web console and the passenger's live
+> screen with polling and staleness. See `docs/phase-6-report.md`. What remains is listed at the end of
+> that report: the native background-location cadence, a routing provider, the realtime channel and
+> per-passenger check-in.
 
 ### Deliverables
 - Driver console (mobile): today's trips, start (blocked unless verified, BR-05), ODO + photo, running screen,
@@ -399,17 +401,23 @@ not build the acceptance-criterion region and reference data that could never be
 - Cron: auto `in_progress` at departure, auto-complete rules, stale-trip alerts.
 
 ### Tasks
-- [~] Migrations: odometer readings + richer `trip_events` + `trip_status.in_progress` done (`00021`, `00022`);
-      pings (partitioned), progress and route geometry remain.
-- [ ] `app.recompute_trip_progress`: nearest upcoming stop (KNN), polyline or haversine distance, ETA from rolling speed.
-- [ ] Routing provider at publish (cached; OSRM/ORS) + graceful fallback.
-- [~] Commands (edge fn + atomic `cmd_*` SQL): `start_trip`, `end_trip`, `mark_stop_reached` done; `record_trip_ping`,
-      `get_trip_progress`, `get_driver_trips_today`, `check_in_passenger`.
-- [ ] Realtime publication + private-channel policy + `useTripProgress()` hook in core.
-- [ ] Mobile: driver flow, `expo-task-manager` background location, queue, permission UX (iOS/Android), bilingual prompts.
-- [ ] Web passenger live page `/trips/[code]/live`, stale states, route map.
-- [~] pgTAP: start blocked when unverified/early/wrong driver, monotonic ODO, stop monotonicity, end-of-trip
-      finalisation — 30 assertions in `0009_trip_execution.test.sql`; ping visibility awaits the pings table.
+- [x] Migrations: odometer readings, `trip_events`, `trip_status.in_progress` (`00021`, `00022`); pings
+      (monthly partitions), `trip_progress`, `trip_route_geometry` and the driver's read policy (`00023`, `00024`).
+- [x] `app.recompute_trip_progress`: nearest upcoming stop, haversine chain, ETA from rolling speed with a
+      timetable fallback — `supabase/migrations/00023_trip_tracking.sql`.
+- [ ] Routing provider at publish (cached; OSRM/ORS) + graceful fallback — the straight-line fallback and the
+      `trip_route_geometry` seam exist; no provider is called yet.
+- [x] Commands (edge fn + atomic `cmd_*` SQL): `start_trip`, `end_trip`, `mark_stop_reached`, `record_ping`,
+      and the visibility-checked read `get_trip_progress`. (`check_in_passenger` and a dedicated
+      `get_driver_trips_today` are folded into the read policy + `/driver` for now; the former arrives with
+      the Phase 7 manifest.)
+- [x] Realtime: the private `trip:<id>` publication is added when the deployment has it (00023), and the live
+      screen polls every 30 s — the transport that exists in *both* environments is the one that ships.
+- [~] Mobile: the web driver console covers start / position / stop / end. `expo-task-manager` background
+      location, the offline queue and the iOS/Android permission UX are not built.
+- [x] Web passenger live page `/trips/[code]/live`, stale states, route strip.
+- [x] pgTAP: 30 assertions in `0009_trip_execution.test.sql` (start, ODO, stops, end) and 39 in
+      `0010_trip_tracking.test.sql` (pings, out-of-order timestamps, progress, staleness, visibility, grants).
 
 ### Acceptance criteria
 - Start 3 h early → `TOO_EARLY`; unverified trip → `TRIP_NOT_VERIFIED`; wrong driver → `FORBIDDEN` unless audited override.

@@ -180,11 +180,15 @@ async function main() {
  * reimplementing the Supabase type generator.
  */
 async function checkTypes(client) {
+  // Partitions are excluded: `trip_location_pings_202611` and `_default` are storage for one logical
+  // table, and a monthly cron would otherwise turn into a weekly types edit.
   const { rows } = await client.query(`
-    select table_name, column_name
-    from information_schema.columns
-    where table_schema = 'public'
-    order by table_name, ordinal_position
+    select c.table_name, c.column_name
+    from information_schema.columns c
+    join pg_class k on k.relname = c.table_name and k.relnamespace = 'public'::regnamespace
+    where c.table_schema = 'public'
+      and not k.relispartition
+    order by c.table_name, c.ordinal_position
   `);
 
   const live = new Map();

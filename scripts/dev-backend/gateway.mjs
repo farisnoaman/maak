@@ -147,6 +147,7 @@ const TRIPS_CAPABILITY = {
   'trip.start': 'trip.start',
   'trip.stopReached': 'trip.start',
   'trip.end': 'trip.start',
+  'trip.recordPing': 'trip.start',
 };
 
 const BOOKINGS_CAPABILITY = {

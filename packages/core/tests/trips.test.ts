@@ -180,6 +180,9 @@ describe('trip action contract', () => {
         reason: 'vehicle broke down',
         odoKm: 184_400,
         seq: 2,
+        lat: 13.55,
+        lng: 44.05,
+        source: 'app',
       };
       return tripsCommandArgs(sample as never, 'u-1', audit);
     });
@@ -195,6 +198,7 @@ describe('trip action contract', () => {
       'cmd_start_trip',
       'cmd_mark_stop_reached',
       'cmd_end_trip',
+      'cmd_record_ping',
     ]);
     for (const entry of map) {
       expect(entry.args.p_actor).toBe('u-1');
