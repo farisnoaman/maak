@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
 import { Select } from '@/components/ui/Select';
 import { getApiClient } from '@/lib/api';
+import { copyText } from '@/lib/clipboard';
 
 export interface TeamMember {
   readonly id: string;
@@ -297,13 +298,23 @@ export function TeamPanel({
           <p className="form-hint" dir="ltr" style={{ wordBreak: 'break-all' }}>
             {inviteLink}
           </p>
+          {/* Always selectable: if the clipboard is blocked this is the only way to take it. */}
+          <input
+            className="ui-input"
+            dir="ltr"
+            readOnly
+            value={inviteLink}
+            aria-label={t('org.shareInvite')}
+            onFocus={(event) => event.currentTarget.select()}
+          />
           <div className="form-actions">
             <Button
               variant="subtle"
               size="sm"
               onClick={async () => {
-                await navigator.clipboard?.writeText(inviteLink);
-                setMessage(t('org.copied'));
+                // Blocked inside an iframe by `clipboard-write`, so the failure has to be visible.
+                const copied = await copyText(inviteLink);
+                setMessage(t(copied ? 'org.copied' : 'org.copyBlocked'));
               }}
             >
               {t('org.copyLink')}

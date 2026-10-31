@@ -15,6 +15,8 @@ import { getApiClient } from '@/lib/api';
 export interface NotificationItem {
   readonly id: string;
   readonly titleKey: string;
+  /** Values for the `{name}` / `{reason}` placeholders in the notification text. */
+  readonly params?: Readonly<Record<string, string | number>>;
   readonly link: string | null;
   readonly readAt: string | null;
   readonly createdAt: string;
@@ -41,6 +43,18 @@ export function NotificationPanel({
   const [error, setError] = useState<string | null>(null);
 
   const unread = rows.filter((row) => !row.readAt).length;
+
+  // A notification is stored as a key plus its values; rendering the key alone is how "your place
+  // «{name}» is waiting for review" reached the screen with the placeholder still in it.
+  const label = (row: NotificationItem) => t(row.titleKey as TranslationKey, row.params ?? {});
+
+  /**
+   * Notification links come from the database, which stores them without a locale (`/admin/places`).
+   * Bouncing through a redirect for every row is wasteful and loses the error state, so the prefix is
+   * added here.
+   */
+  const localeHref = (href: string) =>
+    /^\/(ar|en)(\/|$)/.test(href) ? href : `/${locale}${href.startsWith('/') ? '' : '/'}${href}`;
 
   async function markAllRead() {
     const client = getApiClient();
@@ -89,9 +103,9 @@ export function NotificationPanel({
           >
             <span aria-hidden="true">{row.readAt ? '○' : '●'}</span>
             {row.link ? (
-              <Link href={row.link}>{t(row.titleKey as TranslationKey)}</Link>
+              <Link href={localeHref(row.link)}>{label(row)}</Link>
             ) : (
-              <span>{t(row.titleKey as TranslationKey)}</span>
+              <span>{label(row)}</span>
             )}
             <time className="form-hint" dateTime={row.createdAt}>
               {new Date(row.createdAt).toISOString().slice(0, 10)}

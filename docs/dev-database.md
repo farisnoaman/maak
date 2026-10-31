@@ -215,6 +215,17 @@ simply being carried by the token.
 
 | Production path | cookies only (`SameSite=None; Secure; Partitioned`); the app must not be embedded, or it must use the Storage Access API |
 
+### Two things the preview iframe breaks that are not our bug
+
+· **Clipboard.** The document is served with a `permissions-policy` that blocks `clipboard-write`, so
+  `navigator.clipboard.writeText()` rejects with `NotAllowedError`. Copy actions go through
+  `copyText()` in `lib/clipboard.ts`, which falls back to `execCommand('copy')` and otherwise says so —
+  never a silent no-op. Invite links are always shown in a selectable field as the last resort.
+· **Hydration.** Anything that rewrites server-rendered markup on mount (for example, appending `?st=`
+  to every `href`) makes React log a hydration mismatch and refuse to patch it. `SessionTokenKeeper`
+  therefore only *listens* — clicks and submits are given the token on their way out — and never edits
+  the DOM during render.
+
 ## Older notes on third-party cookie blocking
 
 Some browsers (Safari and Firefox by default, Chrome for some users) block third-party storage

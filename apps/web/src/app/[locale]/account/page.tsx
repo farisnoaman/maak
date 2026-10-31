@@ -156,6 +156,7 @@ export default async function AccountPage({
             items={data.notifications.map((item) => ({
               id: item.id,
               titleKey: item.titleKey,
+              params: item.params,
               link: item.link,
               readAt: item.readAt,
               createdAt: item.createdAt,

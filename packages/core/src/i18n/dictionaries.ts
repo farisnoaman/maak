@@ -241,6 +241,7 @@ export const ar = {
   'org.shareInvite': 'شارك الدعوة',
   'org.copyLink': 'نسخ الرابط',
   'org.copied': 'تم نسخ الرابط.',
+  'org.copyBlocked': 'المتصفح منع النسخ التلقائي — حدّد الرابط في الحقل وانسخه يدويًا.',
   'org.shareWhatsapp': 'مشاركة عبر واتساب',
   'org.inviteMessage': 'دعوة للانضمام إلى {org} على منصة معك: {link}',
 
@@ -675,6 +676,7 @@ export const en: Record<TranslationKey, string> = {
   'org.shareInvite': 'Share the invitation',
   'org.copyLink': 'Copy link',
   'org.copied': 'Link copied.',
+  'org.copyBlocked': 'This browser blocked copying — select the link in the field and copy it.',
   'org.shareWhatsapp': 'Share on WhatsApp',
   'org.inviteMessage': 'You are invited to join {org} on Maak: {link}',
 

@@ -124,6 +124,14 @@ if (!useApi) {
       `status ${viaToken.status}`,
     );
     check('and shows the signed-in user', viaToken.text.includes('فارس'));
+    check(
+      'notifications render their values, not raw {name} placeholders',
+      viaToken.text.includes('مكانك «') && !viaToken.text.includes('{name}'),
+    );
+    check(
+      'notification links carry the locale prefix',
+      viaToken.text.includes('href="/ar/admin/places"'),
+    );
 
     const meViaToken = await call(`/api/data/functions/v1/me?st=${encodeURIComponent(token)}`, {
       method: 'POST',

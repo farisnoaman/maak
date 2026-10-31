@@ -3,48 +3,68 @@
 import { useEffect } from 'react';
 
 /**
- * Keeps `?st=` (the cookie-less session token) attached to internal links.
+ * Keeps `?st=` (the cookie-less session token) on internal navigations.
  *
- * Only active when the URL carries a token, which happens only when the sign-in flow decided it had to
- * use the fallback — i.e. an embedded preview where cookies cannot be stored. Every same-origin link is
- * rewritten as it appears (and as the router adds more), so navigating never silently signs you out.
+ * The first version of this rewrote every `href` as soon as it mounted. That is what React means by a
+ * hydration error: the attribute the server rendered was `/ar`, and by the time React compared them the
+ * value was `/ar?st=…`, so it logged a mismatch and refused to patch it up. Mutating server-rendered
+ * markup is not a thing a client component is allowed to do, no matter how well intentioned.
  *
- * This is the one place that knows about the token; pages and components stay oblivious.
+ * So this only *listens*: a click on an internal link or a submit of an internal form is caught at the
+ * document level and given the token on its way out. The DOM is never touched before hydration, and
+ * after it only in the act of navigating.
+ *
+ * Only active when the URL carries a token — i.e. when sign-in already decided cookies cannot work.
  */
 export function SessionTokenKeeper() {
   useEffect(() => {
     const token = new URLSearchParams(window.location.search).get('st');
     if (!token) return;
 
-    const attach = (root: ParentNode) => {
-      for (const anchor of root.querySelectorAll<HTMLAnchorElement>('a[href^="/"]')) {
-        const url = new URL(anchor.href, window.location.origin);
-        if (url.origin !== window.location.origin) continue;
-        if (url.searchParams.has('st')) continue;
-        url.searchParams.set('st', token);
-        anchor.href = `${url.pathname}${url.search}${url.hash}`;
-      }
-      for (const form of root.querySelectorAll<HTMLFormElement>('form[action^="/"]')) {
-        const hidden = form.querySelector<HTMLInputElement>('input[name="st"]');
-        if (hidden) continue;
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'st';
-        input.value = token;
-        form.append(input);
-      }
+    const withToken = (raw: string | null): string | null => {
+      if (!raw) return null;
+      const url = new URL(raw, window.location.origin);
+      if (url.origin !== window.location.origin) return null;
+      if (!url.pathname.startsWith('/')) return null;
+      if (url.pathname.startsWith('/_next') || url.pathname.startsWith('/api/qr')) return null;
+      if (url.searchParams.has('st')) return null;
+      url.searchParams.set('st', token);
+      return `${url.pathname}${url.search}${url.hash}`;
     };
 
-    attach(document);
-    const observer = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        for (const node of mutation.addedNodes) {
-          if (node instanceof HTMLElement) attach(node);
-        }
-      }
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
-    return () => observer.disconnect();
+    const onClick = (event: MouseEvent) => {
+      // Let the browser handle new tabs, downloads and modified clicks as usual.
+      if (event.defaultPrevented || event.button !== 0) return;
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+
+      const anchor = (event.target as Element | null)?.closest?.('a[href]');
+      if (!(anchor instanceof HTMLAnchorElement)) return;
+      if (anchor.target && anchor.target !== '_self') return;
+
+      const next = withToken(anchor.getAttribute('href'));
+      if (!next) return;
+
+      // A full navigation, deliberately: the session has to be resolved on the server, and a client
+      // transition would leave the address bar without the token the next request needs.
+      event.preventDefault();
+      window.location.assign(next);
+    };
+
+    const onSubmit = (event: SubmitEvent) => {
+      const form = event.target;
+      if (!(form instanceof HTMLFormElement) || event.defaultPrevented) return;
+      const next = withToken(form.getAttribute('action') ?? window.location.pathname);
+      if (!next) return;
+      // Set at submit time, after hydration — never during render.
+      form.setAttribute('action', next);
+    };
+
+    document.addEventListener('click', onClick, true);
+    document.addEventListener('submit', onSubmit, true);
+    return () => {
+      document.removeEventListener('click', onClick, true);
+      document.removeEventListener('submit', onSubmit, true);
+    };
   }, []);
 
   return null;
