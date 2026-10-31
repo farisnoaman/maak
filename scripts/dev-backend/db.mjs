@@ -448,6 +448,21 @@ async function seedDemoOperations(client, log = () => {}) {
     ],
   );
 
+  // This month's maintenance figure needs something in it, or the rollup shows a zero that reads like a
+  // bug. Five days ago is inside the current month; the brake job below is the one that lands outside it.
+  await client.query('select public.cmd_log_maintenance($1::uuid, $2::uuid, $3::jsonb, $4, null)', [
+    owner,
+    vehicle,
+    JSON.stringify({
+      kind: 'tyres',
+      performedOn: new Date(Date.now() - 5 * 86_400_000).toISOString().slice(0, 10),
+      costYer: 18_000,
+      vendor: 'مؤسسة الإطارات الحديثة — عدن',
+      note: 'إطاران خلفيان',
+    }),
+    'dev-seed-tyres',
+  ]);
+
   await client.query('select public.cmd_log_maintenance($1::uuid, $2::uuid, $3::jsonb, $4, null)', [
     owner,
     vehicle,
