@@ -1,34 +1,70 @@
 import { NextResponse } from 'next/server';
-import { getSession } from '@/lib/supabase/server';
+import { getSession, URL_SESSION_ENABLED } from '@/lib/supabase/server';
 import { AUTH_COOKIE_NAME } from '@/lib/supabase/config';
 import { resolveRequest } from '@/lib/origin';
 
 /**
  * Diagnostics for "I signed in and nothing happened".
  *
- * Open it in the window that misbehaves. It reports two independent things:
+ * It answers two **independent** questions, which look identical from the outside:
  *
  *   · **where the server thinks the browser is** — the evidence it used (`origin`, `referer`,
- *     `forwarded`, `remembered`, `host`), which is what decides cookie `SameSite`/`Secure` and every
- *     redirect target;
- *   · **whether the browser sent a session at all** — `sessionCookiePresent: false` means the cookie
- *     never arrived (blocked, or a cross-site frame); `true` with `user: null` means it arrived and was
- *     rejected. Two completely different bugs that look identical from the outside.
+ *     `forwarded`, `remembered`, `host`), which decides cookie `SameSite`/`Secure` and every redirect;
+ *   · **which channel is carrying the session** — a cookie, or (outside production) the token the proxy
+ *     recovers from `?st=` for previews where the browser refuses to store anything.
  *
- * Read-only, never echoes a cookie value or a token.
+ * `sessionCookiePresent: false` is **not an error** when `via: "token"` and `signedIn: true` — it is the
+ * expected shape in an embedded preview whose browser blocks third-party storage. The `summary` field
+ * says so in one sentence rather than leaving you to infer it.
+ *
+ * Read-only, and it never echoes a cookie value or a token.
  */
 export async function GET(request: Request) {
   const context = resolveRequest(request);
   const headers = request.headers;
-  const session = await getSession();
+
+  // Read the same token the app itself is using, so the probe reports the real session.
+  const url = new URL(request.url);
+  const tokenInUrl = URL_SESSION_ENABLED ? url.searchParams.get('st') : null;
+  const session = await getSession(tokenInUrl);
   const cookieSent = (headers.get('cookie') ?? '').includes(`${AUTH_COOKIE_NAME}=`);
+  const signedIn = Boolean(session.user);
+
+  const via: 'cookie' | 'token' | 'none' = !signedIn
+    ? 'none'
+    : tokenInUrl || headers.get('x-maak-token')
+      ? 'token'
+      : 'cookie';
+
+  const summary = !session.configured
+    ? 'The auth backend is not configured — check apps/web/.env.local.'
+    : signedIn && via === 'token'
+      ? 'Signed in through the URL token, not a cookie: this browser refuses to store one in an ' +
+        'embedded frame. That is expected in the preview and the app works normally.'
+      : signedIn
+        ? 'Signed in through a session cookie, and the server accepted it.'
+        : cookieSent
+          ? 'A session cookie arrived, but it was not valid — it may have expired. Sign in again.'
+          : 'No session at all. This probe was opened without a token, so sign in from this window first.';
 
   return NextResponse.json(
     {
+      // Headline first: the one question people actually open this for.
+      ok: true,
+      signedIn,
+      via,
+      user: session.user?.email ?? session.user?.phone ?? null,
+      summary,
+
       configured: session.configured,
       sessionCookiePresent: cookieSent,
       sessionCookieName: AUTH_COOKIE_NAME,
-      user: session.user?.email ?? session.user?.phone ?? null,
+      tokenChannel: {
+        enabled: URL_SESSION_ENABLED,
+        present: Boolean(tokenInUrl || headers.get('x-maak-token')),
+        why: 'development-only fallback for previews where the browser blocks third-party storage',
+      },
+
       browser: {
         resolvedOrigin: context.origin,
         scheme: context.protocol,
@@ -42,17 +78,16 @@ export async function GET(request: Request) {
         forwardedProto: headers.get('x-forwarded-proto'),
         origin: headers.get('origin'),
         referer: headers.get('referer'),
-        // `cross-site` + `iframe` is the embedded preview. A browser that blocks third-party cookies
-        // will store our session and never send it back, which is what an empty session looks like.
+        // `cross-site` + `iframe` is the embedded preview: a browser that blocks third-party storage
+        // will store our cookie and never send it back, which is exactly what an empty session is.
         secFetchSite: headers.get('sec-fetch-site'),
         secFetchDest: headers.get('sec-fetch-dest'),
         secFetchMode: headers.get('sec-fetch-mode'),
+        hasTokenParam: Boolean(tokenInUrl),
       },
-      note: !cookieSent
-        ? 'no session cookie reached the server — the browser is not storing or not sending it'
-        : session.user
-          ? 'the browser sent a session cookie and the server accepted it'
-          : 'the cookie arrived but the token was rejected',
+      note: cookieSent
+        ? 'a session cookie reached the server'
+        : 'no session cookie reached the server — normal when signed in with the token channel',
     },
     { headers: { 'cache-control': 'no-store' } },
   );

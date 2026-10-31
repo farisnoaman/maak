@@ -81,8 +81,14 @@ export async function getServerClient(): Promise<SupabaseClient | null> {
   });
 }
 
-/** The bearer token this request carries, from the header or from the session cookie. */
-export async function resolveAccessToken(): Promise<string | null> {
+/**
+ * The bearer token this request carries: an explicit override, the header the proxy injects, or the
+ * session cookie. The override exists so the diagnostics endpoint can report on the channel the user is
+ * *actually* using, instead of always reporting the cookie channel and looking broken.
+ */
+export async function resolveAccessToken(override?: string | null): Promise<string | null> {
+  if (override) return override;
+
   const injected = (await headers()).get(TOKEN_HEADER);
   if (injected) return injected;
 
@@ -97,11 +103,11 @@ export interface SessionInfo {
   readonly user: Pick<User, 'id' | 'email' | 'phone'> | null;
 }
 
-export async function getSession(): Promise<SessionInfo> {
+export async function getSession(tokenOverride?: string | null): Promise<SessionInfo> {
   const config = getSupabaseConfig();
   if (!config) return { configured: false, user: null };
 
-  const token = await resolveAccessToken();
+  const token = await resolveAccessToken(tokenOverride);
   if (!token) return { configured: true, user: null };
 
   // Ask the auth endpoint who this token belongs to. This works identically for a cookie session and

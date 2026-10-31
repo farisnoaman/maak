@@ -207,6 +207,12 @@ links and forms, so navigating does not silently sign you out.
 | Enabled | everywhere except `NODE_ENV=production` |
 | Disable | `MAAK_IFRAME_SESSION=0` |
 | Cost | the token appears in the URL (history, logs) — acceptable for a dev preview, not for production |
+| Read it | `GET /api/auth/status` — add the same `?st=` you are browsing with, or it reports the anonymous cookie channel |
+
+`/api/auth/status` leads with `ok`, `signedIn`, `via` (`cookie` | `token` | `none`) and a one-sentence
+`summary`, so `sessionCookiePresent: false` is no longer mistaken for a failure when the session is
+simply being carried by the token.
+
 | Production path | cookies only (`SameSite=None; Secure; Partitioned`); the app must not be embedded, or it must use the Storage Access API |
 
 ## Older notes on third-party cookie blocking

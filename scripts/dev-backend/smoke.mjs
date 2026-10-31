@@ -134,6 +134,13 @@ if (!useApi) {
       meViaToken.body?.user?.roles?.includes('platform_admin'),
     );
 
+    const statusViaToken = await call(`/api/auth/status?st=${encodeURIComponent(token)}`);
+    check(
+      'the probe reports the token session instead of looking broken',
+      statusViaToken.body?.signedIn === true && statusViaToken.body?.via === 'token',
+      `${statusViaToken.body?.signedIn}/${statusViaToken.body?.via}`,
+    );
+
     const placesViaToken = await call(`/ar/admin/places?st=${encodeURIComponent(token)}`, {
       headers: { accept: 'text/html' },
     });
@@ -142,6 +149,14 @@ if (!useApi) {
       placesViaToken.status === 200 && placesViaToken.text.includes('نقطة تجمع'),
     );
   }
+
+  const anonymousStatus = await call('/api/auth/status');
+  check(
+    'and an anonymous probe explains itself rather than just showing null',
+    anonymousStatus.body?.signedIn === false &&
+      typeof anonymousStatus.body?.summary === 'string' &&
+      anonymousStatus.body.summary.includes('sign in'),
+  );
 
   const status = await call('/api/auth/status', { cookie: signIn.cookie });
   check(
