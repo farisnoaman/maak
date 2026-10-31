@@ -1,5 +1,5 @@
-// migrations-sha256: 8e8e38ab3038848b8b64ea7230e7d27d34f2f31ebf711f058cd0033d01ef8ce8
-/* Generated from 12 migrations. Run `npm run db:types` after changing the schema. */
+// migrations-sha256: 7fe7409b15765a85839a992d27d8062180ee0e4b59c0aee944052e3522c86cf4
+/* Generated from 14 migrations. Run `npm run db:types` after changing the schema. */
 
 /**
  * Schema types for RLS-filtered reads (Phase 0 subset).
@@ -40,6 +40,24 @@ export type VehicleOwnershipKind = 'owned' | 'leased' | 'financed';
 export type VehicleStatus = 'draft' | 'active' | 'suspended' | 'retired';
 export type DriverStatus = 'invited' | 'active' | 'suspended' | 'revoked';
 export type OdometerKind = 'baseline' | 'trip_start' | 'trip_end' | 'service';
+
+export type TripStatus = 'draft' | 'pending_verification' | 'published' | 'cancelled' | 'completed';
+export type TripEventKind =
+  | 'created'
+  | 'updated'
+  | 'stops_changed'
+  | 'published'
+  | 'unpublished'
+  | 'verification_submitted'
+  | 'verification_approved'
+  | 'verification_rejected'
+  | 'cancelled';
+export type TripBookingMode = 'per_seat' | 'whole_trip' | 'both';
+export type TripPricingMode = 'flat' | 'per_stop';
+export type TripDiscountKind = 'none' | 'fixed' | 'percent';
+export type TripDiscountScope = 'per_seat' | 'whole_trip' | 'all';
+export type TripGenderPolicy = 'any' | 'men_only' | 'women_only';
+export type TripPaymentPolicy = 'cash' | 'deposit' | 'prepaid';
 export type PlaceKind =
   | 'city'
   | 'town'
@@ -429,6 +447,120 @@ export interface OdometerReading {
   note: string | null;
 }
 
+export interface Trip {
+  id: string;
+  code: string;
+  owner_user_id: string | null;
+  owner_org_id: string | null;
+  vehicle_id: string;
+  driver_id: string | null;
+  origin_governorate_id: string;
+  destination_governorate_id: string;
+  departure_at: string;
+  departure_date: string | null;
+  arrive_estimate_minutes: number;
+  seats_total: number;
+  seats_available: number;
+  booking_mode: TripBookingMode;
+  pricing_mode: TripPricingMode;
+  price_per_seat_yer: number | null;
+  whole_trip_price_yer: number | null;
+  discount_kind: TripDiscountKind;
+  discount_value: number;
+  discount_scope: TripDiscountScope;
+  gender_policy: TripGenderPolicy;
+  payment_policy: TripPaymentPolicy;
+  luggage_allowance_kg: number | null;
+  policies: Json;
+  notes: string | null;
+  status: TripStatus;
+  verification_status: VerificationStatus;
+  verified_by: string | null;
+  verified_at: string | null;
+  verification_note: string | null;
+  published_at: string | null;
+  featured_until: string | null;
+  cancelled_at: string | null;
+  cancelled_by: string | null;
+  cancel_reason: string | null;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TripStop {
+  id: string;
+  trip_id: string;
+  seq: number;
+  place_id: string | null;
+  governorate_id: string | null;
+  name_ar: string | null;
+  name_en: string | null;
+  arrive_offset_minutes: number;
+  price_from_origin_yer: number | null;
+  created_at: string;
+}
+
+export interface TripEvent {
+  id: number;
+  trip_id: string;
+  kind: TripEventKind;
+  actor_id: string | null;
+  detail: Json;
+  created_at: string;
+}
+
+export interface TripVerification {
+  id: string;
+  trip_id: string;
+  submitted_by: string | null;
+  submitted_at: string;
+  snapshot: Json;
+  outcome: unknown /* USER-DEFINED verification_outcome */ | null;
+  decided_by: string | null;
+  decided_at: string | null;
+  note: string | null;
+}
+
+export interface TripSearchRow {
+  trip_id: string;
+  owner_user_id: string | null;
+  owner_org_id: string | null;
+  status: TripStatus;
+  verification_status: VerificationStatus;
+  is_public: boolean;
+  departure_at: string;
+  departure_date: string;
+  seats_available: number;
+  seats_total: number;
+  price_from_yer: number;
+  price_per_seat_yer: number | null;
+  discount_kind: TripDiscountKind;
+  discount_value: number;
+  booking_mode: TripBookingMode;
+  pricing_mode: TripPricingMode;
+  origin_governorate_id: string;
+  destination_governorate_id: string;
+  stop_governorate_ids: string[];
+  stop_place_ids: string[];
+  stop_count: number;
+  gender_policy: TripGenderPolicy;
+  payment_policy: TripPaymentPolicy;
+  operator_name_ar: string | null;
+  operator_name_en: string | null;
+  vehicle_label: string | null;
+  featured_until: string | null;
+  is_featured: boolean;
+  search_text: string;
+  updated_at: string;
+}
+
+export interface SearchCacheRow {
+  key: string;
+  payload: Json;
+  expires_at: string;
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -545,6 +677,41 @@ export interface Database {
         };
         Update: Partial<OdometerReading>;
       };
+      trips: {
+        Row: Trip;
+        Insert: Partial<Trip> & {
+          vehicle_id: string;
+          origin_governorate_id: string;
+          destination_governorate_id: string;
+          departure_at: string;
+        };
+        Update: Partial<Trip>;
+      };
+      trip_stops: {
+        Row: TripStop;
+        Insert: Partial<TripStop> & { trip_id: string; seq: number };
+        Update: Partial<TripStop>;
+      };
+      trip_events: {
+        Row: TripEvent;
+        Insert: Partial<TripEvent> & { trip_id: string; kind: TripEventKind };
+        Update: Partial<TripEvent>;
+      };
+      trip_verifications: {
+        Row: TripVerification;
+        Insert: Partial<TripVerification> & { trip_id: string };
+        Update: Partial<TripVerification>;
+      };
+      trips_search: {
+        Row: TripSearchRow;
+        Insert: Partial<TripSearchRow> & { trip_id: string };
+        Update: Partial<TripSearchRow>;
+      };
+      search_cache: {
+        Row: SearchCacheRow;
+        Insert: Partial<SearchCacheRow> & { key: string; payload: Json };
+        Update: Partial<SearchCacheRow>;
+      };
       region_governorates: {
         Row: RegionGovernorate;
         Insert: RegionGovernorate;
@@ -584,6 +751,14 @@ export interface Database {
       verification_outcome: VerificationOutcome;
       notification_kind: NotificationKind;
       region_kind: RegionKind;
+      trip_status: TripStatus;
+      trip_event_kind: TripEventKind;
+      trip_booking_mode: TripBookingMode;
+      trip_pricing_mode: TripPricingMode;
+      trip_discount_kind: TripDiscountKind;
+      trip_discount_scope: TripDiscountScope;
+      trip_gender_policy: TripGenderPolicy;
+      trip_payment_policy: TripPaymentPolicy;
     };
   };
 }
