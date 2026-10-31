@@ -126,6 +126,11 @@ export const ar = {
   'console.navScans': 'المسح',
   'console.navGeography': 'الجغرافيا',
   'console.navPlans': 'الخطط',
+  'console.open': 'فتح',
+  'console.tileVehicles': 'سجّل مركباتك، أرفق الصور والوثائق، وتابع التوثيق.',
+  'console.tileDrivers': 'ادعُ السائقين برقم الهاتف وأسندهم إلى المركبات.',
+  'console.tileReviewVehicles': 'راجع طلبات توثيق المركبات ووثائقها، ثم قرّر بالموافقة أو الرفض.',
+  'console.tileReviewAccounts': 'راجع طلبات توثيق الحسابات والمنظّمات.',
   'console.requiresSignIn': 'تحتاج إلى تسجيل الدخول لعرض هذه اللوحة.',
 
   'console.public': 'الرحلات العامة',
@@ -813,6 +818,13 @@ export const en: Record<TranslationKey, string> = {
   'console.navScans': 'Scans',
   'console.navGeography': 'Geography',
   'console.navPlans': 'Plans',
+  'console.open': 'Open',
+  'console.tileVehicles':
+    'Register vehicles, attach photos and documents, and follow verification.',
+  'console.tileDrivers': 'Invite drivers by phone and assign them to vehicles.',
+  'console.tileReviewVehicles':
+    'Review vehicle verification requests and their documents, then approve or reject.',
+  'console.tileReviewAccounts': 'Review account and organization verification requests.',
   'console.requiresSignIn': 'You need to sign in to view this console.',
 
   'console.public': 'Public trips',

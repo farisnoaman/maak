@@ -46,6 +46,10 @@ export function SiteHeader({
           <Link className="nav-link" href={withQuery('/styleguide')}>
             {t('nav.styleguide')}
           </Link>
+          {/* The operator console is the product's working surface; it should not need a typed URL. */}
+          <Link className="nav-link" href={withQuery('/operator/vehicles')}>
+            {t('console.navVehicles')}
+          </Link>
           <Link className="nav-link" href={withQuery('/auth/sign-in')}>
             {t('nav.signIn')}
           </Link>

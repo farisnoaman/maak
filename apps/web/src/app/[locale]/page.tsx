@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { translate, isLocale, type Locale, type TranslationKey } from '@maak/core';
 import { SiteHeader } from '@/components/SiteHeader';
@@ -10,14 +11,18 @@ export const metadata: Metadata = {
   },
 };
 
-const CONSOLES: { key: TranslationKey; phase: string; note: TranslationKey }[] = [
-  { key: 'console.public', phase: '4', note: 'home.verified' },
-  { key: 'console.operator', phase: '3', note: 'home.verified' },
-  { key: 'console.staff', phase: '7', note: 'home.verified' },
-  { key: 'console.admin', phase: '10', note: 'home.verified' },
-  { key: 'console.finance', phase: '10', note: 'home.verified' },
-  { key: 'console.driver', phase: '6', note: 'home.verified' },
-  { key: 'console.passenger', phase: '5', note: 'home.verified' },
+/**
+ * `href` means the console exists: the card becomes a door. The rest are plans, and say so — a card
+ * that looks clickable but is not is worse than a card marked "coming soon".
+ */
+const CONSOLES: { key: TranslationKey; phase: string; href?: string }[] = [
+  { key: 'console.public', phase: '4' },
+  { key: 'console.operator', phase: '3', href: '/operator' },
+  { key: 'console.staff', phase: '3', href: '/staff' },
+  { key: 'console.admin', phase: '10' },
+  { key: 'console.finance', phase: '10' },
+  { key: 'console.driver', phase: '6' },
+  { key: 'console.passenger', phase: '5' },
 ];
 
 const FOUNDATIONS: { icon: string; title: TranslationKey; body: TranslationKey }[] = [
@@ -106,7 +111,13 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
                       {t('common.phase')} {consoleItem.phase}
                     </span>
                   </div>
-                  <p>{t('common.comingSoon')}</p>
+                  {consoleItem.href ? (
+                    <Link className="btn btn--ghost" href={`/${locale}${consoleItem.href}`}>
+                      {t('console.open')}
+                    </Link>
+                  ) : (
+                    <p>{t('common.comingSoon')}</p>
+                  )}
                 </article>
               ))}
             </div>
