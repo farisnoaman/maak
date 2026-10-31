@@ -1,0 +1,52 @@
+{
+  "name": "maak",
+  "private": true,
+  "version": "0.0.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
+    "build:functions": "node scripts/build-functions.mjs",
+    "check:functions": "node scripts/build-functions.mjs --check",
+    "dev": "node scripts/dev.mjs",
+    "dev:web": "npm --workspace @maak/web run dev",
+    "dev:api": "node scripts/dev-backend/server.mjs",
+    "dev:api:reset": "node scripts/dev-backend/server.mjs --reset",
+    "dev:setup": "node scripts/dev-backend/setup-env.mjs",
+    "dev:check": "node scripts/dev-backend/smoke.mjs",
+    "check:guards": "node scripts/check-guards.mjs",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:types": "node scripts/db-types.mjs --write",
+    "db:types:check": "node scripts/db-types.mjs --check",
+    "geo:import": "node scripts/geo/import-districts.mjs",
+    "test:coverage": "npm --workspace @maak/core run test:coverage",
+    "check:a11y": "node scripts/check-a11y.mjs",
+    "sql:check": "node scripts/sql-check.mjs",
+    "check:all": "npm run check:guards && npm run lint && npm run format:check && npm run typecheck && npm test && npm run test:coverage && npm run db:types:check && npm run check:functions && npm run sql:check",
+    "ci:install": "node scripts/install-ci.mjs"
+  },
+  "devDependencies": {
+    "@embedded-postgres/linux-x64": "^17.10.0-beta.17",
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^22.9.0",
+    "@vitest/coverage-v8": "^5.0.5",
+    "embedded-postgres": "^17.10.0-beta.17",
+    "esbuild": "^0.28.2",
+    "eslint": "^10.13.0",
+    "node-html-parser": "^9.0.5",
+    "prettier": "^3.9.10",
+    "typescript": "^5.6.3",
+    "typescript-eslint": "^8.72.1",
+    "vitest": "^5.0.5"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "type": "module"
+}
