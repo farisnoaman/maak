@@ -2647,6 +2647,52 @@ input[type='file']::file-selector-button {
   white-space: nowrap;
 }
 
+/*
+ * Below 720px the same table becomes a stack of cards: no horizontal scrolling to read one row, and the
+ * header text moves into each cell as a label (`data-label`), so nothing is lost. The markup stays a real
+ * `<table>` — a screen reader still gets rows, columns and their headers; only the presentation changes.
+ */
+@media (max-width: 719.98px) {
+  .table-cards {
+    min-inline-size: 0;
+  }
+
+  .table-cards thead {
+    display: none;
+  }
+
+  .table-cards,
+  .table-cards tbody,
+  .table-cards tr,
+  .table-cards td {
+    display: block;
+    inline-size: 100%;
+  }
+
+  .table-cards tr {
+    margin-block: var(--space-3);
+    padding: var(--space-3);
+    border: 1px solid var(--surface-sunken);
+    border-radius: var(--radius-md);
+    background: var(--surface-base);
+  }
+
+  .table-cards td {
+    display: grid;
+    grid-template-columns: 7rem 1fr;
+    gap: var(--space-2);
+    padding-block: var(--space-1);
+    border: 0;
+  }
+
+  .table-cards td::before {
+    content: attr(data-label);
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--ink-500);
+  }
+}
+
 /* ---------------------------------------------------------------------------------------------
    The phone's bottom navigation.
 

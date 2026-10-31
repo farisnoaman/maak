@@ -181,7 +181,7 @@ export default async function StaffTripsPage({
               <EmptyState title={t('trips.search.noResults')} />
             ) : (
               <div className="table-scroll">
-                <table className="trip-table">
+                <table className="trip-table table-cards">
                   <thead>
                     <tr>
                       <th scope="col">{t('trips.code')}</th>
@@ -197,20 +197,20 @@ export default async function StaffTripsPage({
                       const when = departureLabel(row.departureAt, locale);
                       return (
                         <tr key={row.id}>
-                          <td>
+                          <td data-label={t('trips.code')}>
                             <Link href={`/${locale}/staff/trips/${row.id}`}>{row.code}</Link>
                           </td>
-                          <td>
+                          <td data-label={t('trips.route')}>
                             {row.origin} ← {row.destination}
                             {row.cancelReason ? (
                               <span className="trip-form__hint"> · {row.cancelReason}</span>
                             ) : null}
                           </td>
-                          <td>
+                          <td data-label={t('trips.schedule')}>
                             {when.date} · <bdi>{when.time}</bdi>
                           </td>
-                          <td>{row.operatorName ?? '—'}</td>
-                          <td>
+                          <td data-label={t('staff.trips.operator')}>{row.operatorName ?? '—'}</td>
+                          <td data-label={t('trips.seats')}>
                             {row.seatsAvailable}/{row.seatsTotal}
                             {row.priceFromYer != null ? (
                               <span className="trip-form__hint">
@@ -219,7 +219,7 @@ export default async function StaffTripsPage({
                               </span>
                             ) : null}
                           </td>
-                          <td>
+                          <td data-label={t('trips.statusLabel')}>
                             <Badge tone={STATUS_TONE[row.status] ?? 'neutral'}>
                               {t(tripStatusKey(row.status))}
                             </Badge>{' '}
