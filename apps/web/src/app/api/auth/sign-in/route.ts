@@ -1,5 +1,6 @@
-import { NextResponse, type NextRequest } from 'next/server';
+import type { NextRequest } from 'next/server';
 import { redirectTo } from '@/lib/redirect';
+import { isSameOriginRequest } from '@/lib/origin';
 import { getServerClient } from '@/lib/supabase/server';
 import { getSupabaseConfig } from '@/lib/supabase/config';
 
@@ -31,13 +32,18 @@ function failure(request: NextRequest, locale: string, error: string, query = ''
 }
 
 export async function POST(request: NextRequest) {
-  // A cross-site form post must not be able to sign a victim in to the attacker's account.
-  const origin = request.headers.get('origin');
-  if (origin && origin !== request.nextUrl.origin) {
-    return NextResponse.json({ code: 'FORBIDDEN' }, { status: 403 });
+  const form = await request.formData();
+  const localeForError = String(form.get('locale') ?? 'ar');
+
+  // A cross-site form post must not be able to sign a victim in to the attacker's account. The check
+  // runs *after* parsing, so a rejection can be a readable redirect instead of a blank JSON page.
+  if (!isSameOriginRequest(request)) {
+    console.warn(
+      `[auth] rejected a sign-in post from origin ${request.headers.get('origin') ?? '(none)'}`,
+    );
+    return redirectTo(request, `/${localeForError}/auth/sign-in?error=origin`, 303);
   }
 
-  const form = await request.formData();
   const locale = String(form.get('locale') ?? 'ar');
   const next = safeNext(form.get('next'), locale);
   const mode = String(form.get('mode') ?? 'email') as Mode;

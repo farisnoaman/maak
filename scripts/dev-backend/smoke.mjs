@@ -51,11 +51,16 @@ async function call(path, { method = 'GET', token, body, headers = {}, cookie } 
   return { status: response.status, body: parsed, headers: response.headers, text };
 }
 
-/** The sign-in form, posted exactly as the browser posts it. Returns the cookie header. */
-async function signInThroughForm(email) {
+/**
+ * The sign-in form, posted exactly as the browser posts it. Returns the cookie header.
+ *
+ * `origin` matters: a browser always sends it, and comparing it against the *internal* listening
+ * origin is what made every preview sign-in answer `403 FORBIDDEN`.
+ */
+async function signInThroughForm(email, origin = BASE, extraHeaders = {}) {
   const response = await fetch(`${BASE}/api/auth/sign-in`, {
     method: 'POST',
-    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    headers: { 'content-type': 'application/x-www-form-urlencoded', origin, ...extraHeaders },
     body: new URLSearchParams({
       mode: 'email',
       locale: 'ar',
@@ -140,6 +145,22 @@ if (!useApi) {
     'an anonymous caller cannot run an authenticated-only function',
     anonymous.status >= 400,
     `status ${anonymous.status}`,
+  );
+
+  // A public host header is what makes the origin check decidable at all; on loopback the app allows
+  // the request rather than break sign-in for a proxy that forwards no host.
+  // `fetch` refuses to override `Host`, so the public host arrives the way a proxy sends it.
+  const hostile = await signInThroughForm('admin@maak.test', 'https://evil.example', {
+    'x-forwarded-host': '3000-abc123.e2b.app',
+  });
+  check(
+    'a cross-site form post is refused',
+    !hostile.setCookie.some((line) => line.includes('sb-maak-auth=')),
+  );
+  check(
+    'and the refusal is a readable page, not raw JSON',
+    (hostile.location ?? '').includes('error=origin'),
+    String(hostile.location),
   );
 
   const redirect = await fetch(`${BASE}/ar/account`, { redirect: 'manual' });

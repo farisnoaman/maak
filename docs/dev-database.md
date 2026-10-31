@@ -124,6 +124,24 @@ Two rules that cost an afternoon each and are now enforced by tests:
 | Redirects are absolute, built from the **`Host` header** | `request.url` is the address the server *listens* on (`0.0.0.0`), which no browser can follow. Next also rejects a relative `Location` from the proxy. |
 | A non-loopback host is treated as **https** | `next dev` supplies `x-forwarded-proto: http` describing the hop to itself, not the browser; trusting it wrote `SameSite=Lax` cookies into an https preview |
 
+### The CSRF check that broke every preview sign-in
+
+`/api/auth/sign-in` refuses a form post whose `Origin` does not match the request's own host. The first
+version compared `Origin` with `request.nextUrl.origin` — which, behind a proxy, is the *internal*
+address (`http://localhost:3000`) while the browser honestly says `https://3000-abc.e2b.app`. Every
+sign-in in the preview came back `403 FORBIDDEN`.
+
+`lib/origin.ts` now compares hosts from `Host` / `x-forwarded-host`, scheme-agnostic. Two deliberate
+choices:
+
+- a request with **no** `Origin` is allowed — that is a same-origin navigation or `curl`, not a
+  cross-site form post;
+- if every host we can see is loopback, the request cannot be verified, so it is **allowed with a
+  warning** rather than breaking sign-in behind a proxy that forwards nothing. An attacker's page still
+  cannot forge `Origin` to match a public host.
+
+A refusal is a redirect back to the form with a localized message, never a raw JSON body in the tab.
+
 Check what the server knows about your session at any time: <http://localhost:3000/api/auth/status>
 
 ```json

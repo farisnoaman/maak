@@ -102,6 +102,8 @@ export const ar = {
   'auth.sessionBlocked':
     'تم تسجيل الدخول لكن المتصفح منع حفظ الجلسة داخل هذه النافذة. افتح التطبيق في تبويب مستقل ثم أعد المحاولة.',
   'auth.openInTab': 'افتح التطبيق في تبويب مستقل',
+  'auth.originMismatch':
+    'رُفض الطلب لأنه جاء من مصدر غير معروف. أعد تحميل الصفحة ثم حاول مرة أخرى.',
 
   'console.subtitle.operator': 'إدارة المركبات والسائقين والرحلات والحجوزات.',
   'console.subtitle.staff': 'التحقق من الحسابات والمركبات والرحلات، ومسح رموز QR.',
@@ -529,6 +531,8 @@ export const en: Record<TranslationKey, string> = {
   'auth.sessionBlocked':
     'Signed in, but the browser blocked the session inside this window. Open the app in its own tab and try again.',
   'auth.openInTab': 'Open the app in its own tab',
+  'auth.originMismatch':
+    'The request came from an unrecognised origin, so it was rejected. Reload the page and try again.',
 
   'console.subtitle.operator': 'Manage vehicles, drivers, trips and bookings.',
   'console.subtitle.staff': 'Verify accounts, vehicles and trips; scan QR codes.',
