@@ -225,6 +225,12 @@ simply being carried by the token.
   to every `href`) makes React log a hydration mismatch and refuse to patch it. `SessionTokenKeeper`
   therefore only *listens* — clicks and submits are given the token on their way out — and never edits
   the DOM during render.
+· **Assets that never change URL.** Turbopack gives a chunk a stable path that keeps serving different
+  bytes as you edit, so a browser memory cache, a proxy in front of the preview, or a restored bfcache
+  page can hand the browser JavaScript from an older build — indefinitely, and no reload fixes it.
+  `next.config.mjs` therefore prefixes every dev asset with the build stamp
+  (`/__build/<stamp>/_next/…`, rewritten to `/_next/…`) and sends `Cache-Control: no-store` for them.
+  Each run gets a fresh asset URL space, and a fresh document can never pull yesterday's modules.
 · **Dead HMR.** A tab left open while `npm run dev` restarts keeps its old modules forever: the HMR
   socket is gone, so every navigation hydrates fresh server HTML with stale client code, and React
   reports a mismatch about attributes that no longer exist in the source. `scripts/dev.mjs` stamps each
