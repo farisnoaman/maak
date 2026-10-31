@@ -63,6 +63,7 @@ export default function DriverFuelScreen() {
   const [fullTank, setFullTank] = useState(true);
   const [station, setStation] = useState('');
   const [receipt, setReceipt] = useState<string | null>(null);
+  const [odoPhoto, setOdoPhoto] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -112,14 +113,16 @@ export default function DriverFuelScreen() {
    * and the upload happens *before* the command, because `cmd_log_fuel` stores the object path it is given
    * and a path that does not exist is a receipt nobody can open.
    */
-  async function captureReceipt() {
+  async function capture(target: 'receipt' | 'odometer') {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
       setError(t('errors.FORBIDDEN'));
       return;
     }
     const result = await ImagePicker.launchCameraAsync({ quality: 0.6, allowsEditing: false });
-    if (!result.canceled && result.assets[0]) setReceipt(result.assets[0].uri);
+    if (result.canceled || !result.assets[0]) return;
+    if (target === 'receipt') setReceipt(result.assets[0].uri);
+    else setOdoPhoto(result.assets[0].uri);
   }
 
   async function submit() {
@@ -146,6 +149,19 @@ export default function DriverFuelScreen() {
       receiptPath = uploaded.path;
     }
 
+    // The meter itself, for the reading. The photo goes up first for the same reason the receipt does: a
+    // stored path that does not open is a reading nobody can defend when the owner disputes it.
+    let photoPath: string | null = null;
+    if (mode === 'odometer' && odoPhoto) {
+      const uploaded = await uploadVehicleOpsFile(odoPhoto, vehicle.id, 'odometer');
+      if (!uploaded.ok) {
+        setBusy(false);
+        setError(t('fleetOps.photoUploadFailed'));
+        return;
+      }
+      photoPath = uploaded.path;
+    }
+
     // A fill needs litres and a price; a bare reading needs neither. Two actions, one screen.
     const result =
       mode === 'fuel'
@@ -166,6 +182,7 @@ export default function DriverFuelScreen() {
             action: 'odometer.record',
             vehicleId: vehicle.id,
             odometerKm: Number(odometer),
+            photoPath,
           } as never);
 
     setBusy(false);
@@ -181,6 +198,7 @@ export default function DriverFuelScreen() {
     setPrice('');
     setStation('');
     setReceipt(null);
+    setOdoPhoto(null);
     setVehicle({ ...vehicle, odometer_km: Number(odometer) });
   }
 
@@ -265,7 +283,7 @@ export default function DriverFuelScreen() {
 
           <Pressable
             accessibilityRole="button"
-            onPress={() => void captureReceipt()}
+            onPress={() => void capture('receipt')}
             style={styles.secondary}
           >
             <Text style={styles.secondaryText}>
@@ -283,7 +301,17 @@ export default function DriverFuelScreen() {
             <Text style={styles.checkText}>{t('fleetOps.fullTank')}</Text>
           </Pressable>
         </>
-      ) : null}
+      ) : (
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => void capture('odometer')}
+          style={styles.secondary}
+        >
+          <Text style={styles.secondaryText}>
+            {odoPhoto ? t('fleetOps.attachmentUploaded') : t('fleetOps.photo')}
+          </Text>
+        </Pressable>
+      )}
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {message ? <Text style={styles.success}>{message}</Text> : null}
