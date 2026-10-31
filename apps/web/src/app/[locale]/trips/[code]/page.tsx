@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import {
   departureLabel,
+  describePolicies,
   formatMinor,
   isLocale,
   translate,
@@ -52,14 +53,7 @@ export default async function PublicTripPage({
   const trip = await loadPublicTrip(code, locale);
   const when = trip ? departureLabel(trip.departureAt, locale) : null;
 
-  /** Only the printable policy values: a nested object is the operator's own structure, not a fact. */
-  const policyRows: [string, string][] = trip
-    ? Object.entries(trip.policies).flatMap(([key, value]) =>
-        typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'
-          ? [[key, String(value)] as [string, string]]
-          : [],
-      )
-    : [];
+  const policyRows = describePolicies(trip?.policies, locale);
 
   return (
     <>

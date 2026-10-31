@@ -60,6 +60,11 @@ Mobile (`apps/mobile`): `/trips` (search, filter sheet, infinite scroll) and `/t
 Both clients call the *same* RPCs with the *same* argument builders, so a filter cannot mean one thing on
 the web and another in the app.
 
+Phone first, not phone-tolerant: below 720px the bottom tab bar carries the four destinations a thumb
+needs (home, marketplace, my trips, console), the home page opens with a three-field GET search whose
+result is a shareable URL rather than a modal, and `/console` forwards a staff member to `/staff` and an
+operator to `/operator` so the tab bar never guesses a role it cannot know.
+
 ---
 
 ## 2. Defects the tests found (and fixed)
@@ -101,9 +106,9 @@ read that ships revoked fails the suite instead of a console.
 
 | Gate | Result |
 | --- | --- |
-| `npm run sql:check` | 16 migrations applied; 7 pgTAP suites green; **92** trip assertions; no type drift; no client write grants |
-| `npm test` | 18 files, **365** tests (33 of them the Phase 4 domain/contract tests) |
-| `npm run check:guards` | 22 core files · 88 style files · 16 migrations · 43 commands |
+| `npm run sql:check` | 17 migrations applied; 7 pgTAP suites green; **97** trip assertions; no type drift; no client write grants |
+| `npm test` | 18 files, **367** tests (33 of them the Phase 4 domain/contract tests) |
+| `npm run check:guards` | 22 core files · 92 style files · 17 migrations · 43 commands |
 | `npm run check:a11y` | **52** routes, both directions, **7** discovered detail pages |
 | `npm run check:responsive` | viewport exported, no unguarded grid tracks, every wide table scrollable |
 | `npm run dev:check -- --api` | 16/16, including the marketplace without a session and a trip-code lookup |

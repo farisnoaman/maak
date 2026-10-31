@@ -82,6 +82,11 @@ export interface TripOptionVehicle {
   readonly verificationStatus: string;
   readonly ownerUserId: string | null;
   readonly ownerOrgId: string | null;
+  /** Mirrors `isVehicleOperational()`: the wizard disables exactly what the RPC will refuse. */
+  readonly status: string;
+  readonly insuranceExpiry: string | null;
+  readonly inspectionExpiry: string | null;
+  readonly registrationExpiry: string | null;
 }
 
 export interface TripOptionDriver {
@@ -176,6 +181,16 @@ const TRIP_COLUMNS =
 const STOP_COLUMNS =
   'id, trip_id, seq, name_ar, name_en, governorate_id, arrive_offset_minutes, price_from_origin_yer';
 
+/**
+ * The 22 governorates, for a form that has no session — the home page's search box. A visitor reading the
+ * landing page is anonymous by definition, and `governorates` is public reference data.
+ */
+export async function loadPublicGovernorates(): Promise<readonly Governorate[]> {
+  const client = await getServerClient();
+  if (!client) return [];
+  return loadGovernorates(client);
+}
+
 async function loadGovernorates(client: NonNullable<Awaited<ReturnType<typeof getServerClient>>>) {
   const result = await client.from('governorates').select('id, code, name_ar, name_en').limit(40);
   return rows(result.data).map((row) => ({
@@ -203,7 +218,7 @@ export async function loadTripOptions(context: AccountContext): Promise<TripOpti
     client
       .from('vehicles')
       .select(
-        'id, make, model, model_year, plate_number, verification_status, owner_user_id, owner_org_id',
+        'id, make, model, model_year, plate_number, verification_status, status, owner_user_id, owner_org_id, insurance_expiry, inspection_expiry, registration_expiry',
       )
       .eq('verification_status', 'verified')
       .eq('status', 'active')
@@ -240,6 +255,10 @@ export async function loadTripOptions(context: AccountContext): Promise<TripOpti
       verificationStatus: String(row.verification_status ?? 'unverified'),
       ownerUserId: str(row.owner_user_id),
       ownerOrgId: str(row.owner_org_id),
+      status: String(row.status ?? 'active'),
+      insuranceExpiry: str(row.insurance_expiry),
+      inspectionExpiry: str(row.inspection_expiry),
+      registrationExpiry: str(row.registration_expiry),
     }));
 
   return {

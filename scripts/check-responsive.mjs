@@ -139,6 +139,7 @@ const TARGETS = [
   '.fleet-step',
   '.site-menu__toggle',
   '.fleet-toggle',
+  '.tabbar__link',
 ];
 
 for (const selector of TARGETS) {

@@ -2646,3 +2646,95 @@ input[type='file']::file-selector-button {
   font-size: 0.75rem;
   white-space: nowrap;
 }
+
+/* ---------------------------------------------------------------------------------------------
+   The phone's bottom navigation.
+
+   Hidden — not just visually — above 720px: the header carries the full navigation there, and two
+   navigations on one screen is one too many. Below 720px it is the only fixed element in the product,
+   so `body` is padded by exactly its height (plus the safe-area inset) to keep the last row of a page
+   reachable instead of underneath a bar.
+   --------------------------------------------------------------------------------------------- */
+
+.mobile-tabbar {
+  display: none;
+}
+
+@media (max-width: 719.98px) {
+  .mobile-tabbar {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    position: fixed;
+    inset-block-end: 0;
+    inset-inline: 0;
+    z-index: 30;
+    background: var(--surface-base);
+    border-block-start: 1px solid var(--surface-sunken);
+    padding-block-end: env(safe-area-inset-bottom);
+  }
+
+  body:has(.mobile-tabbar) {
+    padding-block-end: calc(var(--tap-target) + var(--space-2) + env(safe-area-inset-bottom));
+  }
+}
+
+.tabbar__link {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 2px;
+  min-block-size: var(--tap-target);
+  padding-block: var(--space-2);
+  font-size: 0.7rem;
+  line-height: 1.2;
+  color: var(--ink-600);
+  text-decoration: none;
+}
+
+.tabbar__link[aria-current='page'] {
+  color: var(--brand-600);
+  font-weight: 700;
+}
+
+@media print {
+  .mobile-tabbar {
+    display: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------------------------
+   The home page's search box: one column at 320px, a row from 640px, never a horizontal form on a phone.
+   --------------------------------------------------------------------------------------------- */
+
+.hero-search {
+  display: grid;
+  gap: var(--space-3);
+  margin-block: var(--space-5);
+  padding: var(--space-4);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+}
+
+.hero-search__field {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.hero-search__field label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--ink-600);
+}
+
+.hero-search__submit {
+  min-block-size: var(--tap-target);
+}
+
+@media (min-width: 640px) {
+  .hero-search {
+    grid-template-columns: repeat(3, minmax(min(100%, 8rem), 1fr)) auto;
+    align-items: end;
+  }
+}

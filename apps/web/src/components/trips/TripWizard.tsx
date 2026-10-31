@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import {
   adenLocalToIso,
   errorKey,
+  isVehicleOperational,
   isoToAdenLocal,
   quotaMetricKey,
   quotaOf,
@@ -645,10 +646,24 @@ export function TripWizard({
             }
             options={[
               { value: '', label: t('fleet.selectPlaceholder') },
-              ...options.vehicles.map((vehicle) => ({
-                value: vehicle.id,
-                label: `${vehicle.label} · ${vehicle.plateNumber}`,
-              })),
+              ...options.vehicles.map((vehicle) => {
+                // The same predicate the database applies in `app.assert_trip_vehicle`: a grounded
+                // vehicle is disabled here instead of failing the whole wizard at step six.
+                const operational = isVehicleOperational({
+                  status: vehicle.status,
+                  verificationStatus: vehicle.verificationStatus,
+                  insuranceExpiry: vehicle.insuranceExpiry,
+                  inspectionExpiry: vehicle.inspectionExpiry,
+                  registrationExpiry: vehicle.registrationExpiry,
+                });
+                return {
+                  value: vehicle.id,
+                  label: operational
+                    ? `${vehicle.label} · ${vehicle.plateNumber}`
+                    : `${vehicle.label} · ${vehicle.plateNumber} · ${t('trips.vehicleGrounded')}`,
+                  disabled: !operational,
+                };
+              }),
             ]}
             onChange={(event) => set('vehicleId', event.target.value)}
             required

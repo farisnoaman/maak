@@ -5,6 +5,7 @@ import {
   isoToAdenLocal,
   departureLabel,
   isTripEditable,
+  describePolicies,
   readTripFilters,
   searchSuffix,
   tripBadges,
@@ -184,6 +185,27 @@ describe('marketplace filter URLs', () => {
     expect(fromRecord.origin).toEqual(['g1', 'g2']);
     expect(fromRecord.direct).toBe(true);
     expect(fromRecord.priceMax).toBe(5000);
+  });
+
+  it('names the policies it knows and shows the rest as the operator wrote them', () => {
+    expect(
+      describePolicies({ luggage: 'حقيبة 20 كجم', smoking: false, women_only: true }, 'ar'),
+    ).toEqual([
+      ['الأمتعة', 'حقيبة 20 كجم'],
+      ['التدخين', 'لا'],
+      ['مقاعد نسائية', 'نعم'],
+    ]);
+    expect(describePolicies({ women_only: true }, 'en')).toEqual([['Women-only seating', 'Yes']]);
+    expect(describePolicies({ wheel_chair: 'on request' }, 'en')).toEqual([
+      ['Wheel chair', 'on request'],
+    ]);
+  });
+
+  it('drops what it cannot print instead of showing [object Object] to a passenger', () => {
+    expect(describePolicies({ refund: { within: 24 }, empty: '', missing: null }, 'en')).toEqual(
+      [],
+    );
+    expect(describePolicies(null, 'en')).toEqual([]);
   });
 
   it('re-serialises a query for the language switch, keeping keys it does not know', () => {

@@ -4,7 +4,8 @@
 --   1. an unverified account cannot create a trip, and the refusal is NOT_VERIFIED (42501)
 --   2. a trip is a draft until it is published, and only a published trip is in the marketplace
 --   3. the payload is checked, not trusted: same origin and destination, no seats, a departure in the
---      past, another owner's vehicle, an unverified vehicle, a driver who was never invited
+--      past, another owner's vehicle, an unverified vehicle, a vehicle whose papers have lapsed, a
+--      driver who was never invited
 --   4. stops are ordered, priced, replaced (never patched), and never the same place twice in a row
 --   5. pricing matches @maak/core: flat, per-stop, whole-trip, percent (basis points), fixed, scopes
 --   6. the 2-hour lock is a database rule — a stale tab gets EDIT_WINDOW_CLOSED from the RPC itself
@@ -20,7 +21,7 @@ begin;
 
 create extension if not exists pgtap;
 
-select plan(92);
+select plan(97);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -401,7 +402,74 @@ select is(
 );
 
 -- ---------------------------------------------------------------------------
--- 4. Publishing, and the two-hour lock
+-- 4. An expired document grounds the vehicle
+-- ---------------------------------------------------------------------------
+-- Phase 3 warns on the roster; this is where the warning becomes a rule, because this is where a seat is
+-- sold. `app.assert_trip_vehicle` is called by create, update *and* publish.
+
+update public.vehicles
+set inspection_expiry = current_date - 1
+where id = 'eeee00a1-0000-4000-8000-eeeeeeeeeeee';
+
+select throws_ok(
+  $$ select pg_temp.create_trip('eeee0001-1111-4111-8111-eeeeeeeeeeee', pg_temp.trip()) $$,
+  '23505',
+  null,
+  'a verified van whose inspection lapsed cannot be scheduled'
+);
+
+update public.vehicles
+set inspection_expiry = current_date + 120, insurance_expiry = current_date - 1
+where id = 'eeee00a1-0000-4000-8000-eeeeeeeeeeee';
+
+select throws_ok(
+  $$ select pg_temp.create_trip('eeee0001-1111-4111-8111-eeeeeeeeeeee', pg_temp.trip()) $$,
+  '23505',
+  null,
+  'nor can one whose insurance lapsed'
+);
+
+update public.vehicles
+set insurance_expiry = current_date + 120, registration_expiry = current_date - 1
+where id = 'eeee00a1-0000-4000-8000-eeeeeeeeeeee';
+
+select throws_ok(
+  $$ select pg_temp.create_trip('eeee0001-1111-4111-8111-eeeeeeeeeeee', pg_temp.trip()) $$,
+  '23505',
+  null,
+  'nor one whose registration lapsed — the same three documents the wizard disables'
+);
+
+update public.vehicles
+set registration_expiry = current_date + 300
+where id = 'eeee00a1-0000-4000-8000-eeeeeeeeeeee';
+
+select lives_ok(
+  $$ select app.assert_trip_vehicle(
+       'eeee00a1-0000-4000-8000-eeeeeeeeeeee', 'eeee0001-1111-4111-8111-eeeeeeeeeeee', null
+     ) $$,
+  'renewing both documents makes the same vehicle schedulable again'
+);
+
+-- An unknown expiry is not an expired one: a vehicle whose papers were never recorded stays usable.
+update public.vehicles
+set inspection_expiry = null, insurance_expiry = null, registration_expiry = null
+where id = 'eeee00a1-0000-4000-8000-eeeeeeeeeeee';
+
+select lives_ok(
+  $$ select app.assert_trip_vehicle(
+       'eeee00a1-0000-4000-8000-eeeeeeeeeeee', 'eeee0001-1111-4111-8111-eeeeeeeeeeee', null
+     ) $$,
+  'and a vehicle with no recorded expiry is not silently grounded'
+);
+
+update public.vehicles
+set inspection_expiry = current_date + 120, insurance_expiry = current_date + 120,
+    registration_expiry = current_date + 300
+where id = 'eeee00a1-0000-4000-8000-eeeeeeeeeeee';
+
+-- ---------------------------------------------------------------------------
+-- 5. Publishing, and the two-hour lock
 -- ---------------------------------------------------------------------------
 
 select is(
@@ -478,7 +546,7 @@ select is(
 );
 
 -- ---------------------------------------------------------------------------
--- 5. Quotas: five trips a month, one live trip
+-- 6. Quotas: five trips a month, one live trip
 -- ---------------------------------------------------------------------------
 
 create temp table rival as
@@ -599,7 +667,7 @@ select is(
 );
 
 -- ---------------------------------------------------------------------------
--- 6. The marketplace: what is visible, what is filterable, how it pages
+-- 7. The marketplace: what is visible, what is filterable, how it pages
 -- ---------------------------------------------------------------------------
 
 select is(
@@ -742,7 +810,7 @@ select is(
 );
 
 -- ---------------------------------------------------------------------------
--- 7. Verification: staff-only, needs a pending submission, re-opens on a real change
+-- 8. Verification: staff-only, needs a pending submission, re-opens on a real change
 -- ---------------------------------------------------------------------------
 
 select throws_ok(
@@ -810,7 +878,7 @@ select is(
 );
 
 -- ---------------------------------------------------------------------------
--- 8. Cancelling: out of the marketplace in the same transaction, still in the staff view
+-- 9. Cancelling: out of the marketplace in the same transaction, still in the staff view
 -- ---------------------------------------------------------------------------
 
 select throws_ok(
@@ -872,7 +940,7 @@ select ok(
 );
 
 -- ---------------------------------------------------------------------------
--- 9. RLS and grants: the marketplace is open, the workshop is not
+-- 10. RLS and grants: the marketplace is open, the workshop is not
 -- ---------------------------------------------------------------------------
 
 set local role anon;
@@ -951,7 +1019,7 @@ select is(
 );
 
 -- ---------------------------------------------------------------------------
--- 10. The fare is the JavaScript fare, in SQL
+-- 11. The fare is the JavaScript fare, in SQL
 -- ---------------------------------------------------------------------------
 -- `app.trip_total` is the number the screen renders and the number the booking command will charge. The
 -- market it prices is a market of trust, so "the card said 24 300 and the ticket said 27 000" is not a

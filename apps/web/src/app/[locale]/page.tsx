@@ -4,6 +4,8 @@ import { notFound } from 'next/navigation';
 import { translate, isLocale, type Locale, type TranslationKey } from '@maak/core';
 import { SiteHeader } from '@/components/SiteHeader';
 import { FareCalculator } from '@/components/FareCalculator';
+import { TripSearchForm } from '@/components/TripSearchForm';
+import { loadPublicGovernorates } from '@/lib/trips';
 
 export const metadata: Metadata = {
   alternates: {
@@ -36,6 +38,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
   if (!isLocale(raw)) notFound();
   const locale: Locale = raw;
   const t = (key: TranslationKey) => translate(locale, key);
+  const governorates = await loadPublicGovernorates();
 
   return (
     <>
@@ -51,6 +54,9 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
               </span>
               <h1>{t('home.heroTitle')}</h1>
               <p className="lead">{t('home.heroSubtitle')}</p>
+              {/* Above the buttons, because on a phone this is the whole page: pick where from, where to,
+                  when — and the result is a URL, not a modal. */}
+              <TripSearchForm locale={locale} governorates={governorates} />
               <div className="hero__actions">
                 {/* "Explore trips" used to be an in-page anchor to the console grid — a button that
                     promises the marketplace and scrolls. It now opens the marketplace. */}
@@ -63,7 +69,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
               </div>
               <div className="hero__stats">
                 <div>
-                  <div className="stat__value num">365</div>
+                  <div className="stat__value num">367</div>
                   <div className="stat__label">{t('home.statTests')}</div>
                 </div>
                 <div>

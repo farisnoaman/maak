@@ -5,6 +5,7 @@ import { DIRECTION, LOCALES, isLocale, type Locale } from '@maak/core';
 import '@maak/design-tokens/tokens.css';
 import '../globals.css';
 import { ToastProvider } from '@/components/ui/Toast';
+import { MobileTabBar } from '@/components/MobileTabBar';
 import { SessionTokenKeeper } from '@/components/SessionTokenKeeper';
 import { StaleBuildBanner } from '@/components/StaleBuildBanner';
 import { BUILD } from '@/lib/build';
@@ -55,6 +56,9 @@ export default async function LocaleLayout({
         <SessionTokenKeeper />
         <StaleBuildBanner build={BUILD} locale={locale as Locale} />
         <ToastProvider>{children}</ToastProvider>
+        {/* The phone's primary navigation. Rendered for every screen; CSS keeps it out of the way on
+            a desktop, where the header already carries the same four destinations. */}
+        <MobileTabBar />
       </body>
     </html>
   );

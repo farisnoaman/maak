@@ -7,7 +7,7 @@
  * side-effect free, so it can be unit-tested and used in a server component.
  */
 
-import type { TranslationKey } from '../i18n/dictionaries';
+import { translate, type TranslationKey } from '../i18n/dictionaries';
 import type { Locale } from '../i18n/locale';
 
 export type TripStatus = 'draft' | 'pending' | 'published' | 'cancelled' | 'completed';
@@ -289,6 +289,48 @@ export function activeFilterCount(state: TripFilterState): number {
   if (state.dateFrom) count += 1;
   if (state.dateTo) count += 1;
   return count;
+}
+
+/**
+ * Keys we can name in Arabic and English. `trips.policies` is free-form operator JSON — there is no
+ * schema to validate against — so this is a courtesy, not a contract: a key we do not know is shown
+ * exactly as the operator wrote it, because inventing a translation for an unknown key is a lie.
+ */
+const POLICY_LABELS: Record<string, TranslationKey> = {
+  luggage: 'trips.policy.luggage',
+  smoking: 'trips.policy.smoking',
+  women_only: 'trips.policy.womenOnly',
+  pets: 'trips.policy.pets',
+  cancellation: 'trips.policy.cancellation',
+};
+
+function humanisePolicyKey(key: string): string {
+  const spaced = key.replace(/[_-]+/g, ' ').trim();
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
+/**
+ * The policy block on the trip page: printable label/value pairs, in the operator's own words.
+ *
+ * Nested objects are dropped rather than stringified — `[object Object]` in a public page is worse than
+ * a missing row — and flags read as yes/no instead of `true`/`false`.
+ */
+export function describePolicies(
+  policies: Readonly<Record<string, unknown>> | null | undefined,
+  locale: Locale,
+): [string, string][] {
+  if (!policies) return [];
+
+  return Object.entries(policies).flatMap(([key, value]): [string, string][] => {
+    const label = POLICY_LABELS[key]
+      ? translate(locale, POLICY_LABELS[key])
+      : humanisePolicyKey(key);
+    if (typeof value === 'boolean')
+      return [[label, translate(locale, value ? 'fleet.yes' : 'fleet.no')]];
+    if (typeof value === 'number') return [[label, String(value)]];
+    if (typeof value === 'string' && value.trim() !== '') return [[label, value]];
+    return [];
+  });
 }
 
 /**
