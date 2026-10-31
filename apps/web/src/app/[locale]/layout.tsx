@@ -25,6 +25,8 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  // Canonical and hreflang URLs are absolute; without a base Next.js refuses to emit them.
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'),
   title: 'Maak — إدارة الرحلات',
   description:
     'منصة إدارة الرحلات في اليمن: حسابات أفراد وشركات، مركبات وسائقون موثّقون، رحلات عامة، دفع ومحاسبة.',

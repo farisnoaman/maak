@@ -305,19 +305,19 @@ not build the acceptance-criterion region and reference data that could never be
 - Mobile: search + filter sheet + trip detail.
 
 ### Tasks
-- [ ] Migrations: trips/trip_stops + enums (`trip_status`, verification status, `booking_mode`, `discount_kind`,
+- [x] Migrations: trips/trip_stops + enums (`trip_status`, verification status, `booking_mode`, `discount_kind`,
       `pricing_mode`, `gender_policy`, `payment_policy`) + constraints (seats, ordering, no duplicate consecutive stops).
-- [ ] `app.assert_trip_editable()`, `app.actor_can_manage_trip()`, `app.recompute_seats_available()`,
+- [x] `app.assert_trip_editable()`, `app.actor_can_manage_trip()`, `app.recompute_seats_available()`,
       `app.set_trip_visibility()`.
-- [ ] `trips_search` refresh triggers + indexes (GIN stop ids, btree date/price, trigram names, featured boost).
-- [ ] Commands (edge fn + atomic `cmd_*` SQL): `create_trip`, `update_trip`, `set_trip_stops`, `publish_trip`, `submit_trip_verification`,
+- [x] `trips_search` refresh triggers + indexes (GIN stop ids, btree date/price, trigram names, featured boost).
+- [x] Commands (edge fn + atomic `cmd_*` SQL): `create_trip`, `update_trip`, `set_trip_stops`, `publish_trip`, `submit_trip_verification`,
       `decide_trip_verification`, `cancel_trip`, `search_public_trips(locale, filters, sort, cursor)`,
       `get_trip_public`, `staff_search_trips`.
-- [ ] Facets (`{ items, facets, total }`) + 30 s cache + k6 benchmark script.
-- [ ] Pricing engine in `@maak/core/pricing.ts` mirroring DB math + Vitest parity tests against RPC fixtures.
-- [ ] Web `/operator/trips/*`, `/trips`, `/trips/[code]`, `/staff/trips`; localized forms with `Asia/Aden` timezone.
-- [ ] Mobile search/filter/results/detail.
-- [ ] pgTAP: unverified cannot create; edit blocked at 1h59m (frozen clock); drafts/rejected/completed hidden publicly.
+- [~] Facets (`{ items, facets, total }`) + 30 s cache done; **k6 benchmark not written or run** (no k6, no 50k-trip seed).
+- [x] Pricing engine in `@maak/core/pricing.ts` mirroring DB math + Vitest parity tests against RPC fixtures.
+- [x] Web `/operator/trips/*`, `/trips`, `/trips/[code]`, `/staff/trips`; localized forms with `Asia/Aden` timezone.
+- [x] Mobile search/filter/results/detail — implemented and typechecked, **not run on a device**.
+- [x] pgTAP: unverified cannot create; edit blocked at 1h59m (frozen clock); drafts/rejected/completed hidden publicly.
 
 ### Acceptance criteria
 - Verified operator creates Sana'a → Aden with 2 stops, per-stop pricing, 10% discount, publishes → visible publicly in < 1 s.

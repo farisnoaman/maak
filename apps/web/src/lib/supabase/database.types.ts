@@ -739,7 +739,31 @@ export interface Database {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    /**
+     * The three trip RPCs. They are `security definer` functions granted to `anon` (the marketplace) and
+     * to `authenticated` (the review queue), so they are part of the API surface the web reads — typed
+     * here rather than cast away at every call site.
+     */
+    Functions: {
+      search_public_trips: {
+        Args: {
+          p_locale: string;
+          p_filters: Json;
+          p_sort: string;
+          p_cursor: string | null;
+          p_limit: number;
+        };
+        Returns: Json;
+      };
+      get_trip_public: {
+        Args: { p_code: string; p_locale: string };
+        Returns: Json;
+      };
+      staff_search_trips: {
+        Args: { p_actor: string; p_filters: Json; p_limit: number };
+        Returns: Json;
+      };
+    };
     Enums: {
       verification_status: VerificationStatus;
       platform_role: PlatformRole;

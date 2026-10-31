@@ -125,7 +125,13 @@ async function main() {
           pass(`${file}: ${ran} assertions`);
         }
       } catch (error) {
-        fail(`${file}: ${error.message}`);
+        // `position` is the character offset into the multi-statement string, so it maps back to the
+        // line of the test file that failed — without it a 900-line suite says only "syntax error".
+        const line =
+          typeof error.position === 'number'
+            ? sql.slice(0, error.position).split('\n').length
+            : null;
+        fail(`${file}: ${error.message}${line === null ? '' : ` (line ${line})`}`);
         // The file opens a transaction; an error leaves it aborted, which would poison everything
         // that follows (including the type check).
         await client.query('rollback').catch(() => {});

@@ -1994,3 +1994,618 @@ input[type='file']::file-selector-button {
   color: var(--brand-700);
   font-weight: 700;
 }
+
+/* ---------------------------------------------------------------------------
+   trips (Phase 4) — built mobile-first
+   ---------------------------------------------------------------------------
+   The marketplace is where passengers are, and passengers are on phones. Every rule below starts at
+   the narrowest column and only *adds* columns when there is room, so a 360px screen gets one card per
+   row, a thumb-sized target and no horizontal scroll; a 1280px screen gets a grid. Nothing here hides
+   content on a phone — a narrower screen reflows, it does not lose the route, the price or the CTA.
+   --------------------------------------------------------------------------- */
+
+.trip-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.trips-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+  margin-block-start: var(--space-5);
+}
+
+@media (min-width: 720px) {
+  .trips-grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
+  }
+}
+
+.trip-card {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+@media (min-width: 560px) {
+  .trip-card {
+    padding: var(--space-5);
+  }
+}
+
+.trip-card__route {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.trip-card__arrow {
+  color: var(--ink-400);
+}
+
+.trip-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  font-size: 0.85rem;
+  color: var(--ink-600);
+}
+
+.trip-card__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--surface-sunken);
+}
+
+/* On a phone the price and the link stack; the link stays a full-width tap target. */
+@media (max-width: 479px) {
+  .trip-card__footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .trip-card__footer .btn {
+    inline-size: 100%;
+  }
+}
+
+.trip-price {
+  font-size: 1.05rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.trip-price small {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ink-500);
+}
+
+/* ---------- the trip form (wizard + edit) ---------- */
+
+.trip-form {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.trip-form__row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-3);
+}
+
+@media (min-width: 560px) {
+  .trip-form__row--2 {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.trip-steps {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  padding-block-end: var(--space-2);
+  margin-block-end: var(--space-4);
+  scrollbar-width: thin;
+}
+
+.trip-steps button {
+  flex: 0 0 auto;
+  min-block-size: var(--tap-target);
+  padding-inline: var(--space-4);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-pill);
+  background: var(--surface-muted);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--ink-600);
+  cursor: pointer;
+}
+
+.trip-steps button[aria-current='step'] {
+  background: var(--brand-600);
+  border-color: var(--brand-600);
+  color: #fff;
+}
+
+.trip-stop {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-md);
+  background: var(--surface-muted);
+}
+
+@media (min-width: 640px) {
+  .trip-stop {
+    grid-template-columns: minmax(0, 1fr) 8rem 8rem auto;
+    align-items: end;
+  }
+}
+
+.trip-stop__remove {
+  min-block-size: var(--tap-target);
+  min-inline-size: var(--tap-target);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-sm);
+  background: var(--surface-base);
+  font: inherit;
+  color: var(--ink-600);
+  cursor: pointer;
+}
+
+/* ---------- the route timeline (detail page) ---------- */
+
+.trip-timeline {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.trip-timeline li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: baseline;
+}
+
+.trip-timeline__marker {
+  inline-size: 0.7rem;
+  block-size: 0.7rem;
+  border-radius: 50%;
+  background: var(--brand-500);
+  margin-block-start: 0.35rem;
+}
+
+.trip-timeline__name {
+  font-weight: 700;
+}
+
+.trip-timeline__meta {
+  font-size: 0.8rem;
+  color: var(--ink-500);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- the marketplace filters ---------- */
+
+.trip-filters {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+}
+
+.trip-filters > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: var(--tap-target);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+@media (min-width: 900px) {
+  /* From a laptop up the filters are always visible: a disclosure that is open by default is a click
+     nobody needs, and `<details open>` on a wide screen would leave the marker lying. */
+  .trip-filters > summary {
+    display: none;
+  }
+}
+
+.trip-filters__group {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.trip-filters__group legend {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--ink-600);
+}
+
+.trip-filters__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.trip-filters__option {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: var(--tap-target);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-pill);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.trip-filters__option input {
+  margin: 0;
+  inline-size: 1rem;
+  block-size: 1rem;
+}
+
+.trip-filters__option:has(input:checked) {
+  border-color: var(--brand-500);
+  background: var(--brand-50);
+  font-weight: 700;
+}
+
+/* The clear-filters link and the sort switch keep a thumb-sized target even as plain links. */
+.trip-filters__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.trip-filters__actions .btn {
+  flex: 1 1 auto;
+}
+
+@media (min-width: 560px) {
+  .trip-filters__actions .btn {
+    flex: 0 0 auto;
+  }
+}
+
+/* ---------- the sticky book bar (mobile) ---------- */
+
+.trip-cta {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3) 0;
+  position: sticky;
+  inset-block-end: 0;
+  background: var(--surface-base);
+  border-block-start: 1px solid var(--surface-sunken);
+}
+
+@media (min-width: 720px) {
+  .trip-cta {
+    position: static;
+    border: 0;
+    padding: 0;
+  }
+}
+
+.trip-cta .btn {
+  inline-size: 100%;
+}
+
+.trip-summary {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-lg);
+  background: var(--surface-muted);
+}
+
+.trip-summary__row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font-size: 0.9rem;
+}
+
+.trip-summary__row--total {
+  font-size: 1rem;
+  font-weight: 800;
+  padding-block-start: var(--space-2);
+  border-block-start: 1px solid var(--surface-sunken);
+}
+
+.trip-summary__row dt {
+  color: var(--ink-600);
+}
+
+.trip-summary__row dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------------------
+   trips — console and marketplace furniture
+   ---------------------------------------------------------------------------
+   Only what the trip screens need beyond the card/form primitives above: a status tab strip that
+   scrolls sideways on a phone instead of wrapping into four lines, a hint line, an action row, and the
+   two-column marketplace layout that becomes a sidebar at 900px.
+   --------------------------------------------------------------------------- */
+
+.trip-form__hint {
+  color: var(--ink-600);
+  font-size: 0.85rem;
+  margin-block: var(--space-1);
+}
+
+.trip-form__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-block-start: var(--space-4);
+}
+
+.trip-form__actions .ui-btn {
+  min-height: var(--tap-target);
+}
+
+.trip-form__wide {
+  grid-column: 1 / -1;
+}
+
+.trip-stop-list {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.trip-tabs {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  padding-block-end: var(--space-2);
+  margin-block: var(--space-3);
+  scrollbar-width: thin;
+}
+
+.trip-tabs a {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 0 0 auto;
+  min-height: var(--tap-target);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--surface-muted);
+  border-radius: var(--radius-pill);
+  color: var(--ink-700, var(--ink-600));
+  white-space: nowrap;
+}
+
+.trip-tabs a[aria-current='page'] {
+  background: var(--brand-50);
+  border-color: var(--brand-300);
+  color: var(--brand-700);
+  font-weight: 700;
+}
+
+.trip-tabs__count {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-500);
+  font-size: 0.8rem;
+}
+
+.trip-note {
+  border-inline-start: 3px solid var(--brand-500);
+  background: var(--surface-sunken);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+}
+
+.trip-back {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap-target);
+  color: var(--ink-600);
+}
+
+.trip-detail__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.trip-detail__head h1,
+.trip-detail__head h2 {
+  margin-block: var(--space-1);
+  font-size: 1.2rem;
+}
+
+.trip-cancel {
+  display: grid;
+  gap: var(--space-3);
+  margin-block-start: var(--space-4);
+  padding: var(--space-3);
+  border: 1px solid var(--surface-muted);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+
+.trip-queue {
+  display: grid;
+  gap: var(--space-3);
+  list-style: none;
+  padding: 0;
+  margin-block: var(--space-4);
+}
+
+.trip-queue__item {
+  padding: var(--space-4);
+}
+
+.trip-queue__item h3 {
+  font-size: 1rem;
+  margin-block-end: var(--space-1);
+}
+
+/* Marketplace ----------------------------------------------------------------------------------- */
+
+.trips-hero {
+  margin-block: var(--space-5) var(--space-3);
+}
+
+.trips-hero h1 {
+  font-size: clamp(1.35rem, 4vw, 1.9rem);
+  margin-block-end: var(--space-2);
+}
+
+.trips-hero p {
+  color: var(--ink-600);
+  max-inline-size: 46ch;
+}
+
+.trips-layout {
+  display: grid;
+  gap: var(--space-4);
+}
+
+@media (min-width: 900px) {
+  .trips-layout {
+    grid-template-columns: minmax(min(100%, 16rem), 18rem) 1fr;
+    align-items: start;
+    gap: var(--space-5);
+  }
+}
+
+.trips-results {
+  min-inline-size: 0;
+}
+
+.trips-count {
+  color: var(--ink-600);
+  font-size: 0.9rem;
+}
+
+.trips-pager {
+  display: flex;
+  justify-content: center;
+  margin-block: var(--space-5);
+}
+
+.trips-pager .ui-btn {
+  min-width: 10rem;
+  min-height: var(--tap-target);
+}
+
+/* The governorate a filter matched, so a result does not look unrelated to the search. */
+.trip-match {
+  text-decoration: underline;
+  text-decoration-color: var(--brand-500);
+  text-underline-offset: 0.2em;
+}
+
+/* Operator calendar ------------------------------------------------------------------------------ */
+
+.trip-calendar__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-block: var(--space-4);
+}
+
+.trip-calendar__bar .ui-btn {
+  min-height: var(--tap-target);
+}
+
+.trip-calendar__month {
+  font-weight: 800;
+  font-size: 1.05rem;
+}
+
+.trip-calendar {
+  width: 100%;
+  border-collapse: collapse;
+  min-inline-size: 44rem;
+}
+
+.trip-calendar th {
+  text-align: start;
+  font-size: 0.8rem;
+  color: var(--ink-600);
+  padding: var(--space-2);
+  border-block-end: 1px solid var(--surface-muted);
+}
+
+.trip-calendar td {
+  vertical-align: top;
+  padding: var(--space-2);
+  border: 1px solid var(--surface-muted);
+  inline-size: 14.28%;
+  block-size: 6rem;
+}
+
+.trip-calendar td[aria-current='date'] {
+  background: var(--brand-50);
+}
+
+.trip-calendar__empty {
+  background: var(--surface-sunken);
+}
+
+.trip-calendar__day {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--ink-500);
+  font-variant-numeric: tabular-nums;
+}
+
+.trip-calendar__list {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+  font-size: 0.75rem;
+}
+
+.trip-calendar__list a {
+  display: block;
+  color: var(--ink-900);
+}
+
+.trip-share {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.trip-share .ui-btn {
+  min-height: var(--tap-target);
+}

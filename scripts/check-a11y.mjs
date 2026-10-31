@@ -60,6 +60,21 @@ const ROUTES = [
   { path: '/en/operator/drivers', lang: 'en', dir: 'ltr', account: 'owner' },
   { path: '/ar/staff/vehicles', lang: 'ar', dir: 'rtl', account: 'staff' },
   { path: '/en/staff/vehicles', lang: 'en', dir: 'ltr', account: 'staff' },
+  // Phase 4 surfaces — the marketplace is public, so it is checked with no session at all.
+  { path: '/ar/trips', lang: 'ar', dir: 'rtl', account: null },
+  { path: '/en/trips', lang: 'en', dir: 'ltr', account: null },
+  { path: '/ar/trips?direct=1&sort=cheapest', lang: 'ar', dir: 'rtl', account: null },
+  { path: '/ar/operator/trips', lang: 'ar', dir: 'rtl', account: 'owner' },
+  { path: '/en/operator/trips', lang: 'en', dir: 'ltr', account: 'owner' },
+  { path: '/ar/operator/trips?status=draft', lang: 'ar', dir: 'rtl', account: 'owner' },
+  { path: '/ar/operator/trips/new', lang: 'ar', dir: 'rtl', account: 'owner' },
+  { path: '/en/operator/trips/new', lang: 'en', dir: 'ltr', account: 'owner' },
+  { path: '/ar/operator/trips/calendar', lang: 'ar', dir: 'rtl', account: 'owner' },
+  { path: '/en/operator/trips/calendar', lang: 'en', dir: 'ltr', account: 'owner' },
+  { path: '/ar/account/trips', lang: 'ar', dir: 'rtl', account: 'owner' },
+  { path: '/en/account/trips', lang: 'en', dir: 'ltr', account: 'owner' },
+  { path: '/ar/staff/trips', lang: 'ar', dir: 'rtl', account: 'staff' },
+  { path: '/en/staff/trips', lang: 'en', dir: 'ltr', account: 'staff' },
 ];
 
 const failures = [];
@@ -254,6 +269,41 @@ if (sessions.owner) {
       lang: locale,
       dir: locale === 'ar' ? 'rtl' : 'ltr',
       account: 'owner',
+    });
+    detailRoutes += 1;
+  }
+
+  // The operator's trip detail — discovered from the list, so the screen is only checked when a trip
+  // actually exists (an empty dev database must not fail the guard).
+  for (const locale of ['ar', 'en']) {
+    const listHtml = await fetch(`${BASE}/${locale}/operator/trips`, {
+      headers: { cookie: sessions.owner },
+    })
+      .then((response) => (response.ok ? response.text() : ''))
+      .catch(() => '');
+    const href = listHtml.match(/href="\/(ar|en)\/operator\/trips\/([0-9a-f-]{36})"/);
+    if (!href) continue;
+    await checkRoute({
+      path: `/${locale}/operator/trips/${href[2]}`,
+      lang: locale,
+      dir: locale === 'ar' ? 'rtl' : 'ltr',
+      account: 'owner',
+    });
+    detailRoutes += 1;
+  }
+}
+
+{
+  const publicHtml = await fetch(`${BASE}/ar/trips`)
+    .then((response) => (response.ok ? response.text() : ''))
+    .catch(() => '');
+  const code = publicHtml.match(/href="\/ar\/trips\/([A-Za-z0-9-]{4,20})"/);
+  if (code) {
+    await checkRoute({
+      path: `/ar/trips/${code[1]}`,
+      lang: 'ar',
+      dir: 'rtl',
+      account: null,
     });
     detailRoutes += 1;
   }
