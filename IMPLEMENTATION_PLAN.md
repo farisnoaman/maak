@@ -509,6 +509,14 @@ binary, trips-only bulk, no native camera) is argued in `docs/phase-7-report.md`
 - [x] Web `/operator/vehicles/[id]/health`, `/operator/fleet`, CSV export.
 - [x] Mobile fuel/ODO quick action (`/driver/fuel`).
 - [x] Tests: consumption math, due-date math, timezone-safe date handling (Vitest + pgTAP — 52 pgTAP assertions)
+- [x] 8.3 — the marketplace, the booking form and the account area: the filter panel was a closed `<details>`
+      whose summary is hidden from 900px up, so a desktop visitor had no filters at all (`FilterDisclosure`
+      sets the `open` attribute and marks the panel `data-enhanced`, so a browser without JavaScript still gets
+      a visible toggle); `.trip-filters__count` and the `fleet-panel`/`fleet-form-grid` pair were used and
+      never defined; `.trip-detail` had no rules; the stop marker drew its number over a 0.7rem dot; the route
+      arrow pointed backwards in English; the account area gained the pill navigation its four sub-screens never
+      had. Two extra departures and one accepted booking seeded, so the grid, the facets, the "direct" badge and the
+      booking card have something to lay out.
 - [x] 8.2 — the dashboard itself: `.fleet-grid` meant two things (a card grid and a table) and `.console-grid`
       was a tile grid on every content page, so the fleet screen rendered its tables as columns of cards
       inside a 220px strip. Renamed the table class, made the console grid one column, and rebuilt the page

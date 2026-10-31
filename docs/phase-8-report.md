@@ -274,3 +274,99 @@ adding this month's fuel would have quietly changed the evidence. Verified after
 typecheck ×3 · 451 tests · coverage 95.84 % / 87.1 % · db types · edge bundle · 29 migrations, 13 suites) ·
 `check:a11y` ✓ **68 routes**, including the fleet page in both directions · both locales render the new
 copy (`مركبات تحتاج إلى انتباهك: 2`).
+
+---
+
+## 9. Phase 8.3 — the marketplace, the booking form and the account area
+
+The same method as 8.2: find the defects that are facts about the markup and the stylesheet, fix those first,
+then let the layout follow. The marketplace had three, and one of them meant a desktop visitor could not filter
+at all.
+
+1. **The filters were unreachable from 900px up.** The panel is a `<details>` whose `<summary>` is
+   `display: none` on a wide screen — a sidebar has no toggle. But the panel was rendered
+   `open={activeCount > 0}`, so a visitor who had not filtered anything got a *closed* disclosure with no
+   summary: the content is not merely collapsed, it is not rendered, and no stylesheet can bring it back.
+   `<details>` hides its own content by attribute, so the attribute is the fix. `FilterDisclosure` sets `open`
+   from `matchMedia('(min-width: 900px)')` and marks the panel `data-enhanced`; the summary is hidden only
+   once that attribute is there. Without JavaScript the summary stays visible and the panel is one click away
+   — the failure mode is a disclosure, never a form nobody can reach. The old CSS also assumed a `<details>`
+   keeps its marker under `display: flex`; it does not, so the summary now draws its own chevron.
+2. **`.trip-filters__actions` styled `.btn`; the markup writes `.ui-btn`.** The "full width on a phone" rule
+   therefore never applied and nothing was ever stretched — the same class-drift the fleet ledger had.
+3. **`.trip-filters__count` was used three times and defined nowhere.** The facet counts ("Aden 2"), the
+   active-filter count on the summary and the direct count all rendered as loose digits after a label.
+4. **The filter groups zeroed their own margins** (a `<fieldset>` needs that) and the form between them had no
+   gap, so the nine controls sat flush against each other. The form is now the grid that spaces them.
+
+With those fixed, the rest was layout:
+
+| At 320–719px | At 720px and up |
+| --- | --- |
+| Filters behind one 44px row: *Filter* + a brand badge with the number in force; the panel opens into full-width fields | A 16–18rem sidebar, always open, summary gone |
+| Filter and Clear are full-width buttons, stacked | One row, hugged left |
+| Trip cards in one column; price above a full-width action | `auto-fill` cards from 22rem; price and action on one line |
+| The book bar is a floating card pinned to the bottom of the screen | Inline buttons in the article, no shadow, no border |
+| Timeline stops: numbered pin, name, then arrival and fare beneath it | Arrival and fare on the stop's own line, right-aligned |
+| The booking form is a card that is the page | Same card, 40rem, more padding |
+| Account sections: pill navigation that scrolls sideways | The same pills, wrapped into rows |
+
+**The trip detail page had no rules at all.** `.trip-detail` was used as a wrapper and defined nowhere, so the
+busiest page in the marketplace — heading, eleven summary rows, three stops, policies, operator, sticky book
+bar — was a stack of browser default margins. It is now one column of blocks with a rhythm, capped at 48rem,
+and **deliberately not a grid**: `position: sticky` on the book bar needs the article to be its containing
+block, and a grid item is confined to its own row, which would silently unpin the bar.
+
+**The stop marker was a 0.7rem dot with the stop's number inside it**, so the digit drew over the circle. It is
+a 1.5rem numbered pin now. **The route arrow was a hard-coded `←`**: the English page read *"Aden ← Sana'a"*,
+which says the opposite of the trip, while the JSON-LD on the same page said `Aden → Sana'a`. It is `→` now,
+flipped by the `--icon-flip` token the chevrons already use, so Arabic still reads the way Arabic reads.
+
+**The account area had no navigation.** `/account/bookings`, `/account/invitations`, `/account/licence` and
+`/account/verification` were reachable only from the hub's button row — a person on their bookings had no way
+back to their details but the back button. Every account page now carries the same five-link pill row, marked
+`aria-current="page"`. The hub itself lost its inline styles, its doorway links became a tile grid, and
+signing out — which ends the session, and is not one of the page's actions — moved below a rule with the
+sentence that says so. `.account-org` was also the one element in the app painted with a literal `#fff`, which
+is invisible only for as long as there is no dark theme.
+
+**Two class names that have never existed, closed.** `driver/LicencePanel.tsx` has written `fleet-panel` and
+`fleet-form-grid` since Phase 3; neither was ever in the stylesheet, which is why `/account/licence` rendered as
+an unbordered stack of fields. Both now have rules. It is the same failure as `.trip-filters__count`, and the
+reason the audit for "class used with no exact rule" is worth running after every screen.
+
+### Demo data, so the marketplace is a marketplace
+
+One published trip proves the booking flow and cannot prove the marketplace: one card has no second column to
+get wrong, no sort that changes anything, no origin facet with two counts, and never a **Direct** badge (that
+badge means *no stops*, and the only seeded trip had three). Two more departures are now seeded through the
+same three commands as the first — a direct Aden → Taiz on the Coaster, and a women-only Sana'a → Aden via Taiz
+on the County — guarded per route so a stack left running does not grow duplicates. After a reset `/en/trips`
+reads **3 trips**, facet counts Everyone 2 / Women only 1 / Men only 0, **Direct 1**, and the three cards are
+Aden → Sana'a (featured, 14 seats, YER 5 000), Aden → Taiz (direct, 22 seats, YER 2 500) and Sana'a → Aden
+(women only, 26 seats, YER 4 500). The fleet month figures are untouched — no fills were added.
+
+The same argument applies one screen further in. `/account/bookings` is a *list*, and with no bookings the demo
+only ever showed its empty state — so the booking card this phase restyled was never rendered by anybody. One
+**accepted** booking is seeded for the demo owner on the direct trip: accepted rather than pending because a
+pending booking carries a 30-minute hold, and a demo that expires while somebody is looking at it is worse than
+none. It is on the direct trip deliberately — no destination stop means the flow exercises the null-stop branch
+that a stop-priced trip never reaches. After a reset the page reads *Upcoming* with `Aden → Taiz`, badge
+**Confirmed**, the reference in a `<bdi>` and the fare beside it.
+
+### Gates after 8.3
+
+`check:all` ✓ (guards 27 / 129 / 29 / 66 · responsive **50 media queries**, 7 tap targets, no hidden
+navigation, no unguarded grid tracks · lint · format · typecheck ×3 · 451 tests · coverage 95.84 % / 87.1 % ·
+db types · edge bundle · 29 migrations, 13 suites) · `check:a11y` ✓ **71 routes** (68 + the public trip detail in
+both directions and the signed-in booking form), 12 discovered detail pages. The booking form is discovered from
+a marketplace card and signed in as the **driver** account, not the owner: the seed gives the owner a booking, so
+the owner's visit would correctly answer `ALREADY_BOOKED` and the form this check exists for would never be
+parsed.
+
+**What was not verified: pixels.** There is no headless browser in this environment, so every layout claim in
+this section was checked in the served HTML and by CSS arithmetic — DOM shape, computed widths at 320 / 360 /
+720 / 900 / 1280, direction-sensitive rules, and the two class audits — and never by looking at a screenshot.
+The one behaviour that is neither markup nor stylesheet, `FilterDisclosure` setting `open`, is a `matchMedia`
+subscription on mount with a server default that degrades to a visible summary; it is described here rather than
+claimed as observed.

@@ -310,6 +310,19 @@ async function seed(client, log = () => {}) {
      on conflict (id) do nothing`,
   );
 
+  // Now that the two extra vans exist, the marketplace can have more than one departure.
+  try {
+    await seedMarketplaceTrips(client, log);
+  } catch (error) {
+    log(`  (extra demo trips skipped: ${error.message})`);
+  }
+
+  try {
+    await seedDemoBooking(client, log);
+  } catch (error) {
+    log(`  (demo booking skipped: ${error.message})`);
+  }
+
   await seedExtraFleetOperations(client, log);
 
   await grantDemoScope(client);
@@ -634,6 +647,198 @@ async function seedDemoTrip(client, log = () => {}) {
   ]);
 
   log(`  seeded a bookable trip: ${created.rows[0].result.trip.code}`);
+}
+
+/**
+ * Two more departures, so the marketplace is a marketplace.
+ *
+ * One published trip is enough to prove the booking flow works and far too little to prove the
+ * marketplace does: with a single card there is no second column to get wrong, no sort to change, no
+ * origin facet with two counts in it, and the "direct" badge — the one that says a trip has no stops —
+ * can never appear at all. Every layout bug that only shows up with a real list stays invisible in the
+ * demo that is meant to show the list.
+ *
+ * The extra vans are seeded first (this runs after them), so these are three departures on three
+ * different vehicles and two different routes. Written through the same three commands as the primary
+ * trip, so a reset re-proves `cmd_create_trip`, `cmd_set_trip_stops` and `cmd_publish_trip` for each.
+ */
+async function seedMarketplaceTrips(client, log = () => {}) {
+  const owner = '33333333-3333-4333-8333-333333333333';
+  const org = 'aaaaaaaa-0000-4000-8000-000000000001';
+  const driver = '7925cdf3-0000-4000-8000-00000000d001';
+
+  const governorateId = async (code) =>
+    (await client.query('select id from public.governorates where code = $1', [code])).rows[0]
+      ?.id ?? null;
+  const placeId = async (nameAr) =>
+    (
+      await client.query(
+        'select id from public.places where name_ar = $1 and lat is not null and lng is not null limit 1',
+        [nameAr],
+      )
+    ).rows[0]?.id ?? null;
+
+  const departures = [
+    {
+      vehicle: '7925cdf3-0000-4000-8000-00000000c001',
+      origin: 'YE-AD',
+      destination: 'YE-TA',
+      inHours: 55,
+      arriveEstimateMinutes: 300,
+      seatsTotal: 22,
+      pricePerSeatYer: 2_500,
+      luggageAllowanceKg: 15,
+      notes: 'رحلة تجريبية مباشرة من عدن إلى تعز.',
+      // No stops at all: this is the trip that gives the "direct" badge and the direct filter a count.
+      stops: [],
+    },
+    {
+      vehicle: '7925cdf3-0000-4000-8000-00000000c002',
+      origin: 'YE-SA',
+      destination: 'YE-AD',
+      inHours: 74,
+      arriveEstimateMinutes: 480,
+      seatsTotal: 26,
+      pricePerSeatYer: 4_500,
+      genderPolicy: 'women_only',
+      luggageAllowanceKg: 25,
+      notes: 'رحلة تجريبية من صنعاء إلى عدن عبر تعز.',
+      stops: [
+        { nameAr: 'صنعاء', nameEn: 'Sanaa', arriveOffsetMinutes: 0 },
+        { nameAr: 'تعز', nameEn: 'Taiz', arriveOffsetMinutes: 240 },
+        { nameAr: 'عدن', nameEn: 'Aden', arriveOffsetMinutes: 480 },
+      ],
+    },
+  ];
+
+  for (const spec of departures) {
+    const originId = await governorateId(spec.origin);
+    const destinationId = await governorateId(spec.destination);
+    if (!originId || !destinationId) continue;
+
+    // Per route, not per organization: a stack that was left running must not grow a second copy of the
+    // same departure every time it restarts, and the primary trip already exists by the time this runs.
+    const already = await client.query(
+      `select 1 from public.trips
+        where owner_org_id = $1
+          and status = 'published'
+          and origin_governorate_id = $2
+          and destination_governorate_id = $3
+          and departure_at > now() + interval '12 hours'
+        limit 1`,
+      [org, originId, destinationId],
+    );
+    if (already.rows.length > 0) continue;
+
+    const created = await client.query(
+      `select public.cmd_create_trip($1::uuid, $2::uuid, $3::jsonb, 'dev-seed', null) as result`,
+      [
+        owner,
+        org,
+        JSON.stringify({
+          vehicleId: spec.vehicle,
+          driverId: driver,
+          originGovernorateId: originId,
+          destinationGovernorateId: destinationId,
+          departureAt: new Date(Date.now() + spec.inHours * 60 * 60 * 1000).toISOString(),
+          arriveEstimateMinutes: spec.arriveEstimateMinutes,
+          seatsTotal: spec.seatsTotal,
+          bookingMode: 'per_seat',
+          pricingMode: 'flat',
+          pricePerSeatYer: spec.pricePerSeatYer,
+          discountKind: 'none',
+          discountValue: 0,
+          genderPolicy: spec.genderPolicy ?? 'any',
+          paymentPolicy: 'cash',
+          luggageAllowanceKg: spec.luggageAllowanceKg,
+          notes: spec.notes,
+        }),
+      ],
+    );
+    const trip = created.rows[0].result.trip;
+
+    if (spec.stops.length > 0) {
+      const stops = [];
+      for (const stop of spec.stops) {
+        stops.push({
+          placeId: await placeId(stop.nameAr),
+          nameAr: stop.nameAr,
+          nameEn: stop.nameEn,
+          arriveOffsetMinutes: stop.arriveOffsetMinutes,
+        });
+      }
+      await client.query(
+        `select public.cmd_set_trip_stops($1::uuid, $2::uuid, $3::jsonb, 'dev-seed', null)`,
+        [owner, trip.id, JSON.stringify(stops)],
+      );
+    }
+
+    await client.query(`select public.cmd_publish_trip($1::uuid, $2::uuid, 'dev-seed', null)`, [
+      owner,
+      trip.id,
+    ]);
+
+    log(`  seeded a marketplace trip: ${trip.code}`);
+  }
+}
+
+/**
+ * One passenger booking, accepted, so `/account/bookings` is a list rather than an empty state.
+ *
+ * The booking card — route, status badge, reference, fare, and the "finish identity" action — is the whole
+ * screen when a passenger has bookings, and it was never rendered by the demo. Booked on the *direct* trip
+ * because that one has no stops: the flow then runs with a null destination stop, which is the branch a
+ * stop-priced trip never reaches.
+ *
+ * Accepted, not pending: a pending booking carries a 30-minute hold, and a demo that expires while somebody
+ * is looking at it is worse than no demo. Accepted by the owner account because that is the actor
+ * `cmd_accept_booking` accepts for this trip, and it is also the account the accessibility guard signs in as.
+ */
+async function seedDemoBooking(client, log = () => {}) {
+  const owner = '33333333-3333-4333-8333-333333333333';
+  const org = 'aaaaaaaa-0000-4000-8000-000000000001';
+
+  const existing = await client.query(
+    `select 1 from public.bookings b
+       join public.trips t on t.id = b.trip_id
+      where b.passenger_id = $1
+        and b.status in ('pending', 'accepted')
+        and t.departure_at > now()
+      limit 1`,
+    [owner],
+  );
+  if (existing.rows.length > 0) return;
+
+  const trip = (
+    await client.query(
+      `select t.id from public.trips t
+        where t.owner_org_id = $1
+          and t.status = 'published'
+          and t.departure_at > now() + interval '24 hours'
+          and not exists (select 1 from public.trip_stops s where s.trip_id = t.id)
+        order by t.departure_at
+        limit 1`,
+      [org],
+    )
+  ).rows[0];
+  if (!trip) return;
+
+  // `p_claimed_total` is null on purpose: this is a seed, not a client, and a claim it cannot compute is a
+  // `PRICE_CHANGED` the seed has no business arguing with.
+  const created = await client.query(
+    `select public.cmd_create_booking(
+       $1::uuid, $2::uuid, 1, null, null, 'مستخدم تجريبي', '+967733000101', null, null, 'dev-seed', null
+     ) as result`,
+    [owner, trip.id],
+  );
+  const booking = created.rows[0].result.booking;
+
+  await client.query(`select public.cmd_accept_booking($1::uuid, $2::uuid, 'dev-seed', null)`, [
+    owner,
+    booking.id,
+  ]);
+
+  log(`  seeded a passenger booking: ${booking.code}`);
 }
 
 /**

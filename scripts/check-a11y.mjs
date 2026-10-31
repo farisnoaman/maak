@@ -387,18 +387,41 @@ if (sessions.staff) {
 }
 
 {
+  // The marketplace's own detail page, discovered from a card rather than hard-coded: the code is
+  // generated per departure, and an empty dev database must skip the screen, not fail the guard. Both
+  // directions, because the route arrow, the timeline marker and the sticky book bar are the things most
+  // likely to be right in English and wrong in Arabic.
   const publicHtml = await fetch(`${BASE}/ar/trips`)
     .then((response) => (response.ok ? response.text() : ''))
     .catch(() => '');
   const code = publicHtml.match(/href="\/ar\/trips\/([A-Za-z0-9-]{4,20})"/);
   if (code) {
-    await checkRoute({
-      path: `/ar/trips/${code[1]}`,
-      lang: 'ar',
-      dir: 'rtl',
-      account: null,
-    });
-    detailRoutes += 1;
+    for (const locale of ['ar', 'en']) {
+      await checkRoute({
+        path: `/${locale}/trips/${code[1]}`,
+        lang: locale,
+        dir: locale === 'ar' ? 'rtl' : 'ltr',
+        account: null,
+      });
+      detailRoutes += 1;
+    }
+
+    // And the booking form, signed in: it is the one screen in the flow a visitor cannot reach, so an
+    // unlabelled seat selector or a heading order nobody looks at would stay green forever. Signed in as
+    // the driver rather than the owner, because the demo seed gives the owner a booking and the page would
+    // then legitimately answer `ALREADY_BOOKED` instead of rendering the form the check is here for.
+    const booker = sessions.driver ? 'driver' : sessions.owner ? 'owner' : null;
+    if (booker) {
+      for (const locale of ['ar', 'en']) {
+        await checkRoute({
+          path: `/${locale}/trips/${code[1]}/book`,
+          lang: locale,
+          dir: locale === 'ar' ? 'rtl' : 'ltr',
+          account: booker,
+        });
+        detailRoutes += 1;
+      }
+    }
   }
 }
 
