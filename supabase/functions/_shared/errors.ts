@@ -3,7 +3,7 @@
  * understood by every client without translation tables drifting.
  */
 
-import type { ErrorCode } from '@maak/core';
+import { errorCodeFromMessage, HTTP_STATUS_BY_CODE, type ErrorCode } from '@maak/core';
 
 export interface ErrorBody {
   readonly code: ErrorCode;
@@ -49,48 +49,27 @@ export const rateLimited = (retryAfterSeconds: number) =>
   });
 export const internal = (detail = 'Unexpected error') => new ApiError(500, 'INTERNAL', detail);
 
-/** Maps a Postgres error raised by a cmd_* function onto the client contract. */
+/**
+ * Maps a Postgres error raised by a `cmd_*` function onto the client contract.
+ *
+ * The status table and the prefix parser live in `@maak/core` so this cannot drift from the dev
+ * gateway, which used to keep its own copy and disagree about which codes it recognised.
+ */
 export function fromPostgres(error: { message?: string; code?: string }): ApiError {
   const message = error.message ?? '';
-  const known: ErrorCode[] = [
-    'FORBIDDEN',
-    'NOT_VERIFIED',
-    'SELF_LOCKOUT',
-    'VALIDATION_FAILED',
-    'MISSING_DOCUMENT',
-    'INVITE_INVALID',
-    'INVITE_EXPIRED',
-    'NOT_FOUND',
-    'CONFLICT',
-    'QUOTA_EXCEEDED',
-    'EDIT_WINDOW_CLOSED',
-    'CANCEL_WINDOW_CLOSED',
-    'NO_SEATS_LEFT',
-    'PRICE_CHANGED',
-    'TRIP_NOT_VERIFIED',
-    'ODO_REGRESSION',
-    'PROOF_ALREADY_USED',
-    'DUPLICATE_REFERENCE',
-    'PAYMENT_ALREADY_CONFIRMED',
-    'IDEMPOTENCY_CONFLICT',
-  ];
+
   // Commands raise with a machine code prefix, e.g. `raise exception 'EDIT_WINDOW_CLOSED: ...'`.
-  const prefix = message.split(':')[0]?.trim();
-  if (prefix && (known as string[]).includes(prefix)) {
-    const status =
-      prefix === 'FORBIDDEN' || prefix === 'NOT_VERIFIED' || prefix === 'SELF_LOCKOUT'
-        ? 403
-        : prefix === 'VALIDATION_FAILED' ||
-            prefix === 'MISSING_DOCUMENT' ||
-            prefix === 'INVITE_INVALID' ||
-            prefix === 'INVITE_EXPIRED'
-          ? 400
-          : prefix === 'NOT_FOUND'
-            ? 404
-            : 409;
-    return new ApiError(status, prefix as ErrorCode, message);
+  const code = errorCodeFromMessage(message);
+  if (code) {
+    const detail = message.replace(new RegExp(`^\\s*${code}\\s*:?\\s*`), '').trim();
+    return new ApiError(HTTP_STATUS_BY_CODE[code], code, detail || code);
   }
-  if (error.code === '23505') return new ApiError(409, 'CONFLICT', 'Duplicate');
+
+  // No prefix: the database itself refused. A unique violation is the one case a person can act on, so
+  // it gets its own code instead of a generic conflict with a raw constraint name inside it.
+  if (error.code === '23505') {
+    return new ApiError(409, 'DUPLICATE_REFERENCE', 'That entry already exists');
+  }
   if (error.code === '23503') return new ApiError(409, 'CONFLICT', 'Related row missing');
   return internal(message || 'Database error');
 }

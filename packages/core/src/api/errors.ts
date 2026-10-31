@@ -76,10 +76,10 @@ const ERROR_KEYS: Record<ErrorCode, TranslationKey> = {
   NO_SEATS_LEFT: 'errors.NO_SEATS_LEFT',
   PRICE_CHANGED: 'errors.PRICE_CHANGED',
   TRIP_NOT_VERIFIED: 'errors.TRIP_NOT_VERIFIED',
-  TRIP_NOT_STARTABLE: 'errors.INTERNAL',
+  TRIP_NOT_STARTABLE: 'errors.CONFLICT',
   ODO_REGRESSION: 'errors.VALIDATION_FAILED',
   PROOF_ALREADY_USED: 'errors.VALIDATION_FAILED',
-  DUPLICATE_REFERENCE: 'errors.VALIDATION_FAILED',
+  DUPLICATE_REFERENCE: 'errors.DUPLICATE_REFERENCE',
   PAYMENT_ALREADY_CONFIRMED: 'errors.CONFLICT',
   RATE_LIMITED: 'errors.RATE_LIMITED',
   IDEMPOTENCY_CONFLICT: 'errors.CONFLICT',
@@ -89,6 +89,60 @@ const ERROR_KEYS: Record<ErrorCode, TranslationKey> = {
 
 export function errorKey(code: ErrorCode): TranslationKey {
   return ERROR_KEYS[code] ?? 'errors.INTERNAL';
+}
+
+/**
+ * The one table that turns a contract code into an HTTP status.
+ *
+ * Both mappers — the production gateway (`supabase/functions/_shared/errors.ts`) and the local dev
+ * gateway (`scripts/dev-backend/gateway.mjs`) — read this, because they used to keep separate lists and
+ * drifted: a code known to one was `INTERNAL` in the other. A client that sees `INTERNAL` where the API
+ * documented `DUPLICATE_REFERENCE` has no way to recover, and the drift is invisible until someone
+ * hits that exact error.
+ */
+export const HTTP_STATUS_BY_CODE: Record<ErrorCode, number> = {
+  UNAUTHENTICATED: 401,
+  FORBIDDEN: 403,
+  NOT_VERIFIED: 403,
+  SELF_LOCKOUT: 403,
+  VALIDATION_FAILED: 422,
+  MISSING_DOCUMENT: 422,
+  INVITE_INVALID: 400,
+  INVITE_EXPIRED: 410,
+  NOT_FOUND: 404,
+  CONFLICT: 409,
+  QUOTA_EXCEEDED: 409,
+  EDIT_WINDOW_CLOSED: 409,
+  CANCEL_WINDOW_CLOSED: 409,
+  NO_SEATS_LEFT: 409,
+  PRICE_CHANGED: 409,
+  TRIP_NOT_VERIFIED: 409,
+  TRIP_NOT_STARTABLE: 409,
+  ODO_REGRESSION: 422,
+  PROOF_ALREADY_USED: 409,
+  DUPLICATE_REFERENCE: 409,
+  PAYMENT_ALREADY_CONFIRMED: 409,
+  RATE_LIMITED: 429,
+  IDEMPOTENCY_CONFLICT: 409,
+  INTERNAL: 500,
+  NETWORK: 502,
+};
+
+/**
+ * Stateless calls raise with a machine prefix, e.g. `raise exception 'CONFLICT: already decided'`.
+ *
+ * Matching is anchored at the start and longest-code-first: a detail that merely *mentions* a code
+ * ("CONFLICT: the CONFLICT table…") must not be reclassified, and `PAYMENT_ALREADY_CONFIRMED` must win
+ * over any shorter code that happens to be a prefix of it.
+ */
+const PREFIXES = [...ERROR_CODES].sort((a, b) => b.length - a.length);
+
+export function errorCodeFromMessage(message: string): ErrorCode | null {
+  const trimmed = message.trimStart();
+  for (const code of PREFIXES) {
+    if (trimmed.startsWith(`${code}:`) || trimmed === code) return code;
+  }
+  return null;
 }
 
 export function isErrorCode(value: unknown): value is ErrorCode {

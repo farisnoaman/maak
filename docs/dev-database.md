@@ -189,6 +189,19 @@ preserved. Together they explain any redirect or cookie oddity in one request.
 running at all, sign-in says so explicitly ("could not reach the database") instead of blaming the
 password.
 
+## Adding a migration
+
+Migrations are tracked **per file** in `dev.meta.applied_files`, so `npm run dev` applies only what is
+new. It used to fingerprint the whole file list, which meant adding one migration re-ran all the earlier
+ones against an existing cluster and failed with `relation "log" already exists` — the stack would not
+start at exactly the moment you needed to test a schema change.
+
+```bash
+# add supabase/migrations/00013_something.sql, then:
+npm run dev            # applies only 00013, then seeds
+npm run dev:api:reset  # drops the cluster and rebuilds from scratch
+```
+
 ## When the browser refuses to keep the session at all
 
 **This is the supported escape hatch, and it is on by default outside production.**

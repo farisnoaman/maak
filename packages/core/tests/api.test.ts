@@ -1,7 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { ApiClient, defaultIdFactory, type TransportRequest } from '../src/api/client';
-import { errorKey, isErrorCode, toApiFailure } from '../src/api/errors';
+import {
+  ERROR_CODES,
+  errorCodeFromMessage,
+  errorKey,
+  HTTP_STATUS_BY_CODE,
+  isErrorCode,
+  toApiFailure,
+} from '../src/api/errors';
 
 const inputSchema = z.object({ tripId: z.string().uuid(), seats: z.number().int().min(1) });
 
@@ -143,5 +150,35 @@ describe('error contract', () => {
     });
     await client.call(spec, { tripId: TRIP_ID, seats: 3 });
     expect(transport).toHaveBeenCalledTimes(1);
+  });
+
+  it('has an HTTP status for every code, so no mapper can invent one', () => {
+    for (const code of ERROR_CODES) {
+      expect(typeof HTTP_STATUS_BY_CODE[code], code).toBe('number');
+    }
+  });
+
+  it('reads the code a command raised only from the start of the message', () => {
+    expect(errorCodeFromMessage('CONFLICT: place is already verified')).toBe('CONFLICT');
+    expect(errorCodeFromMessage('  DUPLICATE_REFERENCE: name taken')).toBe('DUPLICATE_REFERENCE');
+    expect(errorCodeFromMessage('CONFLICT')).toBe('CONFLICT');
+    // A detail that merely mentions a code must not be reclassified.
+    expect(errorCodeFromMessage('VALIDATION_FAILED: cannot CONFLICT here')).toBe(
+      'VALIDATION_FAILED',
+    );
+    expect(errorCodeFromMessage('duplicate key value violates unique constraint')).toBeNull();
+  });
+
+  it('prefers the longest matching code', () => {
+    // `PAYMENT_ALREADY_CONFIRMED` must not be read as a shorter code that prefixes it.
+    expect(errorCodeFromMessage('PAYMENT_ALREADY_CONFIRMED: already paid')).toBe(
+      'PAYMENT_ALREADY_CONFIRMED',
+    );
+    expect(errorCodeFromMessage('IDEMPOTENCY_CONFLICT: reused key')).toBe('IDEMPOTENCY_CONFLICT');
+  });
+
+  it('maps a duplicate to a message a form can show', () => {
+    expect(errorKey('DUPLICATE_REFERENCE')).toBe('errors.DUPLICATE_REFERENCE');
+    expect(errorKey('CONFLICT')).toBe('errors.CONFLICT');
   });
 });

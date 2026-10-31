@@ -150,6 +150,8 @@ export const ar = {
   'errors.TRIP_NOT_VERIFIED': 'لا يمكن بدء رحلة غير موثّقة.',
   'errors.RATE_LIMITED': 'محاولات كثيرة. انتظر قليلًا ثم أعد المحاولة.',
   'errors.CONFLICT': 'تغيّرت البيانات منذ آخر تحديث. أعد المحاولة.',
+  'errors.DUPLICATE_REFERENCE':
+    'يوجد عنصر بالاسم نفسه مسبقًا. اختر اسمًا آخر أو استخدم العنصر الموجود.',
   'errors.INTERNAL': 'حدث خطأ غير متوقع. حاول مرة أخرى.',
   'errors.NETWORK': 'تعذّر الاتصال بالخادم. تحقّق من الشبكة.',
 
@@ -585,6 +587,8 @@ export const en: Record<TranslationKey, string> = {
   'errors.TRIP_NOT_VERIFIED': 'This trip cannot start until it is verified.',
   'errors.RATE_LIMITED': 'Too many attempts. Please wait and try again.',
   'errors.CONFLICT': 'This item changed since you loaded it. Please retry.',
+  'errors.DUPLICATE_REFERENCE':
+    'An entry with this name already exists. Pick another name or use the existing one.',
   'errors.INTERNAL': 'Something went wrong. Please try again.',
   'errors.NETWORK': 'Could not reach the server. Check your connection.',
 

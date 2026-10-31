@@ -13,34 +13,36 @@
  * dev stack either does the Node equivalent or says so in the response.
  */
 
-const STATUS_BY_CODE = {
-  FORBIDDEN: 403,
-  NOT_VERIFIED: 403,
-  UNAUTHENTICATED: 401,
-  NOT_FOUND: 404,
-  CONFLICT: 409,
-  VALIDATION_FAILED: 422,
-  QUOTA_EXCEEDED: 409,
-  INTERNAL: 500,
-};
-
 /**
  * Postgres exception → the client error contract.
  *
- * Commands raise `P0001` with a message prefixed by the contract code, e.g.
- * `CONFLICT: N active sub-region(s)…`, so the mapping is a prefix lookup rather than a guess.
+ * The status table and the prefix parser come from `@maak/core`, shared with the production gateway.
+ * They used to be duplicated here, and the copies disagreed: a code the real gateway knew was
+ * `INTERNAL` locally, so a defect that only showed up in dev could not be reproduced in production.
  */
-export function mapDbError(error) {
+export function mapDbError(error, core) {
   const message = String(error?.message ?? error);
+  const code = core.errorCodeFromMessage(message);
+  if (code) {
+    return {
+      status: core.HTTP_STATUS_BY_CODE[code] ?? 409,
+      body: {
+        code,
+        detail: message.replace(new RegExp(`^\\s*${code}\\s*:?\\s*`), '').trim() || code,
+      },
+    };
+  }
+  // No prefix: the database refused on its own. A unique violation is the one a person can fix.
+  if (error?.code === '23505') {
+    return {
+      status: 409,
+      body: { code: 'DUPLICATE_REFERENCE', detail: 'That entry already exists' },
+    };
+  }
   if (error?.code === '42501') {
     return { status: 403, body: { code: 'FORBIDDEN', detail: message } };
   }
-  const code = Object.keys(STATUS_BY_CODE).find((candidate) => message.includes(candidate));
-  if (!code) return { status: 500, body: { code: 'INTERNAL', detail: message } };
-  return {
-    status: STATUS_BY_CODE[code],
-    body: { code, detail: message.replace(new RegExp(`${code}:\\s*`), '').trim() },
-  };
+  return { status: 500, body: { code: 'INTERNAL', detail: message } };
 }
 
 /**
@@ -196,7 +198,7 @@ export async function handleFunction({ name, body, userId, client, core, request
       const result = await runCommand(client, fn, args);
       return { status: 200, body: { ...result, requestId } };
     } catch (error) {
-      const mapped = mapDbError(error);
+      const mapped = mapDbError(error, core);
       return { ...mapped, body: { ...mapped.body, requestId } };
     }
   }
@@ -432,7 +434,7 @@ export async function handleFunction({ name, body, userId, client, core, request
       if (error instanceof core.PolicyError) {
         return { status: 403, body: { code: 'FORBIDDEN', detail: error.message } };
       }
-      const mapped = mapDbError(error);
+      const mapped = mapDbError(error, core);
       return { ...mapped, body: { ...mapped.body, requestId } };
     }
   }

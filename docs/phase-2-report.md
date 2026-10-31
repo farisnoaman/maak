@@ -169,3 +169,29 @@ mechanism that now stops it from coming back.
 
 Not changed, deliberately: the starter district/place data (§3) — inventing 300 district names to
 look complete would be worse than importing the real list, which now has a tested path.
+
+---
+
+## 7. Second review pass — three defects and one broken dev loop
+
+Found by re-reading the commands against their own contract, then confirmed against a live database
+before changing anything. Each row names the check that now fails if it comes back.
+
+| # | Problem | Evidence | Fix | Prevented by |
+|---|---|---|---|---|
+| 15 | **`cmd_decide_place` decided a place that was already decided.** Approving twice audited twice and notified twice; approving a *rejected* place resurrected it with no record of why. `cmd_decide_verification` had refused this since Phase 1 | read: no status guard, unlike `cmd_decide_verification` | refuses anything not `pending`, `CONFLICT` 409 | pgTAP `a place that has already been decided cannot be decided again` + `the refused second decision left no second audit row` |
+| 16 | **A duplicate name reached the user as `INTERNAL`** with `duplicate key value violates unique constraint "regions_name_unique"` in it — the gateway did not even recognise the code | live request: `{"code":"INTERNAL","detail":"duplicate key value…"}` | `cmd_upsert_region` / `cmd_create_place` name the clash (`DUPLICATE_REFERENCE`, 409) and return the existing id in `detail`; the mappers map a bare `23505` too | pgTAP duplicate-name assertions; unit tests for `errorCodeFromMessage` and `errorKey('DUPLICATE_REFERENCE')` |
+| 17 | **Organization verification was ignored where an org owns something.** `cmd_create_place` checked membership and never `org_is_verified`, so an unverified — even rejected — company could own reference data the picker treats as legitimate | live call with the seeded company flipped to `pending`: **accepted** | `app.org_can_own(org, actor)` (membership **and** org verification) and a `NOT_VERIFIED` gate in `cmd_create_place` | pgTAP `a verified member cannot create a place for an unverified organization` / `once the organization is verified, the same call succeeds` |
+| 18 | **Adding a migration broke `npm run dev` on an existing cluster.** The schema marker was one fingerprint over the whole file list, so a new file re-ran every earlier migration and died on `relation "log" already exists` — the dev stack would not start exactly when a schema change needed testing | reproduced by adding `00012` and restarting | per-file ledger (`dev.meta.applied_files`), with a backfill from the old comma-joined marker | the stack now starts on a new migration; `dev.meta` is dev-only |
+
+Not changed, deliberately: `cmd_decide_place` still refuses a *rejected* place outright. A rejected
+submission that becomes acceptable is a new submission; allowing approve-after-reject would make "why
+did this come back?" unanswerable from the audit trail.
+
+### One definition of an error
+
+The two gateways each kept their own code→status table (`STATUS_BY_CODE` in the dev harness,
+`known` in the edge function) and they disagreed: `DUPLICATE_REFERENCE` existed in one and not the
+other, so the same failure was a documented 409 in production and a 500 in dev. Both now read
+`HTTP_STATUS_BY_CODE` and `errorCodeFromMessage()` from `@maak/core`, and the parser is anchored at the
+start of the message so a detail that merely mentions a code cannot be reclassified.

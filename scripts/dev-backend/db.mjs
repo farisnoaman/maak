@@ -64,45 +64,80 @@ export async function startDatabase({ reset = false, quiet = false } = {}) {
   return { pg, client };
 }
 
-/** Applies bootstrap + migrations once, then the dev-only extras and the seed (idempotent). */
+/**
+ * Applies bootstrap + migrations, then the dev-only extras and the seed.
+ *
+ * Migrations are tracked **per file**, not as one fingerprint. Tracking the whole set meant that adding a
+ * single migration made the next `npm run dev` re-run every earlier one against an existing cluster,
+ * which fails (`relation "log" already exists`) — the app simply would not start after a schema change.
+ * That is the worst possible time to break the dev loop.
+ */
 export async function applySchema(client, { reset = false, log = () => {} } = {}) {
   await client.query(`create schema if not exists dev`);
-
-  // A marker so a restart does not re-run 6 migrations and 200 inserts.
   await client.query(`
     create table if not exists dev.meta (key text primary key, value text not null)
   `);
-  const marker = await client.query(`select value from dev.meta where key = 'schema_hash'`);
-  const migrations = (await readdir(migrationsDir)).filter((f) => f.endsWith('.sql')).sort();
-  const fingerprint = `${migrations.join(',')}`;
 
-  const applied = marker.rows[0]?.value === fingerprint;
-  if (applied && !reset) {
+  const migrations = (await readdir(migrationsDir)).filter((file) => file.endsWith('.sql')).sort();
+
+  const marker = await client.query(
+    `select key, value from dev.meta where key in ('applied_files', 'schema_hash')`,
+  );
+  const rows = new Map(marker.rows.map((row) => [row.key, row.value]));
+
+  /** @type {Set<string>} */
+  let applied = new Set();
+  if (!reset) {
+    const recorded = rows.get('applied_files');
+    if (recorded) {
+      try {
+        applied = new Set(JSON.parse(recorded));
+      } catch {
+        applied = new Set();
+      }
+    } else if (rows.get('schema_hash')) {
+      // A cluster from before per-file tracking: the old marker was the whole list, joined by commas, so
+      // it still tells us exactly which files had run.
+      applied = new Set(String(rows.get('schema_hash')).split(',').filter(Boolean));
+    }
+  }
+
+  const pending = migrations.filter((file) => !applied.has(file));
+
+  if (pending.length === 0) {
     log('  schema already applied');
     await seed(client, log);
     return;
   }
 
-  log('  applying bootstrap + migrations…');
+  // The bootstrap is idempotent (`if not exists` everywhere) and cheap; the migrations are not, which is
+  // the whole reason for the per-file ledger above.
   const bootstrap = await readFile(join(root, 'scripts', 'sql-check', 'bootstrap.sql'), 'utf8');
   await client.query(bootstrap);
 
-  for (const file of migrations) {
+  for (const file of pending) {
     let sql = await readFile(join(migrationsDir, file), 'utf8');
-    // PostGIS is not part of the embedded build; migrations guard it, but the statement itself
-    // still has to be dropped.
+    // PostGIS is not part of the embedded build; migrations guard it, but the statement itself still has
+    // to be dropped.
     sql = sql.replace('create extension if not exists postgis;', '-- [dev] postgis unavailable');
     try {
       await client.query(sql);
     } catch (error) {
       throw new Error(`migration ${file} failed: ${error.message}`, { cause: error });
     }
+    applied.add(file);
+    await client.query(
+      `insert into dev.meta (key, value) values ('applied_files', $1)
+       on conflict (key) do update set value = excluded.value`,
+      [JSON.stringify([...applied])],
+    );
+    log(`  applied ${file}`);
   }
 
   await client.query(
     `insert into dev.meta (key, value) values ('schema_hash', $1)
      on conflict (key) do update set value = excluded.value`,
-    [fingerprint],
+    [migrations.join(',')],
   );
 
   await seed(client, log);

@@ -16,7 +16,7 @@ begin;
 
 create extension if not exists pgtap;
 
-select plan(67);
+select plan(75);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -276,6 +276,14 @@ from (select public.cmd_upsert_region(
   'إقليم عدن للاختبار', 'Aden Test Region', null,
   array[(select aden from t_geo)], '{}'::uuid[], 'test-request-2', null
 ) as p) s;
+
+select throws_ok(
+  $$select public.cmd_upsert_region('aaaa0001-1111-4111-8111-aaaaaaaaaaaa', null, null, 'region',
+      'إقليم عدن للاختبار', 'Aden Test Region', null,
+      array[(select aden from t_geo)], '{}'::uuid[])$$,
+  '23505',
+  'a duplicate region name is refused instead of reaching the unique index as a 500'
+);
 
 select is(
   (select count(*)::int from public.region_governorates rg
@@ -725,6 +733,77 @@ select ok(
       and title_key = 'notifications.geoRegionRetired'
   ),
   'a supervisor is told when the region that gave them scope is retired'
+);
+
+select throws_ok(
+  $$select public.cmd_decide_place('aaaa0002-2222-4222-8222-aaaaaaaaaaaa',
+      (select (payload -> 'place' ->> 'id')::uuid from t_place), 'reject', 'سبب الرفض لا يهم هنا')$$,
+  '23505',
+  'a place that has already been decided cannot be decided again'
+);
+
+select is(
+  (select count(*)::int from audit.log
+   where action = 'place.decide'
+     and entity_id = (select payload -> 'place' ->> 'id' from t_place)),
+  1,
+  'and the refused second decision left no second audit row'
+);
+
+-- ---------------------------------------------------------------------------
+-- 8c. Organization verification decides what an organization may own
+-- ---------------------------------------------------------------------------
+
+insert into public.organizations (id, owner_id, name, kind, verification_status)
+values ('aaaa00c0-cccc-4ccc-8ccc-aaaaaaaaaaaa', 'aaaa0003-3333-4333-8333-aaaaaaaaaaaa',
+        'شركة غير موثّقة', 'company', 'pending');
+insert into public.organization_members (org_id, user_id, role, status)
+values ('aaaa00c0-cccc-4ccc-8ccc-aaaaaaaaaaaa', 'aaaa0003-3333-4333-8333-aaaaaaaaaaaa', 'owner', 'active');
+
+select throws_ok(
+  $$select public.cmd_create_place('aaaa0003-3333-4333-8333-aaaaaaaaaaaa', 'gathering_point',
+      'نقطة لشركة غير موثّقة', 'Unverified org pin', null, null, null, null, '{}', '{}',
+      'aaaa00c0-cccc-4ccc-8ccc-aaaaaaaaaaaa')$$,
+  '42501',
+  'a verified member cannot create a place for an unverified organization'
+);
+
+update public.organizations set verification_status = 'verified'
+where id = 'aaaa00c0-cccc-4ccc-8ccc-aaaaaaaaaaaa';
+
+select lives_ok(
+  $$select public.cmd_create_place('aaaa0003-3333-4333-8333-aaaaaaaaaaaa', 'gathering_point',
+      'نقطة لشركة موثّقة', 'Verified org pin', null, null, null, null, '{}', '{}',
+      'aaaa00c0-cccc-4ccc-8ccc-aaaaaaaaaaaa')$$,
+  'once the organization is verified, the same call succeeds'
+);
+
+select throws_ok(
+  $$select public.cmd_create_place('aaaa0003-3333-4333-8333-aaaaaaaaaaaa', 'gathering_point',
+      'نقطة لشركة موثّقة', 'Verified org pin', null, null, null, null, '{}', '{}',
+      'aaaa00c0-cccc-4ccc-8ccc-aaaaaaaaaaaa')$$,
+  '23505',
+  'the same pin twice is a duplicate reference, not a silent second row'
+);
+
+select public.cmd_create_place(
+  'aaaa0003-3333-4333-8333-aaaaaaaaaaaa', 'gathering_point',
+  'نقطة شخصية بلا مؤسسة', 'Personal pin', (select aden from t_geo), (select crater from t_geo),
+  null, null, '{}', '{}', null
+);
+
+select throws_ok(
+  $$select public.cmd_create_place('aaaa0003-3333-4333-8333-aaaaaaaaaaaa', 'gathering_point',
+      'نقطة شخصية بلا مؤسسة', 'Personal pin', (select aden from t_geo), (select crater from t_geo),
+      null, null, '{}', '{}', null)$$,
+  '23505',
+  'a pin with the same name, owner and district is refused even without an organization'
+);
+
+select is(
+  (select count(*)::int from public.places where name_ar = 'نقطة لشركة موثّقة'),
+  1,
+  'exactly one row exists for the pin that was accepted'
 );
 
 -- ---------------------------------------------------------------------------
