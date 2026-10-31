@@ -45,8 +45,14 @@ create type public.trip_payment_policy as enum ('cash', 'transfer', 'deposit');
 create table public.trips (
   id                          uuid primary key default gen_random_uuid(),
 
-  -- A short, stable, human-shareable code: `/trips/ADE-SAA-7K2Q`. Uppercase so a URL is case-safe.
-  code                        text not null unique check (code ~ '^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$'),
+  -- A short, stable, human-shareable code: `/trips/SA-AD-7K2Q`. Uppercase so a URL is case-safe.
+  --
+  -- The first two segments come from the governorate codes (ISO 3166-2 `YE-XX` → `XX`), so they are
+  -- two characters long, not four; the last segment is always four. The check below accepts both a
+  -- two- and a three-letter place segment, because a country with longer codes should not need a
+  -- migration to get trip codes.
+  code                        text not null unique
+    check (code ~ '^[A-Z0-9]{2,4}-[A-Z0-9]{2,4}-[A-Z0-9]{4}$'),
 
   owner_user_id               uuid references public.profiles (id) on delete restrict,
   owner_org_id                uuid references public.organizations (id) on delete restrict,
@@ -988,7 +994,7 @@ $$;
 -- 9. Commands
 -- ---------------------------------------------------------------------------
 
-/** A short shareable code: `ADE-SAA-7K2Q`. Derived from the route, so it is readable in a URL. */
+/** A short shareable code: `SA-AD-7K2Q`. Derived from the route, so it is readable in a URL. */
 create or replace function app.new_trip_code(p_origin uuid, p_destination uuid)
 returns text
 language plpgsql
@@ -1009,7 +1015,15 @@ begin
   loop
     v_attempt := v_attempt + 1;
     -- No vowels and no lookalikes: a code gets read over the phone and typed by hand.
-    v_suffix := upper(substr(translate(encode(gen_random_bytes(6), 'base64'), 'aeiou+/=lIO01', 'BCDFGHJKLMNOPQRSTUVWXYZ'), 1, 4));
+    --
+    -- `md5(random())` rather than `gen_random_bytes()` on purpose: this function runs with
+    -- `search_path = ''`, and pgcrypto lives in the `extensions` schema on Supabase, so an unqualified
+    -- `gen_random_bytes` is invisible here (and 42883 at runtime). `md5`, `random` and `clock_timestamp`
+    -- are pg_catalog and always resolve. The collision loop below is what actually guarantees the code.
+    v_suffix := upper(substr(translate(
+      md5(random()::text || clock_timestamp()::text) || md5(random()::text),
+      'aeiou01l', 'BCDFGH26M'
+    ), 1, 4));
     v_code := concat_ws('-', coalesce(v_origin, 'TRI'), coalesce(v_destination, 'XXX'), rpad(v_suffix, 4, 'X'));
     exit when not exists (select 1 from public.trips t where t.code = v_code);
     if v_attempt > 20 then
@@ -1792,7 +1806,9 @@ create or replace function public.search_public_trips(
 )
 returns jsonb
 language plpgsql
-stable
+-- Volatile, not stable: a cache miss writes a row into `search_cache`. A STABLE function may not
+-- INSERT, and marking this one STABLE to satisfy a reader made every cache miss fail at runtime.
+volatile
 security definer
 set search_path = ''
 as $$
@@ -2164,8 +2180,17 @@ alter table public.trip_verifications enable row level security;
 alter table public.trips_search enable row level security;
 alter table public.search_cache enable row level security;
 
+-- Two policies, not one, because the two audiences are evaluated by different roles: an anonymous
+-- visitor has no `auth.uid()`, and the membership predicates are (deliberately) not executable by
+-- `anon`. A single policy that calls `app.is_org_member()` for everybody therefore fails *closed* with
+-- "permission denied for function is_org_member" — an empty marketplace dressed up as an error. The
+-- anonymous arm is pure row logic; the signed-in arm needs the helpers it is actually allowed to call.
+create policy trips_read_published on public.trips
+  for select to anon
+  using (status = 'published' and verification_status <> 'rejected' and cancelled_at is null);
+
 create policy trips_read_visible on public.trips
-  for select to anon, authenticated
+  for select to authenticated
   using (
     (status = 'published' and verification_status <> 'rejected' and cancelled_at is null)
     or (owner_user_id is not null and owner_user_id = app.uid())
@@ -2185,8 +2210,13 @@ create policy trip_verifications_read_owner_or_staff on public.trip_verification
   for select to authenticated
   using (app.actor_can_manage_trip(app.uid(), trip_id));
 
+-- Same split as `trips`: the anonymous arm is the projection's own public flag.
+create policy trips_search_read_published on public.trips_search
+  for select to anon
+  using (is_public);
+
 create policy trips_search_read_visible on public.trips_search
-  for select to anon, authenticated
+  for select to authenticated
   using (
     is_public
     or (owner_user_id is not null and owner_user_id = app.uid())
@@ -2259,8 +2289,19 @@ begin
   end loop;
 
   -- Predicates the RLS policies execute as the querying role.
+  --
+  -- `can_read_trip` is granted to `anon` as well: `trip_stops` uses it as its policy predicate and the
+  -- public detail page is anonymous by design. It answers only "may this caller see this trip", which
+  -- for `anon` is "is it published".
   foreach v_signature in array array[
-    'app.can_read_trip(uuid)',
+    'app.can_read_trip(uuid)'
+  ]
+  loop
+    execute format('revoke all on function %s from public', v_signature);
+    execute format('grant execute on function %s to anon, authenticated, service_role', v_signature);
+  end loop;
+
+  foreach v_signature in array array[
     'app.actor_can_manage_trip(uuid, uuid)'
   ]
   loop

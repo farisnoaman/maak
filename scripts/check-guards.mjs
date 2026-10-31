@@ -255,6 +255,43 @@ for (const [fn, mapName] of Object.entries(GATEWAY_MAP)) {
   }
 }
 
+// --- 11. A function that writes must not call itself STABLE or IMMUTABLE -------------------------
+// `search_public_trips` shipped as STABLE while filling its 30-second cache, so every cache miss raised
+// "INSERT is not allowed in a non-volatile function": the marketplace worked only for pages somebody
+// else had already searched. PostgreSQL enforces this at call time, not at creation time, which is why
+// it needs a static check — and pgTAP (0007) now pins the behaviour too.
+const writePattern = /\b(?:insert\s+into|delete\s+from|update\s+(?:public|storage|audit)\.)\b/i;
+// Comments are stripped first: this codebase explains *why* a function is volatile, and the explanation
+// naturally contains the word it is warning about.
+const stripComments = (text) => text.replace(/--[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
+for (const match of sqlSource.matchAll(
+  /create or replace function ((?:public|app)\.[a-z0-9_]+)\(([\s\S]*?)\$\$;/g,
+)) {
+  const block = match[0];
+  const bodyStart = block.indexOf('as $$');
+  if (bodyStart === -1) continue;
+  const header = stripComments(block.slice(0, bodyStart));
+  const body = stripComments(block.slice(bodyStart));
+  const volatileMarker = /\b(stable|immutable)\b/.exec(header);
+  if (volatileMarker && writePattern.test(body)) {
+    failures.push(
+      `supabase/migrations: ${match[1]}() is declared ${volatileMarker[1].toUpperCase()} but writes to a table — ` +
+        `PostgreSQL answers "not allowed in a non-volatile function" at call time`,
+    );
+  }
+}
+
+// --- 12. No `gen_random_bytes`: it is pgcrypto, and pgcrypto is not on the empty search_path ------
+// Supabase installs extensions into the `extensions` schema; a `set search_path = ''` function cannot
+// see `gen_random_bytes` unqualified, and every call fails with 42883 in production. `md5(random())`
+// is pg_catalog and always resolves.
+if (/gen_random_bytes\s*\(/.test(stripComments(sqlSource))) {
+  failures.push(
+    'supabase/migrations: gen_random_bytes() is a pgcrypto function and is not visible from a function ' +
+      "declared with set search_path = '' — use md5(random()::text) instead",
+  );
+}
+
 if (failures.length > 0) {
   console.error(`✗ ${failures.length} guard failure(s):\n`);
   for (const failure of failures) console.error(`  - ${failure}`);
