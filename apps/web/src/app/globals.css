@@ -3680,6 +3680,57 @@ input[type='file']::file-selector-button {
   color: var(--ink-700);
 }
 
+/*
+ * A real <table>, unlike `.fleet-table` (which is a definition list) — and a *different class name* from
+ * `.fleet-grid`, which is the card grid above. Sharing that name meant every fleet table inherited
+ * `display: grid` and was drawn as a column of 280px cells.
+ */
+.fleet-ledger {
+  inline-size: 100%;
+  min-inline-size: 34rem;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.fleet-ledger th,
+.fleet-ledger td {
+  padding: var(--space-3);
+  text-align: start;
+  vertical-align: middle;
+  border-block-end: 1px solid var(--surface-sunken);
+}
+
+.fleet-ledger thead th {
+  background: var(--surface-muted);
+  color: var(--ink-500);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border-block-end: 1px solid var(--surface-sunken);
+  white-space: nowrap;
+}
+
+.fleet-ledger tbody th {
+  font-weight: 600;
+  white-space: normal;
+}
+
+/* Numbers line up down the column, and a kilometric figure never wraps mid-value. */
+.fleet-ledger tbody td {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.fleet-ledger tbody tr:hover th,
+.fleet-ledger tbody tr:hover td {
+  background: var(--surface-muted);
+}
+
+.fleet-ledger tbody tr:last-child th,
+.fleet-ledger tbody tr:last-child td {
+  border-block-end: 0;
+}
+
 .fleet-ledger tbody th .ui-badge {
   margin-block-start: var(--space-1);
 }
