@@ -20,7 +20,7 @@ begin;
 
 create extension if not exists pgtap;
 
-select plan(80);
+select plan(83);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -907,6 +907,47 @@ select is(
   has_function_privilege('anon', 'public.search_public_trips(text, jsonb, text, text, integer)', 'execute'),
   true,
   'but the marketplace reader is open, because the marketplace is'
+);
+
+-- A read that only `service_role` may execute is a read nobody can use: the staff search shipped revoked
+-- from `authenticated` alongside the commands, so the console's search box answered 42501. pgTAP could
+-- not see it, because the suite runs as `postgres` and never consults a grant.
+select is(
+  has_function_privilege('authenticated', 'public.staff_search_trips(uuid, jsonb, integer)', 'execute'),
+  true,
+  'staff search is callable by a signed-in user'
+);
+
+select is(
+  has_function_privilege('anon', 'public.staff_search_trips(uuid, jsonb, integer)', 'execute'),
+  false,
+  'and not by a visitor, who has no staff role to claim'
+);
+
+-- The invariant behind the two grants above, in one assertion: in `public`, every function this
+-- project defines — everything that is neither a `cmd_*` command, an `app_*` internal wrapper, nor an
+-- extension member — must be executable by a signed-in user. A new read granted only to `service_role`
+-- fails here instead of failing in a console nobody exercised.
+select is(
+  (
+    select count(*)::int
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and p.prokind = 'f'
+      and p.proname not like 'cmd\_%'
+      and p.proname not like 'app\_%'
+      and not exists (
+        select 1
+        from pg_depend d
+        where d.classid = 'pg_proc'::regclass
+          and d.objid = p.oid
+          and d.deptype = 'e'
+      )
+      and not has_function_privilege('authenticated', p.oid, 'execute')
+  ),
+  0,
+  'every non-command public function is callable by a signed-in user'
 );
 
 select * from finish();

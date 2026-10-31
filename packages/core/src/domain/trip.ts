@@ -292,6 +292,38 @@ export function activeFilterCount(state: TripFilterState): number {
 }
 
 /**
+ * Re-serialise a page's query for a link that must not drop it — the language switcher, a sort link, the
+ * "next page" affordance. Returns `''` or a string that already starts with `?`.
+ *
+ * `drop` removes keys that belong to one rendering only: `st` is a session token in development, and
+ * carrying it into a link would hand the visitor's session to the next page's history entry. Unknown keys
+ * are kept on purpose — dropping one silently is how a filter nobody thought of disappears on a locale
+ * switch.
+ */
+export function searchSuffix(
+  params: URLSearchParams | Record<string, string | string[] | undefined>,
+  drop: readonly string[] = [],
+): string {
+  const serialised = new URLSearchParams();
+  const append = (key: string, value: string | null | undefined) => {
+    if (!value || drop.includes(key)) return;
+    serialised.append(key, value);
+  };
+
+  if (params instanceof URLSearchParams) {
+    for (const key of new Set(params.keys())) {
+      for (const value of params.getAll(key)) append(key, value);
+    }
+  } else {
+    for (const [key, value] of Object.entries(params)) {
+      for (const item of Array.isArray(value) ? value : [value]) append(key, item);
+    }
+  }
+
+  return serialised.size > 0 ? `?${serialised.toString()}` : '';
+}
+
+/**
  * The cheapest fare a card can advertise — the TypeScript side of `app.trip_price_from()`.
  *
  * A per-stop trip has no flat fare, so reading `pricePerSeatYer` for the card would show "—" for a

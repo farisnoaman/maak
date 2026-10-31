@@ -4,6 +4,7 @@ import {
   activeFilterCount,
   isLocale,
   readTripFilters,
+  searchSuffix,
   translate,
   type Locale,
   type TranslationKey,
@@ -48,6 +49,10 @@ export default async function TripsPage({
   const state = readTripFilters(query);
   const activeCount = activeFilterCount(state);
 
+  // The language switcher re-renders the same path in the other direction; without the query it would
+  // silently drop every filter, which is exactly what "shareable in both locales" must not do.
+  const suffix = searchSuffix(query, ['st']);
+
   const page = await loadPublicTrips(
     locale,
     {
@@ -87,7 +92,7 @@ export default async function TripsPage({
 
   return (
     <>
-      <SiteHeader locale={locale} pathname="/trips" />
+      <SiteHeader locale={locale} pathname="/trips" search={suffix} />
       <main id="main" className="shell">
         <PreviewBanner locale={locale} />
 

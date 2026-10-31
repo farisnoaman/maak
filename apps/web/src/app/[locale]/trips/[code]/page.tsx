@@ -52,6 +52,15 @@ export default async function PublicTripPage({
   const trip = await loadPublicTrip(code, locale);
   const when = trip ? departureLabel(trip.departureAt, locale) : null;
 
+  /** Only the printable policy values: a nested object is the operator's own structure, not a fact. */
+  const policyRows: [string, string][] = trip
+    ? Object.entries(trip.policies).flatMap(([key, value]) =>
+        typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'
+          ? [[key, String(value)] as [string, string]]
+          : [],
+      )
+    : [];
+
   return (
     <>
       <SiteHeader locale={locale} pathname="/trips" />
@@ -153,6 +162,16 @@ export default async function PublicTripPage({
               ) : null}
               {trip.fare ? (
                 <>
+                  <div className="trip-summary__row">
+                    <dt>{t('trips.perSeatFare')}</dt>
+                    <dd>{formatMinor(trip.fare.unitFareMinor, 'YER', { locale })}</dd>
+                  </div>
+                  {trip.fare.discountMinor > 0 ? (
+                    <div className="trip-summary__row">
+                      <dt>{t('trips.subtotal')}</dt>
+                      <dd>{formatMinor(trip.fare.subtotalMinor, 'YER', { locale })}</dd>
+                    </div>
+                  ) : null}
                   {trip.fare.discountMinor > 0 ? (
                     <div className="trip-summary__row">
                       <dt>{t('trips.discount')}</dt>
@@ -192,6 +211,22 @@ export default async function PublicTripPage({
                 ))}
               </ol>
             )}
+
+            {policyRows.length > 0 ? (
+              <section aria-labelledby="policies-title">
+                <h2 id="policies-title">{t('trips.detail.policies')}</h2>
+                {/* Policies are free-form key/value pairs the operator chose; nothing is invented for a
+                    key we do not know, and nothing is hidden for a key we do. */}
+                <dl className="trip-summary">
+                  {policyRows.map(([key, value]) => (
+                    <div className="trip-summary__row" key={key}>
+                      <dt>{key}</dt>
+                      <dd>{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
+            ) : null}
 
             {trip.notes ? (
               <section>

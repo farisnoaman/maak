@@ -85,16 +85,25 @@ A fifth, smaller one: the dev REST stand-in wrapped scalar RPC results in `[{ "f
 PostgREST returns the value itself. Fixed, because a client that has to unwrap in dev and not in
 production is the kind of divergence that only shows up on deploy.
 
+A sixth was found later, by using the screen rather than by reading it: `staff_search_trips` had been
+created inside the block that revokes the trip *commands* from `anon` and `authenticated`, so it was
+reachable only by `service_role` — and reads in this app never use the service role. `/staff/trips?q=…`
+answered `42501 permission denied for function staff_search_trips` and the page rendered "forbidden" to
+the staff member it exists for. Migration `00016` re-grants it to `authenticated` (the function already
+authorises itself through `app.is_platform_staff`), and `0007` now asserts the grant — plus an invariant
+that every function this project defines in `public` is executable by a signed-in user — so the next
+read that ships revoked fails the suite instead of a console.
+
 ---
 
 ## 3. Evidence
 
 | Gate | Result |
 | --- | --- |
-| `npm run sql:check` | 15 migrations applied; 7 pgTAP suites green; **80** trip assertions; no type drift; no client write grants |
-| `npm test` | 18 files, **362** tests (33 of them the Phase 4 domain/contract tests) |
-| `npm run check:guards` | 22 core files · 88 style files · 15 migrations · 43 commands |
-| `npm run check:a11y` | **49** routes, both directions, **5** discovered detail pages |
+| `npm run sql:check` | 16 migrations applied; 7 pgTAP suites green; **83** trip assertions; no type drift; no client write grants |
+| `npm test` | 18 files, **365** tests (33 of them the Phase 4 domain/contract tests) |
+| `npm run check:guards` | 22 core files · 88 style files · 16 migrations · 43 commands |
+| `npm run check:a11y` | **50** routes, both directions, **5** discovered detail pages |
 | `npm run check:responsive` | viewport exported, no unguarded grid tracks, every wide table scrollable |
 | `npm run dev:check -- --api` | 16/16, including the marketplace without a session and a trip-code lookup |
 | `npm run check:functions`, `db:types:check` | bundles current; types match 15 migrations |

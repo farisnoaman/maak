@@ -2609,3 +2609,40 @@ input[type='file']::file-selector-button {
 .trip-share .ui-btn {
   min-height: var(--tap-target);
 }
+
+/* Staff trip search ------------------------------------------------------------------------------- */
+
+.trip-search {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--surface-muted);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  margin-block-end: var(--space-4);
+}
+
+.trip-search > summary {
+  display: none;
+}
+
+.trip-table {
+  inline-size: 100%;
+  min-inline-size: 46rem;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.trip-table th,
+.trip-table td {
+  text-align: start;
+  padding: var(--space-2);
+  border-block-end: 1px solid var(--surface-muted);
+  vertical-align: top;
+}
+
+.trip-table th {
+  color: var(--ink-600);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}

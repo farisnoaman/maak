@@ -11,7 +11,7 @@
  * cheaper than a divergence between development and production.
  */
 
-import { publicTripArgs, publicTripsArgs, type TripFilters } from '@maak/core';
+import { publicTripArgs, publicTripsArgs, staffTripsArgs, type TripFilters } from '@maak/core';
 
 import { getServerClient } from './supabase/server';
 import type { AccountContext } from './account';
@@ -698,5 +698,76 @@ export async function loadPublicTrip(
       fare: breakdown(row.fare),
     })),
     fare: breakdown(payload.fare),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Staff search: every trip, including the ones the marketplace hides
+// ---------------------------------------------------------------------------
+
+/** A row from `staff_search_trips` — a fleet-wide view with the operator named. */
+export interface StaffTripRow {
+  readonly id: string;
+  readonly code: string;
+  readonly status: string;
+  readonly verificationStatus: string;
+  readonly departureAt: string;
+  readonly seatsAvailable: number;
+  readonly seatsTotal: number;
+  readonly priceFromYer: number | null;
+  readonly operatorName: string | null;
+  readonly cancelReason: string | null;
+  /** Governorate *names*, not ids: this read is for a human scanning a table. */
+  readonly origin: string;
+  readonly destination: string;
+}
+
+/**
+ * Staff trip search.
+ *
+ * `staff_search_trips` is `security definer` and raises `42501` for anyone who is not staff, so the
+ * RPC is the permission check as well as the query — the page does not have to be trusted, and a
+ * customer who guesses the URL gets an empty result rather than other people's drafts.
+ */
+export async function loadStaffTrips(
+  actorId: string,
+  filters: { status?: readonly string[]; q?: string },
+): Promise<{ configured: boolean; items: readonly StaffTripRow[]; error?: string }> {
+  const client = await getServerClient();
+  if (!client) return { configured: false, items: [] };
+
+  const { fn, args } = staffTripsArgs(
+    actorId,
+    {
+      status: filters.status?.length
+        ? (filters.status as ('draft' | 'pending' | 'published' | 'cancelled' | 'completed')[])
+        : undefined,
+      q: filters.q,
+    },
+    50,
+  );
+
+  const result = await client.rpc(fn, args as never);
+  if (result.error) {
+    return { configured: true, items: [], error: result.error.message };
+  }
+
+  const payload = (result.data ?? {}) as Record<string, unknown>;
+  return {
+    configured: true,
+    items: rows(payload.items).map((row) => ({
+      id: String(row.id ?? ''),
+      code: String(row.code ?? ''),
+      status: String(row.status ?? 'draft'),
+      verificationStatus: String(row.verificationStatus ?? 'unverified'),
+      departureAt: String(row.departureAt ?? ''),
+      seatsAvailable: num(row.seatsAvailable) ?? 0,
+      seatsTotal: num(row.seatsTotal) ?? 0,
+      priceFromYer: num(row.priceFromYer),
+      operatorName: str(row.operatorName),
+      cancelReason: str(row.cancelReason),
+      origin: String(row.origin ?? '—'),
+      destination: String(row.destination ?? '—'),
+    })),
   };
 }

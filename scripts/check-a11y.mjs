@@ -75,6 +75,7 @@ const ROUTES = [
   { path: '/en/account/trips', lang: 'en', dir: 'ltr', account: 'owner' },
   { path: '/ar/staff/trips', lang: 'ar', dir: 'rtl', account: 'staff' },
   { path: '/en/staff/trips', lang: 'en', dir: 'ltr', account: 'staff' },
+  { path: '/ar/staff/trips?q=SA&status=published', lang: 'ar', dir: 'rtl', account: 'staff' },
 ];
 
 const failures = [];

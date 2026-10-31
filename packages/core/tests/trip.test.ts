@@ -6,6 +6,7 @@ import {
   departureLabel,
   isTripEditable,
   readTripFilters,
+  searchSuffix,
   tripBadges,
   tripFilterQuery,
   tripPriceFrom,
@@ -183,6 +184,26 @@ describe('marketplace filter URLs', () => {
     expect(fromRecord.origin).toEqual(['g1', 'g2']);
     expect(fromRecord.direct).toBe(true);
     expect(fromRecord.priceMax).toBe(5000);
+  });
+
+  it('re-serialises a query for the language switch, keeping keys it does not know', () => {
+    const search = searchSuffix({ q: 'عدن', status: ['draft', 'published'], page: '2' });
+    expect(search).toBe('?q=%D8%B9%D8%AF%D9%86&status=draft&status=published&page=2');
+    expect(new URLSearchParams(search).getAll('status')).toEqual(['draft', 'published']);
+  });
+
+  it('drops the session token and empty values, because a link is not a session', () => {
+    expect(searchSuffix({ q: 'SA', st: 'token', empty: '', missing: undefined }, ['st'])).toBe(
+      '?q=SA',
+    );
+    expect(searchSuffix({ st: 'token' }, ['st'])).toBe('');
+    expect(searchSuffix({})).toBe('');
+  });
+
+  it('reads the same query from a URLSearchParams as from Next.js searchParams', () => {
+    const params = new URLSearchParams('q=SA&status=draft&status=cancelled');
+    expect(searchSuffix(params)).toBe(searchSuffix({ q: 'SA', status: ['draft', 'cancelled'] }));
+    expect(searchSuffix(params)).toBe('?q=SA&status=draft&status=cancelled');
   });
 
   it('ignores junk instead of sending it to the database', () => {
