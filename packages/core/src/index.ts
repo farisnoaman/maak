@@ -15,6 +15,7 @@ export * from './domain/finance';
 export * from './domain/policy';
 export * from './domain/identity';
 export * from './domain/geo';
+export * from './domain/trip';
 
 export * from './api/errors';
 export * from './api/gateway';
