@@ -16,7 +16,7 @@ export const metadata: Metadata = {
  * that looks clickable but is not is worse than a card marked "coming soon".
  */
 const CONSOLES: { key: TranslationKey; phase: string; href?: string }[] = [
-  { key: 'console.public', phase: '4' },
+  { key: 'console.public', phase: '4', href: '/trips' },
   { key: 'console.operator', phase: '3', href: '/operator' },
   { key: 'console.staff', phase: '3', href: '/staff' },
   { key: 'console.admin', phase: '10' },
@@ -52,16 +52,18 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
               <h1>{t('home.heroTitle')}</h1>
               <p className="lead">{t('home.heroSubtitle')}</p>
               <div className="hero__actions">
-                <a className="btn btn--primary" href="#consoles">
+                {/* "Explore trips" used to be an in-page anchor to the console grid — a button that
+                    promises the marketplace and scrolls. It now opens the marketplace. */}
+                <Link className="btn btn--primary" href={`/${locale}/trips`}>
                   {t('home.ctaExplore')}
-                </a>
-                <a className="btn btn--ghost" href="#foundations">
+                </Link>
+                <Link className="btn btn--ghost" href={`/${locale}/operator`}>
                   {t('home.ctaOperator')}
-                </a>
+                </Link>
               </div>
               <div className="hero__stats">
                 <div>
-                  <div className="stat__value num">268</div>
+                  <div className="stat__value num">362</div>
                   <div className="stat__label">{t('home.statTests')}</div>
                 </div>
                 <div>

@@ -293,6 +293,42 @@ if (/gen_random_bytes\s*\(/.test(stripComments(sqlSource))) {
   );
 }
 
+// --- 13. Every screen is reachable ---------------------------------------------------------------
+// A page that exists but that nothing links to is indistinguishable, from the user's side, from a page
+// that was never built: the Phase 4 marketplace shipped at `/trips` while the home page's "Explore
+// trips" button was still an in-page anchor and the header had no Trips entry, so the product's front
+// door could only be opened by typing the URL. This check fails when a non-dynamic route under
+// `app/[locale]` has no inbound `/${locale}…` link anywhere in the web app. Dynamic routes ([id],
+// [code]) are excluded here — they are discovered from their list page by `check-a11y.mjs`.
+const appRoot = join(root, 'apps', 'web', 'src', 'app', '[locale]');
+const pageFiles = await walk(appRoot, (f) => f.endsWith('page.tsx'));
+// Only `.tsx`: a link lives in a component. `.ts` modules (the proxy's locale-less allowlist, for one)
+// mention routes without linking them, and would make this check pass on a page nobody can open.
+const viewFiles = await walk(join(root, 'apps', 'web', 'src'), (f) => f.endsWith('.tsx'));
+const views = (await Promise.all(viewFiles.map((f) => readFile(f, 'utf8'))))
+  .join('\n')
+  // `pathname="/trips"` tells the language switcher which page is current; it is not an inbound link,
+  // and it is exactly the difference this check exists to see.
+  .replaceAll(/pathname="[^"]*"/g, '');
+
+for (const file of pageFiles) {
+  const route = relative(appRoot, dirname(file)).replaceAll('\\', '/');
+  const routePath = route === '' || route === '.' ? '/' : `/${route}`;
+  if (routePath.includes('[')) continue;
+
+  // `'/' + '${locale}'` is the source text a template link is written with (single quotes keep
+  // `${locale}` literal); the other two forms cover a pre-interpolated path and a plain absolute href.
+  const linked =
+    views.includes('/' + '${locale}' + routePath) ||
+    views.includes(`'${routePath}'`) ||
+    views.includes(`href="${routePath}"`);
+  if (linked) continue;
+
+  failures.push(
+    `apps/web/src/app/[locale]${routePath === '/' ? '' : routePath}: no inbound link — nothing in a .tsx file points at this route, so the screen cannot be opened from the UI`,
+  );
+}
+
 if (failures.length > 0) {
   console.error(`✗ ${failures.length} guard failure(s):\n`);
   for (const failure of failures) console.error(`  - ${failure}`);

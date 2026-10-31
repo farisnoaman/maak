@@ -26,6 +26,9 @@ export function SiteHeader({
 
   const links: { key: TranslationKey; href: string }[] = [
     { key: 'nav.home', href: `/${locale}` },
+    // The marketplace is the product's front door for a visitor with no account; it must be reachable
+    // from every page, not only by typing the URL.
+    { key: 'nav.trips', href: withQuery('/trips') },
     { key: 'console.navVehicles', href: withQuery('/operator/vehicles') },
     { key: 'nav.styleguide', href: withQuery('/styleguide') },
     { key: 'nav.signIn', href: withQuery('/auth/sign-in') },

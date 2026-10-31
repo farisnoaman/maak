@@ -28,6 +28,22 @@ export default async function proxy(request: NextRequest) {
 
   const segments = pathname.split('/').filter(Boolean);
   const first = segments[0];
+
+  /**
+   * Locale-less public paths. `/` was negotiated but `/trips` was not, so the marketplace — the one URL
+   * a visitor is likely to type or receive in a message — answered 404. Only public, locale-independent
+   * paths are listed: a console route without a locale stays a 404 rather than guessing.
+   */
+  const PUBLIC_LOCALELESS = ['/trips'];
+  const needsLocale =
+    first !== undefined &&
+    !(LOCALES as readonly string[]).includes(first) &&
+    PUBLIC_LOCALELESS.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+
+  if (needsLocale) {
+    const locale = negotiateLocale(request.headers.get('accept-language'));
+    return redirectTo(request, `/${locale}${pathname}${search}`);
+  }
   const config = getSupabaseConfig();
 
   if (!config) return NextResponse.next();
