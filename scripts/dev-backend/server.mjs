@@ -30,6 +30,14 @@ const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '..', '..');
 const storageDir = join(root, '.dev', 'storage');
 
+/**
+ * Signed storage URLs, in memory.
+ *
+ * The real platform signs a URL and forgets it; the mock has to remember the token to honour it. Five
+ * minutes, exactly like the call site asks for, so a stale link really does stop working in dev.
+ */
+const signedObjects = new Map();
+
 export const API_PORT = Number(process.env.MAAK_API_PORT ?? 54321);
 export const ANON_KEY = process.env.MAAK_ANON_KEY ?? 'maak-dev-anon-key';
 
@@ -99,10 +107,51 @@ async function handleStorage({ request, url, claims, body, client }) {
   // — and means the web app can use the *real* URLs for both a public bucket and a private one.
   const [, , kind, ...tail] = parts;
   const access = tail[0] === 'public' || tail[0] === 'authenticated' ? tail.shift() : null;
+  const signing = tail[0] === 'sign' ? tail.shift() : null;
   const bucket = tail.shift();
   const objectPath = tail.join('/');
 
   if (kind !== 'object' || !bucket) return { status: 404, body: { message: 'not found' } };
+
+  // Signing: `createSignedUrl()` posts here and gets a token back; the browser then reads the same path
+  // with `?token=`. The token is the authorisation, which is why the read below needs no session.
+  if (kind === 'object' && signing) {
+    const safe = objectPath.replaceAll('..', '').replace(/^\/+/, '');
+    if (request.method === 'POST') {
+      const token = randomUUID();
+      const expires = Date.now() + 300_000;
+      signedObjects.set(token, { bucket, name: safe, expires });
+      return { status: 200, body: { signedURL: `/object/sign/${bucket}/${safe}?token=${token}` } };
+    }
+    if (request.method === 'GET') {
+      const token = url.searchParams.get('token') ?? '';
+      const record = signedObjects.get(token);
+      if (!record || record.bucket !== bucket || record.name !== safe) {
+        return {
+          status: 400,
+          body: { statusCode: '400', error: 'InvalidJWT', message: 'invalid signature' },
+        };
+      }
+      if (record.expires < Date.now()) {
+        signedObjects.delete(token);
+        return {
+          status: 400,
+          body: { statusCode: '400', error: 'InvalidJWT', message: 'expired' },
+        };
+      }
+      try {
+        const body = await readFile(join(storageDir, bucket, safe));
+        return { status: 200, raw: body, headers: { 'content-type': 'application/octet-stream' } };
+      } catch {
+        return {
+          status: 400,
+          body: { statusCode: '404', error: 'not_found', message: 'Object not found' },
+        };
+      }
+    }
+    return { status: 405, body: { message: 'method not allowed' } };
+  }
+
   // A public bucket is readable without a session, exactly like the real thing; writes never are.
   const publicRead = access === 'public' && request.method === 'GET';
   if (claims.role !== 'authenticated' && !publicRead) {
@@ -128,6 +177,26 @@ async function handleStorage({ request, url, claims, body, client }) {
           message: 'new row violates row-level security policy',
         },
       };
+    }
+
+    // Passenger ID photos are keyed by booking, not by user, so the folder check is a lookup: the
+    // booking has to be *yours*. Without it the wizard could upload to someone else's booking and only
+    // the real platform would complain.
+    if (bucket === 'passenger-ids') {
+      const owned = await client.query(
+        'select 1 from bookings where id::text = $1 and passenger_id = $2',
+        [safe.split('/')[0] ?? '', claims.sub ?? ''],
+      );
+      if (owned.rows.length === 0) {
+        return {
+          status: 403,
+          body: {
+            statusCode: '403',
+            error: 'Unauthorized',
+            message: 'new row violates row-level security policy',
+          },
+        };
+      }
     }
 
     // The router already consumed the stream once (`readBody` cannot run twice), so the buffer it read
@@ -180,6 +249,16 @@ async function main() {
   const fks = await loadForeignKeys(client);
   const columns = await loadColumns(client);
   await mkdir(storageDir, { recursive: true });
+
+  // Phase 5's hold expiry is a cron job on the platform (migration 00020). A laptop has no cron, so the
+  // same function runs on a timer here: a pending request really does give its seats back after the hold,
+  // instead of only doing so in production. One minute is a demo-friendly stand-in for two.
+  const sweeper = setInterval(() => {
+    client
+      .query('select app.job_expire_holds(200)')
+      .catch((error) => console.warn(`[jobs] hold sweep failed: ${error.message}`));
+  }, 60_000);
+  sweeper.unref();
 
   const server = createServer(async (request, response) => {
     const url = new URL(request.url ?? '/', `http://${request.headers.host ?? 'localhost'}`);

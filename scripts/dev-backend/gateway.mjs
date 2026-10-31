@@ -146,6 +146,18 @@ const TRIPS_CAPABILITY = {
   'trip.cancel': 'trip.cancel',
 };
 
+const BOOKINGS_CAPABILITY = {
+  'booking.create': 'booking.create',
+  'booking.setDocument': 'booking.create',
+  'booking.accept': 'booking.accept',
+  'booking.bulkAccept': 'booking.accept',
+  'booking.reject': 'booking.accept',
+  'booking.cancelByPassenger': 'booking.cancelAsPassenger',
+  'booking.cancelByOperator': 'booking.cancelAsOperator',
+  'booking.markNoShow': 'booking.accept',
+  'booking.shareLink': 'booking.create',
+};
+
 const FLEET_CAPABILITY = {
   'vehicle.create': 'vehicle.create',
   'vehicle.update': 'vehicle.update',
@@ -289,6 +301,42 @@ export async function handleFunction({ name, body, userId, client, core, request
     }
 
     const { fn, args } = core.tripsCommandArgs(parsed.data, userId, {
+      p_request_id: requestId,
+      p_ip: null,
+    });
+    try {
+      const result = await runCommand(client, fn, args);
+      return { status: 200, body: { ...result, requestId } };
+    } catch (error) {
+      const mapped = mapDbError(error, core);
+      return { ...mapped, body: { ...mapped.body, requestId } };
+    }
+  }
+
+  if (name === 'bookings') {
+    const parsed = core.bookingsActionSchema.safeParse(body);
+    if (!parsed.success) return mapZod(parsed.error);
+
+    const resolved = await resolveActor(client, userId);
+    const denial = core.policyDenial(
+      resolved.actor,
+      BOOKINGS_CAPABILITY[parsed.data.action],
+      core.bookingsScope(parsed.data),
+    );
+    if (denial) {
+      return {
+        status: denial === 'UNAUTHENTICATED' ? 401 : 403,
+        body: {
+          code: denial,
+          detail:
+            denial === 'NOT_VERIFIED'
+              ? 'Account is not verified'
+              : 'You do not have permission to perform this action',
+        },
+      };
+    }
+
+    const { fn, args } = core.bookingsCommandArgs(parsed.data, userId, {
       p_request_id: requestId,
       p_ip: null,
     });

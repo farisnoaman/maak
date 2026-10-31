@@ -63,6 +63,16 @@ export default async function OperatorTripPage({
         <a className="trip-back" href={`/${locale}/operator/trips`}>
           ← {t('common.back')}
         </a>
+        {/* The inbox is where the money and the seats are, so it is one tap from the trip, not buried in
+            a menu that an operator has to learn. */}
+        <p>
+          <a
+            className="ui-btn ui-btn--primary ui-btn--md"
+            href={`/${locale}/operator/trips/${id}/bookings`}
+          >
+            {t('bookings.inboxTitle')}
+          </a>
+        </p>
         <TripDetail
           locale={locale}
           trip={detail.trip}

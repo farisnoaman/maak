@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/ui/Feedback';
 import { AcceptInvitePanel, LicencePanel } from '@/components/driver/LicencePanel';
 import { loadAccountContext } from '@/lib/account';
 import { loadDriverState } from '@/lib/driver';
+import { signedObjectUrl } from '@/lib/storage';
 
 /**
  * The driver's licence — on the web, not only in the app.
@@ -39,6 +40,9 @@ export default async function AccountLicencePage({
 
   const state = await loadDriverState();
   const userId = loaded.user?.id ?? '';
+  const licencePhotoUrl = state.driver?.licencePhotoPath
+    ? await signedObjectUrl('driver-documents', state.driver.licencePhotoPath)
+    : null;
 
   return (
     <>
@@ -58,7 +62,12 @@ export default async function AccountLicencePage({
             <AcceptInvitePanel locale={locale} invite={state.invite} />
           </>
         ) : state.driver ? (
-          <LicencePanel locale={locale} userId={userId} driver={state.driver} />
+          <LicencePanel
+            locale={locale}
+            userId={userId}
+            driver={state.driver}
+            photoUrl={licencePhotoUrl}
+          />
         ) : (
           <EmptyState
             title={t('fleet.noDriverProfile')}

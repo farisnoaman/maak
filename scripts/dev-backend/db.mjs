@@ -179,6 +179,17 @@ const DEMO_USERS = [
     role: null,
     verified: 'unverified',
   },
+  {
+    // The driver the seeded fleet already had a profile for (`+967733000101`). Without an account to
+    // bind it to, the licence screen answered "no driver profile" and the whole photo flow — the one
+    // thing the screen exists for — could not be tried on a laptop at all.
+    id: '55555555-5555-4555-8555-555555555555',
+    email: 'driver@maak.test',
+    phone: '+967733000101',
+    name: 'خالد الحميري',
+    role: null,
+    verified: 'verified',
+  },
 ];
 
 async function seed(client, log = () => {}) {
@@ -250,7 +261,7 @@ async function seed(client, log = () => {}) {
   await seedDemoFleet(client);
 
   await grantDemoScope(client);
-  log(`  demo sign-in: admin@maak.test / ${DEMO_PASSWORD}`);
+  log(`  demo sign-in: admin@maak.test · owner@maak.test · driver@maak.test / ${DEMO_PASSWORD}`);
 }
 
 /**
@@ -317,6 +328,14 @@ async function seedDemoFleet(client) {
        '22222222-2222-4222-8222-222222222222', now()
      )
      on conflict (id) do nothing`,
+  );
+
+  // Bind the seeded driver profile to the seeded driver account, once. A row edited in the UI stays
+  // edited: the condition is "nobody", not "not this user".
+  await client.query(
+    `update public.driver_profiles
+        set user_id = '55555555-5555-4555-8555-555555555555'
+      where id = '7925cdf3-0000-4000-8000-00000000d001' and user_id is null`,
   );
 
   await client.query(

@@ -24,7 +24,7 @@ export interface ConsoleDriver {
   readonly phone: string;
   readonly licenceNo: string | null;
   readonly licenceExpiry: string | null;
-  readonly licencePhotoPath: string | null;
+  readonly licencePhotoUrl: string | null;
   readonly status: string;
   readonly verificationStatus: string;
   readonly vehicleName: string | null;
@@ -213,12 +213,8 @@ export function DriverConsole({
                   </p>
                   <p className="fleet-row__meta">
                     {t('fleet.licencePhoto')}:{' '}
-                    {driver.licencePhotoPath ? (
-                      <a
-                        href={`/api/data/storage/v1/object/authenticated/driver-documents/${driver.licencePhotoPath}`}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
+                    {driver.licencePhotoUrl ? (
+                      <a href={driver.licencePhotoUrl} target="_blank" rel="noreferrer">
                         {t('fleet.viewPhoto')}
                       </a>
                     ) : (

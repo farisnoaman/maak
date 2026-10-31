@@ -149,8 +149,17 @@ export default function TripDetailScreen() {
         ) : null}
       </View>
 
-      {/* Bookings are Phase 5; the CTA is honest about that instead of pretending to reserve a seat. */}
-      <Text style={styles.hint}>{t('trips.detail.bookingSoon')}</Text>
+      {trip.seatsAvailable >= 1 ? (
+        <Pressable
+          onPress={() => router.push(`/book/${trip.code}`)}
+          accessibilityRole="button"
+          style={styles.primary}
+        >
+          <Text style={styles.primaryText}>{t('trips.detail.bookCta')}</Text>
+        </Pressable>
+      ) : (
+        <Text style={styles.hint}>{t('bookings.noSeatsLeft')}</Text>
+      )}
     </ScrollView>
   );
 }
@@ -194,4 +203,13 @@ const styles = StyleSheet.create({
   },
   stopName: { fontWeight: '600' },
   verified: { color: '#0b7a5a', fontSize: 12, fontWeight: '700' },
+  primary: {
+    marginTop: 16,
+    minHeight: 48,
+    borderRadius: 12,
+    backgroundColor: '#0b7a5a',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  primaryText: { color: '#ffffff', fontWeight: '800', fontSize: 16 },
 });

@@ -2784,3 +2784,168 @@ input[type='file']::file-selector-button {
     align-items: end;
   }
 }
+
+/* ---------------------------------------------------------------------------
+ * Phase 5 — bookings
+ *
+ * Everything here is one column by default, because the person booking a seat is holding a phone at a
+ * bus stop. The wider layout is the enhancement, never the starting point.
+ * ------------------------------------------------------------------------- */
+
+.booking-form,
+.booking-identity {
+  display: grid;
+  gap: 1rem;
+  max-inline-size: 34rem;
+}
+
+.booking-total {
+  margin-block-start: 0.25rem;
+}
+
+.booking-done {
+  display: grid;
+  gap: 0.75rem;
+  max-inline-size: 34rem;
+  padding: 1rem;
+  border: 1px solid color-mix(in srgb, currentColor 16%, transparent);
+  border-radius: var(--radius-md, 0.75rem);
+}
+
+.booking-done__code {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin: 0;
+}
+
+.booking-list {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.booking-card {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.85rem;
+  border: 1px solid color-mix(in srgb, currentColor 16%, transparent);
+  border-radius: var(--radius-md, 0.75rem);
+}
+
+.booking-card__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.booking-card__code {
+  font-weight: 700;
+}
+
+.booking-card__meta {
+  margin: 0;
+  font-size: 0.9rem;
+  color: color-mix(in srgb, currentColor 72%, transparent);
+}
+
+.booking-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
+.booking-actions__confirm,
+.booking-actions__reject,
+.booking-share {
+  display: grid;
+  gap: 0.5rem;
+  inline-size: 100%;
+}
+
+.booking-share__url {
+  margin: 0;
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+
+.booking-detail__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-block-end: 0.75rem;
+}
+
+.booking-manifest {
+  inline-size: 100%;
+  border-collapse: collapse;
+}
+
+.booking-manifest th,
+.booking-manifest td {
+  padding: 0.5rem;
+  text-align: start;
+  vertical-align: top;
+  border-block-end: 1px solid color-mix(in srgb, currentColor 14%, transparent);
+}
+
+/* A watermark that is a reminder, not a redaction: it repeats the booking code and the viewer's name so
+ * a screenshot identifies who took it. Decorative for assistive tech, and it never blocks the page. */
+.watermark {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-block-end: 1rem;
+  opacity: 0.35;
+  pointer-events: none;
+  font-size: 0.75rem;
+  overflow: hidden;
+}
+
+.watermark span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  transform: rotate(-12deg);
+}
+
+@media (min-width: 720px) {
+  .booking-form,
+  .booking-identity {
+    max-inline-size: 40rem;
+  }
+
+  .watermark {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* The boarding ticket: a code an operator can scan, with the caption as its accessible name. */
+.ticket {
+  display: grid;
+  gap: 0.35rem;
+  justify-items: start;
+  margin: 0 0 1rem;
+  padding: 0.75rem;
+  border: 1px solid color-mix(in srgb, currentColor 16%, transparent);
+  border-radius: var(--radius-md, 0.75rem);
+  inline-size: fit-content;
+}
+
+.ticket__qr svg {
+  display: block;
+  inline-size: 11rem;
+  block-size: auto;
+}
+
+.ticket__caption {
+  font-size: 0.85rem;
+  color: color-mix(in srgb, currentColor 72%, transparent);
+  max-inline-size: 16rem;
+}

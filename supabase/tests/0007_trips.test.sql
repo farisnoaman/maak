@@ -1005,6 +1005,10 @@ select is(
       and p.prokind = 'f'
       and p.proname not like 'cmd\_%'
       and p.proname not like 'app\_%'
+      -- Two Phase 5 writes whose names the implementation plan fixes: both are commands in every
+      -- sense that matters (one transaction, audited, reachable only through the gateway), so they are
+      -- service-only exactly like `cmd_*`.
+      and p.proname not in ('create_id_share_link', 'get_trip_manifest_data')
       and not exists (
         select 1
         from pg_depend d

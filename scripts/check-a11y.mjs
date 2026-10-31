@@ -40,8 +40,10 @@ const ROUTES = [
   { path: '/en/account', lang: 'en', dir: 'ltr', account: 'owner' },
   { path: '/ar/account/verification', lang: 'ar', dir: 'rtl', account: 'owner' },
   { path: '/en/account/verification', lang: 'en', dir: 'ltr', account: 'owner' },
-  { path: '/ar/account/licence', lang: 'ar', dir: 'rtl', account: 'owner' },
-  { path: '/en/account/licence', lang: 'en', dir: 'ltr', account: 'owner' },
+  { path: '/ar/account/licence', lang: 'ar', dir: 'rtl', account: 'driver' },
+  { path: '/en/account/licence', lang: 'en', dir: 'ltr', account: 'driver' },
+  { path: '/ar/account/bookings', lang: 'ar', dir: 'rtl', account: 'owner' },
+  { path: '/en/account/bookings', lang: 'en', dir: 'ltr', account: 'owner' },
   { path: '/ar/operator/settings', lang: 'ar', dir: 'rtl', account: 'owner' },
   { path: '/en/operator/team', lang: 'en', dir: 'ltr', account: 'owner' },
   { path: '/ar/staff/verifications', lang: 'ar', dir: 'rtl', account: 'staff' },
@@ -94,6 +96,9 @@ function sessionCookie(route) {
 const ACCOUNTS = {
   owner: process.env.A11Y_OWNER ?? 'owner@maak.test',
   staff: process.env.A11Y_STAFF ?? 'admin@maak.test',
+  // The seeded driver: the licence screen renders an empty state for anybody else, and an empty state
+  // is not what this gate is here to parse.
+  driver: process.env.A11Y_DRIVER ?? 'driver@maak.test',
 };
 const PASSWORD = process.env.A11Y_PASSWORD ?? 'Maak!2026';
 
@@ -124,7 +129,7 @@ async function signIn(who) {
   }
 }
 
-const sessions = { owner: null, staff: null };
+const sessions = { owner: null, staff: null, driver: null };
 
 function fail(route, message) {
   failures.push(`${route}: ${message}`);

@@ -5,6 +5,7 @@ import { PreviewBanner } from '@/components/PreviewBanner';
 import { ConsoleShell } from '@/components/ConsoleShell';
 import { DriverConsole } from '@/components/fleet/DriverConsole';
 import { activeOrganization, loadAccountContext } from '@/lib/account';
+import { signedObjectUrl } from '@/lib/storage';
 import { loadFleet } from '@/lib/fleet';
 
 export default async function OperatorDriversPage({
@@ -95,20 +96,24 @@ export default async function OperatorDriversPage({
             id: vehicle.id,
             name: vehicleNames.get(vehicle.id) ?? vehicle.plateNumber,
           }))}
-          drivers={drivers.map((driver) => {
-            const vehicleId = assignedByDriver.get(driver.id);
-            return {
-              id: driver.id,
-              fullName: driver.fullName,
-              phone: driver.phone,
-              licenceNo: driver.licenceNo,
-              licenceExpiry: driver.licenceExpiry,
-              licencePhotoPath: driver.licencePhotoPath,
-              status: driver.status,
-              verificationStatus: driver.verificationStatus,
-              vehicleName: vehicleId ? (vehicleNames.get(vehicleId) ?? null) : null,
-            };
-          })}
+          drivers={await Promise.all(
+            drivers.map(async (driver) => {
+              const vehicleId = assignedByDriver.get(driver.id);
+              return {
+                id: driver.id,
+                fullName: driver.fullName,
+                phone: driver.phone,
+                licenceNo: driver.licenceNo,
+                licenceExpiry: driver.licenceExpiry,
+                licencePhotoUrl: driver.licencePhotoPath
+                  ? await signedObjectUrl('driver-documents', driver.licencePhotoPath)
+                  : null,
+                status: driver.status,
+                verificationStatus: driver.verificationStatus,
+                vehicleName: vehicleId ? (vehicleNames.get(vehicleId) ?? null) : null,
+              };
+            }),
+          )}
         />
       </ConsoleShell>
     </>

@@ -17,15 +17,6 @@ import { getApiClient, uploadDriverLicence } from '@/lib/api';
 import type { DriverLicenceRecord } from '@/lib/driver';
 
 /**
- * The authenticated read of one licence image. It lives here rather than in `lib/driver.ts` because that
- * module reads the session with `next/headers` and a client component may not import it — types are
- * erased, values are not.
- */
-function licencePhotoUrl(path: string): string {
-  return `/api/data/storage/v1/object/authenticated/driver-documents/${path}`;
-}
-
-/**
  * The driver's licence, on the web.
  *
  * The phone app was the only place a licence could be photographed, which made the whole feature depend
@@ -45,10 +36,13 @@ export function LicencePanel({
   locale,
   userId,
   driver,
+  photoUrl,
 }: {
   readonly locale: Locale;
   readonly userId: string;
   readonly driver: DriverLicenceRecord;
+  /** A five-minute signed read, minted by the page. Null when there is no photo or it cannot be signed. */
+  readonly photoUrl: string | null;
 }) {
   const t = (key: TranslationKey, vars?: Record<string, string | number>) =>
     translate(locale, key, vars);
@@ -132,9 +126,9 @@ export function LicencePanel({
         </Badge>
       </div>
 
-      {driver.licencePhotoPath ? (
+      {photoUrl ? (
         <p>
-          <a href={licencePhotoUrl(driver.licencePhotoPath)} target="_blank" rel="noreferrer">
+          <a href={photoUrl} target="_blank" rel="noreferrer">
             {t('fleet.viewPhoto')}
           </a>
         </p>

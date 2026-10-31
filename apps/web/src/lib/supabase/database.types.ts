@@ -1,5 +1,5 @@
-// migrations-sha256: 11c21abfd09d4d2da73e4a8f6b78887f8ed634ec4021dab1858dd7fedf6df209
-/* Generated from 18 migrations. Run `npm run db:types` after changing the schema. */
+// migrations-sha256: 0c9783c17cf43d697fca093dae8e1d8327cce34c3fb7a2826f7fb236516ebc88
+/* Generated from 20 migrations. Run `npm run db:types` after changing the schema. */
 
 /**
  * Schema types for RLS-filtered reads (Phase 0 subset).
@@ -40,6 +40,28 @@ export type VehicleOwnershipKind = 'owned' | 'leased' | 'financed';
 export type VehicleStatus = 'draft' | 'active' | 'suspended' | 'retired';
 export type DriverStatus = 'invited' | 'active' | 'suspended' | 'revoked';
 export type OdometerKind = 'baseline' | 'trip_start' | 'trip_end' | 'service';
+
+export type BookingStatus =
+  | 'pending'
+  | 'accepted'
+  | 'rejected'
+  | 'expired'
+  | 'cancelled_by_passenger'
+  | 'cancelled_by_operator'
+  | 'no_show'
+  | 'completed';
+export type IdDocumentType = 'national_id' | 'passport' | 'iqama' | 'other';
+export type BookingPaymentStatus = 'unpaid' | 'deposit_paid' | 'paid' | 'refunded';
+export type BookingEventKind =
+  | 'created'
+  | 'accepted'
+  | 'rejected'
+  | 'cancelled'
+  | 'expired'
+  | 'no_show'
+  | 'completed'
+  | 'document_shared';
+export type DocumentAccessKind = 'owner' | 'operator' | 'staff' | 'share_link';
 
 export type TripStatus = 'draft' | 'pending' | 'published' | 'cancelled' | 'completed';
 export type TripEventKind =
@@ -562,6 +584,83 @@ export interface SearchCacheRow {
   expires_at: string;
 }
 
+export interface Booking {
+  id: string;
+  code: string;
+  trip_id: string;
+  passenger_id: string;
+  booked_by: string;
+  status: BookingStatus;
+  seats: number;
+  origin_stop_id: string | null;
+  destination_stop_id: string | null;
+  destination_seq: number | null;
+  currency: string;
+  unit_price_yer: number;
+  subtotal_yer: number;
+  discount_yer: number;
+  total_yer: number;
+  refund_yer: number;
+  payment_status: BookingPaymentStatus;
+  contact_name: string;
+  contact_phone: string;
+  passenger_gender: 'male' | 'female' | null;
+  note: string | null;
+  hold_expires_at: string | null;
+  accepted_at: string | null;
+  decided_by: string | null;
+  reject_reason: string | null;
+  cancelled_at: string | null;
+  cancelled_by: string | null;
+  cancel_reason: string | null;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PassengerDocument {
+  id: string;
+  booking_id: string;
+  id_type: IdDocumentType;
+  id_number: string;
+  birth_place: string | null;
+  birth_date: string | null;
+  photo_path: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DocumentAccessLog {
+  id: number;
+  booking_id: string;
+  actor_id: string | null;
+  kind: DocumentAccessKind;
+  ip: string | null;
+  user_agent: string | null;
+  created_at: string;
+}
+
+export interface BookingEvent {
+  id: number;
+  booking_id: string;
+  kind: BookingEventKind;
+  actor_id: string | null;
+  detail: Json;
+  created_at: string;
+}
+
+export interface BookingShareToken {
+  id: string;
+  booking_id: string;
+  token: string;
+  created_by: string;
+  expires_at: string;
+  revoked_at: string | null;
+  view_count: number;
+  last_viewed_at: string | null;
+  created_at: string;
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -697,6 +796,52 @@ export interface Database {
         Row: TripEvent;
         Insert: Partial<TripEvent> & { trip_id: string; kind: TripEventKind };
         Update: Partial<TripEvent>;
+      };
+      bookings: {
+        Row: Booking;
+        Insert: Partial<Booking> & {
+          trip_id: string;
+          passenger_id: string;
+          booked_by: string;
+          unit_price_yer: number;
+          subtotal_yer: number;
+          total_yer: number;
+          contact_name: string;
+          contact_phone: string;
+        };
+        Update: Partial<Booking>;
+      };
+      passenger_documents: {
+        Row: PassengerDocument;
+        Insert: Partial<PassengerDocument> & {
+          booking_id: string;
+          id_type: IdDocumentType;
+          id_number: string;
+        };
+        Update: Partial<PassengerDocument>;
+      };
+      document_access_log: {
+        Row: DocumentAccessLog;
+        Insert: Partial<DocumentAccessLog> & {
+          booking_id: string;
+          kind: DocumentAccessKind;
+        };
+        Update: Partial<DocumentAccessLog>;
+      };
+      booking_events: {
+        Row: BookingEvent;
+        Insert: Partial<BookingEvent> & { booking_id: string; kind: BookingEventKind };
+        Update: Partial<BookingEvent>;
+      };
+      booking_share_tokens: {
+        Row: BookingShareToken;
+        Insert: Partial<BookingShareToken> & {
+          booking_id: string;
+          token: string;
+          created_by: string;
+          expires_at: string;
+        };
+        Update: Partial<BookingShareToken>;
       };
       trip_verifications: {
         Row: TripVerification;

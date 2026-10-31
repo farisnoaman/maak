@@ -90,8 +90,17 @@ export default function HomeScreen() {
         <Text style={styles.linkText}>{t('trips.search.title')}</Text>
       </Pressable>
 
+      {/* Phase 5: a booking is the passenger's own record, so it is reachable from the first screen. */}
+      <Pressable
+        accessibilityRole="link"
+        onPress={() => router.push('/bookings')}
+        style={styles.link}
+      >
+        <Text style={styles.linkText}>{t('bookings.myTitle')}</Text>
+      </Pressable>
+
       <Text style={styles.note}>
-        {LOCALE_LABEL[locale]} · {t('common.phase')} 4
+        {LOCALE_LABEL[locale]} · {t('common.phase')} 5
       </Text>
     </ScrollView>
   );

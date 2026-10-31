@@ -274,3 +274,28 @@ queue renders the licence link → the link downloads `200` for staff and for th
 command refuses a path that does not exist. **Not verified:** the phone screen itself (no simulator in
 this environment) — the upload and command it performs were, through the same HTTP endpoints the app
 uses.
+
+### 9.1 Follow-up: the web screen, one more clock, and a demo account
+
+Three things were still wrong *after* §9, and they were only visible by trying to use it:
+
+1. **The only place to photograph a licence was the phone.** A driver using a laptop — or anyone
+   reviewing this build in a browser — could not upload one. The web screen now exists at
+   `/[locale]/account/licence`: the same order (upload into `<userId>/…`, then `driver.setLicence`), the
+   same `capture="environment"` input that opens the rear camera on a phone and a file picker on a
+   laptop, the same re-verification on replacement. `/account` links to it.
+2. **The image URL was a session cookie, not a signature.** Licence photos were served through
+   `/api/data/storage/v1/object/authenticated/...`, which works but never expires while the session
+   lives. They now use the same five-minute signed read as passenger IDs (`lib/storage.ts`), for the
+   driver, the operator console and the staff queue alike. The dev backend implements the sign/verify
+   handshake, so a stale link really does 400 locally instead of passing by luck.
+3. **Nobody could reach the screen.** The seeded driver profile had `user_id = null`, so the page
+   answered "no driver profile" for every demo account and the flow could not be tried at all. The seed
+   now creates `driver@maak.test` (+967733000101) and binds the existing profile to it.
+
+Re-verified on the live stack with the seeded driver: the panel renders the stored licence number and
+"no photo yet" → upload through the web proxy `200` → `driver.setLicence` `200`
+`{ verificationStatus: "pending", reverificationRequired: true }` → the driver page, the operator
+console and the staff queue each render a signed URL → that URL returns the image (`200`, correct byte
+count), and a forged token returns `400`. The a11y gate now signs in as the driver for the two licence
+routes, so an empty state can no longer pass for a verified screen.

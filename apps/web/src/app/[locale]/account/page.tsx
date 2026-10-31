@@ -88,6 +88,12 @@ export default async function AccountPage({
             </Link>
             {/* A driver's licence is a document about the person, so it lives with the account — and it
                 must be reachable from the account, or the only way to add one is to know the URL. */}
+            <Link
+              className="ui-btn ui-btn--primary ui-btn--md"
+              href={`/${locale}/account/bookings`}
+            >
+              {t('bookings.myTitle')}
+            </Link>
             <Link className="ui-btn ui-btn--ghost ui-btn--md" href={`/${locale}/account/licence`}>
               {t('fleet.accountLicence')}
             </Link>

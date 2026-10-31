@@ -240,8 +240,15 @@ export default async function PublicTripPage({
             </section>
 
             <div className="trip-cta">
-              {/* Bookings are the next phase; a button that does nothing would be worse than saying so. */}
-              <p className="trip-form__hint">{t('trips.detail.bookingSoon')}</p>
+              {/* One primary action, and only when it can actually work: a departed trip or a full one
+                  shows the reason instead of a button that leads to a closed form. */}
+              {trip.hasDeparted || trip.seatsAvailable < 1 ? (
+                <p className="trip-form__hint">{t('trips.detail.bookingSoon')}</p>
+              ) : (
+                <Link className="btn btn--primary" href={`/${locale}/trips/${trip.code}/book`}>
+                  {t('bookings.reserve')}
+                </Link>
+              )}
               <div className="trip-form__actions">
                 <ShareTrip locale={locale} url={`/${locale}/trips/${trip.code}`} />
                 <Link className="btn btn--ghost" href={`/${locale}/trips`}>

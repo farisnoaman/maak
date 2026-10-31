@@ -110,8 +110,23 @@ export async function uploadDriverLicence(
   return uploadToBucket('driver-documents', file, userId);
 }
 
+/**
+ * Uploads one passenger ID into `<bookingId>/…` in the private `passenger-ids` bucket.
+ *
+ * Same rule as the driver licence, different audience: the folder is the booking id because
+ * `passenger_ids_write_own` authorises the write by comparing that first segment with the booking's
+ * passenger — an operator cannot upload a passenger's document, and this helper cannot be pointed at
+ * somebody else's booking by a bug in the caller.
+ */
+export async function uploadPassengerId(
+  file: File,
+  bookingId: string,
+): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
+  return uploadToBucket('passenger-ids', file, bookingId);
+}
+
 async function uploadToBucket(
-  bucket: 'vehicle-photos' | 'vehicle-documents' | 'driver-documents',
+  bucket: 'vehicle-photos' | 'vehicle-documents' | 'driver-documents' | 'passenger-ids',
   file: File,
   folder: string,
 ): Promise<{ ok: true; path: string } | { ok: false; error: string }> {

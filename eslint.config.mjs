@@ -83,6 +83,8 @@ export default tseslint.config(
         Request: 'readonly',
         Response: 'readonly',
         setTimeout: 'readonly',
+        setInterval: 'readonly',
+        clearInterval: 'readonly',
       },
     },
     rules: {
