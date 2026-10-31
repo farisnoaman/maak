@@ -1,7 +1,12 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { LOCALES, negotiateLocale } from '@maak/core';
-import { AUTH_COOKIE_NAME, getSupabaseConfig } from './lib/supabase/config';
+import {
+  AUTH_COOKIE_NAME,
+  authCookieFlags,
+  getSupabaseConfig,
+  requestProtocol,
+} from './lib/supabase/config';
 
 /**
  * Two jobs, in order:
@@ -33,8 +38,11 @@ export default async function proxy(request: NextRequest) {
 
   let response = NextResponse.next({ request });
 
+  const flags = authCookieFlags(
+    requestProtocol(request.headers.get('x-forwarded-proto') ?? request.nextUrl.protocol),
+  );
   const supabase = createServerClient(config.url, config.anonKey, {
-    cookieOptions: { name: AUTH_COOKIE_NAME },
+    cookieOptions: { name: AUTH_COOKIE_NAME, ...flags },
     cookies: {
       getAll() {
         return request.cookies.getAll();
@@ -48,8 +56,7 @@ export default async function proxy(request: NextRequest) {
           response.cookies.set(name, value, {
             ...options,
             httpOnly: true,
-            sameSite: 'lax',
-            secure: process.env.NODE_ENV === 'production',
+            ...flags,
             path: '/',
           });
         }
@@ -69,6 +76,11 @@ export default async function proxy(request: NextRequest) {
   );
 
   if (needsAuth && !data.user) {
+    // The single most useful line when a sign-in "does nothing": it says whether the cookie arrived at
+    // all, which separates a blocked/cross-site cookie from a rejected token.
+    console.warn(
+      `[auth] ${pathname} → sign-in (session cookie ${request.cookies.has(AUTH_COOKIE_NAME) ? 'present' : 'absent'})`,
+    );
     const signIn = new URL(`/${locale}/auth/sign-in`, request.url);
     signIn.searchParams.set('next', `${pathname}${search}`);
     // Preserve the destination so the user lands where they intended, not on a generic home page.

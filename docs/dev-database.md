@@ -99,6 +99,29 @@ schemas, the command→argument map or the policy matrix. If a change lands in t
 not here, the dev stack is wrong in the same way a stale client would be — not "correct but
 different".
 
+## Signing in inside a preview frame
+
+The hosted preview renders the app in a **cross-site iframe**, and that changes cookie rules: a
+document inside a third-party frame counts as cross-site even when it calls its own origin, so a
+`SameSite=Lax` session cookie is written but never sent back. The symptom is distinctive — the
+sign-in call succeeds, the app navigates, and the server immediately bounces back to `/sign-in`.
+
+Both sides therefore derive the attributes from the real scheme (`authCookieFlags`): over https the
+session is `SameSite=None; Secure; Partitioned`, over http (localhost) it stays `SameSite=Lax`.
+`Partitioned` (CHIPS) is what lets the cookie exist in a third-party frame at all.
+
+If a browser still refuses, the sign-in form says so in words and offers **Open the app in its own
+tab** — a top-level page has no third-party restrictions.
+
+The proxy also logs the reason on every bounce:
+
+```
+[auth] /en/account → sign-in (session cookie absent)
+```
+
+`absent` = the cookie never arrived (blocked or cross-site); `present` = it arrived and the token was
+rejected, which is a completely different bug.
+
 ## Troubleshooting
 
 - **`EADDRINUSE :54321`** — a previous backend is still running.

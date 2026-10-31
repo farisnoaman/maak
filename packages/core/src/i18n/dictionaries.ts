@@ -99,6 +99,9 @@ export const ar = {
   'auth.notConfigured':
     'لم يتم ربط Supabase في هذه البيئة بعد. أضف المفاتيح في .env.local لتجربة تسجيل الدخول.',
   'auth.invalidCredentials': 'البريد الإلكتروني أو كلمة المرور غير صحيحة.',
+  'auth.sessionBlocked':
+    'تم تسجيل الدخول لكن المتصفح منع حفظ الجلسة داخل هذه النافذة. افتح التطبيق في تبويب مستقل ثم أعد المحاولة.',
+  'auth.openInTab': 'افتح التطبيق في تبويب مستقل',
 
   'console.subtitle.operator': 'إدارة المركبات والسائقين والرحلات والحجوزات.',
   'console.subtitle.staff': 'التحقق من الحسابات والمركبات والرحلات، ومسح رموز QR.',
@@ -523,6 +526,9 @@ export const en: Record<TranslationKey, string> = {
   'auth.notConfigured':
     'Supabase is not configured in this environment. Add your keys to .env.local to try sign-in.',
   'auth.invalidCredentials': 'Incorrect email address or password.',
+  'auth.sessionBlocked':
+    'Signed in, but the browser blocked the session inside this window. Open the app in its own tab and try again.',
+  'auth.openInTab': 'Open the app in its own tab',
 
   'console.subtitle.operator': 'Manage vehicles, drivers, trips and bookings.',
   'console.subtitle.staff': 'Verify accounts, vehicles and trips; scan QR codes.',

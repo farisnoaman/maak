@@ -22,6 +22,45 @@ export interface SupabaseConfig {
 export const AUTH_COOKIE_NAME = 'sb-maak-auth';
 
 /**
+ * Cookie attributes for the session, derived from the scheme the page is actually served over.
+ *
+ * Why this is not simply `SameSite=Lax`: the hosted preview renders the app inside a cross-site
+ * iframe, and a document in a third-party frame is "cross-site" even when it calls its own origin.
+ * A `Lax` cookie is then never sent back — the browser looks signed in on the client and signed out
+ * on the server, which reads as "sign-in does nothing". `SameSite=None` is the only attribute that
+ * survives that context, and it is only legal together with `Secure`, which in turn needs https.
+ *
+ * Over plain http (localhost) `None` is rejected, so local development stays on `Lax`. Both sides —
+ * browser and server — derive this from the real request, so they can never disagree.
+ */
+export interface AuthCookieFlags {
+  readonly sameSite: 'lax' | 'none';
+  readonly secure: boolean;
+  /**
+   * `Partitioned` (CHIPS): lets the cookie exist inside a third-party frame *and* keeps it keyed to
+   * this top-level site, which is exactly the preview's situation. Browsers that do not know the
+   * attribute ignore it, so it costs nothing where it is not needed.
+   */
+  readonly partitioned?: boolean;
+}
+
+export function authCookieFlags(protocol: string): AuthCookieFlags {
+  return protocol.startsWith('https')
+    ? { sameSite: 'none', secure: true, partitioned: true }
+    : { sameSite: 'lax', secure: false };
+}
+
+/** The protocol as this runtime sees it; on the server, `x-forwarded-proto` wins over NODE_ENV. */
+export function requestProtocol(forwardedProto?: string | null): string {
+  if (typeof window !== 'undefined') return window.location.protocol;
+  return forwardedProto
+    ? `${forwardedProto}:`
+    : process.env.NODE_ENV === 'production'
+      ? 'https:'
+      : 'http:';
+}
+
+/**
  * Resolves the API base URL for the current runtime.
  *
  * A `/`-prefixed URL means "same origin, through the Next rewrite":

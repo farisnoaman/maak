@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { PHONE_PLACEHOLDER, translate, type Locale, type TranslationKey } from '@maak/core';
 import { getBrowserClient } from '@/lib/supabase/browser';
+import { AUTH_COOKIE_NAME } from '@/lib/supabase/config';
 import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
 import { useToast } from '@/components/ui/Toast';
@@ -27,7 +27,6 @@ export function SignInForm({
   readonly next?: string;
 }) {
   const t = (key: TranslationKey) => translate(locale, key);
-  const router = useRouter();
   const { push } = useToast();
 
   const [mode, setMode] = useState<Mode>('email');
@@ -38,30 +37,60 @@ export function SignInForm({
   const [code, setCode] = useState('');
   const [codeSent, setCodeSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Set when the browser accepted the credentials but refused to keep the session cookie — which is
+  // what a cross-site preview frame does when it blocks third-party storage.
+  const [blocked, setBlocked] = useState(false);
+
+  /**
+   * The server gates protected pages on the session cookie, so a client-only "success" is not a
+   * success. Confirm the cookie survived before navigating: a cross-site iframe that refuses it would
+   * otherwise bounce the user straight back here with nothing to read.
+   */
+  function sessionPersisted(): boolean {
+    return document.cookie.split('; ').some((part) => part.startsWith(`${AUTH_COOKIE_NAME}=`));
+  }
+
+  function finish() {
+    push({ title: t('auth.signIn'), tone: 'success' });
+    // A full navigation, not `router.push`: the point is to make the next request carry the cookie we
+    // just wrote, and the client router may serve the destination from its cache instead.
+    window.location.assign(next ?? `/${locale}/account`);
+  }
 
   async function handleEmailSignIn(event: React.FormEvent) {
     event.preventDefault();
     const client = getBrowserClient();
-    if (!client) return;
+    if (!client) {
+      setError(t('auth.notConfigured'));
+      return;
+    }
 
     setBusy(true);
     setError(null);
     const { error: authError } = await client.auth.signInWithPassword({ email, password });
-    setBusy(false);
 
     if (authError) {
+      setBusy(false);
       setError(t('auth.invalidCredentials'));
       return;
     }
-    push({ title: t('auth.signIn'), tone: 'success' });
-    router.push(next ?? `/${locale}/account`);
-    router.refresh();
+    if (!sessionPersisted()) {
+      setBusy(false);
+      setBlocked(true);
+      setError(t('auth.sessionBlocked'));
+      return;
+    }
+
+    finish();
   }
 
   async function handleSendCode(event: React.FormEvent) {
     event.preventDefault();
     const client = getBrowserClient();
-    if (!client) return;
+    if (!client) {
+      setError(t('auth.notConfigured'));
+      return;
+    }
 
     setBusy(true);
     setError(null);
@@ -83,14 +112,20 @@ export function SignInForm({
     setBusy(true);
     setError(null);
     const { error: authError } = await client.auth.verifyOtp({ phone, token: code, type: 'sms' });
-    setBusy(false);
 
     if (authError) {
+      setBusy(false);
       setError(t('errors.VALIDATION_FAILED'));
       return;
     }
-    router.push(next ?? `/${locale}/account`);
-    router.refresh();
+    if (!sessionPersisted()) {
+      setBusy(false);
+      setBlocked(true);
+      setError(t('auth.sessionBlocked'));
+      return;
+    }
+
+    finish();
   }
 
   return (
@@ -102,6 +137,16 @@ export function SignInForm({
         <p className="auth-notice" role="status">
           {t('auth.notConfigured')}
         </p>
+      ) : null}
+
+      {blocked ? (
+        <Button
+          variant="ghost"
+          fullWidth
+          onClick={() => window.open(window.location.href, '_blank')}
+        >
+          {t('auth.openInTab')}
+        </Button>
       ) : null}
 
       <div className="auth-tabs" role="tablist" aria-label={t('auth.title')}>

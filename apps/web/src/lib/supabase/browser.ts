@@ -2,7 +2,7 @@
 
 import { createBrowserClient } from '@supabase/ssr';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { AUTH_COOKIE_NAME, getSupabaseConfig } from './config';
+import { AUTH_COOKIE_NAME, authCookieFlags, getSupabaseConfig, requestProtocol } from './config';
 
 let cached: SupabaseClient | null = null;
 
@@ -16,7 +16,9 @@ export function getBrowserClient(): SupabaseClient | null {
   const config = getSupabaseConfig();
   if (!config) return null;
   cached = createBrowserClient(config.url, config.anonKey, {
-    cookieOptions: { name: AUTH_COOKIE_NAME },
+    // Same `sameSite`/`secure` the server derives, from the same scheme — otherwise a session written
+    // here is ignored there (see `authCookieFlags`).
+    cookieOptions: { name: AUTH_COOKIE_NAME, ...authCookieFlags(requestProtocol()) },
     auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
     global: { headers: { 'X-Maak-Client': 'web' } },
   });

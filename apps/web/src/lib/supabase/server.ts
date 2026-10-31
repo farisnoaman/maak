@@ -1,7 +1,7 @@
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import type { SupabaseClient, User } from '@supabase/supabase-js';
-import { AUTH_COOKIE_NAME, getSupabaseConfig } from './config';
+import { AUTH_COOKIE_NAME, authCookieFlags, getSupabaseConfig, requestProtocol } from './config';
 
 /**
  * `@supabase/ssr` reads `cookieOptions.name` as the *storage key* for the session, but types it as the
@@ -11,14 +11,21 @@ import { AUTH_COOKIE_NAME, getSupabaseConfig } from './config';
  */
 type StorageCookieOptions = CookieOptions & { name?: string };
 
-const COOKIE_OPTIONS: CookieOptions = {
-  path: '/',
-  // The session cookie must never be readable by JavaScript, and only over HTTPS in production.
-  httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'lax',
-  maxAge: 60 * 60 * 24 * 30,
-};
+/**
+ * The session cookie, as the server must write it.
+ *
+ * `httpOnly` because JavaScript has no business reading it, and `sameSite`/`secure` matched to the
+ * scheme the browser actually used (`x-forwarded-proto`) so the server never rewrites a cookie with
+ * attributes that would make it invisible to the next request — see `authCookieFlags`.
+ */
+function cookieOptionsFor(protocol: string): CookieOptions {
+  return {
+    path: '/',
+    httpOnly: true,
+    ...authCookieFlags(protocol),
+    maxAge: 60 * 60 * 24 * 30,
+  };
+}
 
 /**
  * Server-side client bound to the request cookies (App Router).
@@ -28,9 +35,10 @@ export async function getServerClient(): Promise<SupabaseClient | null> {
   const config = getSupabaseConfig();
   if (!config) return null;
 
-  const cookieStore = await cookies();
+  const [cookieStore, requestHeaders] = await Promise.all([cookies(), headers()]);
+  const cookieOptions = cookieOptionsFor(requestProtocol(requestHeaders.get('x-forwarded-proto')));
 
-  const storageOptions: StorageCookieOptions = { ...COOKIE_OPTIONS, name: AUTH_COOKIE_NAME };
+  const storageOptions: StorageCookieOptions = { ...cookieOptions, name: AUTH_COOKIE_NAME };
 
   return createServerClient(config.url, config.anonKey, {
     cookieOptions: storageOptions,
@@ -41,7 +49,7 @@ export async function getServerClient(): Promise<SupabaseClient | null> {
       setAll(cookiesToSet) {
         try {
           for (const { name, value, options } of cookiesToSet) {
-            cookieStore.set(name, value, { ...COOKIE_OPTIONS, ...options });
+            cookieStore.set(name, value, { ...cookieOptions, ...options });
           }
         } catch {
           // Called from a Server Component render: the proxy refreshes the session instead.
