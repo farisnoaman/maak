@@ -97,6 +97,22 @@ export async function uploadVehiclePhoto(
   return uploadToBucket('vehicle-photos', file, vehicleId);
 }
 
+/**
+ * An odometer photograph, or a fuel receipt, filed under `<vehicleId>/…`.
+ *
+ * Same bucket and same folder rule as the vehicle documents, with a second folder for the purpose: the
+ * database points the reading at the object path it is given, and `vehicle_documents_write_own` refuses
+ * any path whose first segment is not a vehicle the caller owns — so a driver cannot attach a photo on
+ * the owner's behalf, and this helper cannot be aimed elsewhere by a bug in a caller.
+ */
+export async function uploadVehicleOpsFile(
+  file: File,
+  vehicleId: string,
+  purpose: 'odometer' | 'fuel' | 'receipt' | 'maintenance',
+): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
+  return uploadToBucket('vehicle-documents', file, `${vehicleId}/${purpose}`);
+}
+
 /** Same contract, private bucket: insurance, registration, inspection, permit scans. */
 export async function uploadVehicleDocument(
   file: File,

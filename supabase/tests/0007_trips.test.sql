@@ -1011,9 +1011,13 @@ select is(
       -- Phase 7's staff reads take the actor explicitly because the gateway resolves it from the
       -- bearer token and the service role does the work — a client with a session cannot call them
       -- with somebody else's id, because it cannot call them at all.
+      -- Phase 8's two vehicle reads take the actor the same way: the gateway resolves it from the
+      -- bearer token, and the session-bound wrappers (`vehicle_health`, `fleet_summary`) are what a
+      -- browser is given instead.
       and p.proname not in (
         'create_id_share_link', 'get_trip_manifest_data',
-        'get_trip_for_staff', 'get_trip_manifest', 'staff_scope_summary'
+        'get_trip_for_staff', 'get_trip_manifest', 'staff_scope_summary',
+        'get_vehicle_health', 'get_fleet_summary'
       )
       and not exists (
         select 1

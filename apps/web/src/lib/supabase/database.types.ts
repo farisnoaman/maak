@@ -1,5 +1,5 @@
-// migrations-sha256: 49f0a0a72f5b806c8014560bf0fe7c186641f17395977d1a5051a06c93b02bbb
-/* Generated from 25 migrations. Run `npm run db:types` after changing the schema. */
+// migrations-sha256: 6c0f1b298fce7254a568626f9c0dbefaaf56e43a7626f05828bf9df946727243
+/* Generated from 27 migrations. Run `npm run db:types` after changing the schema. */
 
 /**
  * Schema types for RLS-filtered reads (Phase 0 subset).
@@ -40,6 +40,40 @@ export type VehicleOwnershipKind = 'owned' | 'leased' | 'financed';
 export type VehicleStatus = 'draft' | 'active' | 'suspended' | 'retired';
 export type DriverStatus = 'invited' | 'active' | 'suspended' | 'revoked';
 export type OdometerKind = 'baseline' | 'trip_start' | 'trip_end' | 'service';
+
+export type MaintenanceKind =
+  | 'oil_change'
+  | 'oil_filter'
+  | 'air_filter'
+  | 'fuel_filter'
+  | 'cabin_filter'
+  | 'tyres'
+  | 'brakes'
+  | 'battery'
+  | 'timing_belt'
+  | 'coolant'
+  | 'transmission'
+  | 'suspension'
+  | 'electrical'
+  | 'bodywork'
+  | 'inspection'
+  | 'other';
+
+export type MaintenanceState = 'ok' | 'due_soon' | 'overdue';
+
+export type ExpenseCategory =
+  | 'fuel'
+  | 'maintenance'
+  | 'insurance'
+  | 'registration'
+  | 'permit'
+  | 'salary'
+  | 'toll'
+  | 'parking'
+  | 'fine'
+  | 'other';
+
+export type ExpenseSource = 'fuel_log' | 'maintenance_record' | 'manual';
 
 export type BookingStatus =
   | 'pending'
@@ -196,7 +230,13 @@ export type NotificationKind =
   | 'member_joined'
   | 'member_removed'
   | 'role_granted'
-  | 'role_revoked';
+  | 'role_revoked'
+  | 'booking_requested'
+  | 'booking_accepted'
+  | 'booking_rejected'
+  | 'booking_cancelled'
+  | 'vehicle_maintenance_due'
+  | 'vehicle_maintenance_overdue';
 
 export type PlatformRole =
   'platform_admin' | 'platform_staff' | 'finance_officer' | 'geo_supervisor';
@@ -474,6 +514,111 @@ export interface OdometerReading {
   note: string | null;
   /** The trip this reading belongs to (`trip_start` / `trip_end`), from migration 00022. */
   trip_id: string | null;
+}
+
+/** Money is integer minor units (fils) throughout, including `total_cost_yer`. */
+export interface FuelLog {
+  id: string;
+  vehicle_id: string;
+  trip_id: string | null;
+  driver_id: string | null;
+  filled_at: string;
+  odometer_km: number;
+  litres: number;
+  price_per_litre_yer: number;
+  total_cost_yer: number;
+  is_full_tank: boolean;
+  station_name: string | null;
+  station_place_id: string | null;
+  receipt_path: string | null;
+  note: string | null;
+  recorded_by: string | null;
+  created_at: string;
+  deleted_at: string | null;
+  deleted_by: string | null;
+}
+
+export interface MaintenanceSchedule {
+  id: string;
+  vehicle_id: string;
+  kind: MaintenanceKind;
+  interval_km: number | null;
+  interval_days: number | null;
+  last_done_km: number | null;
+  last_done_on: string | null;
+  /** Generated: `last_done_km + interval_km`. */
+  due_km: number | null;
+  /** Generated: `last_done_on + interval_days`. */
+  due_on: string | null;
+  is_active: boolean;
+  note: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MaintenanceRecord {
+  id: string;
+  vehicle_id: string;
+  schedule_id: string | null;
+  kind: MaintenanceKind;
+  performed_on: string;
+  odometer_km: number | null;
+  cost_yer: number;
+  vendor: string | null;
+  note: string | null;
+  attachment_path: string | null;
+  recorded_by: string | null;
+  created_at: string;
+  deleted_at: string | null;
+  deleted_by: string | null;
+}
+
+export interface VehicleMaintenanceStatus {
+  vehicle_id: string;
+  state: MaintenanceState;
+  worst_schedule_id: string | null;
+  next_due_km: number | null;
+  next_due_on: string | null;
+  due_count: number;
+  overdue_count: number;
+  last_notified_state: MaintenanceState | null;
+  last_notified_at: string | null;
+  computed_at: string;
+}
+
+export interface Expense {
+  id: string;
+  owner_user_id: string | null;
+  owner_org_id: string | null;
+  vehicle_id: string | null;
+  trip_id: string | null;
+  category: ExpenseCategory;
+  amount_yer: number;
+  incurred_on: string;
+  description: string | null;
+  source: ExpenseSource;
+  source_id: string | null;
+  /** Filled by the Phase 10 ledger when the source row is deleted. */
+  reversal_entry_id: string | null;
+  recorded_by: string | null;
+  created_at: string;
+  deleted_at: string | null;
+  deleted_by: string | null;
+  delete_reason: string | null;
+}
+
+export interface FleetSettings {
+  id: string;
+  owner_user_id: string | null;
+  owner_org_id: string | null;
+  remind_km: number;
+  remind_days: number;
+  block_overdue_assignment: boolean;
+  fuel_anomaly_percent: number;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Trip {
@@ -841,6 +986,51 @@ export interface Database {
         };
         Update: Partial<OdometerReading>;
       };
+      fuel_logs: {
+        Row: FuelLog;
+        Insert: Partial<FuelLog> & {
+          vehicle_id: string;
+          odometer_km: number;
+          litres: number;
+          price_per_litre_yer: number;
+        };
+        Update: Partial<FuelLog>;
+      };
+      maintenance_schedules: {
+        Row: MaintenanceSchedule;
+        Insert: Partial<MaintenanceSchedule> & {
+          vehicle_id: string;
+          kind: MaintenanceKind;
+        };
+        Update: Partial<MaintenanceSchedule>;
+      };
+      maintenance_records: {
+        Row: MaintenanceRecord;
+        Insert: Partial<MaintenanceRecord> & {
+          vehicle_id: string;
+          kind: MaintenanceKind;
+        };
+        Update: Partial<MaintenanceRecord>;
+      };
+      vehicle_maintenance_status: {
+        Row: VehicleMaintenanceStatus;
+        Insert: Partial<VehicleMaintenanceStatus> & { vehicle_id: string };
+        Update: Partial<VehicleMaintenanceStatus>;
+      };
+      expenses: {
+        Row: Expense;
+        Insert: Partial<Expense> & {
+          category: ExpenseCategory;
+          amount_yer: number;
+          incurred_on: string;
+        };
+        Update: Partial<Expense>;
+      };
+      fleet_settings: {
+        Row: FleetSettings;
+        Insert: Partial<FleetSettings>;
+        Update: Partial<FleetSettings>;
+      };
       trips: {
         Row: Trip;
         Insert: Partial<Trip> & {
@@ -1018,6 +1208,34 @@ export interface Database {
         Args: { p_actor: string; p_filters: Json; p_limit: number };
         Returns: Json;
       };
+      vehicle_health: {
+        Args: { p_vehicle_id: string };
+        Returns: Json;
+      };
+      fleet_summary: {
+        Args: { p_org_id?: string | null };
+        Returns: Json;
+      };
+      cmd_log_fuel: {
+        Args: {
+          p_actor: string;
+          p_vehicle_id: string;
+          p_log: Json;
+          p_request_id?: string | null;
+          p_ip?: string | null;
+        };
+        Returns: Json;
+      };
+      cmd_record_manual_odometer: {
+        Args: {
+          p_actor: string;
+          p_vehicle_id: string;
+          p_reading: Json;
+          p_request_id?: string | null;
+          p_ip?: string | null;
+        };
+        Returns: Json;
+      };
     };
     Enums: {
       verification_status: VerificationStatus;
@@ -1039,6 +1257,10 @@ export interface Database {
       trip_discount_scope: TripDiscountScope;
       trip_gender_policy: TripGenderPolicy;
       trip_payment_policy: TripPaymentPolicy;
+      maintenance_kind: MaintenanceKind;
+      maintenance_state: MaintenanceState;
+      expense_category: ExpenseCategory;
+      expense_source: ExpenseSource;
     };
   };
 }

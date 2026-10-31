@@ -3414,3 +3414,147 @@ input[type='file']::file-selector-button {
     break-inside: avoid;
   }
 }
+
+/* ==========================================================================
+   Phase 8 — vehicle operations: the rollup, the health card, the money
+   ==========================================================================
+
+   The numbers here are the ones the trip gate already refused a van over, so the design job is not
+   decoration: a state has to be readable across a workshop forecourt (`--state-*` on a badge), and a
+   table has to survive 320px without becoming a spreadsheet you scroll sideways.                     */
+
+.fleet-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fleet-stats > div {
+  padding: var(--space-3);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-md);
+  background: var(--surface-muted);
+}
+
+.fleet-stats dt {
+  color: var(--ink-500);
+  font-size: 0.8rem;
+  letter-spacing: 0.01em;
+}
+
+.fleet-stats dd {
+  margin: var(--space-1) 0 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  /* A plate, a kilometre figure and a riyal total are Latin digits inside Arabic text. */
+  font-variant-numeric: tabular-nums;
+}
+
+.fleet-stat-suffix {
+  color: var(--ink-500);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+/* A real <table>, unlike `.fleet-table` (which is a definition list). */
+.fleet-grid-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-md);
+}
+
+.fleet-grid {
+  inline-size: 100%;
+  min-inline-size: 34rem;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.fleet-grid th,
+.fleet-grid td {
+  padding: var(--space-2) var(--space-3);
+  text-align: start;
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+.fleet-grid thead th {
+  background: var(--surface-muted);
+  color: var(--ink-500);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: none;
+}
+
+.fleet-grid tbody tr + tr th,
+.fleet-grid tbody tr + tr td {
+  border-block-start: 1px solid var(--surface-sunken);
+}
+
+.fleet-grid tbody th {
+  font-weight: 600;
+  white-space: normal;
+}
+
+.fleet-model {
+  display: block;
+  color: var(--ink-500);
+  font-size: 0.8rem;
+  font-weight: 400;
+}
+
+.fleet-grid .ui-badge {
+  margin-inline-start: var(--space-2);
+}
+
+.fleet-check {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  min-block-size: var(--tap-target);
+  font-size: 0.9rem;
+}
+
+.fleet-check input[type='checkbox'] {
+  inline-size: 1.15rem;
+  block-size: 1.15rem;
+}
+
+.fleet-check select {
+  inline-size: 100%;
+}
+
+.fleet-done-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
+  gap: var(--space-2);
+  align-items: end;
+  inline-size: 100%;
+  margin-block-start: var(--space-2);
+  padding: var(--space-3);
+  border: 1px dashed var(--surface-sunken);
+  border-radius: var(--radius-md);
+}
+
+.fleet-list__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-md);
+}
+
+.fleet-list__row > div:first-child {
+  flex: 1 1 220px;
+}
+
+.fleet-ops {
+  display: grid;
+  gap: var(--space-4);
+}

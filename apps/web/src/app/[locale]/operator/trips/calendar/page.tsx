@@ -116,6 +116,8 @@ export default async function OperatorTripsCalendarPage({
     { key: 'console.navTrips' as TranslationKey, href: `/${locale}/operator/trips` },
     { key: 'trips.calendar' as TranslationKey, href: `/${locale}/operator/trips/calendar` },
     { key: 'console.navVehicles' as TranslationKey, href: `/${locale}/operator/vehicles` },
+
+    { key: 'console.navFleet' as TranslationKey, href: `/${locale}/operator/fleet` },
     { key: 'console.navDrivers' as TranslationKey, href: `/${locale}/operator/drivers` },
   ];
 

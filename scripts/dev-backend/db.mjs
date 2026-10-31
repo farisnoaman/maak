@@ -268,6 +268,15 @@ async function seed(client, log = () => {}) {
 
   await seedDemoFleet(client);
 
+  // Fuel and maintenance, through the commands. Without it the fleet dashboard and the health card are
+  // empty on every reset — and a Phase 8 screen that has never shown a consumption figure is a screen
+  // nobody has looked at.
+  try {
+    await seedDemoOperations(client, log);
+  } catch (error) {
+    log(`  (demo operations skipped: ${error.message})`);
+  }
+
   // Bookable inventory, created through the same three commands the console uses. Without it the
   // marketplace is an empty page after every reset and there is nothing to book — which is how a
   // booking defect stays invisible until somebody hand-inserts a trip.
@@ -361,6 +370,97 @@ async function seedDemoFleet(client) {
              '7925cdf3-0000-4000-8000-00000000d001', '33333333-3333-4333-8333-333333333333')
      on conflict (id) do nothing`,
   );
+}
+
+/**
+ * Two full tanks 450 km apart and an oil rule that is nearly due.
+ *
+ * These are the plan's own acceptance numbers, seeded as data: 38 litres over 450 km is the 8.44 L/100km
+ * the dashboard is supposed to show, and "oil every 5 000 km from 179 500" puts the van 180 km from a
+ * 184 500 due point — inside the 500 km window, so the badge is amber rather than green. A demo that
+ * only ever shows "ok" does not demonstrate the feature.
+ *
+ * Written through `cmd_log_fuel` / `cmd_upsert_maintenance_schedule` rather than inserts, for the same
+ * reason as the trip seed: the seed then proves the commands still work.
+ */
+async function seedDemoOperations(client, log = () => {}) {
+  const owner = '33333333-3333-4333-8333-333333333333';
+  const vehicle = '7925cdf3-5648-4b52-9f84-8ad8fa68aae2';
+
+  const existing = await client.query(
+    'select 1 from public.fuel_logs where vehicle_id = $1 limit 1',
+    [vehicle],
+  );
+  if (existing.rows.length > 0) return;
+
+  log('  seeding demo fuel and maintenance…');
+
+  const fill = async (odometerKm, litres, daysAgo, station) => {
+    await client.query('select public.cmd_log_fuel($1::uuid, $2::uuid, $3::jsonb, $4, null)', [
+      owner,
+      vehicle,
+      JSON.stringify({
+        odometerKm,
+        litres,
+        pricePerLitreYer: 500,
+        isFullTank: true,
+        filledAt: new Date(Date.now() - daysAgo * 86_400_000).toISOString(),
+        stationName: station,
+      }),
+      `dev-seed-fuel-${odometerKm}`,
+    ]);
+  };
+
+  // Above the seeded baseline (184 320), because the odometer only goes forward for the seed too — the
+  // commands would refuse a fill that pretends the van un-drove its last delivery.
+  await fill(184_770, 41, 12, 'محطة الروضة — عدن');
+  await fill(185_220, 40, 7, 'محطة النور — الزنجبار');
+  await fill(185_670, 38, 2, 'محطة الروضة — عدن');
+
+  await client.query(
+    'select public.cmd_upsert_maintenance_schedule($1::uuid, $2::uuid, $3::jsonb, $4, null)',
+    [
+      owner,
+      vehicle,
+      JSON.stringify({
+        kind: 'oil_change',
+        // Due at 186 000 with the van at 185 670: 330 km out, inside the 500 km window, so the badge is
+        // amber. A seed that only ever shows "ok" does not demonstrate the feature.
+        intervalKm: 5000,
+        lastDoneKm: 181_000,
+        note: 'زيت المحرك والفلتر',
+      }),
+      'dev-seed-schedule-oil',
+    ],
+  );
+
+  await client.query(
+    'select public.cmd_upsert_maintenance_schedule($1::uuid, $2::uuid, $3::jsonb, $4, null)',
+    [
+      owner,
+      vehicle,
+      JSON.stringify({
+        kind: 'inspection',
+        intervalDays: 180,
+        lastDoneOn: new Date(Date.now() - 150 * 86_400_000).toISOString().slice(0, 10),
+      }),
+      'dev-seed-schedule-inspection',
+    ],
+  );
+
+  await client.query('select public.cmd_log_maintenance($1::uuid, $2::uuid, $3::jsonb, $4, null)', [
+    owner,
+    vehicle,
+    JSON.stringify({
+      kind: 'brakes',
+      // No odometer on purpose: this happened before the seeded fills, and a maintenance record is
+      // evidence of work, not a claim about when the van last moved.
+      performedOn: new Date(Date.now() - 40 * 86_400_000).toISOString().slice(0, 10),
+      costYer: 12_000,
+      vendor: 'ورشة الدائري — عدن',
+    }),
+    'dev-seed-brakes',
+  ]);
 }
 
 /**

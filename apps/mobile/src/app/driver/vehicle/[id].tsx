@@ -105,6 +105,9 @@ export default function DriverVehicleScreen() {
       <View style={styles.center}>
         <Text style={styles.name}>{t('errors.NOT_FOUND')}</Text>
         {error ? <Text style={styles.error}>{error}</Text> : null}
+        <Text style={styles.link} onPress={() => router.push('/driver/fuel')}>
+          {t('fleetOps.logFuel')}
+        </Text>
         <Text style={styles.link} onPress={() => router.replace('/driver/profile')}>
           {t('fleet.driverProfile')}
         </Text>

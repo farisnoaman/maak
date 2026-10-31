@@ -18,6 +18,11 @@ export default async function ConsolePage({ params }: { params: Promise<{ locale
       href: `/${locale}/operator/vehicles`,
     },
     {
+      key: 'console.navFleet' as const,
+      note: 'fleetOps.fleetSubtitle' as const,
+      href: `/${locale}/operator/fleet`,
+    },
+    {
       key: 'console.navDrivers' as const,
       note: 'console.tileDrivers' as const,
       href: `/${locale}/operator/drivers`,
@@ -35,6 +40,7 @@ export default async function ConsolePage({ params }: { params: Promise<{ locale
         items={[
           { key: 'console.navOverview', href: `/${locale}/operator` },
           { key: 'console.navVehicles', href: `/${locale}/operator/vehicles` },
+          { key: 'console.navFleet', href: `/${locale}/operator/fleet` },
           { key: 'console.navDrivers', href: `/${locale}/operator/drivers` },
         ]}
       >

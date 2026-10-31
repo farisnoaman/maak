@@ -85,6 +85,15 @@ export default function HomeScreen() {
         <Text style={styles.linkText}>{t('fleet.driverProfile')}</Text>
       </Pressable>
 
+      {/* Phase 8: the driver logs the fill where it happens — at the pump. */}
+      <Pressable
+        accessibilityRole="link"
+        onPress={() => router.push('/driver/fuel')}
+        style={styles.link}
+      >
+        <Text style={styles.linkText}>{t('fleetOps.logFuel')}</Text>
+      </Pressable>
+
       {/* Phase 4: search is the passenger's door into the product. */}
       <Pressable accessibilityRole="link" onPress={() => router.push('/trips')} style={styles.link}>
         <Text style={styles.linkText}>{t('trips.search.title')}</Text>

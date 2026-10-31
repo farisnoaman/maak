@@ -28,6 +28,8 @@ export default async function OperatorTripPage({
     { key: 'console.navOverview' as TranslationKey, href: `/${locale}/operator` },
     { key: 'console.navTrips' as TranslationKey, href: `/${locale}/operator/trips` },
     { key: 'console.navVehicles' as TranslationKey, href: `/${locale}/operator/vehicles` },
+
+    { key: 'console.navFleet' as TranslationKey, href: `/${locale}/operator/fleet` },
     { key: 'console.navDrivers' as TranslationKey, href: `/${locale}/operator/drivers` },
   ];
 

@@ -56,6 +56,8 @@ const ROUTES = [
   { path: '/ar/admin/places', lang: 'ar', dir: 'rtl', account: 'staff' },
   { path: '/en/admin/places', lang: 'en', dir: 'ltr', account: 'staff' },
   // Phase 3 surfaces
+  { path: '/ar/operator/fleet', lang: 'ar', dir: 'rtl', account: 'owner' },
+  { path: '/en/operator/fleet', lang: 'en', dir: 'ltr', account: 'owner' },
   { path: '/ar/operator/vehicles', lang: 'ar', dir: 'rtl', account: 'owner' },
   { path: '/en/operator/vehicles', lang: 'en', dir: 'ltr', account: 'owner' },
   { path: '/ar/operator/vehicles/new', lang: 'ar', dir: 'rtl', account: 'owner' },
@@ -286,6 +288,29 @@ if (sessions.owner) {
     if (!href) continue;
     await checkRoute({
       path: `/${locale}/operator/vehicles/${href[2]}`,
+      lang: locale,
+      dir: locale === 'ar' ? 'rtl' : 'ltr',
+      account: 'owner',
+    });
+    detailRoutes += 1;
+  }
+
+  // The vehicle health card — discovered from the rollup, which links every row to it. Discovered rather
+  // than guessed for the same reason as the detail page: the id has to be a row the account can read.
+  for (const locale of ['ar', 'en']) {
+    let href = null;
+    for (const suffix of ['', '?org=aaaaaaaa-0000-4000-8000-000000000001']) {
+      const listHtml = await fetch(`${BASE}/${locale}/operator/fleet${suffix}`, {
+        headers: { cookie: sessions.owner },
+      })
+        .then((response) => (response.ok ? response.text() : ''))
+        .catch(() => '');
+      href = listHtml.match(/href="\/(ar|en)\/operator\/vehicles\/([0-9a-f-]{36})\/health"/);
+      if (href) break;
+    }
+    if (!href) continue;
+    await checkRoute({
+      path: `/${locale}/operator/vehicles/${href[2]}/health`,
       lang: locale,
       dir: locale === 'ar' ? 'rtl' : 'ltr',
       account: 'owner',

@@ -500,14 +500,15 @@ binary, trips-only bulk, no native camera) is argued in `docs/phase-7-report.md`
 - Mobile: fuel/ODO quick log from the running trip screen.
 
 ### Tasks
-- [ ] Migrations + generated columns + `app.vehicle_odometer_guard()` + `app.recompute_maintenance_status()`.
-- [ ] Cron: daily maintenance scan → reminders; overdue escalation.
-- [ ] Commands (edge fn + atomic `cmd_*` SQL): `log_fuel`, `log_maintenance`, `upsert_maintenance_schedule`, `mark_maintenance_done`,
-      `record_manual_odometer`, `get_vehicle_health`, `get_fleet_summary`.
-- [ ] Expense sync triggers (fuel/maintenance → `expenses`, soft-delete → reversing entry stub for Phase 10).
-- [ ] Web `/operator/vehicles/[id]/health`, `/operator/fleet`, exports.
-- [ ] Mobile fuel/ODO quick actions.
-- [ ] Tests: consumption math, due-date math, timezone-safe date handling (Vitest + pgTAP).
+- [x] Migrations + generated columns + `app.assert_odometer_advance()` (the BR-16 guard, in front of every write
+      path) + `app.recompute_maintenance_status()`.
+- [x] Cron: daily maintenance scan → reminders, deduped per state change.
+- [x] Commands (edge fn + atomic `cmd_*` SQL): `log_fuel`, `log_maintenance`, `upsert_maintenance_schedule`,
+      `mark_maintenance_done`, `record_manual_odometer`, `get_vehicle_health`, `get_fleet_summary`.
+- [x] Expense sync triggers (fuel/maintenance → `expenses`, soft-delete → `expense.reversePending` audit stub for Phase 10).
+- [x] Web `/operator/vehicles/[id]/health`, `/operator/fleet`, CSV export.
+- [x] Mobile fuel/ODO quick action (`/driver/fuel`).
+- [x] Tests: consumption math, due-date math, timezone-safe date handling (Vitest + pgTAP — 52 pgTAP assertions)
 
 ### Acceptance criteria
 - Two full-tank logs 450 km / 38 L apart → dashboard shows 8.4 L/100km.
@@ -519,6 +520,29 @@ binary, trips-only bulk, no native camera) is argued in `docs/phase-7-report.md`
 - Fuel/maintenance costs appear as expenses ready for the finance module.
 
 **Estimate:** 6 days.
+
+### As built (deliberate deviations)
+
+- **`app.vehicle_odometer_guard()` is `app.assert_odometer_advance()`.** Named for what it does, and a
+  function the commands *call* rather than a trigger: the one legal backwards step (an owner correcting a
+  replaced odometer) has to be expressible, and a trigger cannot tell a correction from a mistake. The
+  high-water mark on `vehicles.odometer_km` is what keeps both honest.
+- **`get_vehicle_health` / `get_fleet_summary` are reads, not edge-function actions.** They follow the same
+  rule as `get_trip_manifest` and `staff_summary`: the session-bound wrappers (`vehicle_health`,
+  `fleet_summary`) are what the UI calls, so the client never holds an actor id it could lie about. The
+  commands themselves take `p_actor` and stay service-role.
+- **`maintenance_status` is a table, not a view.** The reminder job needs to remember *what it already told
+  somebody*; a view cannot. It is recomputed by triggers on schedules, records, readings and the vehicle's
+  odometer, so no screen ever shows a state the trip gate would disagree with.
+- **Anomaly detection reports, it never refuses.** A fill 30% above the average returns `anomaly: true`; the
+  receipt is still recorded. Refusing it would hide the symptom and lose the cost.
+
+**Changelog:** Phase 8 adds six tables, four enums, six commands, two reads, a nightly reminder job and the
+expenses outbox Phase 10 will post from. Fleet odometers now advance from fuel, maintenance, manual readings
+and trip ends through one guard; schedules carry generated due points; `/operator/fleet` renders a rollup
+whose totals are the same rows each vehicle card shows. 52 pgTAP assertions and 22 Vitest cases cover the
+acceptance numbers (8.44 L/100km, 120 000 → 125 000), the monotonic guard and its one audited override, the
+reminder dedupe, and the trip gate's `MAINTENANCE_OVERDUE` refusal.
 
 ---
 
@@ -743,13 +767,13 @@ Phase 10 must follow 9. Phase 11 needs 5, 6, 9, 10. Phase 12 is last.
 |---|---|---|---|---|
 | 0 | Foundations & bilingual shell | ✅ Complete (audited) | — | 117 tests · lint+guards green · `/ar` + `/en` live · 2 edge functions · 5 migrations · auth shell · pgTAP written (needs Docker) |
 | 1 | Identity & Trust | ✅ Complete | — | 214 tests · orgs + membership + roles · 16 commands · verification queue with signed docs · **53 pgTAP assertions executed** (`npm run sql:check`) |
-| 2 | Geography & Places | ⬜ | | |
-| 3 | Fleet | ⬜ | | quota hooks wired (Basic defaults) |
-| 4 | Trips & Marketplace | ⬜ | | quota hooks wired |
-| 5 | Bookings | ⬜ | | refund math ready for 9/10 |
-| 6 | Live Execution | ⬜ | | |
-| 7 | Staff Operations | ⬜ | | |
-| 8 | Vehicle Operations | ⬜ | | feeds expenses into 10 |
+| 2 | Geography & Places | ✅ Complete | PR #2 | governorates/districts/regions · places + moderation · supervisor scoping |
+| 3 | Fleet | ✅ Complete | PR #2 | vehicles, photos, documents, drivers, assignments · quota hooks live |
+| 4 | Trips & Marketplace | ✅ Complete | PR #2 | publish → search → book · pricing + discounts |
+| 5 | Bookings | ✅ Complete | PR #2 | requests, seats, passengers, refund math ready for 9/10 |
+| 6 | Live Execution | ✅ Complete | PR #2 | start/end, ODO, pings, staleness, public tracking |
+| 7 | Staff Operations | ✅ Complete | PR #2 | QR scan + scope, bulk verify, A4 manifest, history export |
+| 8 | Vehicle Operations | ✅ Complete | PR #2 | fuel/maintenance/ODO · due states · reminders · rollup · expenses outbox for 10 |
 | 9 | Payments | ⬜ | | ledger outbox → 10 |
 | 10 | Finance & Subscriptions | ⬜ | | activates quotas + plan billing |
 | 11 | Notifications & Polish | ⬜ | | |
