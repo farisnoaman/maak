@@ -59,6 +59,14 @@ export function SessionTokenKeeper() {
       form.setAttribute('action', next);
     };
 
+    // A previous version of this component wrote `?st=` into every `href`. Tabs that survived that
+    // build still carry those attributes, and React reports them as a hydration mismatch on every
+    // render. Repairing them once, after hydration, ends that permanently.
+    for (const anchor of document.querySelectorAll<HTMLAnchorElement>('a[href*="st="]')) {
+      const cleaned = anchor.getAttribute('href')?.replace(/[?&]st=[^&]*/, '');
+      if (cleaned) anchor.setAttribute('href', cleaned.replace(/[?&]$/, ''));
+    }
+
     document.addEventListener('click', onClick, true);
     document.addEventListener('submit', onSubmit, true);
     return () => {

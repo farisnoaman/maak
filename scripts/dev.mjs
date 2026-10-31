@@ -98,4 +98,20 @@ if (!webOnly) {
 }
 
 console.log('▸ starting the web app …');
-run('web', 'npm', ['--workspace', '@maak/web', 'run', 'dev']);
+
+/**
+ * A stamp for *this* dev process, baked into the HTML and served by `/api/version`.
+ *
+ * A tab that stays open across an edit can hold a document rendered by a build that no longer exists,
+ * and hydrate it with chunks from the new one — which React reports as a hydration mismatch and refuses
+ * to patch up. Nothing in the render can prevent that; the tab has to notice and reload itself. The
+ * stamp is what lets it notice.
+ */
+const build = Date.now().toString(36);
+run('web', 'npm', ['--workspace', '@maak/web', 'run', 'dev'], {
+  // Read by the server (`/api/version`, the `data-build` attribute) …
+  MAAK_BUILD: build,
+  // … and inlined into the client chunks by Next, so a tab can compare the two and notice that the
+  // JavaScript it is running predates the document it is showing.
+  NEXT_PUBLIC_MAAK_BUILD: build,
+});

@@ -6,6 +6,8 @@ import '@maak/design-tokens/tokens.css';
 import '../globals.css';
 import { ToastProvider } from '@/components/ui/Toast';
 import { SessionTokenKeeper } from '@/components/SessionTokenKeeper';
+import { StaleBuildGuard } from '@/components/StaleBuildGuard';
+import { BUILD } from '@/lib/build';
 
 export const metadata: Metadata = {
   title: 'Maak — إدارة الرحلات',
@@ -28,12 +30,13 @@ export default async function LocaleLayout({
   if (!isLocale(locale)) notFound();
 
   return (
-    <html lang={locale} dir={DIRECTION[locale as Locale]}>
+    <html lang={locale} dir={DIRECTION[locale as Locale]} data-build={BUILD}>
       <body>
         <a className="skip-link" href="#main">
           {locale === 'ar' ? 'تخطَّ إلى المحتوى' : 'Skip to content'}
         </a>
         <SessionTokenKeeper />
+        <StaleBuildGuard build={BUILD} />
         <ToastProvider>{children}</ToastProvider>
       </body>
     </html>

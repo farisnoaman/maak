@@ -225,6 +225,13 @@ simply being carried by the token.
   to every `href`) makes React log a hydration mismatch and refuse to patch it. `SessionTokenKeeper`
   therefore only *listens* — clicks and submits are given the token on their way out — and never edits
   the DOM during render.
+· **Dead HMR.** A tab left open while `npm run dev` restarts keeps its old modules forever: the HMR
+  socket is gone, so every navigation hydrates fresh server HTML with stale client code, and React
+  reports a mismatch about attributes that no longer exist in the source. `scripts/dev.mjs` stamps each
+  run into both sides — `MAAK_BUILD` for the server (`data-build`, `/api/version`) and
+  `NEXT_PUBLIC_MAAK_BUILD` inlined into the client chunks. `StaleBuildGuard` compares them and reloads
+  the tab once. If you ever see a mismatch naming code that is not in the file any more, that is this —
+  reload once and it stops.
 
 ## Older notes on third-party cookie blocking
 
