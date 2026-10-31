@@ -103,6 +103,7 @@ export default async function OperatorDriversPage({
               phone: driver.phone,
               licenceNo: driver.licenceNo,
               licenceExpiry: driver.licenceExpiry,
+              licencePhotoPath: driver.licencePhotoPath,
               status: driver.status,
               verificationStatus: driver.verificationStatus,
               vehicleName: vehicleId ? (vehicleNames.get(vehicleId) ?? null) : null,

@@ -18,7 +18,7 @@ begin;
 
 create extension if not exists pgtap;
 
-select plan(27);
+select plan(31);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -365,6 +365,42 @@ select ok(
         and policyname = 'driver_documents_write_self'
     ) like '%app.uid()%',
   'and that policy is the one that pins the folder to the caller'
+);
+
+-- ---------------------------------------------------------------------------
+-- 6. The invitation is visible to the person it names, and to nobody else
+-- ---------------------------------------------------------------------------
+-- Without this, the "accept" button cannot exist: an unaccepted invitation has `user_id = null`, and the
+-- Phase 3 policy only let a caller read a row whose `user_id` was already theirs. The invitee saw nothing,
+-- so the feature that turns an invitation into a driver was unreachable from every client.
+
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"dddd0006-6666-4666-8666-dddddddddddd","role":"authenticated"}';
+
+select is(
+  (select count(*)::int from public.driver_profiles where user_id is null),
+  1,
+  'an invited driver sees their own unaccepted invitation'
+);
+
+select is(
+  (select full_name from public.driver_profiles where user_id is null),
+  'سائق مدعو',
+  'and it is the row addressed to their phone'
+);
+
+set local request.jwt.claims = '{"sub":"dddd0001-1111-4111-8111-dddddddddddd","role":"authenticated"}';
+select is(
+  (select count(*)::int from public.driver_profiles where user_id is null),
+  0,
+  'a driver whose account is already bound sees no pending invitation for somebody else'
+);
+
+set local request.jwt.claims = '{"sub":"dddd0004-4444-4444-8444-dddddddddddd","role":"authenticated"}';
+select is(
+  (select count(*)::int from public.driver_profiles where status = 'invited'),
+  1,
+  'and staff still reach it through the staff policy, which is a different door'
 );
 
 reset role;

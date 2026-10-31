@@ -105,19 +105,42 @@ authorises itself through `app.is_platform_staff`), and `0007` now asserts the g
 that every function this project defines in `public` is executable by a signed-in user — so the next
 read that ships revoked fails the suite instead of a console.
 
+A seventh and an eighth were found by asking who could actually reach the driver-licence screen that
+Phase 4 shipped. The photograph, the private bucket, the `driver.setLicence` command, the staff viewer
+and 27 assertions were already in place — but only the phone app could upload, and the phone app could
+not see an invitation:
+
+7. **An invitation was invisible to the person it named.** `driver_profiles_read_own_or_org_or_staff`
+   requires `user_id = app.uid()`, and an unaccepted invitation has `user_id = null` by definition. The
+   invitee's app therefore queried an empty set, the "accept" button rendered only inside a branch that
+   needed a driver row, and the only path from invitation to driver was closed from both clients at
+   once. `00018` adds `app.owns_unclaimed_invite(uuid)` (security definer, because `app.normalize_phone`
+   is deliberately not executable by `authenticated`) and one policy that exposes exactly one kind of
+   row: unclaimed, `invited`, active, addressed to the caller's own phone number. `0006` asserts it —
+   four assertions, and the suite fails when the policy is removed.
+8. **A licence could only be photographed on a phone.** `/account/licence` (`LicencePanel`) now does
+   what the mobile screen does, in the same order and with the same command: upload into
+   `<userId>/…` in the private bucket, then record the path with `driver.setLicence`. A failed upload
+   never leaves an approval attached to a document that does not exist, and the operator console links
+   the image through the authenticated storage proxy rather than a public URL. Verified on the running
+   stack: invite → accept → upload → `200` for the driver and the org owner, `401` anonymously.
+
+Both fixes are server-side where it matters: the web client cannot widen its own visibility, and the
+storage policy still pins the folder to `auth.uid()`.
+
 ---
 
 ## 3. Evidence
 
 | Gate | Result |
 | --- | --- |
-| `npm run sql:check` | 17 migrations applied; 7 pgTAP suites green; **97** trip assertions; no type drift; no client write grants |
+| `npm run sql:check` | 18 migrations applied; 7 pgTAP suites green (**328** assertions); **97** of them trips; no type drift; no client write grants |
 | `npm test` | 18 files, **367** tests (33 of them the Phase 4 domain/contract tests) |
-| `npm run check:guards` | 22 core files · 92 style files · 17 migrations · 43 commands |
-| `npm run check:a11y` | **52** routes, both directions, **7** discovered detail pages |
+| `npm run check:guards` | 22 core files · 96 style files · 18 migrations · 43 commands |
+| `npm run check:a11y` | **54** routes, both directions, **7** discovered detail pages |
 | `npm run check:responsive` | viewport exported, no unguarded grid tracks, every wide table scrollable |
 | `npm run dev:check -- --api` | 16/16, including the marketplace without a session and a trip-code lookup |
-| `npm run check:functions`, `db:types:check` | bundles current; types match 15 migrations |
+| `npm run check:functions`, `db:types:check` | bundles current; types match 18 migrations |
 
 Probed on the running stack (owner, staff and anonymous sessions):
 

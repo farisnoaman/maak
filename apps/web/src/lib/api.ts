@@ -96,17 +96,31 @@ export async function uploadVehicleDocument(
   return uploadToBucket('vehicle-documents', file, vehicleId);
 }
 
-async function uploadToBucket(
-  bucket: 'vehicle-photos' | 'vehicle-documents',
+/**
+ * Uploads a driver's licence photograph into `<userId>/…` in the private `driver-documents` bucket.
+ *
+ * The folder is the caller's own user id because `driver_documents_write_self` authorises the write by
+ * comparing the first path segment with `auth.uid()` — an operator cannot upload a driver's document on
+ * their behalf, and this helper cannot be pointed at somebody else's folder by a bug in the caller.
+ */
+export async function uploadDriverLicence(
   file: File,
-  vehicleId: string,
+  userId: string,
+): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
+  return uploadToBucket('driver-documents', file, userId);
+}
+
+async function uploadToBucket(
+  bucket: 'vehicle-photos' | 'vehicle-documents' | 'driver-documents',
+  file: File,
+  folder: string,
 ): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
   if (!getSupabaseConfig()) return { ok: false, error: 'not-configured' };
 
   // A file name is user-controlled: strip everything that is not safe in a URL path, and keep the tail
   // so the extension survives. The timestamp keeps two photos of the same name apart.
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-60) || 'upload';
-  const path = `${vehicleId}/${Date.now()}-${safeName}`;
+  const path = `${folder}/${Date.now()}-${safeName}`;
 
   const response = await fetch(`/api/data/storage/v1/object/${bucket}/${path}`, {
     method: 'POST',

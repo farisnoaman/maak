@@ -703,6 +703,16 @@ export const ar = {
   'fleet.licenceUploaded': 'تم رفع صورة الرخصة، وهي بانتظار المراجعة.',
   'fleet.licencePhotoMissing': 'لم تُرفع صورة الرخصة بعد.',
   'fleet.licenceNeedsReview': 'أي تعديل على الرخصة يعيدها إلى المراجعة.',
+  'fleet.licenceClass': 'فئة الرخصة',
+  'fleet.licencePhotoHint': 'صورة واضحة لوجه الرخصة. تُحفظ في مستندات خاصة لا تُعرض للعامة.',
+  'fleet.licenceSave': 'حفظ الرخصة',
+  'fleet.selectedFile': 'الملف المختار',
+  'fleet.licenceUploadFailed': 'تعذّر رفع الصورة. جرّب صورة أصغر أو صيغة أخرى.',
+  'fleet.viewPhoto': 'عرض الصورة',
+  'fleet.acceptInviteHint': 'قبل الدعوة لتتمكن من إضافة رخصتك وربط حسابك بالمشغّل.',
+  'fleet.accountLicence': 'رخصتي',
+  'fleet.accountLicenceSubtitle': 'رقم رخصتك وصورتها وحالة اعتمادها.',
+  'fleet.noDriverProfileHint': 'يرسل المشغّل دعوة إلى رقم هاتفك، ثم تظهر هنا لقبولها.',
   // Phase 4 — trips
   'trips.title': 'الرحلات',
   'trips.subtitle': 'أنشئ رحلة، انشرها، وتابعها من مكان واحد.',
@@ -1596,6 +1606,19 @@ export const en: Record<TranslationKey, string> = {
   'fleet.licenceUploaded': 'Licence photo uploaded — it is now awaiting review.',
   'fleet.licencePhotoMissing': 'No licence photo has been uploaded yet.',
   'fleet.licenceNeedsReview': 'Any change to the licence sends it back for review.',
+  'fleet.licenceClass': 'Licence class',
+  'fleet.licencePhotoHint': 'A clear photo of the front of the licence. It is stored privately.',
+  'fleet.licenceSave': 'Save licence',
+  'fleet.selectedFile': 'Selected file',
+  'fleet.licenceUploadFailed':
+    'The photo could not be uploaded. Try a smaller image or another format.',
+  'fleet.viewPhoto': 'View photo',
+  'fleet.acceptInviteHint':
+    'Accept the invitation to add your licence and link your account to the operator.',
+  'fleet.accountLicence': 'My licence',
+  'fleet.accountLicenceSubtitle': 'Your licence number, photo and review state.',
+  'fleet.noDriverProfileHint':
+    'An operator invites you by phone number; the invitation then appears here.',
   // Phase 4 — trips
   'trips.title': 'Trips',
   'trips.subtitle': 'Create a trip, publish it, and follow it from one place.',

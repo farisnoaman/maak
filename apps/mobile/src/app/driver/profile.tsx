@@ -74,13 +74,18 @@ export default function DriverProfileScreen() {
       return;
     }
 
+    // Two rows can matter here and they are not the same: the profile already bound to this account, and an
+    // *unbound invitation* addressed to this phone. The screen used to query only the first, so an invited
+    // driver — whose row has `user_id = null` until they accept — could never see the accept button that
+    // this screen exists to show. RLS (00018) narrows the second case to invitations for this number.
     const { data: driverRows } = await supabase
       .from('driver_profiles')
       .select(
         'id, full_name, invited_phone, licence_no, licence_expiry, licence_photo_path, status, verification_status, verification_note',
       )
-      .eq('user_id', userId)
+      .or(`user_id.eq.${userId},and(user_id.is.null,status.eq.invited)`)
       .eq('is_active', true)
+      .order('created_at', { ascending: true })
       .limit(1);
     const row = (driverRows?.[0] as DriverRow | undefined) ?? null;
     setDriver(row);

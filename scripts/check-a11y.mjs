@@ -40,6 +40,8 @@ const ROUTES = [
   { path: '/en/account', lang: 'en', dir: 'ltr', account: 'owner' },
   { path: '/ar/account/verification', lang: 'ar', dir: 'rtl', account: 'owner' },
   { path: '/en/account/verification', lang: 'en', dir: 'ltr', account: 'owner' },
+  { path: '/ar/account/licence', lang: 'ar', dir: 'rtl', account: 'owner' },
+  { path: '/en/account/licence', lang: 'en', dir: 'ltr', account: 'owner' },
   { path: '/ar/operator/settings', lang: 'ar', dir: 'rtl', account: 'owner' },
   { path: '/en/operator/team', lang: 'en', dir: 'ltr', account: 'owner' },
   { path: '/ar/staff/verifications', lang: 'ar', dir: 'rtl', account: 'staff' },
