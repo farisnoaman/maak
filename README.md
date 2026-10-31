@@ -44,7 +44,7 @@ npm run build:functions     # bundle edge functions for deploy
 npm run dev:setup           # writes apps/web/.env.local (once)
 npm run dev:api             # terminal 1 — Postgres + auth + REST + functions on :54321
 npm run dev                 # terminal 2 — web on http://localhost:3000  (/ar and /en)
-npm run dev:check           # end-to-end smoke: sign-in, RLS, gateway command
+npm run dev:check           # end-to-end smoke: form sign-in, cookie, RLS, gateway command
 
 supabase start              # requires Docker
 supabase db reset           # migrations + seed

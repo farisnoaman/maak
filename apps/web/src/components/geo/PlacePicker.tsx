@@ -17,7 +17,6 @@ import {
 } from '@maak/core';
 import { Field } from '@/components/ui/Field';
 import { Select } from '@/components/ui/Select';
-import { getBrowserClient } from '@/lib/supabase/browser';
 import type { GeoDirectory } from '@/lib/geo-types';
 
 /**
@@ -109,22 +108,27 @@ export function PlacePicker({
       setRemote(null);
       return;
     }
-    const supabase = getBrowserClient();
-    if (!supabase) return;
-
     let cancelled = false;
     setSearching(true);
     const timer = setTimeout(() => {
       void (async () => {
-        const { data } = await supabase.rpc('search_places', {
-          p_query: query,
-          p_locale: locale,
-          p_governorate: selection.governorateId,
-          p_district: selection.districtId,
-          p_kind: null,
-          p_limit: 8,
+        // Same-origin proxy: the session cookie travels automatically, and the token never reaches
+        // this bundle (see app/api/data/[...path]/route.ts).
+        const response = await fetch('/api/data/rest/v1/rpc/search_places', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            p_query: query,
+            p_locale: locale,
+            p_governorate: selection.governorateId ?? null,
+            p_district: selection.districtId ?? null,
+            p_kind: null,
+            p_limit: 8,
+          }),
+          credentials: 'same-origin',
         });
         if (cancelled) return;
+        const data: unknown = response.ok ? await response.json() : [];
         const rows = Array.isArray(data) ? data : [];
         setRemote(
           rows.map((row) => {

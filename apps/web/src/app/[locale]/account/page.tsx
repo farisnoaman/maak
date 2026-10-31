@@ -4,6 +4,7 @@ import { isLocale, translate, type Locale, type TranslationKey } from '@maak/cor
 import { SiteHeader } from '@/components/SiteHeader';
 import { PreviewBanner } from '@/components/PreviewBanner';
 import { Badge } from '@/components/ui/Feedback';
+import { Button } from '@/components/ui/Button';
 import { NotificationPanel } from '@/components/account/NotificationPanel';
 import { CreateOrganizationForm } from '@/components/account/CreateOrganizationForm';
 import { DeletionPanel } from '@/components/account/DeletionPanel';
@@ -94,6 +95,14 @@ export default async function AccountPage({
             <Link className="ui-btn ui-btn--ghost ui-btn--md" href={`/${locale}/admin/users`}>
               {t('nav.roles')}
             </Link>
+            {/* Signing out is a POST: the session lives in an httpOnly cookie, so only the server can
+                clear it — and a GET must never change state. */}
+            <form method="post" action="/api/auth/sign-out">
+              <input type="hidden" name="locale" value={locale} />
+              <Button type="submit" variant="subtle">
+                {t('nav.signOut')}
+              </Button>
+            </form>
           </div>
         </div>
 

@@ -99,6 +99,40 @@ schemas, the command→argument map or the policy matrix. If a change lands in t
 not here, the dev stack is wrong in the same way a stale client would be — not "correct but
 different".
 
+## How sign-in works
+
+Sign-in is a **plain form POST** to `/api/auth/sign-in`. The route handler calls the auth API from the
+server and sets the session cookie on the redirect response.
+
+That single decision removes a whole class of bugs:
+
+- the cookie is `httpOnly`, so no script — in this app or injected into it — can read the session;
+- the browser never holds a token, so there is no client/​server session drift and nothing to
+  desynchronise after a refresh;
+- it works with JavaScript disabled, and it works when a stale bundle is cached;
+- it can be tested end-to-end with `curl`, which is why `npm run dev:check` covers it.
+
+Because the token never reaches the browser, client-side data access goes through **`/api/data/*`**
+(a same-origin proxy that attaches the caller's bearer token server-side). `/api/data/rest/v1/...`,
+`/api/data/functions/v1/...` and `/api/data/storage/v1/...` are the three allowed mounts; nothing else
+is forwarded. Client code therefore uses `fetch('/api/data/...')` instead of a Supabase browser client.
+
+Two rules that cost an afternoon each and are now enforced by tests:
+
+| Rule | Why |
+|---|---|
+| Redirects are absolute, built from the **`Host` header** | `request.url` is the address the server *listens* on (`0.0.0.0`), which no browser can follow. Next also rejects a relative `Location` from the proxy. |
+| A non-loopback host is treated as **https** | `next dev` supplies `x-forwarded-proto: http` describing the hop to itself, not the browser; trusting it wrote `SameSite=Lax` cookies into an https preview |
+
+Check what the server knows about your session at any time: <http://localhost:3000/api/auth/status>
+
+```json
+{ "configured": true, "sessionCookiePresent": true, "user": "admin@maak.test" }
+```
+
+`sessionCookiePresent: false` means the browser never sent the cookie (blocked or cross-site);
+`true` with `user: null` means it arrived and was rejected — very different bugs.
+
 ## Signing in inside a preview frame
 
 The hosted preview renders the app in a **cross-site iframe**, and that changes cookie rules: a
@@ -110,8 +144,10 @@ Both sides therefore derive the attributes from the real scheme (`authCookieFlag
 session is `SameSite=None; Secure; Partitioned`, over http (localhost) it stays `SameSite=Lax`.
 `Partitioned` (CHIPS) is what lets the cookie exist in a third-party frame at all.
 
-If a browser still refuses, the sign-in form says so in words and offers **Open the app in its own
-tab** — a top-level page has no third-party restrictions.
+If a browser still refuses, you come back to the sign-in screen with an explanation and an
+**Open the app in its own tab** button — a top-level page has no third-party restrictions. The proxy
+only shows that automatically when it can prove the case: the request came from the sign-in page and
+carried no session cookie at all.
 
 The proxy also logs the reason on every bounce:
 

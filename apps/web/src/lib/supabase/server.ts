@@ -36,7 +36,9 @@ export async function getServerClient(): Promise<SupabaseClient | null> {
   if (!config) return null;
 
   const [cookieStore, requestHeaders] = await Promise.all([cookies(), headers()]);
-  const cookieOptions = cookieOptionsFor(requestProtocol(requestHeaders.get('x-forwarded-proto')));
+  const cookieOptions = cookieOptionsFor(
+    requestProtocol(requestHeaders.get('x-forwarded-proto'), requestHeaders.get('host')),
+  );
 
   const storageOptions: StorageCookieOptions = { ...cookieOptions, name: AUTH_COOKIE_NAME };
 

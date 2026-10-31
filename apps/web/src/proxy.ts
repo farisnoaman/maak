@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { redirectTo } from './lib/redirect';
 import { createServerClient } from '@supabase/ssr';
 import { LOCALES, negotiateLocale } from '@maak/core';
 import {
@@ -25,9 +26,7 @@ export default async function proxy(request: NextRequest) {
 
   if (pathname === '/') {
     const locale = negotiateLocale(request.headers.get('accept-language'));
-    const target = new URL(`/${locale}`, request.url);
-    target.search = search;
-    return NextResponse.redirect(target);
+    return redirectTo(request, `/${locale}${search}`);
   }
 
   const segments = pathname.split('/').filter(Boolean);
@@ -39,7 +38,7 @@ export default async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
 
   const flags = authCookieFlags(
-    requestProtocol(request.headers.get('x-forwarded-proto') ?? request.nextUrl.protocol),
+    requestProtocol(request.headers.get('x-forwarded-proto'), request.headers.get('host')),
   );
   const supabase = createServerClient(config.url, config.anonKey, {
     cookieOptions: { name: AUTH_COOKIE_NAME, ...flags },
@@ -78,13 +77,21 @@ export default async function proxy(request: NextRequest) {
   if (needsAuth && !data.user) {
     // The single most useful line when a sign-in "does nothing": it says whether the cookie arrived at
     // all, which separates a blocked/cross-site cookie from a rejected token.
-    console.warn(
-      `[auth] ${pathname} → sign-in (session cookie ${request.cookies.has(AUTH_COOKIE_NAME) ? 'present' : 'absent'})`,
-    );
-    const signIn = new URL(`/${locale}/auth/sign-in`, request.url);
+    const cookieState = request.cookies.has(AUTH_COOKIE_NAME) ? 'present' : 'absent';
+    console.warn(`[auth] ${pathname} → sign-in (session cookie ${cookieState})`);
+
+    const signIn = new URL(`/${locale}/auth/sign-in`, 'http://placeholder');
     signIn.searchParams.set('next', `${pathname}${search}`);
+
+    // Just posted the sign-in form and still no session? Then the browser refused to store the cookie
+    // rather than "the password was wrong" — say so instead of showing the form again in silence.
+    const cameFromSignIn = (request.headers.get('referer') ?? '').includes('/auth/sign-in');
+    if (cameFromSignIn && !request.cookies.has(AUTH_COOKIE_NAME)) {
+      signIn.searchParams.set('error', 'blocked');
+    }
+
     // Preserve the destination so the user lands where they intended, not on a generic home page.
-    return NextResponse.redirect(signIn);
+    return redirectTo(request, `${signIn.pathname}${signIn.search}`);
   }
 
   return response;

@@ -1,132 +1,44 @@
 'use client';
 
-import { useState } from 'react';
 import { PHONE_PLACEHOLDER, translate, type Locale, type TranslationKey } from '@maak/core';
-import { getBrowserClient } from '@/lib/supabase/browser';
-import { AUTH_COOKIE_NAME } from '@/lib/supabase/config';
 import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
-import { useToast } from '@/components/ui/Toast';
 
-type Mode = 'email' | 'phone';
+export type SignInTab = 'email' | 'phone';
 
-/**
- * Two sign-in paths, because Yemen is phone-first but email is the reliable fallback:
- *  - email + password (works everywhere, no SMS cost)
- *  - phone + OTP (primary for passengers; provider configured in Supabase Auth)
- *
- * All copy comes from the dictionaries; all errors are localized codes, never raw provider text.
- */
-export function SignInForm({
-  locale,
-  configured,
-  next,
-}: {
+export interface SignInFormProps {
   readonly locale: Locale;
   readonly configured: boolean;
   readonly next?: string;
-}) {
+  readonly tab: SignInTab;
+  /** Present while waiting for the code: the account is already known, only the code is missing. */
+  readonly phone?: string;
+  readonly error?: string;
+}
+
+/**
+ * A plain HTML form. No client-side auth state, no JavaScript in the submit path.
+ *
+ * The POST goes to `/api/auth/sign-in`, which holds the session cookie on the redirect response, so
+ * there is nothing here that can succeed on the client and fail on the server. Errors come back as a
+ * redirect with `?error=` and are rendered from the dictionaries, which keeps both locales honest.
+ */
+export function SignInForm({ locale, configured, next, tab, phone, error }: SignInFormProps) {
   const t = (key: TranslationKey) => translate(locale, key);
-  const { push } = useToast();
+  const waitingForCode = Boolean(phone);
 
-  const [mode, setMode] = useState<Mode>('email');
-  const [busy, setBusy] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [phone, setPhone] = useState('');
-  const [code, setCode] = useState('');
-  const [codeSent, setCodeSent] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  // Set when the browser accepted the credentials but refused to keep the session cookie — which is
-  // what a cross-site preview frame does when it blocks third-party storage.
-  const [blocked, setBlocked] = useState(false);
-
-  /**
-   * The server gates protected pages on the session cookie, so a client-only "success" is not a
-   * success. Confirm the cookie survived before navigating: a cross-site iframe that refuses it would
-   * otherwise bounce the user straight back here with nothing to read.
-   */
-  function sessionPersisted(): boolean {
-    return document.cookie.split('; ').some((part) => part.startsWith(`${AUTH_COOKIE_NAME}=`));
-  }
-
-  function finish() {
-    push({ title: t('auth.signIn'), tone: 'success' });
-    // A full navigation, not `router.push`: the point is to make the next request carry the cookie we
-    // just wrote, and the client router may serve the destination from its cache instead.
-    window.location.assign(next ?? `/${locale}/account`);
-  }
-
-  async function handleEmailSignIn(event: React.FormEvent) {
-    event.preventDefault();
-    const client = getBrowserClient();
-    if (!client) {
-      setError(t('auth.notConfigured'));
-      return;
-    }
-
-    setBusy(true);
-    setError(null);
-    const { error: authError } = await client.auth.signInWithPassword({ email, password });
-
-    if (authError) {
-      setBusy(false);
-      setError(t('auth.invalidCredentials'));
-      return;
-    }
-    if (!sessionPersisted()) {
-      setBusy(false);
-      setBlocked(true);
-      setError(t('auth.sessionBlocked'));
-      return;
-    }
-
-    finish();
-  }
-
-  async function handleSendCode(event: React.FormEvent) {
-    event.preventDefault();
-    const client = getBrowserClient();
-    if (!client) {
-      setError(t('auth.notConfigured'));
-      return;
-    }
-
-    setBusy(true);
-    setError(null);
-    const { error: authError } = await client.auth.signInWithOtp({ phone });
-    setBusy(false);
-
-    if (authError) {
-      setError(t('errors.INTERNAL'));
-      return;
-    }
-    setCodeSent(true);
-  }
-
-  async function handleVerifyCode(event: React.FormEvent) {
-    event.preventDefault();
-    const client = getBrowserClient();
-    if (!client) return;
-
-    setBusy(true);
-    setError(null);
-    const { error: authError } = await client.auth.verifyOtp({ phone, token: code, type: 'sms' });
-
-    if (authError) {
-      setBusy(false);
-      setError(t('errors.VALIDATION_FAILED'));
-      return;
-    }
-    if (!sessionPersisted()) {
-      setBusy(false);
-      setBlocked(true);
-      setError(t('auth.sessionBlocked'));
-      return;
-    }
-
-    finish();
-  }
+  const errorMessage =
+    error === 'invalid'
+      ? t('auth.invalidCredentials')
+      : error === 'otp-send'
+        ? t('errors.INTERNAL')
+        : error === 'otp-invalid'
+          ? t('errors.VALIDATION_FAILED')
+          : error === 'not-configured'
+            ? t('auth.notConfigured')
+            : error === 'blocked'
+              ? t('auth.sessionBlocked')
+              : null;
 
   return (
     <div className="card auth-card">
@@ -139,90 +51,108 @@ export function SignInForm({
         </p>
       ) : null}
 
-      {blocked ? (
-        <Button
-          variant="ghost"
-          fullWidth
-          onClick={() => window.open(window.location.href, '_blank')}
+      {errorMessage ? (
+        <p className="auth-notice" role="alert">
+          {errorMessage}
+        </p>
+      ) : null}
+
+      {error === 'blocked' ? (
+        // A top-level tab has no third-party restrictions, so this always works when the browser is
+        // refusing to keep cookies inside the embedded preview.
+        <a
+          className="ui-btn ui-btn--ghost ui-btn--block"
+          href={`/${locale}/auth/sign-in`}
+          target="_blank"
+          rel="noreferrer"
         >
           {t('auth.openInTab')}
-        </Button>
+        </a>
       ) : null}
 
       <div className="auth-tabs" role="tablist" aria-label={t('auth.title')}>
-        <button
-          type="button"
+        <a
           role="tab"
-          aria-selected={mode === 'email'}
-          onClick={() => setMode('email')}
+          aria-selected={tab === 'email'}
+          className={tab === 'email' ? 'is-active' : undefined}
+          href={`/${locale}/auth/sign-in${next ? `?next=${encodeURIComponent(next)}` : ''}`}
         >
           {t('auth.email')}
-        </button>
-        <button
-          type="button"
+        </a>
+        <a
           role="tab"
-          aria-selected={mode === 'phone'}
-          onClick={() => setMode('phone')}
+          aria-selected={tab === 'phone'}
+          className={tab === 'phone' ? 'is-active' : undefined}
+          href={`/${locale}/auth/sign-in?tab=phone${next ? `&next=${encodeURIComponent(next)}` : ''}`}
         >
           {t('auth.signInWithPhone')}
-        </button>
+        </a>
       </div>
 
-      {mode === 'email' ? (
-        <form className="auth-form" onSubmit={handleEmailSignIn}>
-          <Field
-            label={t('auth.email')}
-            type="email"
-            autoComplete="email"
-            required
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            disabled={!configured}
-          />
-          <Field
-            label={t('auth.password')}
-            type="password"
-            autoComplete="current-password"
-            required
-            minLength={8}
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            disabled={!configured}
-            error={error ?? undefined}
-          />
-          <Button type="submit" fullWidth loading={busy} disabled={!configured}>
-            {t('auth.signIn')}
-          </Button>
-        </form>
-      ) : (
-        <form className="auth-form" onSubmit={codeSent ? handleVerifyCode : handleSendCode}>
-          <Field
-            label={t('auth.phone')}
-            type="tel"
-            inputMode="tel"
-            autoComplete="tel"
-            placeholder={PHONE_PLACEHOLDER}
-            required
-            value={phone}
-            onChange={(event) => setPhone(event.target.value)}
-            disabled={!configured}
-          />
-          {codeSent ? (
+      <form className="auth-form" method="post" action="/api/auth/sign-in">
+        <input type="hidden" name="locale" value={locale} />
+        {next ? <input type="hidden" name="next" value={next} /> : null}
+
+        {tab === 'email' ? (
+          <>
+            <input type="hidden" name="mode" value="email" />
+            <Field
+              label={t('auth.email')}
+              type="email"
+              name="email"
+              autoComplete="email"
+              required
+              disabled={!configured}
+            />
+            <Field
+              label={t('auth.password')}
+              type="password"
+              name="password"
+              autoComplete="current-password"
+              required
+              minLength={8}
+              disabled={!configured}
+            />
+            <Button type="submit" fullWidth disabled={!configured}>
+              {t('auth.signIn')}
+            </Button>
+          </>
+        ) : waitingForCode ? (
+          <>
+            <input type="hidden" name="mode" value="otp-verify" />
+            <input type="hidden" name="phone" value={phone} />
+            <Field label={t('auth.phone')} type="tel" value={phone} readOnly disabled />
             <Field
               label={t('auth.code')}
+              name="code"
               inputMode="numeric"
               autoComplete="one-time-code"
               required
-              value={code}
-              onChange={(event) => setCode(event.target.value)}
-              error={error ?? undefined}
+              autoFocus
             />
-          ) : null}
-          <Button type="submit" fullWidth loading={busy} disabled={!configured}>
-            {codeSent ? t('auth.verify') : t('auth.sendCode')}
-          </Button>
-        </form>
-      )}
+            <Button type="submit" fullWidth disabled={!configured}>
+              {t('auth.verify')}
+            </Button>
+          </>
+        ) : (
+          <>
+            <input type="hidden" name="mode" value="otp-send" />
+            <Field
+              label={t('auth.phone')}
+              type="tel"
+              name="phone"
+              inputMode="tel"
+              autoComplete="tel"
+              placeholder={PHONE_PLACEHOLDER}
+              required
+              disabled={!configured}
+            />
+            <Button type="submit" fullWidth disabled={!configured}>
+              {t('auth.sendCode')}
+            </Button>
+          </>
+        )}
+      </form>
     </div>
   );
 }

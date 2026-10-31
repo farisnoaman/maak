@@ -3,27 +3,33 @@
 /**
  * Browser-side gateway client.
  *
- * The only place the web app talks to `functions/v1`. The session token is read at call time (never
- * cached), so a refreshed token is always used, and every mutation carries an idempotency key.
+ * The only place the web app talks to `functions/v1` — via the same-origin `/api/data` proxy, which
+ * holds the bearer token server-side. Every mutation still carries an idempotency key.
  */
 
 import { ApiClient } from '@maak/core';
-import { getBrowserClient } from './supabase/browser';
 import { getSupabaseConfig } from './supabase/config';
 
+/**
+ * Marker, not a credential. The session cookie is httpOnly, so this file cannot read a token — and
+ * must not. `/api/data/...` runs on the server, swaps this header for the caller's real token, and
+ * streams the answer back. `ApiClient` only needs a truthy value to know a session exists.
+ */
+const SESSION_MARKER = 'session-cookie';
+
 export function getApiClient(): ApiClient | null {
-  const config = getSupabaseConfig();
-  const supabase = getBrowserClient();
-  if (!config || !supabase) return null;
+  if (!getSupabaseConfig()) return null;
 
   return new ApiClient({
-    baseUrl: `${config.url}/functions/v1`,
+    baseUrl: '/api/data/functions/v1',
     transport: async ({ method, path, body, headers }) => {
       const response = await fetch(path, {
         method,
         headers,
         body: JSON.stringify(body),
-        credentials: 'omit',
+        // `same-origin`, never `omit`: the session is an httpOnly cookie, and omitting credentials
+        // would make every authenticated call look anonymous.
+        credentials: 'same-origin',
       });
       const text = await response.text();
       let parsed: unknown;
@@ -34,33 +40,36 @@ export function getApiClient(): ApiClient | null {
       }
       return { status: response.status, body: parsed };
     },
-    getToken: async () => {
-      const { data } = await supabase.auth.getSession();
-      return data.session?.access_token ?? null;
-    },
+    getToken: async () => SESSION_MARKER,
     clientVersion: 'web',
   });
 }
 
-/** Uploads a verification document to the caller's own folder and returns its object path. */
+/**
+ * Uploads a verification document to the caller's own folder and returns its object path.
+ *
+ * Goes through `/api/data/storage/v1/...` for the same reason as every other call: the token stays in
+ * an httpOnly cookie, and the server decides which folder that token may write to (the database
+ * policies enforce `auth.uid()` as the folder prefix regardless).
+ */
 export async function uploadVerificationDocument(
   file: File,
   kind: string,
 ): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
-  const supabase = getBrowserClient();
-  if (!supabase) return { ok: false, error: 'not-configured' };
-
-  const { data: userData } = await supabase.auth.getUser();
-  const userId = userData.user?.id;
-  if (!userId) return { ok: false, error: 'UNAUTHENTICATED' };
+  if (!getSupabaseConfig()) return { ok: false, error: 'not-configured' };
 
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-60);
-  const path = `${userId}/${kind}-${Date.now()}-${safeName}`;
+  const path = `${kind}-${Date.now()}-${safeName}`;
 
-  const { error } = await supabase.storage
-    .from('verification-docs')
-    .upload(path, file, { contentType: file.type, upsert: false });
+  const response = await fetch(`/api/data/storage/v1/object/verification-docs/${path}`, {
+    method: 'POST',
+    headers: { 'content-type': file.type || 'application/octet-stream', 'x-upsert': 'false' },
+    body: file,
+  });
 
-  if (error) return { ok: false, error: error.message };
+  if (!response.ok) {
+    const detail = await response.text().catch(() => 'upload failed');
+    return { ok: false, error: detail || 'upload failed' };
+  }
   return { ok: true, path };
 }

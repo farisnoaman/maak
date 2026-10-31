@@ -61,6 +61,8 @@ export default tseslint.config(
         crypto: 'readonly',
         fetch: 'readonly',
         Buffer: 'readonly',
+        URLSearchParams: 'readonly',
+        FormData: 'readonly',
         Headers: 'readonly',
         Request: 'readonly',
         Response: 'readonly',
