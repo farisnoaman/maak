@@ -260,6 +260,15 @@ async function seed(client, log = () => {}) {
 
   await seedDemoFleet(client);
 
+  // Bookable inventory, created through the same three commands the console uses. Without it the
+  // marketplace is an empty page after every reset and there is nothing to book — which is how a
+  // booking defect stays invisible until somebody hand-inserts a trip.
+  try {
+    await seedDemoTrip(client, log);
+  } catch (error) {
+    log(`  (demo trip skipped: ${error.message})`);
+  }
+
   await grantDemoScope(client);
   log(`  demo sign-in: admin@maak.test · owner@maak.test · driver@maak.test / ${DEMO_PASSWORD}`);
 }
@@ -344,6 +353,86 @@ async function seedDemoFleet(client) {
              '7925cdf3-0000-4000-8000-00000000d001', '33333333-3333-4333-8333-333333333333')
      on conflict (id) do nothing`,
   );
+}
+
+/**
+ * One published trip, three stops out, so `/trips` has something to show and the booking form has
+ * something to book.
+ *
+ * Created with `cmd_create_trip` → `cmd_set_trip_stops` → `cmd_publish_trip` rather than with an insert:
+ * the seed then exercises the same rules a real operator does (quota, verification, search refresh,
+ * events), and a regression in any of them breaks the seed instead of hiding behind it.
+ *
+ * The check is "is there a *future* published trip", not "is there a trip": a stack left running for a
+ * week would otherwise keep announcing a departure that left on Monday.
+ */
+async function seedDemoTrip(client, log = () => {}) {
+  const owner = '33333333-3333-4333-8333-333333333333';
+  const org = 'aaaaaaaa-0000-4000-8000-000000000001';
+  const vehicle = '7925cdf3-5648-4b52-9f84-8ad8fa68aae2';
+  const driver = '7925cdf3-0000-4000-8000-00000000d001';
+
+  const existing = await client.query(
+    `select 1 from public.trips
+      where owner_org_id = $1
+        and status = 'published'
+        and departure_at > now() + interval '12 hours'
+      limit 1`,
+    [org],
+  );
+  if (existing.rows.length > 0) return;
+
+  const governorateId = async (code) =>
+    (await client.query('select id from public.governorates where code = $1', [code])).rows[0]
+      ?.id ?? null;
+
+  const created = await client.query(
+    `select public.cmd_create_trip($1::uuid, $2::uuid, $3::jsonb, 'dev-seed', null) as result`,
+    [
+      owner,
+      org,
+      JSON.stringify({
+        vehicleId: vehicle,
+        driverId: driver,
+        originGovernorateId: await governorateId('YE-AD'),
+        destinationGovernorateId: await governorateId('YE-SA'),
+        // A day and a bit out, at a tidy hour, so "departs tomorrow morning" reads like a timetable.
+        departureAt: new Date(Date.now() + 39 * 60 * 60 * 1000).toISOString(),
+        arriveEstimateMinutes: 480,
+        seatsTotal: 14,
+        bookingMode: 'per_seat',
+        pricingMode: 'flat',
+        pricePerSeatYer: 5000,
+        discountKind: 'none',
+        discountValue: 0,
+        genderPolicy: 'any',
+        paymentPolicy: 'cash',
+        luggageAllowanceKg: 20,
+        notes: 'رحلة تجريبية من عدن إلى صنعاء.',
+      }),
+    ],
+  );
+  const tripId = created.rows[0].result.trip.id;
+
+  await client.query(
+    `select public.cmd_set_trip_stops($1::uuid, $2::uuid, $3::jsonb, 'dev-seed', null)`,
+    [
+      owner,
+      tripId,
+      JSON.stringify([
+        { nameAr: 'عدن', nameEn: 'Aden', arriveOffsetMinutes: 0 },
+        { nameAr: 'تعز', nameEn: 'Taiz', arriveOffsetMinutes: 240 },
+        { nameAr: 'صنعاء', nameEn: 'Sanaa', arriveOffsetMinutes: 480 },
+      ]),
+    ],
+  );
+
+  await client.query(`select public.cmd_publish_trip($1::uuid, $2::uuid, 'dev-seed', null)`, [
+    owner,
+    tripId,
+  ]);
+
+  log(`  seeded a bookable trip: ${created.rows[0].result.trip.code}`);
 }
 
 /**

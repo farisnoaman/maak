@@ -19,7 +19,7 @@ begin;
 
 create extension if not exists pgtap;
 
-select plan(87);
+select plan(91);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -197,6 +197,66 @@ from b1;
 -- Stashed in a setting rather than only a temp table: later sections switch to `authenticated`, and a
 -- role that is not the owner cannot read another session's temp table.
 select set_config('test.booking1', (select id::text from booking1), false);
+
+-- ---------------------------------------------------------------------------
+-- 2b. One live booking per passenger per trip — and a sentence, not a constraint name
+-- ---------------------------------------------------------------------------
+
+-- The unique index `bookings_one_active_per_trip` already refused the second booking. What it did not
+-- do was explain it: the insert retried the violation five times (it is written to retry *code*
+-- collisions) and then surfaced a bare 23505, which the gateway maps to `DUPLICATE_REFERENCE` — "an
+-- entry with this name already exists", a message about organization names, shown above the fold of a
+-- booking form whose button is at the bottom. To a passenger, that is a dead button. The command now
+-- checks first and raises `ALREADY_BOOKED` naming the booking that exists.
+
+create temp table duplicate_attempt (
+  state text,
+  message text,
+  seats_before integer,
+  seats_after integer
+);
+
+insert into duplicate_attempt (seats_before)
+values (app.recompute_seats_available('ffff00b1-0000-4000-8000-ffffffffffff'));
+
+do $$
+begin
+  perform pg_temp.book(
+    'ffff0002-2222-4222-8222-ffffffffffff',
+    'ffff00b1-0000-4000-8000-ffffffffffff',
+    1, null, 'مسافر ثانٍ', '+967733500003'
+  );
+exception when others then
+  update duplicate_attempt set state = sqlstate, message = sqlerrm;
+end $$;
+
+update duplicate_attempt
+set seats_after = app.recompute_seats_available('ffff00b1-0000-4000-8000-ffffffffffff');
+
+select ok(
+  (select state = '23505' from duplicate_attempt),
+  'a second live booking on the same trip is refused'
+);
+
+select ok(
+  (select message from duplicate_attempt)
+    like 'ALREADY_BOOKED: booking BK-' || '% is already pending on this trip',
+  'and the refusal names the booking that already exists'
+);
+
+select is(
+  (select count(*)::int from public.bookings b
+    where b.trip_id = 'ffff00b1-0000-4000-8000-ffffffffffff'
+      and b.passenger_id = 'ffff0002-2222-4222-8222-ffffffffffff'),
+  1,
+  'no second booking row was written'
+);
+
+select is(
+  (select seats_before = seats_after from duplicate_attempt),
+  true,
+  'and the refused attempt held no seats'
+);
 
 select is(
   (select status from booking1), 'pending',

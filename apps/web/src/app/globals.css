@@ -1207,6 +1207,37 @@ a {
   font-weight: 600;
 }
 
+/*
+ * A failed command, shown as a block rather than a line of text.
+ *
+ * This class was used by the booking form and the booking detail page from Phase 5 without ever being
+ * defined, so a refused booking rendered as an ordinary grey paragraph at the top of a form whose
+ * submit button is at the bottom — indistinguishable from nothing happening at all. Defined here, once,
+ * with the same tone as `.form-error` so every failure in the product reads the same.
+ */
+.ui-alert {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+  margin-block-start: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  border-inline-start: 4px solid currentColor;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.ui-alert--error {
+  background: var(--danger-50, #fdecec);
+  color: var(--danger-700, #8c1d1d);
+}
+
+.ui-alert--warning {
+  background: var(--surface-muted);
+  color: var(--ink-700, #3b4149);
+  border-inline-start-color: var(--state-warning);
+}
+
 .form-success {
   margin-block-start: var(--space-3);
   padding: var(--space-3) var(--space-4);

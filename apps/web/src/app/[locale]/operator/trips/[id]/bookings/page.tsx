@@ -77,6 +77,9 @@ export default async function TripBookingsPage({
               <li key={booking.id} className="booking-card">
                 <div className="booking-card__head">
                   <strong>{booking.contactName}</strong>
+                  <span className="booking-card__code" dir="ltr">
+                    {booking.code}
+                  </span>
                   <Badge tone={bookingTone(booking.status)}>{t(BOOKING_STATUS_KEY.pending)}</Badge>
                 </div>
                 <p className="booking-card__meta">
@@ -127,6 +130,9 @@ export default async function TripBookingsPage({
                       <Link href={`/${locale}/account/bookings/${booking.id}`}>
                         {booking.contactName}
                       </Link>
+                      <div className="booking-card__meta">
+                        <bdi dir="ltr">{booking.code}</bdi>
+                      </div>
                       <div className="booking-card__meta" dir="ltr">
                         {booking.contactPhone}
                       </div>

@@ -52,7 +52,7 @@ difference in *when*, not in *what*.
 | --- | --- | --- |
 | Booking wizard (web) | `/[locale]/trips/[code]/book` | Seats, stop, contact, gender when the trip demands it, live total, hold explanation |
 | My bookings (web) | `/[locale]/account/bookings` + `/[id]` | Upcoming/past split, ticket QR, identity form, cancel, refund line |
-| Operator inbox (web) | `/[locale]/operator/trips/[id]/bookings` | Pending list with bulk accept, rejected-with-reason, manifest, share-link generation |
+| Operator inbox (web) | `/[locale]/operator/trips/[id]/bookings` | Pending list with bulk accept, rejected-with-reason, manifest, share-link generation, booking code on every card and manifest row |
 | Share preview (web) | `/[locale]/s/[token]` (+ `/s/[token]` → locale) | Watermarked, 72-hour, operator-only, signed 5-minute photo URL |
 | Driver licence (web) | `/[locale]/account/licence` | Camera/file capture, `driver.setLicence`, five-minute signed read (see `docs/phase-3-review.md` §9.1) |
 | Booking wizard (native) | `app/book/[code].tsx` | One screen: seats, traveller, price, submit |
@@ -84,6 +84,20 @@ gets a code it can act on.
 own actions. The fix claims `isBooker`; the command still re-reads `bookings.passenger_id`, so a forged
 claim buys nothing. This is exactly the class of bug a gate cannot find and a transcript can.
 
+**A refusal has to say what happened, and be visible where the thumb is.** The second booking on one
+trip was refused all along — by `bookings_one_active_per_trip`, a partial unique index. What a passenger
+saw was nothing: the insert retried the violation five times (that loop exists to retry *code*
+collisions, not this), surfaced a bare `23505`, the gateway mapped it to `DUPLICATE_REFERENCE` — "an entry
+with this name already exists", a sentence written for organization names — and the form rendered it in
+`.ui-alert`, a class that had never been defined in `globals.css`, at the top of a form whose submit
+button is at the bottom. On a phone the honest reading of that screen is "the button is broken". Three
+fixes, one for each layer: `cmd_create_booking` now checks for a live booking first and raises
+`ALREADY_BOOKED` naming it; the retry loop re-raises anything that is not a code collision; and the form
+renders the failure directly above the button, styled, announced, scrolled into view, with a link to My
+bookings. The native screen had the mirror-image hole — it printed `error.detail`, which is English
+support text, instead of a translation — and now calls `errorKey()`. The demo seed also gained a
+published trip, because an empty marketplace is the same bug with a different cause.
+
 **A share link dies with the booking.** `resolve_id_share_token` refuses anything that is not `pending`
 or `accepted`, and a trigger revokes the tokens when a booking closes. Without it, cancelling a seat left
 the operator able to open the passenger's ID for the rest of the 72 hours — the second defect the smoke
@@ -108,10 +122,12 @@ instead of smuggled into an unrelated change.
 
 ## 3. What the suite promises
 
-`supabase/tests/0008_bookings.test.sql` — **87 assertions**, in twelve sections:
+`supabase/tests/0008_bookings.test.sql` — **91 assertions**, in thirteen sections:
 
 1. the server prices the booking and refuses a moved fare with `PRICE_CHANGED`;
 2. the last seat is sold once — the second request gets `NO_SEATS_LEFT` and the trip never goes negative;
+2b. a passenger cannot hold two bookings on one trip: `ALREADY_BOOKED`, naming the booking that exists,
+   with no row written and no seat held by the refused attempt;
 3. accepted / rejected by the right actor, and a rival operator or the passenger is refused;
 4. the 30-minute hold, its expiry, and the sweeper being idempotent;
 5. BR-09's ladder — 48 h → 100 %, 24 h → 75 %, 2 h → 50 %, inside 2 h → `CANCEL_WINDOW_CLOSED`;
@@ -138,7 +154,7 @@ instead of smuggled into an unrelated change.
 | `npm run check:a11y` | **54 routes**, both directions, 5 discovered detail pages |
 | `npm run check:responsive` | viewport exported, 34 media queries, 7 tap targets, every wide table scrollable |
 | `npm test` | **390** tests in 19 files |
-| `npm run sql:check` | 20 migrations · 8 pgTAP suites · **415** assertions (87 in 0008) · no type drift · no client write grants |
+| `npm run sql:check` | 20 migrations · 8 pgTAP suites · **419** assertions (91 in 0008) · no type drift · no client write grants |
 | `npm run db:types:check` | types stamped for 20 migrations |
 | `npm run check:functions` | 8 edge functions bundled, no drift |
 
@@ -163,10 +179,17 @@ accounts:
 | operator `booking.reject` with a reason | rejected, seat returned, localized notification with the reason |
 | `/en/account/bookings/<id>` | ticket QR, signed URL of the form `/api/data/storage/v1/object/sign/...?token=…` |
 | that signed URL | 200, 900 bytes; a bogus token → 400 |
-| `document_access_log` | `owner: 2`, `share_link: 2` |
+| `document_access_log` | `owner: 1`, `share_link: 1` (four audiences, one row per look) |
+| a second `booking.create` on the same trip | **409 `ALREADY_BOOKED`**, `detail: booking BK-… is already pending on this trip` |
+| force a hold into the past, then `app.job_expire_holds(500)` | `{"expired": 1}`, status `expired`, seats 12 → 14, an `expired` event |
+| `booking.cancelByPassenger` 39 h out | `cancelled_by_passenger`, refund **75 %** (3,750 of 5,000), seat back |
+| the same share link after cancellation | resolves to "not found" — 0 mentions of the ID number in the HTML |
 
-Two defects were found and fixed by this probe: the booker-scope denial (§2) and link revocation after
-cancellation (§2).
+Four defects were found and fixed by this probe: the booker-scope denial (§2), link revocation after
+cancellation (§2), the unexplained duplicate refusal and its invisible rendering (§2), and — found by
+restarting from nothing — a marketplace with no trip to book, which is why the dev seed now creates one
+through `cmd_create_trip` → `cmd_set_trip_stops` → `cmd_publish_trip` instead of leaving the flow
+untestable without a hand-written fixture.
 
 ---
 

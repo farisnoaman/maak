@@ -430,7 +430,9 @@ declare
   v_available integer;
   v_code text;
   v_booking public.bookings%rowtype;
+  v_existing public.bookings%rowtype;
   v_attempt integer := 0;
+  v_constraint text;
 begin
   if p_actor is null then
     raise exception 'UNAUTHENTICATED: missing actor' using errcode = '28000';
@@ -483,6 +485,22 @@ begin
     end if;
   end if;
 
+  -- One live booking per passenger per trip — the rule `bookings_one_active_per_trip` enforces. Stated
+  -- here as a check with a name, because the index alone answers "that entry already exists", which is
+  -- true, useless, and arrives five random codes later (see the retry loop below).
+  select * into v_existing
+  from public.bookings b
+  where b.trip_id = p_trip_id
+    and b.passenger_id = p_actor
+    and b.status in ('pending', 'accepted')
+  limit 1;
+
+  if v_existing.id is not null then
+    raise exception 'ALREADY_BOOKED: booking % is already % on this trip',
+      v_existing.code, v_existing.status
+      using errcode = '23505';
+  end if;
+
   v_available := app.recompute_seats_available(p_trip_id);
   if v_available < v_seats then
     raise exception 'NO_SEATS_LEFT: only % seat(s) left', v_available using errcode = '23505';
@@ -519,7 +537,11 @@ begin
       returning * into v_booking;
       exit;
     exception when unique_violation then
-      if v_attempt >= 5 then
+      -- Only a code collision is worth retrying: `BK-` plus six random characters will eventually
+      -- collide. Every other violation here is the one-active-booking index, which the check above
+      -- already turned into a sentence — retrying it just burns five codes and hides the reason.
+      get stacked diagnostics v_constraint = constraint_name;
+      if v_constraint <> 'bookings_code_key' or v_attempt >= 5 then
         raise;
       end if;
     end;

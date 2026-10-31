@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -75,6 +75,7 @@ export function BookingForm({
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<Failure | null>(null);
+  const alertRef = useRef<HTMLDivElement | null>(null);
   const [done, setDone] = useState<{ code: string; holdExpiresAt: string | null } | null>(null);
 
   const stop = stops.find((item) => item.seq === stopSeq) ?? null;
@@ -101,6 +102,12 @@ export function BookingForm({
       return null;
     }
   }, [trip, stop, seats]);
+
+  useEffect(() => {
+    // The submit button sits at the bottom of a long form on a phone. A refusal that renders above the
+    // fold looks exactly like a dead button, so the failure scrolls itself into view.
+    if (failure) alertRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }, [failure]);
 
   async function submit() {
     setFailure(null);
@@ -167,16 +174,6 @@ export function BookingForm({
 
   return (
     <div className="booking-form">
-      {failure ? (
-        <p className="ui-alert ui-alert--error" role="alert">
-          {failure.code === 'PRICE_CHANGED'
-            ? t('errors.PRICE_CHANGED')
-            : failure.fields
-              ? t('errors.VALIDATION_FAILED')
-              : t(errorKey(failure.code as never))}
-        </p>
-      ) : null}
-
       {wholeTrip ? (
         <p className="trip-form__hint">{t('bookings.wholeTripHint')}</p>
       ) : (
@@ -280,8 +277,26 @@ export function BookingForm({
 
       <p className="trip-form__hint">{t('bookings.cashHint')}</p>
 
+      {/* Directly above the button, in the block style the rest of the app uses for failures. */}
+      {failure ? (
+        <div ref={alertRef} className="ui-alert ui-alert--error" role="alert">
+          <p>
+            {failure.code === 'PRICE_CHANGED'
+              ? t('errors.PRICE_CHANGED')
+              : failure.fields
+                ? t('errors.VALIDATION_FAILED')
+                : t(errorKey(failure.code as never))}
+          </p>
+          {failure.code === 'ALREADY_BOOKED' ? (
+            <Link className="ui-btn ui-btn--ghost ui-btn--sm" href={`/${locale}/account/bookings`}>
+              {t('bookings.myTitle')}
+            </Link>
+          ) : null}
+        </div>
+      ) : null}
+
       <Button loading={busy} onClick={() => void submit()} fullWidth>
-        {t('bookings.reserve')}
+        {busy ? t('common.loading') : t('bookings.reserve')}
       </Button>
     </div>
   );

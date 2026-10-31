@@ -157,6 +157,7 @@ export const ar = {
   'errors.EDIT_WINDOW_CLOSED': 'لا يمكن التعديل قبل أقل من ساعتين من موعد الانطلاق.',
   'errors.CANCEL_WINDOW_CLOSED': 'لا يمكن الإلغاء قبل أقل من ساعتين من موعد الانطلاق.',
   'errors.NO_SEATS_LEFT': 'لم تعد هناك مقاعد متاحة.',
+  'errors.ALREADY_BOOKED': 'لديك حجز قائم على هذه الرحلة. افتح حجوزاتي للاطّلاع عليه أو إلغائه.',
   'errors.PRICE_CHANGED': 'تغيّر السعر. راجع التفاصيل قبل المتابعة.',
   'errors.TRIP_NOT_VERIFIED': 'لا يمكن بدء رحلة غير موثّقة.',
   'errors.RATE_LIMITED': 'محاولات كثيرة. انتظر قليلًا ثم أعد المحاولة.',
@@ -1161,6 +1162,8 @@ export const en: Record<TranslationKey, string> = {
   'errors.EDIT_WINDOW_CLOSED': 'Trips cannot be edited within two hours of departure.',
   'errors.CANCEL_WINDOW_CLOSED': 'Bookings cannot be cancelled within two hours of departure.',
   'errors.NO_SEATS_LEFT': 'No seats are left on this trip.',
+  'errors.ALREADY_BOOKED':
+    'You already have a booking on this trip. Open My bookings to view or cancel it.',
   'errors.PRICE_CHANGED': 'The price changed. Please review before continuing.',
   'errors.TRIP_NOT_VERIFIED': 'This trip cannot start until it is verified.',
   'errors.RATE_LIMITED': 'Too many attempts. Please wait and try again.',

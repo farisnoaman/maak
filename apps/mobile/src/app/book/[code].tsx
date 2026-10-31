@@ -11,6 +11,7 @@ import {
 import { getLocales } from 'expo-localization';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
+  errorKey,
   formatMinor,
   MAX_SEATS_PER_BOOKING,
   isLocale,
@@ -119,7 +120,9 @@ export default function BookScreen() {
 
     setBusy(false);
     if (!result.ok) {
-      setError(result.error.detail ?? result.error.code);
+      // A translated sentence, never `error.detail`: that field is English support text and belongs in
+      // a log, not in front of an Arabic-speaking passenger at a bus stop.
+      setError(t(errorKey(result.error.code)));
       return;
     }
 
