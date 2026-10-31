@@ -160,6 +160,7 @@ export const ar = {
   'errors.ALREADY_BOOKED': 'لديك حجز قائم على هذه الرحلة. افتح حجوزاتي للاطّلاع عليه أو إلغائه.',
   'errors.PRICE_CHANGED': 'تغيّر السعر. راجع التفاصيل قبل المتابعة.',
   'errors.TRIP_NOT_VERIFIED': 'لا يمكن بدء رحلة غير موثّقة.',
+  'errors.TOO_EARLY': 'لا يمكن بدء الرحلة قبل ساعتين من موعد الانطلاق.',
   'errors.RATE_LIMITED': 'محاولات كثيرة. انتظر قليلًا ثم أعد المحاولة.',
   'errors.CONFLICT': 'تغيّرت البيانات منذ آخر تحديث. أعد المحاولة.',
   'errors.DUPLICATE_REFERENCE':
@@ -1171,6 +1172,7 @@ export const en: Record<TranslationKey, string> = {
     'You already have a booking on this trip. Open My bookings to view or cancel it.',
   'errors.PRICE_CHANGED': 'The price changed. Please review before continuing.',
   'errors.TRIP_NOT_VERIFIED': 'This trip cannot start until it is verified.',
+  'errors.TOO_EARLY': 'This trip cannot start more than two hours before departure.',
   'errors.RATE_LIMITED': 'Too many attempts. Please wait and try again.',
   'errors.CONFLICT': 'This item changed since you loaded it. Please retry.',
   'errors.DUPLICATE_REFERENCE':

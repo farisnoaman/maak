@@ -27,9 +27,11 @@ import { enforceRateLimit } from '../_shared/ratelimit.ts';
 const schema = tripsActionSchema;
 
 /**
- * The capability each action needs. `trip.publish` and `trip.submitVerification` deliberately reuse
- * `trip.update`: they are edits to a trip you already own, and inventing a capability for each verb
- * would mean the policy matrix and the SQL had two vocabularies for the same permission.
+ * The capability each action needs.
+ *
+ * Kept literal on purpose: `check:guards` reads this object and the dev gateway's twin, and fails when
+ * one has an action the other does not. That guard is the reason `driver.setLicence` could not ship into
+ * one gateway only — see §10 of `scripts/check-guards.mjs`.
  */
 const CAPABILITY: Record<TripsAction['action'], Capability> = {
   'trip.create': 'trip.create',
@@ -39,6 +41,9 @@ const CAPABILITY: Record<TripsAction['action'], Capability> = {
   'trip.submitVerification': 'trip.update',
   'trip.decideVerification': 'trip.verify',
   'trip.cancel': 'trip.cancel',
+  'trip.start': 'trip.start',
+  'trip.stopReached': 'trip.start',
+  'trip.end': 'trip.start',
 };
 
 export default defineCommand({ schema }, async (ctx) => {

@@ -63,7 +63,8 @@ export type BookingEventKind =
   | 'document_shared';
 export type DocumentAccessKind = 'owner' | 'operator' | 'staff' | 'share_link';
 
-export type TripStatus = 'draft' | 'pending' | 'published' | 'cancelled' | 'completed';
+export type TripStatus =
+  'draft' | 'pending' | 'published' | 'in_progress' | 'cancelled' | 'completed';
 export type TripEventKind =
   | 'created'
   | 'updated'
@@ -74,7 +75,10 @@ export type TripEventKind =
   | 'published'
   | 'unpublished'
   | 'cancelled'
-  | 'completed';
+  | 'completed'
+  | 'started'
+  | 'stop_reached'
+  | 'ended';
 export type TripBookingMode = 'per_seat' | 'whole_trip' | 'both';
 export type TripPricingMode = 'flat' | 'per_stop';
 export type TripDiscountKind = 'none' | 'fixed' | 'percent';
@@ -468,6 +472,8 @@ export interface OdometerReading {
   recorded_by: string | null;
   recorded_at: string;
   note: string | null;
+  /** The trip this reading belongs to (`trip_start` / `trip_end`), from migration 00022. */
+  trip_id: string | null;
 }
 
 export interface Trip {
@@ -507,6 +513,10 @@ export interface Trip {
   cancelled_by: string | null;
   cancel_reason: string | null;
   completed_at: string | null;
+  /** Set by `cmd_start_trip`; a trip cannot be `in_progress` without it. */
+  started_at: string | null;
+  /** The highest stop the driver has announced reaching (`cmd_mark_stop_reached`). */
+  last_stop_seq: number | null;
   created_at: string;
   updated_at: string;
 }

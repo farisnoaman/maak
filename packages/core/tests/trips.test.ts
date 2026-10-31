@@ -178,6 +178,8 @@ describe('trip action contract', () => {
         trip,
         stops: [],
         reason: 'vehicle broke down',
+        odoKm: 184_400,
+        seq: 2,
       };
       return tripsCommandArgs(sample as never, 'u-1', audit);
     });
@@ -190,11 +192,32 @@ describe('trip action contract', () => {
       'cmd_submit_trip_verification',
       'cmd_decide_trip_verification',
       'cmd_cancel_trip',
+      'cmd_start_trip',
+      'cmd_mark_stop_reached',
+      'cmd_end_trip',
     ]);
     for (const entry of map) {
       expect(entry.args.p_actor).toBe('u-1');
       expect(entry.args.p_request_id).toBe('req-1');
     }
+  });
+
+  it('carries the odometer and the stop sequence as numbers, not strings', () => {
+    // `p_odo_km` is an integer and `p_seq` a smallint: a string would be cast by Postgres and would hide
+    // a client sending "12O" (letter O) until the driver is at the roadside.
+    const start = tripsCommandArgs(
+      { action: 'trip.start', tripId: TRIP, odoKm: 184_400 },
+      'u-1',
+      audit,
+    );
+    expect(start.args.p_odo_km).toBe(184_400);
+
+    const stop = tripsCommandArgs(
+      { action: 'trip.stopReached', tripId: TRIP, seq: 2 },
+      'u-1',
+      audit,
+    );
+    expect(stop.args.p_seq).toBe(2);
   });
 
   it('serialises jsonb arguments, because node-postgres would send an array literal', () => {

@@ -144,6 +144,9 @@ const TRIPS_CAPABILITY = {
   'trip.submitVerification': 'trip.update',
   'trip.decideVerification': 'trip.verify',
   'trip.cancel': 'trip.cancel',
+  'trip.start': 'trip.start',
+  'trip.stopReached': 'trip.start',
+  'trip.end': 'trip.start',
 };
 
 const BOOKINGS_CAPABILITY = {

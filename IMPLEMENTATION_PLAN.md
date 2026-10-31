@@ -382,6 +382,10 @@ not build the acceptance-criterion region and reference data that could never be
 
 **Goal:** the trip actually runs: verified-only start, odometer discipline, 10-minute location, meaningful progress.
 
+> **In progress.** Part one (start / stop-reached / end, odometer discipline, status machine) is
+> implemented and tested — see `docs/phase-6-report.md`. Pings, progress, realtime and the driver
+> console are the next slice.
+
 ### Deliverables
 - Driver console (mobile): today's trips, start (blocked unless verified, BR-05), ODO + photo, running screen,
   "reached stop", end with ODO, per-passenger check-in, cash-collection prompt (wired in Phase 9).
@@ -395,15 +399,17 @@ not build the acceptance-criterion region and reference data that could never be
 - Cron: auto `in_progress` at departure, auto-complete rules, stale-trip alerts.
 
 ### Tasks
-- [ ] Migrations: pings (partitioned), progress, route geometry, odometer readings, richer trip_events.
+- [~] Migrations: odometer readings + richer `trip_events` + `trip_status.in_progress` done (`00021`, `00022`);
+      pings (partitioned), progress and route geometry remain.
 - [ ] `app.recompute_trip_progress`: nearest upcoming stop (KNN), polyline or haversine distance, ETA from rolling speed.
 - [ ] Routing provider at publish (cached; OSRM/ORS) + graceful fallback.
-- [ ] Commands (edge fn + atomic `cmd_*` SQL): `start_trip`, `end_trip`, `record_trip_ping`, `mark_stop_reached`, `report_incident`,
+- [~] Commands (edge fn + atomic `cmd_*` SQL): `start_trip`, `end_trip`, `mark_stop_reached` done; `record_trip_ping`,
       `get_trip_progress`, `get_driver_trips_today`, `check_in_passenger`.
 - [ ] Realtime publication + private-channel policy + `useTripProgress()` hook in core.
 - [ ] Mobile: driver flow, `expo-task-manager` background location, queue, permission UX (iOS/Android), bilingual prompts.
 - [ ] Web passenger live page `/trips/[code]/live`, stale states, route map.
-- [ ] pgTAP: start blocked when unverified/early; monotonic ODO; out-of-order pings; visibility limited to accepted passengers.
+- [~] pgTAP: start blocked when unverified/early/wrong driver, monotonic ODO, stop monotonicity, end-of-trip
+      finalisation — 30 assertions in `0009_trip_execution.test.sql`; ping visibility awaits the pings table.
 
 ### Acceptance criteria
 - Start 3 h early → `TOO_EARLY`; unverified trip → `TRIP_NOT_VERIFIED`; wrong driver → `FORBIDDEN` unless audited override.

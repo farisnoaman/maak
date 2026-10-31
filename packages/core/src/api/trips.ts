@@ -201,6 +201,26 @@ export const cancelTripSchema = z.object({
   reason: z.string().trim().min(3).max(500),
 });
 
+/** Phase 6 — the trip leaves the station. The odometer is a reading, not a delta. */
+export const startTripSchema = z.object({
+  action: z.literal('trip.start'),
+  tripId: uuid,
+  odoKm: z.number().int().min(0).max(3_000_000),
+});
+
+/** "Reached stop n." Monotonic in the database; a repeat is answered, not refused. */
+export const markStopReachedSchema = z.object({
+  action: z.literal('trip.stopReached'),
+  tripId: uuid,
+  seq: z.number().int().min(1).max(20),
+});
+
+export const endTripSchema = z.object({
+  action: z.literal('trip.end'),
+  tripId: uuid,
+  odoKm: z.number().int().min(0).max(3_000_000),
+});
+
 export const tripsActionSchema = z.discriminatedUnion('action', [
   createTripSchema,
   updateTripSchema,
@@ -209,6 +229,9 @@ export const tripsActionSchema = z.discriminatedUnion('action', [
   submitTripVerificationSchema,
   decideTripVerificationSchema,
   cancelTripSchema,
+  startTripSchema,
+  markStopReachedSchema,
+  endTripSchema,
 ]);
 
 export type TripsAction = z.infer<typeof tripsActionSchema>;
@@ -223,6 +246,12 @@ export function tripsScope(input: TripsAction) {
   switch (input.action) {
     case 'trip.create':
       return input.orgId ? { isOrgMember: true } : { isOwner: true };
+    // `trip.start` is driver-scoped in the policy matrix: the driver claims they are the assigned one,
+    // and `cmd_start_trip` re-derives it from `driver_profiles.user_id` before touching the trip.
+    case 'trip.start':
+    case 'trip.stopReached':
+    case 'trip.end':
+      return { isAssignedDriver: true, isOwner: true, isOrgMember: true };
     default:
       return { isOwner: true, isOrgMember: true };
   }
@@ -240,6 +269,10 @@ export const tripsResultSchema = z
   .object({
     trip: z.record(z.string(), z.unknown()).optional(),
     warnings: z.array(tripWarningSchema).optional(),
+    odoKm: z.number().optional(),
+    distanceKm: z.number().optional(),
+    flagged: z.boolean().optional(),
+    alreadyReached: z.boolean().optional(),
     reverificationRequired: z.boolean().optional(),
     tripId: uuid.optional(),
     verificationStatus: z.string().optional(),
@@ -319,6 +352,21 @@ export function tripsCommandArgs(
       return {
         fn: 'cmd_cancel_trip',
         args: { p_actor: actorId, p_trip_id: action.tripId, p_reason: action.reason, ...audit },
+      };
+    case 'trip.start':
+      return {
+        fn: 'cmd_start_trip',
+        args: { p_actor: actorId, p_trip_id: action.tripId, p_odo_km: action.odoKm, ...audit },
+      };
+    case 'trip.stopReached':
+      return {
+        fn: 'cmd_mark_stop_reached',
+        args: { p_actor: actorId, p_trip_id: action.tripId, p_seq: action.seq, ...audit },
+      };
+    case 'trip.end':
+      return {
+        fn: 'cmd_end_trip',
+        args: { p_actor: actorId, p_trip_id: action.tripId, p_odo_km: action.odoKm, ...audit },
       };
   }
 }
