@@ -4,6 +4,7 @@ import { SiteHeader } from '@/components/SiteHeader';
 import { PreviewBanner } from '@/components/PreviewBanner';
 import { EmptyState } from '@/components/ui/Feedback';
 import { AcceptInvite } from '@/components/account/AcceptInvite';
+import { AccountNav } from '@/components/account/AccountNav';
 import { loadAccountContext } from '@/lib/account';
 
 export default async function InvitationsPage({
@@ -30,9 +31,14 @@ export default async function InvitationsPage({
   return (
     <>
       <SiteHeader locale={locale} pathname="/account/invitations" />
-      <main id="main" className="shell section">
-        <h1>{t('account.invitations')}</h1>
-        <p className="form-hint">{t('org.inviteCreated')}</p>
+      <main id="main" className="shell section account-page">
+        <header className="account-head">
+          <h1>{t('account.invitations')}</h1>
+          <p className="form-hint">{t('org.inviteCreated')}</p>
+        </header>
+
+        <AccountNav locale={locale} current="/account/invitations" />
+
         {!loaded.configured ? <PreviewBanner locale={locale} /> : null}
 
         {memberId && token ? (

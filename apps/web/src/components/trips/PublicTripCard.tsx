@@ -50,7 +50,7 @@ export function PublicTripCard({
           {trip.origin.name}
         </span>
         <span className="trip-card__arrow" aria-hidden="true">
-          ←
+          →
         </span>
         <span className={highlighted.has(trip.destination.code) ? 'trip-match' : undefined}>
           {trip.destination.name}

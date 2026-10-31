@@ -77,9 +77,12 @@ export default async function BookTripPage({
   return (
     <>
       <SiteHeader locale={locale} pathname="/trips" />
-      <main id="main" className="shell section">
+      <main id="main" className="shell section booking-page">
         <Link className="trip-back" href={`/${locale}/trips/${trip.code}`}>
-          ← {t('common.back')}
+          <span className="back-arrow" aria-hidden="true">
+            ←{' '}
+          </span>
+          {t('common.back')}
         </Link>
         <h1>{t('bookings.bookTitle', { code: trip.code })}</h1>
         <p className="trip-form__hint">{t('bookings.bookSubtitle')}</p>

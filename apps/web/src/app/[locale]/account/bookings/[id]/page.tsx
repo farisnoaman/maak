@@ -15,6 +15,7 @@ import { SiteHeader } from '@/components/SiteHeader';
 import { Badge } from '@/components/ui/Feedback';
 import { IdentityForm, PassengerBookingActions } from '@/components/bookings/BookingActions';
 import { TicketQr } from '@/components/bookings/TicketQr';
+import { AccountNav } from '@/components/account/AccountNav';
 import { loadAccountContext } from '@/lib/account';
 import { loadBooking, logDocumentAccess, passengerIdSignedUrl } from '@/lib/bookings';
 import { SITE_URL } from '@/lib/seo';
@@ -60,133 +61,153 @@ export default async function BookingDetailPage({
   return (
     <>
       <SiteHeader locale={locale} pathname="/account" />
-      <main id="main" className="shell section">
+      <main id="main" className="shell section account-page">
         <Link className="trip-back" href={`/${locale}/account/bookings`}>
-          ← {t('bookings.myTitle')}
-        </Link>
-        <h1>
-          {booking.trip
-            ? `${booking.trip.originName ?? ''} ← ${booking.trip.destinationName ?? ''}`
-            : booking.code}
-        </h1>
-        <div className="booking-detail__badges">
-          <Badge tone={bookingTone(booking.status)}>
-            {t(
-              BOOKING_STATUS_KEY[booking.status as keyof typeof BOOKING_STATUS_KEY] ??
-                'bookings.status.pending',
-            )}
-          </Badge>
-          <span className="trip-form__hint" dir="ltr">
-            {booking.code}
+          <span className="back-arrow" aria-hidden="true">
+            ←{' '}
           </span>
-        </div>
+          {t('bookings.myTitle')}
+        </Link>
 
-        {live ? (
-          <TicketQr
-            value={`${SITE_URL}/${locale}/account/bookings/${booking.id}`}
-            caption={t('bookings.ticketHint')}
-          />
-        ) : null}
+        <AccountNav locale={locale} current="/account/bookings" />
 
-        {booking.status === 'pending' && booking.holdExpiresAt ? (
-          <p className="ui-alert" role="status">
-            {t('bookings.holdUntil', {
-              time: new Date(booking.holdExpiresAt).toLocaleTimeString(
-                locale === 'ar' ? 'ar-YE' : 'en-GB',
-                {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                },
-              ),
-            })}
-          </p>
-        ) : null}
+        <div className="booking-view">
+          <header className="booking-view__head">
+            <h1>
+              {booking.trip ? (
+                <>
+                  {booking.trip.originName ?? '—'}
+                  <span className="route-arrow" aria-hidden="true">
+                    {' → '}
+                  </span>
+                  {booking.trip.destinationName ?? '—'}
+                </>
+              ) : (
+                <bdi dir="ltr">{booking.code}</bdi>
+              )}
+            </h1>
+            <div className="booking-detail__badges">
+              <Badge tone={bookingTone(booking.status)}>
+                {t(
+                  BOOKING_STATUS_KEY[booking.status as keyof typeof BOOKING_STATUS_KEY] ??
+                    'bookings.status.pending',
+                )}
+              </Badge>
+              <span className="trip-form__hint" dir="ltr">
+                {booking.code}
+              </span>
+            </div>
+          </header>
 
-        {booking.rejectReason ? (
-          <p className="ui-alert ui-alert--error">
-            {t('bookings.rejectedReason')}: {booking.rejectReason}
-          </p>
-        ) : null}
-        {booking.cancelReason ? (
-          <p className="trip-form__hint">
-            {t('bookings.cancelReason')}: {booking.cancelReason}
-          </p>
-        ) : null}
-        {booking.refundYer > 0 ? (
-          <p className="ui-alert" role="status">
-            {t('bookings.refundDue', { amount: formatMinor(booking.refundYer, 'YER', { locale }) })}
-          </p>
-        ) : null}
-
-        <dl className="trip-summary">
-          <div className="trip-summary__row">
-            <dt>{t('bookings.departure')}</dt>
-            <dd>{when ? `${when.date} · ${when.time}` : '—'}</dd>
-          </div>
-          <div className="trip-summary__row">
-            <dt>{t('bookings.seats')}</dt>
-            <dd>{booking.seats}</dd>
-          </div>
-          <div className="trip-summary__row">
-            <dt>{t('bookings.passenger')}</dt>
-            <dd>
-              {booking.contactName} · <bdi dir="ltr">{booking.contactPhone}</bdi>
-            </dd>
-          </div>
-          <div className="trip-summary__row trip-summary__row--total">
-            <dt>{t('bookings.total')}</dt>
-            <dd>{formatMinor(booking.totalYer, 'YER', { locale })}</dd>
-          </div>
-          <div className="trip-summary__row">
-            <dt>{t('bookings.paymentStatus')}</dt>
-            <dd>{t(`bookings.payment.${booking.paymentStatus}` as TranslationKey)}</dd>
-          </div>
-        </dl>
-
-        {live ? (
-          <PassengerBookingActions
-            locale={locale}
-            bookingId={booking.id}
-            cancellable={isPassengerCancellable(booking.status)}
-          />
-        ) : null}
-
-        {live ? (
-          <>
-            <h2>{t('bookings.identityTitle')}</h2>
-            <p className="form-hint">{t('bookings.identityHint')}</p>
-            <IdentityForm
-              locale={locale}
-              booking={{ id: booking.id, document: booking.document }}
+          {live ? (
+            <TicketQr
+              value={`${SITE_URL}/${locale}/account/bookings/${booking.id}`}
+              caption={t('bookings.ticketHint')}
             />
-            {booking.document?.photoPath ? (
-              <p>
-                <a href={photoUrl ?? '#'} target="_blank" rel="noreferrer">
-                  {t('bookings.viewIdPhoto')}
-                </a>
-              </p>
-            ) : null}
-          </>
-        ) : null}
+          ) : null}
 
-        {booking.trip ? (
-          <p>
-            <Link href={`/${locale}/trips/${booking.trip.code}`}>{t('bookings.viewTrip')}</Link>
-          </p>
-        ) : null}
+          {booking.status === 'pending' && booking.holdExpiresAt ? (
+            <p className="ui-alert" role="status">
+              {t('bookings.holdUntil', {
+                time: new Date(booking.holdExpiresAt).toLocaleTimeString(
+                  locale === 'ar' ? 'ar-YE' : 'en-GB',
+                  {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  },
+                ),
+              })}
+            </p>
+          ) : null}
 
-        {/* A cancelled or finished booking is a dead end unless it leads somewhere: the trip it was
+          {booking.rejectReason ? (
+            <p className="ui-alert ui-alert--error">
+              {t('bookings.rejectedReason')}: {booking.rejectReason}
+            </p>
+          ) : null}
+          {booking.cancelReason ? (
+            <p className="trip-form__hint">
+              {t('bookings.cancelReason')}: {booking.cancelReason}
+            </p>
+          ) : null}
+          {booking.refundYer > 0 ? (
+            <p className="ui-alert" role="status">
+              {t('bookings.refundDue', {
+                amount: formatMinor(booking.refundYer, 'YER', { locale }),
+              })}
+            </p>
+          ) : null}
+
+          <dl className="trip-summary">
+            <div className="trip-summary__row">
+              <dt>{t('bookings.departure')}</dt>
+              <dd>{when ? `${when.date} · ${when.time}` : '—'}</dd>
+            </div>
+            <div className="trip-summary__row">
+              <dt>{t('bookings.seats')}</dt>
+              <dd>{booking.seats}</dd>
+            </div>
+            <div className="trip-summary__row">
+              <dt>{t('bookings.passenger')}</dt>
+              <dd>
+                {booking.contactName} · <bdi dir="ltr">{booking.contactPhone}</bdi>
+              </dd>
+            </div>
+            <div className="trip-summary__row trip-summary__row--total">
+              <dt>{t('bookings.total')}</dt>
+              <dd>{formatMinor(booking.totalYer, 'YER', { locale })}</dd>
+            </div>
+            <div className="trip-summary__row">
+              <dt>{t('bookings.paymentStatus')}</dt>
+              <dd>{t(`bookings.payment.${booking.paymentStatus}` as TranslationKey)}</dd>
+            </div>
+          </dl>
+
+          {live ? (
+            <PassengerBookingActions
+              locale={locale}
+              bookingId={booking.id}
+              cancellable={isPassengerCancellable(booking.status)}
+            />
+          ) : null}
+
+          {live ? (
+            <>
+              <h2>{t('bookings.identityTitle')}</h2>
+              <p className="form-hint">{t('bookings.identityHint')}</p>
+              <IdentityForm
+                locale={locale}
+                booking={{ id: booking.id, document: booking.document }}
+              />
+              {booking.document?.photoPath ? (
+                <p>
+                  <a href={photoUrl ?? '#'} target="_blank" rel="noreferrer">
+                    {t('bookings.viewIdPhoto')}
+                  </a>
+                </p>
+              ) : null}
+            </>
+          ) : null}
+
+          {booking.trip ? (
+            <p>
+              <Link href={`/${locale}/trips/${booking.trip.code}`}>{t('bookings.viewTrip')}</Link>
+            </p>
+          ) : null}
+
+          {/* A cancelled or finished booking is a dead end unless it leads somewhere: the trip it was
             for is still on sale, and the passenger has already typed this journey once. */}
-        {!live && booking.trip && new Date(booking.trip.departureAt) > new Date() ? (
-          <p>
-            <Link
-              className="ui-btn ui-btn--primary ui-btn--md"
-              href={`/${locale}/trips/${booking.trip.code}/book`}
-            >
-              {t('bookings.rebook')}
-            </Link>
-          </p>
-        ) : null}
+          {!live && booking.trip && new Date(booking.trip.departureAt) > new Date() ? (
+            <p>
+              <Link
+                className="ui-btn ui-btn--primary ui-btn--md"
+                href={`/${locale}/trips/${booking.trip.code}/book`}
+              >
+                {t('bookings.rebook')}
+              </Link>
+            </p>
+          ) : null}
+        </div>
       </main>
     </>
   );

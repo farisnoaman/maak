@@ -84,7 +84,9 @@ export default async function PublicTripPage({
                 <p className="trip-form__hint">{trip.code}</p>
                 <h1>
                   {trip.origin.name}
-                  <span aria-hidden="true"> ← </span>
+                  <span className="route-arrow" aria-hidden="true">
+                    {' → '}
+                  </span>
                   {trip.destination.name}
                 </h1>
                 {when ? (

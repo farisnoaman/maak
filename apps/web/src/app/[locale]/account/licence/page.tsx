@@ -4,6 +4,7 @@ import { isLocale, translate, type Locale, type TranslationKey } from '@maak/cor
 import { SiteHeader } from '@/components/SiteHeader';
 import { PreviewBanner } from '@/components/PreviewBanner';
 import { EmptyState } from '@/components/ui/Feedback';
+import { AccountNav } from '@/components/account/AccountNav';
 import { AcceptInvitePanel, LicencePanel } from '@/components/driver/LicencePanel';
 import { loadAccountContext } from '@/lib/account';
 import { loadDriverState } from '@/lib/driver';
@@ -47,12 +48,19 @@ export default async function AccountLicencePage({
   return (
     <>
       <SiteHeader locale={locale} pathname="/account/licence" />
-      <main id="main" className="shell section">
+      <main id="main" className="shell section account-page">
         <a className="trip-back" href={`/${locale}/account`}>
-          ← {t('common.back')}
+          <span className="back-arrow" aria-hidden="true">
+            ←{' '}
+          </span>
+          {t('common.back')}
         </a>
-        <h1>{t('fleet.accountLicence')}</h1>
-        <p className="form-hint">{t('fleet.accountLicenceSubtitle')}</p>
+        <header className="account-head">
+          <h1>{t('fleet.accountLicence')}</h1>
+          <p className="form-hint">{t('fleet.accountLicenceSubtitle')}</p>
+        </header>
+
+        <AccountNav locale={locale} current="/account/licence" />
 
         {!loaded.configured ? <PreviewBanner locale={locale} /> : null}
 

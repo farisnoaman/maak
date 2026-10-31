@@ -183,6 +183,10 @@ export const ar = {
   'account.markAllRead': 'تعليم الكل كمقروء',
   'account.invitations': 'الدعوات',
   'account.editProfile': 'تعديل البيانات',
+  'account.overview': 'نظرة عامة',
+  'account.sections': 'أقسام الحساب',
+  'account.quickLinks': 'روابط سريعة',
+  'account.signOutHint': 'تسجيل الخروج ينهي الجلسة على هذا الجهاز.',
 
   'verification.title': 'التوثيق',
   'verification.subtitle': 'التوثيق يفتح إنشاء الرحلات وإضافة المركبات وإدارة السائقين.',
@@ -1477,6 +1481,10 @@ export const en: Record<TranslationKey, string> = {
   'account.markAllRead': 'Mark all as read',
   'account.invitations': 'Invitations',
   'account.editProfile': 'Edit details',
+  'account.overview': 'Overview',
+  'account.sections': 'Account sections',
+  'account.quickLinks': 'Quick links',
+  'account.signOutHint': 'Signing out ends the session on this device.',
 
   'verification.title': 'Verification',
   'verification.subtitle': 'Verification unlocks trip creation, vehicles and driver management.',

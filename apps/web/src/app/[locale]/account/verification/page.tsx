@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation';
 import { isLocale, translate, type Locale, type TranslationKey } from '@maak/core';
 import { SiteHeader } from '@/components/SiteHeader';
 import { PreviewBanner } from '@/components/PreviewBanner';
+import { AccountNav } from '@/components/account/AccountNav';
 import { VerificationWizard } from '@/components/account/VerificationWizard';
 import { loadAccountContext } from '@/lib/account';
 import { previewAccount } from '@/lib/preview-data';
@@ -27,9 +28,13 @@ export default async function VerificationPage({
   return (
     <>
       <SiteHeader locale={locale} pathname="/account/verification" />
-      <main id="main" className="shell section">
-        <h1>{t('verification.title')}</h1>
-        <p className="form-hint">{t('verification.subtitle')}</p>
+      <main id="main" className="shell section account-page">
+        <header className="account-head">
+          <h1>{t('verification.title')}</h1>
+          <p className="form-hint">{t('verification.subtitle')}</p>
+        </header>
+
+        <AccountNav locale={locale} current="/account/verification" />
 
         {preview ? <PreviewBanner locale={locale} /> : null}
 

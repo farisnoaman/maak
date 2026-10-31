@@ -12,6 +12,7 @@ import {
 import { SiteHeader } from '@/components/SiteHeader';
 import { PreviewBanner } from '@/components/PreviewBanner';
 import { Badge, EmptyState } from '@/components/ui/Feedback';
+import { AccountNav } from '@/components/account/AccountNav';
 import { loadAccountContext } from '@/lib/account';
 import { loadMyBookings } from '@/lib/bookings';
 import { departureLabel } from '@maak/core';
@@ -53,9 +54,17 @@ export default async function MyBookingsPage({ params }: { params: Promise<{ loc
       <li key={booking.id} className="booking-card">
         <div className="booking-card__head">
           <Link href={`/${locale}/account/bookings/${booking.id}`} className="booking-card__code">
-            {booking.trip
-              ? `${booking.trip.originName ?? ''} ← ${booking.trip.destinationName ?? ''}`
-              : booking.code}
+            {booking.trip ? (
+              <>
+                {booking.trip.originName ?? '—'}
+                <span className="route-arrow" aria-hidden="true">
+                  {' → '}
+                </span>
+                {booking.trip.destinationName ?? '—'}
+              </>
+            ) : (
+              <bdi dir="ltr">{booking.code}</bdi>
+            )}
           </Link>
           <Badge tone={bookingTone(booking.status)}>
             {t(
@@ -87,9 +96,14 @@ export default async function MyBookingsPage({ params }: { params: Promise<{ loc
   return (
     <>
       <SiteHeader locale={locale} pathname="/account" />
-      <main id="main" className="shell section">
-        <h1>{t('bookings.myTitle')}</h1>
-        <p className="form-hint">{t('bookings.mySubtitle')}</p>
+      <main id="main" className="shell section account-page">
+        <header className="account-head">
+          <h1>{t('bookings.myTitle')}</h1>
+          <p className="form-hint">{t('bookings.mySubtitle')}</p>
+        </header>
+
+        <AccountNav locale={locale} current="/account/bookings" />
+
         {!loaded.configured ? <PreviewBanner locale={locale} /> : null}
 
         {bookings.length === 0 ? (
@@ -104,18 +118,22 @@ export default async function MyBookingsPage({ params }: { params: Promise<{ loc
           />
         ) : (
           <>
-            <h2>{t('bookings.upcoming')}</h2>
-            {upcoming.length === 0 ? (
-              <p className="form-hint">{t('bookings.noUpcoming')}</p>
-            ) : (
-              <ul className="booking-list">{upcoming.map(card)}</ul>
-            )}
-            <h2>{t('bookings.past')}</h2>
-            {past.length === 0 ? (
-              <p className="form-hint">{t('bookings.noPast')}</p>
-            ) : (
-              <ul className="booking-list">{past.map(card)}</ul>
-            )}
+            <section className="account-section" aria-labelledby="bookings-upcoming-title">
+              <h2 id="bookings-upcoming-title">{t('bookings.upcoming')}</h2>
+              {upcoming.length === 0 ? (
+                <p className="form-hint">{t('bookings.noUpcoming')}</p>
+              ) : (
+                <ul className="booking-list">{upcoming.map(card)}</ul>
+              )}
+            </section>
+            <section className="account-section" aria-labelledby="bookings-past-title">
+              <h2 id="bookings-past-title">{t('bookings.past')}</h2>
+              {past.length === 0 ? (
+                <p className="form-hint">{t('bookings.noPast')}</p>
+              ) : (
+                <ul className="booking-list">{past.map(card)}</ul>
+              )}
+            </section>
           </>
         )}
       </main>

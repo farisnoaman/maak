@@ -12,6 +12,7 @@ import {
 import { SiteHeader } from '@/components/SiteHeader';
 import { PreviewBanner } from '@/components/PreviewBanner';
 import { EmptyState } from '@/components/ui/Feedback';
+import { FilterDisclosure } from '@/components/trips/FilterDisclosure';
 import { PublicTripCard } from '@/components/trips/PublicTripCard';
 import { loadPublicTrips } from '@/lib/trips';
 import { tripsMetadata } from '@/lib/seo';
@@ -29,8 +30,10 @@ const GENDERS = ['any', 'women_only', 'men_only'] as const;
  *
  * Server-rendered from `search_public_trips`, with the filters in the URL — which is what makes a result
  * shareable, cacheable and usable before JavaScript loads. The filter panel is a plain GET form inside a
- * `<details>`: one collapsed row with a count on a phone, a sidebar on a desktop (`> summary` is hidden
- * at ≥900px in CSS).
+ * disclosure: one collapsed row with a count on a phone, a sidebar on a desktop. The opening of that
+ * disclosure is the one thing that cannot be CSS — a closed disclosure hides its own content and no
+ * rule can undo it — so `FilterDisclosure` sets the attribute and the stylesheet hides the summary only
+ * once it has (`data-enhanced`).
  */
 export default async function TripsPage({
   params,
@@ -102,7 +105,7 @@ export default async function TripsPage({
         </header>
 
         <div className="trips-layout">
-          <details className="trip-filters" open={activeCount > 0}>
+          <FilterDisclosure defaultOpen={activeCount > 0}>
             <summary>
               {t('trips.search.filter')}
               {activeCount > 0 ? <span className="trip-filters__count">{activeCount}</span> : null}
@@ -248,7 +251,7 @@ export default async function TripsPage({
                 </Link>
               </div>
             </form>
-          </details>
+          </FilterDisclosure>
 
           <section aria-live="polite" aria-atomic="true" className="trips-results">
             <p className="trips-count" role="status">

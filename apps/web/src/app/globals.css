@@ -568,6 +568,12 @@ a {
   cursor: not-allowed;
   transform: none;
 }
+/* The default size, written out. `--md` is what half the screens spell, and a modifier with no rule at
+   all is exactly how a size bug hides: it looks like it was chosen. */
+.ui-btn--md {
+  min-block-size: var(--tap-target);
+  padding-inline: var(--space-5);
+}
 .ui-btn--sm {
   min-block-size: 36px;
   padding-inline: var(--space-4);
@@ -1439,14 +1445,130 @@ a {
   display: grid;
   gap: var(--space-2);
   padding: var(--space-4);
-  border: 1px solid var(--line-200, #eaeaea);
-  border-radius: var(--radius-md);
-  background: #fff;
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
 }
 
 .account-org--active {
   border-color: var(--brand-500, #0d7a5f);
   box-shadow: 0 0 0 1px var(--brand-500, #0d7a5f);
+}
+
+/* ---------------------------------------------------------------------------
+ * The account area — one shell for five screens
+ *
+ * Not a console: no sidebar, no tables, no filters. This is a person checking their own details, usually
+ * on a phone, so the navigation is a row of pills that scrolls sideways instead of a menu that must be
+ * opened first, and every section below it is a card with a heading.
+ * ------------------------------------------------------------------------- */
+
+/* Five screens, one measure: a form or a card that runs the full 1120px of the shell is a page nobody
+   can read. */
+.account-page {
+  max-inline-size: 56rem;
+}
+
+.account-head h1 {
+  margin-block-end: var(--space-1);
+}
+
+.account-nav {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  margin-block: var(--space-4) var(--space-5);
+  padding-block-end: var(--space-2);
+  scrollbar-width: thin;
+}
+
+/* With room the whole set fits, so it wraps into rows rather than scrolling under a hidden edge. */
+@media (min-width: 720px) {
+  .account-nav {
+    flex-wrap: wrap;
+    overflow-x: visible;
+    padding-block-end: 0;
+  }
+}
+
+.account-nav__link {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  min-block-size: var(--tap-target);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-pill);
+  background: var(--surface-base);
+  color: var(--ink-700);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.account-nav__link:hover {
+  background: var(--surface-muted);
+}
+
+.account-nav__link[aria-current='page'] {
+  border-color: var(--brand-600);
+  background: var(--brand-600);
+  color: #fff;
+}
+
+.account-card {
+  padding: var(--space-4);
+}
+
+@media (min-width: 720px) {
+  .account-card {
+    padding: var(--space-6);
+  }
+}
+
+.account-name {
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.account-section {
+  margin-block-start: var(--space-6);
+}
+
+.account-section > h2 {
+  margin-block-end: var(--space-3);
+  font-size: 1.1rem;
+}
+
+/* The doorways out of the account: tiles, because they are all the same size and all lead somewhere. */
+.account-links {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-2);
+}
+
+@media (min-width: 560px) {
+  .account-links {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  }
+}
+
+.account-links .ui-btn {
+  min-block-size: var(--tap-target);
+  justify-content: center;
+}
+
+/* Signing out is not one of the actions of the page, so it sits below them, behind a rule, with its own
+   line of explanation. */
+.account-signout {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+  margin-block-start: var(--space-8);
+  padding-block-start: var(--space-4);
+  border-block-start: 1px solid var(--surface-sunken);
 }
 
 /* --- geography (Phase 2) --------------------------------------------------- */
@@ -1724,6 +1846,38 @@ input[type='file']::file-selector-button {
 .fleet-hint {
   color: var(--ink-500);
   font-size: 0.85rem;
+}
+
+/* Two class names the licence screen has used since Phase 3 without either ever existing in this file —
+   which is why `/account/licence` rendered as an unbordered stack of fields. A panel is a card, and the
+   form inside it is one column until there is room for two. */
+.fleet-panel {
+  display: grid;
+  gap: var(--space-3);
+  margin-block-start: var(--space-5);
+  padding: var(--space-4);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+}
+
+@media (min-width: 720px) {
+  .fleet-panel {
+    padding: var(--space-6);
+  }
+}
+
+.fleet-form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-3);
+}
+
+@media (min-width: 560px) {
+  .fleet-form-grid {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
 .fleet-note {
@@ -2086,7 +2240,18 @@ input[type='file']::file-selector-button {
   font-weight: 800;
 }
 
-.trip-card__arrow {
+/* One glyph for "and then, over there". The arrow has to point along the reading direction, which in
+   Arabic is the mirror image of English, so it is flipped by the same `--icon-flip` token the chevrons
+   in `DirectionalIcon` use — no second glyph and no second stylesheet. */
+.trip-card__arrow,
+.route-arrow,
+.back-arrow {
+  display: inline-block;
+  transform: scaleX(var(--icon-flip, 1));
+}
+
+.trip-card__arrow,
+.route-arrow {
   color: var(--ink-400);
 }
 
@@ -2220,17 +2385,27 @@ input[type='file']::file-selector-button {
 
 .trip-timeline li {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: var(--space-3);
-  align-items: baseline;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-1) var(--space-3);
+  align-items: center;
 }
 
+/* The marker carries the stop's sequence number. It used to be a 0.7rem dot with the digit inside it,
+   which drew the number over the circle instead of in the middle of it; a pin the size of the number is
+   the only version of that idea that reads. */
 .trip-timeline__marker {
-  inline-size: 0.7rem;
-  block-size: 0.7rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 1.5rem;
+  block-size: 1.5rem;
   border-radius: 50%;
-  background: var(--brand-500);
-  margin-block-start: 0.35rem;
+  background: var(--brand-600);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
 }
 
 .trip-timeline__name {
@@ -2238,9 +2413,28 @@ input[type='file']::file-selector-button {
 }
 
 .trip-timeline__meta {
+  grid-column: 2;
   font-size: 0.8rem;
   color: var(--ink-500);
   font-variant-numeric: tabular-nums;
+}
+
+@media (min-width: 560px) {
+  /* With room, the arrival and the fare sit on the stop's own line; on a phone they drop beneath the
+     name instead of squeezing it into two letters. */
+  .trip-timeline li {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: baseline;
+  }
+
+  .trip-timeline__marker {
+    align-self: start;
+  }
+
+  .trip-timeline__meta {
+    grid-column: auto;
+    text-align: end;
+  }
 }
 
 /* ---------- the marketplace filters ---------- */
@@ -2261,14 +2455,45 @@ input[type='file']::file-selector-button {
   min-block-size: var(--tap-target);
   font-weight: 800;
   cursor: pointer;
+  /* `display: flex` removes the built-in triangle, and `list-style` alone does not put it back in every
+     engine, so the disclosure draws its own chevron below. Without one the row reads as a heading and
+     nothing says the panel opens. */
+  list-style: none;
+}
+
+.trip-filters > summary::-webkit-details-marker {
+  display: none;
+}
+
+.trip-filters > summary::after {
+  content: '⌄';
+  margin-inline-start: auto;
+  color: var(--ink-500);
+  font-weight: 800;
+  line-height: 1;
+  transition: transform 120ms ease;
+}
+
+.trip-filters[open] > summary::after {
+  transform: rotate(180deg);
 }
 
 @media (min-width: 900px) {
-  /* From a laptop up the filters are always visible: a disclosure that is open by default is a click
-     nobody needs, and `<details open>` on a wide screen would leave the marker lying. */
-  .trip-filters > summary {
+  /* From a laptop up the filters are a sidebar, not a disclosure. That only works once the panel is
+     *actually open*: a closed `<details>` hides its own content and no stylesheet can bring it back, so
+     the client component that opens it also marks it `data-enhanced`. Until that attribute is there —
+     no JavaScript, or a hydration that never ran — the summary stays visible and the panel can always
+     be opened by hand. */
+  .trip-filters[data-enhanced='true'] > summary {
     display: none;
   }
+}
+
+/* Every group zeroes its own margins (a `<fieldset>` needs that), so the form supplies the rhythm between
+   them — without this the nine controls stack flush against each other. */
+.trip-filters > form {
+  display: grid;
+  gap: var(--space-3);
 }
 
 .trip-filters__group {
@@ -2279,10 +2504,17 @@ input[type='file']::file-selector-button {
   border: 0;
 }
 
+.trip-filters__group > label:not(.trip-filters__option) {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--ink-600);
+}
+
 .trip-filters__group legend {
   font-size: 0.78rem;
   font-weight: 700;
   color: var(--ink-600);
+  padding: 0;
 }
 
 .trip-filters__options {
@@ -2315,7 +2547,32 @@ input[type='file']::file-selector-button {
   font-weight: 700;
 }
 
-/* The clear-filters link and the sort switch keep a thumb-sized target even as plain links. */
+/* The facet count, and the number of filters in force. One class for both because they answer the same
+   question — "how many" — and an unstyled number after a label reads as part of the label. */
+.trip-filters__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: 1.5rem;
+  min-block-size: 1.25rem;
+  padding-inline: var(--space-1);
+  border-radius: var(--radius-pill);
+  background: var(--surface-sunken);
+  color: var(--ink-700);
+  font-size: 0.72rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+/* Inside the summary the count is the badge that says "you have filters on", so it is the brand colour
+   rather than a neutral chip. */
+.trip-filters > summary .trip-filters__count {
+  background: var(--brand-600);
+  color: #fff;
+}
+
+/* The clear-filters link and the filter button: two full-width targets on a phone, a row from 560px. */
 .trip-filters__actions {
   display: flex;
   flex-wrap: wrap;
@@ -2323,12 +2580,14 @@ input[type='file']::file-selector-button {
   gap: var(--space-3);
 }
 
-.trip-filters__actions .btn {
+.trip-filters__actions .btn,
+.trip-filters__actions .ui-btn {
   flex: 1 1 auto;
 }
 
 @media (min-width: 560px) {
-  .trip-filters__actions .btn {
+  .trip-filters__actions .btn,
+  .trip-filters__actions .ui-btn {
     flex: 0 0 auto;
   }
 }
@@ -2338,23 +2597,36 @@ input[type='file']::file-selector-button {
 .trip-cta {
   display: grid;
   gap: var(--space-2);
-  padding: var(--space-3) 0;
+  /* On a phone this is a bar pinned to the bottom of the screen. A full-bleed bar inside a padded shell
+     leaves the page scrolling past its gutters, so it is a floating card instead — same tap target, no
+     seam. From 720px it is one row of buttons in the article, and none of this applies. */
+  padding: var(--space-3);
   position: sticky;
-  inset-block-end: 0;
+  inset-block-end: var(--space-2);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-lg);
   background: var(--surface-base);
-  border-block-start: 1px solid var(--surface-sunken);
+  box-shadow: var(--shadow-lg);
 }
 
 @media (min-width: 720px) {
   .trip-cta {
     position: static;
-    border: 0;
     padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
   }
 }
 
 .trip-cta .btn {
   inline-size: 100%;
+}
+
+/* The bar owns the gap between its buttons; the shared action row would add a second one. */
+.trip-cta .trip-form__actions {
+  margin-block-start: 0;
 }
 
 .trip-summary {
@@ -2485,6 +2757,38 @@ input[type='file']::file-selector-button {
 .trip-detail__head h2 {
   margin-block: var(--space-1);
   font-size: 1.2rem;
+}
+
+.trip-detail__head h1 {
+  /* The route is the page title, so it sets the scale; the code above it stays a hint. */
+  font-size: clamp(1.3rem, 3.2vw, 1.7rem);
+}
+
+/* One column of blocks, deliberately *not* a grid: `position: sticky` on the book bar needs the article
+   to be its containing block, and a grid item is confined to its own row — a grid here silently unpins
+   the bar. The rhythm comes from the sibling rule instead. */
+.trip-detail {
+  max-inline-size: 48rem;
+}
+
+.trip-detail > * + * {
+  margin-block-start: var(--space-5);
+}
+
+.trip-detail h2 {
+  font-size: 1.05rem;
+  margin-block: 0 var(--space-2);
+}
+
+.trip-detail section > * + * {
+  margin-block-start: var(--space-2);
+}
+
+@media (max-width: 719.98px) {
+  /* Clearance for the sticky book bar, which floats over the article's last line on a phone. */
+  .trip-detail {
+    padding-block-end: var(--space-6);
+  }
 }
 
 .trip-cancel {
@@ -2837,21 +3141,42 @@ input[type='file']::file-selector-button {
 .booking-form,
 .booking-identity {
   display: grid;
-  gap: 1rem;
+  gap: var(--space-4);
   max-inline-size: 34rem;
 }
 
+/* The form *is* the page, so it gets the surface: one card to fill in instead of fields floating on the
+   page background. The confirmations and the list of bookings belong to the same family. */
+.booking-form {
+  margin-block-start: var(--space-5);
+  padding: var(--space-4);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+}
+
+@media (min-width: 720px) {
+  .booking-form {
+    padding: var(--space-6);
+  }
+}
+
 .booking-total {
-  margin-block-start: 0.25rem;
+  margin-block-start: var(--space-1);
 }
 
 .booking-done {
   display: grid;
-  gap: 0.75rem;
+  gap: var(--space-3);
   max-inline-size: 34rem;
-  padding: 1rem;
-  border: 1px solid color-mix(in srgb, currentColor 16%, transparent);
-  border-radius: var(--radius-md, 0.75rem);
+  margin-block-start: var(--space-5);
+  padding: var(--space-5);
+  border: 1px solid var(--surface-sunken);
+  border-block-start: 4px solid var(--state-success);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
 }
 
 .booking-done__code {
@@ -2859,11 +3184,13 @@ input[type='file']::file-selector-button {
   font-weight: 700;
   letter-spacing: 0.08em;
   margin: 0;
+  /* A reference number, not a word: stays readable in either direction. */
+  font-variant-numeric: tabular-nums;
 }
 
 .booking-list {
   display: grid;
-  gap: 0.75rem;
+  gap: var(--space-3);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -2871,34 +3198,52 @@ input[type='file']::file-selector-button {
 
 .booking-card {
   display: grid;
-  gap: 0.35rem;
-  padding: 0.85rem;
-  border: 1px solid color-mix(in srgb, currentColor 16%, transparent);
-  border-radius: var(--radius-md, 0.75rem);
+  gap: var(--space-2);
+  min-inline-size: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
 }
 
 .booking-card__head {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: var(--space-2);
   align-items: center;
   justify-content: space-between;
 }
 
+/* The route is the link into the booking: a thumb-sized target, and no underline until it is hovered. */
 .booking-card__code {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: var(--tap-target);
+  min-inline-size: 0;
   font-weight: 700;
+  color: var(--ink-900);
+  text-decoration: none;
+}
+
+a.booking-card__code:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
 }
 
 .booking-card__meta {
   margin: 0;
+  color: var(--ink-600);
   font-size: 0.9rem;
-  color: color-mix(in srgb, currentColor 72%, transparent);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
 }
 
 .booking-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: var(--space-2);
   align-items: flex-start;
 }
 
@@ -2919,9 +3264,32 @@ input[type='file']::file-selector-button {
 .booking-detail__badges {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: var(--space-2);
   align-items: center;
-  margin-block-end: 0.75rem;
+  margin-block-end: var(--space-3);
+}
+
+/* The booking page's own heading: the back link already separates it from the header. */
+.booking-page h1 {
+  margin-block: 0 var(--space-2);
+}
+
+/* The passenger's booking is a stack of blocks, not a grid — same reason as `.trip-detail`: a grid item
+   is confined to its own row, and anything sticky inside it would stop sticking. */
+.booking-view > * {
+  margin-block: 0;
+}
+
+.booking-view > * + * {
+  margin-block-start: var(--space-4);
+}
+
+.booking-view__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
 }
 
 .booking-manifest {
