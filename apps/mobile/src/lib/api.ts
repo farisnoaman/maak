@@ -110,3 +110,37 @@ export async function uploadDriverLicence(
     return { ok: false, error: error instanceof Error ? error.message : 'upload failed' };
   }
 }
+
+/**
+ * A photograph of the odometer, a fuel receipt, or a workshop invoice, filed under
+ * `<vehicleId>/<purpose>/…` in the private vehicle bucket.
+ *
+ * The folder layout *is* the permission (00029): `vehicle-documents_write_own` lets the assigned driver
+ * write into `odometer/`, `receipt/` and `maintenance/`, and lets the owner write anywhere under the
+ * vehicle. React Native cannot hand a `File` to storage, so the image is fetched as an ArrayBuffer, the
+ * same route the verification documents take.
+ */
+export async function uploadVehicleOpsFile(
+  uri: string,
+  vehicleId: string,
+  purpose: 'odometer' | 'receipt' | 'maintenance',
+): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
+  const supabase = getMobileClient();
+  if (!supabase) return { ok: false, error: 'not-configured' };
+
+  const extension = uri.split('.').pop()?.toLowerCase() ?? 'jpg';
+  const path = `${vehicleId}/${purpose}/${Date.now()}.${extension}`;
+
+  try {
+    const response = await fetch(uri);
+    const buffer = await response.arrayBuffer();
+    const { error } = await supabase.storage.from('vehicle-documents').upload(path, buffer, {
+      contentType: extension === 'png' ? 'image/png' : 'image/jpeg',
+      upsert: false,
+    });
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, path };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : 'upload failed' };
+  }
+}

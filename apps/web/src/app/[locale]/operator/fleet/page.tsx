@@ -5,7 +5,7 @@ import { PreviewBanner } from '@/components/PreviewBanner';
 import { ConsoleShell } from '@/components/ConsoleShell';
 import { FleetRollup } from '@/components/fleet/FleetRollup';
 import { activeOrganization, loadAccountContext } from '@/lib/account';
-import { loadFleetSettings, loadFleetSummary } from '@/lib/fleet-ops';
+import { loadFleetSettings, loadFleetSummary, loadReportAccess } from '@/lib/fleet-ops';
 
 /**
  * `/operator/fleet` — the rollup, and the thresholds behind it.
@@ -39,6 +39,7 @@ export default async function OperatorFleetPage({
 
   const summary = await loadFleetSummary(loaded, org?.id ?? null);
   const settings = await loadFleetSettings(org?.id ?? null, loaded.user?.id ?? null);
+  const reportAccess = await loadReportAccess(loaded, org?.id ?? null);
 
   // Thresholds belong to the context: an individual owner sets their own, a company its own row.
   const canManage =
@@ -103,6 +104,7 @@ export default async function OperatorFleetPage({
           settings={settings}
           canManage={canManage}
           basePath={`/${locale}/operator`}
+          reportAllowed={reportAccess.allowed}
         />
       </ConsoleShell>
     </>

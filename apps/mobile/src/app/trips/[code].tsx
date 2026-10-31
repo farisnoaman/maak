@@ -91,6 +91,16 @@ export default function TripDetailScreen() {
       </Text>
       {!configured ? <Text style={styles.hint}>{t('verification.notConfigured')}</Text> : null}
 
+      {/* Phase 8: the person on that bus is the one at the pump. The code carries through so the fill can
+          be named against this trip; the id lookup happens server-side. */}
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => router.push(`/driver/fuel?trip=${trip.code}`)}
+        style={styles.card}
+      >
+        <Text style={styles.primaryText}>{t('fleetOps.logFuel')}</Text>
+      </Pressable>
+
       <View style={styles.card}>
         <Row label={t('trips.vehicle')} value={trip.vehicleLabel ?? '—'} />
         <Row

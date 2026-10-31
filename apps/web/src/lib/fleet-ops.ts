@@ -10,7 +10,7 @@
  * working screen instead of an empty one — the same convention as `loadFleet`.
  */
 
-import type { FleetExportRow } from '@maak/core';
+import type { FleetCostRow, FleetExportRow } from '@maak/core';
 
 import { getServerClient } from './supabase/server';
 import type { AccountContext } from './account';
@@ -72,7 +72,9 @@ export interface VehicleHealth {
     readonly dueCount: number;
     readonly overdueCount: number;
     readonly schedules: readonly MaintenanceScheduleRow[];
-    readonly recentRecords: readonly MaintenanceRecordRow[];
+    readonly recentRecords: readonly (MaintenanceRecordRow & {
+      readonly attachmentPath: string | null;
+    })[];
     readonly computedAt: string | null;
   };
   readonly fuel: {
@@ -87,17 +89,48 @@ export interface VehicleHealth {
       readonly stationName: string | null;
     } | null;
     readonly recentLPer100Km: number | null;
+    readonly recentKmPerLitre: number | null;
     readonly lifetimeLPer100Km: number | null;
+    readonly lifetimeKmPerLitre: number | null;
     readonly lifetimeCostYer: number;
     readonly lifetimeDistanceKm: number;
     readonly costPerKmYer: number | null;
     readonly segments: readonly FuelSegmentRow[];
+    readonly byTrip: readonly TripFuelRow[];
+    readonly monthly: readonly MonthFuelRow[];
   };
   readonly expenses: {
     readonly monthTotalYer: number;
     readonly byCategory: Readonly<Record<string, number>>;
   };
+  readonly reports: ReportAccess;
   readonly thresholds: FleetThresholds;
+}
+
+export interface TripFuelRow {
+  readonly tripId: string;
+  readonly code: string;
+  readonly departureAt: string;
+  readonly litres: number;
+  readonly costYer: number;
+  readonly distanceKm: number | null;
+  readonly lPer100Km: number | null;
+}
+
+export interface MonthFuelRow {
+  readonly monthStart: string;
+  readonly fills: number;
+  readonly litres: number;
+  readonly costYer: number;
+  readonly distanceKm: number | null;
+  readonly lPer100Km: number | null;
+}
+
+/** Whether this owner's plan includes the printable report. The CSV is always theirs. */
+export interface ReportAccess {
+  readonly plan: string;
+  readonly allowed: boolean;
+  readonly csv: boolean;
 }
 
 export interface FleetThresholds {
@@ -121,8 +154,10 @@ export interface FleetSummaryRow {
   readonly nextDueKm: number | null;
   readonly nextDueOn: string | null;
   readonly recentLPer100Km: number | null;
+  readonly recentKmPerLitre: number | null;
   readonly monthFuelYer: number;
   readonly monthMaintenanceYer: number;
+  readonly reportsAllowed: boolean;
 }
 
 export interface FleetSummary {
@@ -192,8 +227,10 @@ function previewSummary(): FleetSummary {
         nextDueKm: 125_000,
         nextDueOn: null,
         recentLPer100Km: 8.44,
+        recentKmPerLitre: 11.84,
         monthFuelYer: 38_000,
         monthMaintenanceYer: 4_500,
+        reportsAllowed: true,
       },
       {
         id: 'preview-vehicle-2',
@@ -209,8 +246,10 @@ function previewSummary(): FleetSummary {
         nextDueKm: 90_000,
         nextDueOn: null,
         recentLPer100Km: 11.2,
+        recentKmPerLitre: 8.93,
         monthFuelYer: 21_500,
         monthMaintenanceYer: 0,
+        reportsAllowed: true,
       },
     ],
     totals: {
@@ -243,8 +282,10 @@ function parseSummary(payload: unknown, configured: boolean): FleetSummary {
       nextDueKm: num(row.nextDueKm),
       nextDueOn: str(row.nextDueOn),
       recentLPer100Km: num(row.recentLPer100Km),
+      recentKmPerLitre: num(row.recentKmPerLitre),
       monthFuelYer: int(row.monthFuelYer),
       monthMaintenanceYer: int(row.monthMaintenanceYer),
+      reportsAllowed: row.reportsAllowed === true,
     };
   });
 
@@ -286,6 +327,9 @@ function parseHealth(payload: unknown): VehicleHealth {
   const fuel = (body.fuel ?? {}) as Record<string, unknown>;
   const expenses = (body.expenses ?? {}) as Record<string, unknown>;
   const thresholds = (body.thresholds ?? {}) as Record<string, unknown>;
+  const reports = (body.reports ?? {}) as Record<string, unknown>;
+  const monthly = Array.isArray(fuel.monthly) ? fuel.monthly : [];
+  const byTrip = Array.isArray(fuel.byTrip) ? fuel.byTrip : [];
 
   const schedules = Array.isArray(maintenance.schedules) ? maintenance.schedules : [];
   const records = Array.isArray(maintenance.recentRecords) ? maintenance.recentRecords : [];
@@ -339,6 +383,7 @@ function parseHealth(payload: unknown): VehicleHealth {
           costYer: int(row.costYer),
           vendor: str(row.vendor),
           note: str(row.note),
+          attachmentPath: str(row.attachmentPath),
         };
       }),
     },
@@ -356,7 +401,9 @@ function parseHealth(payload: unknown): VehicleHealth {
           }
         : null,
       recentLPer100Km: num(fuel.recentLPer100Km),
+      recentKmPerLitre: num(fuel.recentKmPerLitre),
       lifetimeLPer100Km: num(fuel.lifetimeLPer100Km),
+      lifetimeKmPerLitre: num(fuel.lifetimeKmPerLitre),
       lifetimeCostYer: int(fuel.lifetimeCostYer),
       lifetimeDistanceKm: int(fuel.lifetimeDistanceKm),
       costPerKmYer: num(fuel.costPerKmYer),
@@ -373,12 +420,40 @@ function parseHealth(payload: unknown): VehicleHealth {
           filledAt: String(row.filledAt ?? ''),
         };
       }),
+      monthly: monthly.map((raw) => {
+        const row = raw as Record<string, unknown>;
+        return {
+          monthStart: String(row.monthStart ?? ''),
+          fills: int(row.fills),
+          litres: num(row.litres) ?? 0,
+          costYer: int(row.costYer),
+          distanceKm: num(row.distanceKm),
+          lPer100Km: num(row.lPer100Km),
+        };
+      }),
+      byTrip: byTrip.map((raw) => {
+        const row = raw as Record<string, unknown>;
+        return {
+          tripId: String(row.tripId ?? ''),
+          code: String(row.code ?? ''),
+          departureAt: String(row.departureAt ?? ''),
+          litres: num(row.litres) ?? 0,
+          costYer: int(row.costYer),
+          distanceKm: num(row.distanceKm),
+          lPer100Km: num(row.lPer100Km),
+        };
+      }),
     },
     expenses: {
       monthTotalYer: int(expenses.monthTotalYer),
       byCategory: Object.fromEntries(
         Object.entries(byCategory).map(([key, value]) => [key, int(value)]),
       ),
+    },
+    reports: {
+      plan: String(reports.plan ?? 'basic'),
+      allowed: reports.allowed === true,
+      csv: reports.csv !== false,
     },
     thresholds: {
       remindKm: int(thresholds.remindKm, 500),
@@ -448,5 +523,138 @@ export function toExportRows(rows: readonly FleetSummaryRow[]): readonly FleetEx
     recentLPer100Km: row.recentLPer100Km,
     monthFuelYer: row.monthFuelYer,
     monthMaintenanceYer: row.monthMaintenanceYer,
+  }));
+}
+
+/**
+ * Whether the printable report is included, for the context in scope.
+ *
+ * The route that renders the A4 sheet re-asks the same question with the same wrapper before it prints a
+ * row, so hiding the link is a courtesy and not the gate.
+ */
+export async function loadReportAccess(
+  context: AccountContext,
+  orgId: string | null,
+): Promise<ReportAccess> {
+  if (!context.configured) return { plan: 'pro', allowed: true, csv: true };
+  if (!context.user) return { plan: 'basic', allowed: false, csv: true };
+
+  const client = await getServerClient();
+  if (!client) return { plan: 'basic', allowed: false, csv: true };
+
+  const { data } = await client.rpc('fleet_report_access', { p_org_id: orgId });
+  const row = (data ?? {}) as Record<string, unknown>;
+  return {
+    plan: String(row.plan ?? 'basic'),
+    allowed: row.allowed === true,
+    csv: row.csv !== false,
+  };
+}
+
+export interface FleetCostLedger {
+  readonly range: { readonly from: string; readonly to: string };
+  readonly totals: {
+    readonly fuelYer: number;
+    readonly maintenanceYer: number;
+    readonly rows: number;
+  };
+  readonly rows: readonly FleetCostRow[];
+}
+
+const COST_KIND: Record<string, 'fuel' | 'maintenance'> = {
+  fuel: 'fuel',
+  maintenance: 'maintenance',
+};
+
+/**
+ * The date-ranged ledger behind the CSV.
+ *
+ * A ledger that fails to load returns an empty one rather than throwing: an export that 500s in the hands
+ * of an auditor is worse than a CSV with headers and no rows, and the totals say `0`, not `unknown`.
+ */
+export async function loadFleetCostDetail(
+  context: AccountContext,
+  orgId: string | null,
+  from: string | null,
+  to: string | null,
+): Promise<FleetCostLedger> {
+  const empty: FleetCostLedger = {
+    range: { from: from ?? '', to: to ?? '' },
+    totals: { fuelYer: 0, maintenanceYer: 0, rows: 0 },
+    rows: [],
+  };
+  if (!context.configured) return empty;
+
+  const client = await getServerClient();
+  if (!client || !context.user) return empty;
+
+  const { data, error } = await client.rpc('fleet_cost_detail', {
+    p_actor: context.user.id,
+    p_org_id: orgId,
+    p_from: from,
+    p_to: to,
+  });
+  if (error || !data) return empty;
+
+  const payload = data as Record<string, unknown>;
+  const range = (payload.range ?? {}) as Record<string, unknown>;
+  const totals = (payload.totals ?? {}) as Record<string, unknown>;
+  const rows = Array.isArray(payload.rows) ? payload.rows : [];
+
+  return {
+    range: {
+      from: String(range.from ?? from ?? ''),
+      to: String(range.to ?? to ?? ''),
+    },
+    totals: {
+      fuelYer: Number(totals.fuelYer ?? 0),
+      maintenanceYer: Number(totals.maintenanceYer ?? 0),
+      rows: Number(totals.rows ?? 0),
+    },
+    rows: rows.map((item) => {
+      const row = item as Record<string, unknown>;
+      const kind = COST_KIND[String(row.kind)];
+      return {
+        kind: kind ?? 'fuel',
+        occurredOn: String(row.occurredOn ?? ''),
+        plateNumber: String(row.plateNumber ?? ''),
+        detail: String(row.detail ?? ''),
+        litres: row.litres == null ? null : Number(row.litres),
+        odometerKm: row.odometerKm == null ? null : Number(row.odometerKm),
+        amountYer: Number(row.amountYer ?? 0),
+      } satisfies FleetCostRow;
+    }),
+  };
+}
+
+export interface StationOption {
+  readonly id: string;
+  readonly nameAr: string;
+  readonly nameEn: string | null;
+}
+
+/**
+ * The stations the directory knows, for linking a fill.
+ *
+ * Deliberately small (150 rows, ordered by name): a station picker is a convenience, and a search field
+ * over 50 000 places belongs on the places screen, not inside a fuel form. Empty in a database whose
+ * reference has no stations yet, which is the honest state — the link is optional.
+ */
+export async function loadStations(): Promise<readonly StationOption[]> {
+  const client = await getServerClient();
+  if (!client) return [];
+
+  const { data } = await client
+    .from('places')
+    .select('id, name_ar, name_en')
+    .in('kind', ['station', 'market', 'other'])
+    .eq('is_active', true)
+    .order('name_ar')
+    .limit(150);
+
+  return ((data ?? []) as Record<string, unknown>[]).map((row) => ({
+    id: String(row.id),
+    nameAr: String(row.name_ar ?? ''),
+    nameEn: str(row.name_en),
   }));
 }

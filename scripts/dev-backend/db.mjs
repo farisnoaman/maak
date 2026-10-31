@@ -395,6 +395,29 @@ async function seedDemoOperations(client, log = () => {}) {
 
   log('  seeding demo fuel and maintenance…');
 
+  // Two real stations in the directory, because the picker is only worth demonstrating with something in
+  // it: a fuel form whose "station from the directory" list offers a market is a control that looks broken.
+  // They are `kind = 'station'` and public, so they belong to the geo directory rather than to the seed's
+  // private gathering point.
+  await client.query(`
+    insert into public.places (kind, name_ar, name_en, lat, lng, is_public, created_by,
+                               verification_status)
+    select v.kind, v.ar, v.en, v.lat, v.lng, true, '11111111-1111-4111-8111-111111111111',
+           'verified'
+    from (values
+      ('station', 'محطة الروضة — عدن', 'Al Rawda Station — Aden', 12.7855, 45.0184),
+      ('station', 'محطة النور — الزنجبار', 'Al Noor Station — Zinjibar', 13.1289, 45.3807)
+    ) as v(kind, ar, en, lat, lng)
+    where not exists (select 1 from public.places p where p.name_ar = v.ar)
+  `);
+
+  const stationId = async (name) => {
+    const found = await client.query('select id from public.places where name_ar = $1 limit 1', [
+      name,
+    ]);
+    return found.rows[0]?.id ?? null;
+  };
+
   const fill = async (odometerKm, litres, daysAgo, station) => {
     await client.query('select public.cmd_log_fuel($1::uuid, $2::uuid, $3::jsonb, $4, null)', [
       owner,
@@ -406,6 +429,9 @@ async function seedDemoOperations(client, log = () => {}) {
         isFullTank: true,
         filledAt: new Date(Date.now() - daysAgo * 86_400_000).toISOString(),
         stationName: station,
+        // Linked as well as named, so the demo shows the directory doing its job rather than a text field
+        // that happens to be filled in.
+        stationPlaceId: await stationId(station),
       }),
       `dev-seed-fuel-${odometerKm}`,
     ]);

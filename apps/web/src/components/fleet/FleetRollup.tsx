@@ -18,6 +18,15 @@ import { Field } from '@/components/ui/Field';
 import { getApiClient } from '@/lib/api';
 import type { FleetSummary, FleetThresholds, MaintenanceState } from '@/lib/fleet-ops';
 
+/** `YYYY-MM-DD` in Aden, matching how the server reads a day. */
+function today(): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Aden' }).format(new Date());
+}
+
+function firstOfMonth(): string {
+  return `${today().slice(0, 8)}01`;
+}
+
 const TONE: Record<MaintenanceState, BadgeTone> = {
   ok: 'success',
   due_soon: 'warning',
@@ -40,6 +49,7 @@ export function FleetRollup({
   settings,
   canManage,
   basePath,
+  reportAllowed,
 }: {
   readonly locale: Locale;
   readonly configured: boolean;
@@ -48,12 +58,15 @@ export function FleetRollup({
   readonly settings: FleetThresholds;
   readonly canManage: boolean;
   readonly basePath: string;
+  readonly reportAllowed: boolean;
 }) {
   const t = (key: TranslationKey, vars?: Record<string, string | number>) =>
     translate(locale, key, vars);
   const money = (amount: number) => formatMinor(amount, 'YER', { locale });
   const router = useRouter();
 
+  const [rangeFrom, setRangeFrom] = useState(firstOfMonth());
+  const [rangeTo, setRangeTo] = useState(today());
   const [remindKm, setRemindKm] = useState(String(settings.remindKm));
   const [remindDays, setRemindDays] = useState(String(settings.remindDays));
   const [anomaly, setAnomaly] = useState(String(settings.fuelAnomalyPercent));
@@ -63,6 +76,7 @@ export function FleetRollup({
   const [message, setMessage] = useState<string | null>(null);
 
   const exportHref = `/api/fleet/export?locale=${locale}${orgId ? `&org=${orgId}` : ''}`;
+  const reportHref = `/${locale}/operator/fleet/report${orgId ? `?org=${orgId}` : ''}`;
 
   async function saveSettings() {
     const client = getApiClient();
@@ -111,6 +125,13 @@ export function FleetRollup({
           <a className="ui-btn ui-btn--subtle ui-btn--sm" href={exportHref}>
             {t('fleetOps.exportFleet')}
           </a>
+          {/* The CSV is everybody's; the A4 report is Pro/Business. When it is not included the link is
+              replaced by the sentence that says so — a disabled button explains nothing. */}
+          {reportAllowed ? (
+            <a className="ui-btn ui-btn--subtle ui-btn--sm" href={reportHref}>
+              {t('fleetOps.report')}
+            </a>
+          ) : null}
         </div>
 
         <dl className="fleet-stats">
@@ -179,6 +200,13 @@ export function FleetRollup({
                           : t('fleetOps.per100', {
                               value: formatNumber(row.recentLPer100Km, { locale }),
                             })}
+                        {row.recentKmPerLitre == null ? null : (
+                          <span className="fleet-model">
+                            {t('fleetOps.kmPerLitre', {
+                              value: formatNumber(row.recentKmPerLitre, { locale }),
+                            })}
+                          </span>
+                        )}
                       </td>
                       <td>
                         {row.nextDueKm != null
@@ -208,6 +236,35 @@ export function FleetRollup({
             </table>
           </div>
         )}
+      </section>
+
+      <section className="fleet-section" aria-labelledby="fleet-costs-heading">
+        <h2 id="fleet-costs-heading">{t('fleetOps.exportRange')}</h2>
+        <p className="fleet-hint">{t('fleetOps.exportRangeHint')}</p>
+        {/* A plain GET form: the export is a URL, and a URL an auditor can paste into an email is worth
+            more than a client-side download that only works while the tab is open. */}
+        <form className="fleet-range" method="get" action="/api/fleet/export">
+          <input type="hidden" name="kind" value="detail" />
+          <input type="hidden" name="locale" value={locale} />
+          {orgId ? <input type="hidden" name="org" value={orgId} /> : null}
+          <Field
+            label={t('fleetOps.from')}
+            type="date"
+            value={rangeFrom}
+            onChange={(event) => setRangeFrom(event.target.value)}
+            name="from"
+          />
+          <Field
+            label={t('fleetOps.to')}
+            type="date"
+            value={rangeTo}
+            onChange={(event) => setRangeTo(event.target.value)}
+            name="to"
+          />
+          <Button type="submit" variant="subtle">
+            {t('fleetOps.exportFleet')}
+          </Button>
+        </form>
       </section>
 
       {canManage ? (

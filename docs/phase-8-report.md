@@ -160,6 +160,9 @@ lint ✓ · format ✓ · a11y ✓ **66 routes, 9 discovered detail pages** · r
 
 ## 6. What is not done (honest list)
 
+> Superseded in part by §7: the gaps below were the ones I named when the phase shipped, and six of them
+> are now closed. What remains open is at the end of that section.
+
 - **No PDF export.** The plan says "CSV/PDF export (plan-gated later)"; CSV ships. A PDF needs a font strategy
   for Arabic (the Phase 6 `pdfkit` attempt failed on woff-only packages) and print-to-PDF already covers the
   one document that must leave the app — the manifest.
@@ -175,4 +178,45 @@ lint ✓ · format ✓ · a11y ✓ **66 routes, 9 discovered detail pages** · r
 - **Per-trip fuel attribution is modelled but not surfaced.** `fuel_logs.trip_id` is validated against the
   vehicle and stored; no screen groups consumption by route yet.
 - **Export gating by plan** is deferred with the rest of Phase 10's quotas — the CSV is available to any
-  owner today.
+  owner today. *Closed in §7: the printable report is Pro/Business, the CSV stays free.*
+
+---
+
+## 7. Phase 8.1 — the gaps this report named, closed
+
+The report above was honest about what the phase did not do; this section is the pass that closed six of
+those items and the evidence for each. It is a separate migration pair on purpose: `00028` adds one enum
+value, `00029` uses it. A single file cannot add an enum value and reference it in the same transaction.
+
+### What changed
+
+| Gap (from §6) | What it is now | Evidence |
+| --- | --- | --- |
+| Per-trip fuel attribution "modelled but not surfaced" | `cmd_log_fuel` resolves a trip by **id or by the printed code** (a phone has a code, not a uuid), refuses a code that is not a trip of *this* vehicle, and `app.trip_fuel()` groups fills per trip from the trip's own odometer readings. The health card renders **Consumption by trip**. | `0013` — *a fill may name its trip by the printed code, case-insensitively* and *a code that is not a trip of this vehicle is refused* (`P0002`) · live: `{"code":"NOT_FOUND","detail":"no trip with that code on this vehicle"}` at HTTP 404 |
+| No monthly trend | `app.monthly_fuel()` returns L/100km and cost per calendar month **including months with no fills**, so the chart has no hole where the van did not drive. Rendered as **Month by month**. | `0013` — *three months are returned, not just the ones with fills* and *an empty month is reported, with a zero* · live page row: `Oct 2026 · 3 fills · 119 L · 1,350 km · 8.81 L/100km · YER 59,500` |
+| Kilometres per litre missing | `get_vehicle_health.recentKmPerLitre` / `lifetimeKmPerLitre`, `get_fleet_summary.recentKmPerLitre`, all derived from the *same* `app.fuel_segments` rows as L/100km — so the two views cannot disagree. | `0013` — *the newest segment reads 2.61 L/100km*, *and 38.33 km/L*, *the two figures multiply back to 100* · `packages/core/tests/fleet-ops.test.ts` (`kmPerLitre(450, 38)`) |
+| "Anomalies are shown, not notified" | A fill that beats its own 7-segment baseline by the configured percentage writes a `vehicle_fuel_anomaly` notification **once per vehicle per week**, updating the status row so the row exists even when no schedule does. | `0013` — *it rings the bell once*, *the moment it rang is remembered*, *a second bad fill in the same week does not ring it again* · live: first anomaly `anomaly:true`, second fill `anomalyNotified:false` |
+| "Photos are owner-only" / "no receipt photo on a mobile fill" | The storage policy now admits the **assigned driver** into `odometer/`, `receipt/` and `maintenance/` — a driver can photograph the meter they are looking at, and nothing else. The mobile quick log uploads the receipt *before* it calls the command, so a stored path always opens. | `0013` — *a driver may write into the odometer folder of a vehicle they are assigned*, *the owner may still write anywhere under their vehicle*, *the driver clause is scoped to the assignment, not to the bucket* · `apps/mobile/src/lib/api.ts::uploadVehicleOpsFile` |
+| "Export gating by plan is deferred" | `plan_limits.fleet_reports` (Basic 0, Pro 1, Business unlimited) + `app.plan_allows` + `app.report_access`; `public.fleet_report_access()` is the session-bound wrapper the route calls. `get_fleet_summary` carries `reportsAllowed` per vehicle. | `0013` — *Basic does not include the printable report* … *and a stranger reads nothing about somebody else's plan* · live as a Basic account: the locked page renders, **0** table rows |
+| "No PDF export" | An A4 print route at `/[locale]/operator/fleet/report` using the manifest's paper CSS and `@page` rules — the same trade-off Phase 7 made, because a print stylesheet embeds the Arabic face the browser already rendered. | live `/en/operator/fleet/report` HTTP 200 with **59,500** fuel and **18,000** maintenance, matching `/operator/fleet` digit for digit |
+| CSV covers only the current month | `kind=detail` on the existing export returns a **date-ranged ledger** (`public.fleet_cost_detail`), one row per fill and per service, with the range echoed back and a backwards range swapped rather than rejected. | `0013` — *the export sums to exactly what the fills and the services add up to* (`Σ fuel_logs.total_cost_yer + Σ maintenance_records.cost_yer`), *one row per fill and per service*, *a stranger cannot export another organization's costs* · live: Oct range sums **77,500** = 59,500 + 18,000 |
+| Stations were free text | A fill may name a `places` row of kind station; the form offers the directory and fills the name from it, and an unknown station is refused rather than silently stored. | `0013` — *a fill stores the station it was linked to* / *a station that is not in the directory is refused* · live: the picker lists `Al Rawda Station — Aden`, `Al Noor Station — Zinjibar`, and the seeded fills are **linked**, not just named |
+| Attachments were write-only | `get_vehicle_health.recentRecords[].attachmentPath` and a read link through `/api/data/storage/v1/object/authenticated/vehicle-documents/…`; "mark done" accepts a note and a file. | `0013` — *a service records the invoice it was paid against* and *the health card returns the path so the invoice can be opened* · the mark-done form uploads first and refuses to record a service whose invoice did not land |
+
+### Gates after 8.1
+
+`sql:check` ✓ **29 migrations, 13 suites** (`0013` = **41 assertions**; `0005`'s plan-metric count moved
+18 → 21 for the third plan column) · guards ✓ **29 migrations / 66 commands / 127 style files** ·
+typecheck ✓ (core, web, mobile) · `npm test` ✓ **451 / 22 files** · coverage ✓ 95.84 % statements,
+87.1 % branches (the two new `fleetCommandArgs` tests are what carry `src/api/fleet.ts` back over the line) ·
+lint ✓ · format ✓ · a11y ✓ **68 routes, 9 discovered detail pages** · responsive ✓ · 8 edge bundles rebuilt ·
+`db:types:check` ✓ 29 migrations.
+
+### Still not done (unchanged opinion)
+
+- **The anomaly bell has no per-user switch.** It is one weekly message per vehicle to the org owner and
+  managers; a preferences screen is Phase 9's job and inventing one here would be half a feature.
+- **`fleet_cost_detail` exports costs, not litres-and-kilometres reconciliation by trip.** The per-trip view
+  is a screen, not a spreadsheet; if an accountant asks for it, it is a second `kind`.
+- **The printed report has no logo per organization.** It prints the organization's name, which is what a
+  driver hands over; branding is a settings concern nobody has asked for yet.

@@ -301,6 +301,8 @@ export const logFuelSchema = z.object({
   isFullTank: z.boolean().default(true),
   filledAt: isoInstant,
   tripId: uuid.nullish(),
+  /** The printed code, for the phone: a driver has a code on the manifest, not a uuid. */
+  tripCode: z.string().trim().min(4).max(20).nullish(),
   stationName: z.string().trim().max(120).nullish(),
   stationPlaceId: uuid.nullish(),
   receiptPath: z.string().trim().max(300).nullish(),
@@ -713,6 +715,7 @@ function fuelPayload(action: z.infer<typeof logFuelSchema>): Record<string, unkn
     isFullTank: action.isFullTank,
     filledAt: action.filledAt ?? null,
     tripId: action.tripId ?? null,
+    tripCode: action.tripCode ?? null,
     stationName: action.stationName ?? null,
     stationPlaceId: action.stationPlaceId ?? null,
     receiptPath: action.receiptPath ?? null,

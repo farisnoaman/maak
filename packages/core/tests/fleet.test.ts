@@ -180,6 +180,109 @@ describe('fleet actions', () => {
     expect(fleetCommandSpec.path).toBe('fleet');
   });
 
+  it('carries a fill through to the command with every field the screen collected', () => {
+    const parsed = fleetActionSchema.parse({
+      action: 'fuel.log',
+      vehicleId: '11111111-1111-4111-8111-111111111111',
+      odometerKm: 125_300,
+      litres: 38,
+      pricePerLitreYer: 500,
+      isFullTank: true,
+      // The phone sends a code, the web form sends an id: both must survive the mapping, because only the
+      // database knows which trips a vehicle actually drove.
+      tripCode: 'AD-SA-9B01',
+      stationName: 'محطة الروضة — عدن',
+      stationPlaceId: '22222222-2222-4222-8222-222222222222',
+      receiptPath: '11111111-1111-4111-8111-111111111111/receipt/1.jpg',
+    });
+    const { fn, args } = fleetCommandArgs(parsed, 'u-owner', audit);
+    expect(fn).toBe('cmd_log_fuel');
+    expect(JSON.parse(String(args.p_log))).toEqual({
+      odometerKm: 125_300,
+      litres: 38,
+      pricePerLitreYer: 500,
+      isFullTank: true,
+      filledAt: null,
+      tripId: null,
+      tripCode: 'AD-SA-9B01',
+      stationName: 'محطة الروضة — عدن',
+      stationPlaceId: '22222222-2222-4222-8222-222222222222',
+      receiptPath: '11111111-1111-4111-8111-111111111111/receipt/1.jpg',
+      note: null,
+    });
+  });
+
+  it('keeps the invoice with the service it paid for', () => {
+    const parsed = fleetActionSchema.parse({
+      action: 'maintenance.done',
+      scheduleId: '33333333-3333-4333-8333-333333333333',
+      odometerKm: 125_300,
+      costYer: 18_000,
+      vendor: 'مؤسسة الإطارات الحديثة',
+      note: 'front tyres',
+      attachmentPath: '11111111-1111-4111-8111-111111111111/maintenance/1.jpg',
+    });
+    const { fn, args } = fleetCommandArgs(parsed, 'u-owner', audit);
+    expect(fn).toBe('cmd_mark_maintenance_done');
+    expect(JSON.parse(String(args.p_record))).toMatchObject({
+      costYer: 18_000,
+      note: 'front tyres',
+      attachmentPath: '11111111-1111-4111-8111-111111111111/maintenance/1.jpg',
+    });
+  });
+
+  it('maps the rest of the Phase 8 actions onto their own commands', () => {
+    const odometer = fleetActionSchema.parse({
+      action: 'odometer.record',
+      vehicleId: '11111111-1111-4111-8111-111111111111',
+      odometerKm: 125_300,
+      photoPath: '11111111-1111-4111-8111-111111111111/odometer/1.jpg',
+      overrideReason: 'meter replaced',
+    });
+    expect(fleetCommandArgs(odometer, 'u-owner', audit).fn).toBe('cmd_record_manual_odometer');
+    expect(
+      JSON.parse(String(fleetCommandArgs(odometer, 'u-owner', audit).args.p_reading)),
+    ).toMatchObject({ overrideReason: 'meter replaced' });
+
+    const work = fleetActionSchema.parse({
+      action: 'maintenance.log',
+      vehicleId: '11111111-1111-4111-8111-111111111111',
+      kind: 'oil_change',
+      performedOn: '2026-10-31',
+      costYer: 18_000,
+    });
+    expect(fleetCommandArgs(work, 'u-owner', audit).fn).toBe('cmd_log_maintenance');
+    expect(
+      JSON.parse(String(fleetCommandArgs(work, 'u-owner', audit).args.p_record)),
+    ).toMatchObject({ kind: 'oil_change', costYer: 18_000, scheduleId: null });
+
+    const schedule = fleetActionSchema.parse({
+      action: 'maintenance.schedule',
+      vehicleId: '11111111-1111-4111-8111-111111111111',
+      kind: 'oil_change',
+      intervalKm: 5_000,
+      lastDoneKm: 120_000,
+    });
+    expect(fleetCommandArgs(schedule, 'u-owner', audit).fn).toBe('cmd_upsert_maintenance_schedule');
+    expect(
+      JSON.parse(String(fleetCommandArgs(schedule, 'u-owner', audit).args.p_schedule)),
+    ).toMatchObject({ intervalKm: 5_000, lastDoneKm: 120_000 });
+
+    const settings = fleetActionSchema.parse({
+      action: 'fleet.settings',
+      remindKm: 800,
+      remindDays: 21,
+      blockOverdueAssignment: true,
+    });
+    const mapped = fleetCommandArgs(settings, 'u-owner', audit);
+    expect(mapped.fn).toBe('cmd_update_fleet_settings');
+    expect(JSON.parse(String(mapped.args.p_settings))).toMatchObject({
+      remindKm: 800,
+      blockOverdueAssignment: true,
+      fuelAnomalyPercent: 25,
+    });
+  });
+
   it('scopes an organization action to the membership, and a personal one to ownership', () => {
     const orgAction = fleetActionSchema.parse({
       action: 'vehicle.create',

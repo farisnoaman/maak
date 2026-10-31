@@ -509,6 +509,9 @@ binary, trips-only bulk, no native camera) is argued in `docs/phase-7-report.md`
 - [x] Web `/operator/vehicles/[id]/health`, `/operator/fleet`, CSV export.
 - [x] Mobile fuel/ODO quick action (`/driver/fuel`).
 - [x] Tests: consumption math, due-date math, timezone-safe date handling (Vitest + pgTAP — 52 pgTAP assertions)
+- [x] 8.1 — the gaps the first pass left: per-trip and monthly fuel analytics, km/L alongside L/100km, station
+      linking, receipt/odometer photos for the assigned driver, fuel-anomaly notifications, attachment read
+      links, the plan-gated A4 report, and a date-ranged cost ledger for the CSV (`0013`, 41 assertions)
 
 ### Acceptance criteria
 - Two full-tank logs 450 km / 38 L apart → dashboard shows 8.4 L/100km.
@@ -535,10 +538,19 @@ binary, trips-only bulk, no native camera) is argued in `docs/phase-7-report.md`
   somebody*; a view cannot. It is recomputed by triggers on schedules, records, readings and the vehicle's
   odometer, so no screen ever shows a state the trip gate would disagree with.
 - **Anomaly detection reports, it never refuses.** A fill 30% above the average returns `anomaly: true`; the
-  receipt is still recorded. Refusing it would hide the symptom and lose the cost.
+  receipt is still recorded. Refusing it would hide the symptom and lose the cost. Since 8.1 it also rings a
+  bell — **once per vehicle per week**, because a symptom that nobody hears is not a report.
+- **The PDF export is a print route, not a binary.** `/[locale]/operator/fleet/report` prints on A4 through
+  the manifest's paper CSS, so the Arabic face is the one the browser already rendered. A real PDF needs a
+  font pipeline that failed in Phase 6; print-to-PDF is the same artefact with none of that risk.
+- **The printable report is plan-gated at the database, not in the UI.** `plan_limits.fleet_reports` +
+  `app.plan_allows` decide; hiding the link is a courtesy, and the route asks the same function before it
+  renders a row. The CSV stays free for every plan — it is data export, not a deliverable document.
 
 **Changelog:** Phase 8 adds six tables, four enums, six commands, two reads, a nightly reminder job and the
-expenses outbox Phase 10 will post from. Fleet odometers now advance from fuel, maintenance, manual readings
+expenses outbox Phase 10 will post from. Phase 8.1 (`00028`–`00029`) adds one metric to `plan_limits`, the
+`vehicle_fuel_anomaly` notification kind, per-trip and monthly fuel reads, driver-writable photo folders, the
+A4 report and `fleet_cost_detail` — 41 further pgTAP assertions. Fleet odometers now advance from fuel, maintenance, manual readings
 and trip ends through one guard; schedules carry generated due points; `/operator/fleet` renders a rollup
 whose totals are the same rows each vehicle card shows. 52 pgTAP assertions and 22 Vitest cases cover the
 acceptance numbers (8.44 L/100km, 120 000 → 125 000), the monotonic guard and its one audited override, the

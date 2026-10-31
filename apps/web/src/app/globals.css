@@ -3558,3 +3558,56 @@ input[type='file']::file-selector-button {
   display: grid;
   gap: var(--space-4);
 }
+
+/* The printable fleet report reuses the manifest's paper geometry and its print rules; these are the two
+   pieces that are report-specific. Paper is white in both themes for the same reason a manifest is. */
+.fleet-report {
+  display: block;
+}
+
+.fleet-report__totals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 32mm), 1fr));
+  gap: 2mm 4mm;
+  margin: 4mm 0;
+  padding: 2mm 0;
+  border-block: 1px solid #e2e2e2;
+}
+
+.fleet-report h2#report-title {
+  margin: 0;
+  font-size: 15pt;
+}
+
+.fleet-report__totals dt {
+  font-size: 7.5pt;
+  color: #555555;
+}
+
+.fleet-report__totals dd {
+  margin: 0;
+  font-size: 10pt;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+@media print {
+  .fleet-report {
+    inline-size: auto;
+    border: 0;
+    padding: 0;
+  }
+}
+
+/* The export form: two dates and a button, aligned on the baseline of the inputs rather than the page. */
+.fleet-range {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: end;
+}
+
+.fleet-range .ui-field {
+  flex: 1 1 10rem;
+  min-inline-size: 0;
+}

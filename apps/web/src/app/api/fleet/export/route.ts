@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server';
-import { fleetCsv, fleetFilename, isLocale } from '@maak/core';
+import { fleetCostCsv, fleetCsv, fleetFilename, isLocale } from '@maak/core';
 import { activeOrganization, loadAccountContext } from '@/lib/account';
-import { loadFleetSummary, toExportRows } from '@/lib/fleet-ops';
+import { loadFleetCostDetail, loadFleetSummary, toExportRows } from '@/lib/fleet-ops';
+
+/** `YYYY-MM-DD` or nothing. A date the browser half-sent is not a range, so it is ignored, not guessed. */
+function isoDay(value: string | null): string | null {
+  return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
+}
 
 /**
  * The fleet export.
@@ -23,6 +28,22 @@ export async function GET(request: Request) {
   const org = account.configured
     ? activeOrganization(account, url.searchParams.get('org') ?? undefined)
     : null;
+  // `kind=detail` is the ledger: one row per fill and per service, in a date window. The default stays the
+  // per-vehicle rollup, so the existing link and its bookmark keep working.
+  if (url.searchParams.get('kind') === 'detail') {
+    const from = isoDay(url.searchParams.get('from'));
+    const to = isoDay(url.searchParams.get('to'));
+    const ledger = await loadFleetCostDetail(account, org?.id ?? null, from, to);
+    const name = `maak-fleet-costs-${ledger.range.from || 'start'}_${ledger.range.to || 'today'}.csv`;
+    return new NextResponse(fleetCostCsv(ledger.rows, locale), {
+      headers: {
+        'content-type': 'text/csv; charset=utf-8',
+        'content-disposition': `attachment; filename="${name}"`,
+        'cache-control': 'no-store',
+      },
+    });
+  }
+
   const summary = await loadFleetSummary(account, org?.id ?? null);
 
   const stamp = new Date().toISOString().slice(0, 10);

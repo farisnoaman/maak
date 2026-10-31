@@ -16,7 +16,7 @@ import { Badge, type BadgeTone } from '@/components/ui/Feedback';
 import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
 import { getApiClient, uploadVehicleOpsFile } from '@/lib/api';
-import type { MaintenanceState, VehicleHealth } from '@/lib/fleet-ops';
+import type { MaintenanceState, StationOption, VehicleHealth } from '@/lib/fleet-ops';
 
 const TONE: Record<MaintenanceState, BadgeTone> = {
   ok: 'success',
@@ -39,12 +39,14 @@ export function HealthActions({
   vehicleId,
   health,
   canManage,
+  stations,
 }: {
   readonly locale: Locale;
   readonly configured: boolean;
   readonly vehicleId: string;
   readonly health: VehicleHealth;
   readonly canManage: boolean;
+  readonly stations: readonly StationOption[];
 }) {
   const t = (key: TranslationKey, vars?: Record<string, string | number>) =>
     translate(locale, key, vars);
@@ -60,6 +62,7 @@ export function HealthActions({
   const [price, setPrice] = useState('');
   const [fullTank, setFullTank] = useState(true);
   const [station, setStation] = useState('');
+  const [stationPlaceId, setStationPlaceId] = useState('');
 
   const [readingKm, setReadingKm] = useState('');
   const [readingNote, setReadingNote] = useState('');
@@ -75,6 +78,8 @@ export function HealthActions({
   const [doneKm, setDoneKm] = useState('');
   const [doneCost, setDoneCost] = useState('');
   const [doneVendor, setDoneVendor] = useState('');
+  const [doneFile, setDoneFile] = useState<File | null>(null);
+  const [doneNote, setDoneNote] = useState('');
 
   function fail(code: string) {
     setError(t(errorKey(code as never)));
@@ -104,6 +109,7 @@ export function HealthActions({
       pricePerLitreYer: Number(price),
       isFullTank: fullTank,
       stationName: station.trim() || null,
+      stationPlaceId: stationPlaceId || null,
     } as never);
     setBusy(null);
     if (!result.ok) {
@@ -116,6 +122,7 @@ export function HealthActions({
     setLitres('');
     setPrice('');
     setStation('');
+    setStationPlaceId('');
     router.refresh();
   }
 
@@ -193,12 +200,26 @@ export function HealthActions({
     setBusy(scheduleId);
     setError(null);
     setMessage(null);
+    // The invoice goes up first, for the same reason as the odometer photo: the command refuses a path
+    // that does not exist, and a half-recorded service is worse than none.
+    let attachmentPath: string | null = null;
+    if (doneFile) {
+      const uploaded = await uploadVehicleOpsFile(doneFile, vehicleId, 'maintenance');
+      if (!uploaded.ok) {
+        setBusy(null);
+        setError(t('fleetOps.photoUploadFailed'));
+        return;
+      }
+      attachmentPath = uploaded.path;
+    }
     const result = await api.call(fleetCommandSpec, {
       action: 'maintenance.done',
       scheduleId,
       odometerKm: doneKm ? Number(doneKm) : null,
       costYer: doneCost ? Number(doneCost) : 0,
       vendor: doneVendor.trim() || null,
+      note: doneNote.trim() || null,
+      attachmentPath,
     } as never);
     setBusy(null);
     if (!result.ok) {
@@ -210,6 +231,10 @@ export function HealthActions({
     setDoneKm('');
     setDoneCost('');
     setDoneVendor('');
+    setDoneNote('');
+    setDoneFile(null);
+    if (attachmentPath)
+      setMessage(`${t('fleetOps.doneSaved')} ${t('fleetOps.attachmentUploaded')}`);
     router.refresh();
   }
 
@@ -271,6 +296,29 @@ export function HealthActions({
             value={station}
             onChange={(event) => setStation(event.target.value)}
           />
+          {/* Linking is optional; a driver who cannot find the station types the name and moves on. When
+              they do pick one, the name is filled in from the directory so the two agree. */}
+          <label className="fleet-check">
+            <span>{t('fleetOps.stationLink')}</span>
+            <select
+              className="ui-input"
+              value={stationPlaceId}
+              onChange={(event) => {
+                const value = event.target.value;
+                setStationPlaceId(value);
+                const match = stations.find((option) => option.id === value);
+                if (match)
+                  setStation(locale === 'ar' ? match.nameAr : (match.nameEn ?? match.nameAr));
+              }}
+            >
+              <option value="">{t('fleetOps.stationNone')}</option>
+              {stations.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {locale === 'ar' ? option.nameAr : (option.nameEn ?? option.nameAr)}
+                </option>
+              ))}
+            </select>
+          </label>
           <label className="fleet-check">
             <input
               type="checkbox"
@@ -400,6 +448,19 @@ export function HealthActions({
                       value={doneVendor}
                       onChange={(event) => setDoneVendor(event.target.value)}
                     />
+                    <Field
+                      label={t('fleetOps.note')}
+                      value={doneNote}
+                      onChange={(event) => setDoneNote(event.target.value)}
+                    />
+                    <label className="fleet-check">
+                      <span>{t('fleetOps.attachment')}</span>
+                      <input
+                        type="file"
+                        accept="image/*,application/pdf"
+                        onChange={(event) => setDoneFile(event.target.files?.[0] ?? null)}
+                      />
+                    </label>
                     <Button
                       size="sm"
                       loading={busy === schedule.id}

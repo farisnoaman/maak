@@ -8,6 +8,8 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 import { getLocales } from 'expo-localization';
 import {
   errorKey,
@@ -18,7 +20,7 @@ import {
   type Locale,
   type TranslationKey,
 } from '@maak/core';
-import { getApiClient, isBackendConfigured } from '../../lib/api';
+import { getApiClient, isBackendConfigured, uploadVehicleOpsFile } from '../../lib/api';
 import { getMobileClient } from '../../lib/supabase';
 
 interface AssignedVehicle {
@@ -42,6 +44,8 @@ interface AssignedVehicle {
  * `@maak/core`, deliberately.
  */
 export default function DriverFuelScreen() {
+  // Arriving from a trip screen carries the trip code, so the fill is attributed to the run it fuelled.
+  const { trip } = useLocalSearchParams<{ trip?: string }>();
   const deviceLocale = getLocales()[0]?.languageTag ?? 'ar';
   const locale: Locale = isLocale(deviceLocale.split('-')[0] ?? '')
     ? (deviceLocale.split('-')[0] as Locale)
@@ -57,6 +61,8 @@ export default function DriverFuelScreen() {
   const [litres, setLitres] = useState('');
   const [price, setPrice] = useState('');
   const [fullTank, setFullTank] = useState(true);
+  const [station, setStation] = useState('');
+  const [receipt, setReceipt] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -99,6 +105,23 @@ export default function DriverFuelScreen() {
     void load();
   }, [load]);
 
+  /**
+   * The receipt, photographed where it is printed.
+   *
+   * `launchCameraAsync` only after the OS permission is granted, exactly like the verification screen —
+   * and the upload happens *before* the command, because `cmd_log_fuel` stores the object path it is given
+   * and a path that does not exist is a receipt nobody can open.
+   */
+  async function captureReceipt() {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      setError(t('errors.FORBIDDEN'));
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({ quality: 0.6, allowsEditing: false });
+    if (!result.canceled && result.assets[0]) setReceipt(result.assets[0].uri);
+  }
+
   async function submit() {
     if (!vehicle) return;
     const client = getApiClient();
@@ -112,6 +135,17 @@ export default function DriverFuelScreen() {
     setMessage(null);
     setAnomaly(false);
 
+    let receiptPath: string | null = null;
+    if (mode === 'fuel' && receipt) {
+      const uploaded = await uploadVehicleOpsFile(receipt, vehicle.id, 'receipt');
+      if (!uploaded.ok) {
+        setBusy(false);
+        setError(t('fleetOps.photoUploadFailed'));
+        return;
+      }
+      receiptPath = uploaded.path;
+    }
+
     // A fill needs litres and a price; a bare reading needs neither. Two actions, one screen.
     const result =
       mode === 'fuel'
@@ -122,6 +156,11 @@ export default function DriverFuelScreen() {
             litres: Number(litres),
             pricePerLitreYer: Number(price),
             isFullTank: fullTank,
+            stationName: station.trim() || null,
+            receiptPath,
+            // The command resolves the code against *this* vehicle, so a typo cannot attribute a fill to
+            // somebody else's run.
+            tripCode: trip ?? null,
           } as never)
         : await client.call(fleetCommandSpec, {
             action: 'odometer.record',
@@ -140,6 +179,8 @@ export default function DriverFuelScreen() {
     setMessage(mode === 'fuel' ? t('fleetOps.fuelSaved') : t('fleetOps.readingSaved'));
     setLitres('');
     setPrice('');
+    setStation('');
+    setReceipt(null);
     setVehicle({ ...vehicle, odometer_km: Number(odometer) });
   }
 
@@ -212,6 +253,25 @@ export default function DriverFuelScreen() {
             placeholder="0"
             placeholderTextColor="#999"
           />
+
+          <Text style={styles.label}>{t('fleetOps.station')}</Text>
+          <TextInput
+            style={[styles.input, align]}
+            value={station}
+            onChangeText={setStation}
+            placeholder={t('fleetOps.stationNone')}
+            placeholderTextColor="#999"
+          />
+
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => void captureReceipt()}
+            style={styles.secondary}
+          >
+            <Text style={styles.secondaryText}>
+              {receipt ? t('fleetOps.attachmentUploaded') : t('fleetOps.attachment')}
+            </Text>
+          </Pressable>
 
           <Pressable
             accessibilityRole="checkbox"
@@ -291,6 +351,15 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
   },
+  secondary: {
+    marginTop: 8,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    alignItems: 'center',
+  },
+  secondaryText: { color: '#12352b', fontSize: 14, fontWeight: '600' },
   buttonDisabled: { opacity: 0.5 },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   error: { color: '#a01b1b', fontSize: 14 },

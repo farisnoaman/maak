@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   costPerKm,
   daysBetween,
+  fleetCostCsv,
   fleetCsv,
   fleetFilename,
   isFuelAnomaly,
@@ -139,5 +140,50 @@ describe('the export file', () => {
 
   it('names the file without anything an OS dislikes', () => {
     expect(fleetFilename('2026-10-31')).toBe('fleet-2026-10-31.csv');
+  });
+});
+
+describe('the date-ranged cost ledger export', () => {
+  const rows = [
+    {
+      kind: 'fuel' as const,
+      occurredOn: '2026-10-04',
+      plateNumber: '5-9001',
+      detail: 'Total, Aden',
+      litres: 38,
+      odometerKm: 125_300,
+      amountYer: 19_000,
+    },
+    {
+      kind: 'maintenance' as const,
+      occurredOn: '2026-10-06',
+      plateNumber: '5-9001',
+      detail: 'Oil, filter',
+      litres: null,
+      odometerKm: null,
+      amountYer: 4_500,
+    },
+  ];
+
+  it('keeps one row per log, in the order the server sent them', () => {
+    const lines = fleetCostCsv(rows, 'en').split('\r\n');
+    expect(lines).toHaveLength(3);
+    expect(lines[1]).toContain('"2026-10-04"');
+    expect(lines[2]).toContain('"2026-10-06"');
+  });
+
+  it('translates the kind but leaves the money a number', () => {
+    expect(fleetCostCsv(rows, 'ar')).toContain('"وقود"');
+    expect(fleetCostCsv(rows, 'en')).toContain('"maintenance"');
+    expect(fleetCostCsv(rows, 'en')).toContain('"19000"');
+  });
+
+  it('quotes a comma inside a station name so the columns stay aligned', () => {
+    expect(fleetCostCsv(rows, 'en')).toContain('"Total, Aden"');
+  });
+
+  it('leaves litres empty for a service, which did not buy any', () => {
+    // date, kind, plate, detail, litres, odometer, amount — a service row has neither litres nor an ODO.
+    expect(fleetCostCsv(rows, 'en')).toContain('"Oil, filter","","","4500"');
   });
 });

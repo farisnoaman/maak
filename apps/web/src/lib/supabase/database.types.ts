@@ -1,5 +1,5 @@
-// migrations-sha256: 6c0f1b298fce7254a568626f9c0dbefaaf56e43a7626f05828bf9df946727243
-/* Generated from 27 migrations. Run `npm run db:types` after changing the schema. */
+// migrations-sha256: 8d7b3703859a15b7f2edc9e83ede6505e76b495c2813396c38048f7a11100242
+/* Generated from 29 migrations. Run `npm run db:types` after changing the schema. */
 
 /**
  * Schema types for RLS-filtered reads (Phase 0 subset).
@@ -584,6 +584,8 @@ export interface VehicleMaintenanceStatus {
   overdue_count: number;
   last_notified_state: MaintenanceState | null;
   last_notified_at: string | null;
+  /** Phase 8.1 — the weekly dedupe key for the fuel-anomaly notification. */
+  last_fuel_anomaly_at: string | null;
   computed_at: string;
 }
 
@@ -1214,6 +1216,19 @@ export interface Database {
       };
       fleet_summary: {
         Args: { p_org_id?: string | null };
+        Returns: Json;
+      };
+      fleet_report_access: {
+        Args: { p_org_id?: string | null };
+        Returns: Json;
+      };
+      fleet_cost_detail: {
+        Args: {
+          p_actor: string;
+          p_org_id?: string | null;
+          p_from?: string | null;
+          p_to?: string | null;
+        };
         Returns: Json;
       };
       cmd_log_fuel: {

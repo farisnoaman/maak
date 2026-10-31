@@ -15,7 +15,12 @@ import { ConsoleShell } from '@/components/ConsoleShell';
 import { Badge, EmptyState, type BadgeTone } from '@/components/ui/Feedback';
 import { HealthActions } from '@/components/fleet/HealthActions';
 import { activeOrganization, loadAccountContext } from '@/lib/account';
-import { loadVehicleHealth, type MaintenanceState } from '@/lib/fleet-ops';
+import {
+  loadStations,
+  loadVehicleHealth,
+  type MaintenanceState,
+  type VehicleHealth,
+} from '@/lib/fleet-ops';
 
 const TONE: Record<MaintenanceState, BadgeTone> = {
   ok: 'success',
@@ -60,9 +65,10 @@ export default async function VehicleHealthPage({
 
   const health = await loadVehicleHealth(id);
   if (loaded.configured && !health) notFound();
+  const stations = await loadStations();
 
   // A preview visitor gets a shape, not a 404: the preview environment exists to show the screen.
-  const preview = health ?? {
+  const preview: VehicleHealth = health ?? {
     vehicle: {
       id,
       ownerUserId: null,
@@ -89,13 +95,18 @@ export default async function VehicleHealthPage({
     fuel: {
       lastLog: null,
       recentLPer100Km: 8.44,
+      recentKmPerLitre: 11.84,
       lifetimeLPer100Km: 8.44,
+      lifetimeKmPerLitre: 11.84,
       lifetimeCostYer: 57_000,
       lifetimeDistanceKm: 675_000,
       costPerKmYer: 42.22,
       segments: [],
+      monthly: [],
+      byTrip: [],
     },
     expenses: { monthTotalYer: 42_500, byCategory: {} },
+    reports: { plan: 'pro', allowed: true, csv: true },
     thresholds: {
       remindKm: 500,
       remindDays: 14,
@@ -141,6 +152,18 @@ export default async function VehicleHealthPage({
           <p>
             <a href={`/${locale}/operator/fleet`}>← {t('fleetOps.backToFleet')}</a>
           </p>
+          {/* The CSV is everybody's; the A4 report is Pro/Business. The route re-checks with the same
+              function, so hiding this link is a courtesy, not the gate. */}
+          {preview.reports.allowed ? (
+            <a
+              className="ui-btn ui-btn--subtle ui-btn--sm"
+              href={`/${locale}/operator/fleet/report${org ? `?org=${org.id}` : ''}`}
+            >
+              {t('fleetOps.reportOpen')}
+            </a>
+          ) : (
+            <p className="fleet-hint">{t('fleetOps.reportLocked')}</p>
+          )}
         </div>
 
         <section className="fleet-section" aria-labelledby="health-heading">
@@ -161,6 +184,16 @@ export default async function VehicleHealthPage({
                   ? t('fleetOps.noData')
                   : t('fleetOps.per100', {
                       value: formatNumber(fuel.recentLPer100Km, { locale }),
+                    })}
+              </dd>
+            </div>
+            <div>
+              <dt>{t('fleetOps.kmPerLitreShort')}</dt>
+              <dd>
+                {fuel.recentKmPerLitre == null
+                  ? t('fleetOps.noData')
+                  : t('fleetOps.kmPerLitre', {
+                      value: formatNumber(fuel.recentKmPerLitre, { locale }),
                     })}
               </dd>
             </div>
@@ -203,7 +236,93 @@ export default async function VehicleHealthPage({
           vehicleId={vehicle.id}
           health={preview}
           canManage={canManage}
+          stations={stations}
         />
+
+        <section className="fleet-section" aria-labelledby="health-monthly-heading">
+          <h2 id="health-monthly-heading">{t('fleetOps.monthlyTrend')}</h2>
+          <p className="fleet-hint">{t('fleetOps.monthlyHint')}</p>
+          <div className="table-scroll">
+            <table className="fleet-grid">
+              <thead>
+                <tr>
+                  <th scope="col">{t('fleetOps.month')}</th>
+                  <th scope="col">{t('fleetOps.fills')}</th>
+                  <th scope="col">{t('fleetOps.litres')}</th>
+                  <th scope="col">{t('fleetOps.distance')}</th>
+                  <th scope="col">{t('fleetOps.consumption')}</th>
+                  <th scope="col">{t('fleetOps.cost')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {fuel.monthly.map((month) => (
+                  <tr key={month.monthStart}>
+                    <th scope="row">{formatDate(month.monthStart, { locale })}</th>
+                    <td>{formatNumber(month.fills, { locale })}</td>
+                    <td>{formatNumber(month.litres, { locale })}</td>
+                    <td>
+                      {month.distanceKm == null
+                        ? t('fleetOps.noData')
+                        : formatNumber(month.distanceKm, { locale })}
+                    </td>
+                    <td>
+                      {month.lPer100Km == null
+                        ? t('fleetOps.noData')
+                        : t('fleetOps.per100', {
+                            value: formatNumber(month.lPer100Km, { locale }),
+                          })}
+                    </td>
+                    <td>{money(month.costYer)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section className="fleet-section" aria-labelledby="health-trips-heading">
+          <h2 id="health-trips-heading">{t('fleetOps.byTrip')}</h2>
+          {fuel.byTrip.length === 0 ? (
+            <EmptyState title={t('fleetOps.noTrips')} />
+          ) : (
+            <div className="table-scroll">
+              <table className="fleet-grid">
+                <thead>
+                  <tr>
+                    <th scope="col">{t('ops.tripCode')}</th>
+                    <th scope="col">{t('ops.departure')}</th>
+                    <th scope="col">{t('fleetOps.distance')}</th>
+                    <th scope="col">{t('fleetOps.litres')}</th>
+                    <th scope="col">{t('fleetOps.consumption')}</th>
+                    <th scope="col">{t('fleetOps.tripCost')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {fuel.byTrip.map((trip) => (
+                    <tr key={trip.tripId}>
+                      <th scope="row">{trip.code}</th>
+                      <td>{formatDate(trip.departureAt, { locale })}</td>
+                      <td>
+                        {trip.distanceKm == null
+                          ? t('fleetOps.noData')
+                          : formatNumber(trip.distanceKm, { locale })}
+                      </td>
+                      <td>{formatNumber(trip.litres, { locale })}</td>
+                      <td>
+                        {trip.lPer100Km == null
+                          ? t('fleetOps.noData')
+                          : t('fleetOps.per100', {
+                              value: formatNumber(trip.lPer100Km, { locale }),
+                            })}
+                      </td>
+                      <td>{money(trip.costYer)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
 
         <section className="fleet-section" aria-labelledby="health-segments-heading">
           <h2 id="health-segments-heading">{t('fleetOps.segments')}</h2>
@@ -261,6 +380,7 @@ export default async function VehicleHealthPage({
                     <th scope="col">{t('fleet.odometerKm')}</th>
                     <th scope="col">{t('fleetOps.vendor')}</th>
                     <th scope="col">{t('fleetOps.cost')}</th>
+                    <th scope="col">{t('fleetOps.attachment')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -275,6 +395,17 @@ export default async function VehicleHealthPage({
                       </td>
                       <td>{record.vendor ?? t('fleetOps.noData')}</td>
                       <td>{money(record.costYer)}</td>
+                      <td>
+                        {record.attachmentPath ? (
+                          <a
+                            href={`/api/data/storage/v1/object/authenticated/vehicle-documents/${record.attachmentPath}`}
+                          >
+                            {t('fleetOps.viewAttachment')}
+                          </a>
+                        ) : (
+                          t('fleetOps.noData')
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

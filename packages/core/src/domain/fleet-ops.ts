@@ -118,6 +118,49 @@ function cell(value: string | number | null): string {
 }
 
 /**
+ * One row of the date-ranged cost ledger.
+ *
+ * Kind is the string the server emits; the CSV translates it so the spreadsheet says "fuel" in the
+ * language of whoever opened it.
+ */
+export interface FleetCostRow {
+  readonly kind: 'fuel' | 'maintenance';
+  readonly occurredOn: string;
+  readonly plateNumber: string;
+  readonly detail: string;
+  readonly litres: number | null;
+  readonly odometerKm: number | null;
+  readonly amountYer: number;
+}
+
+/** The ledger as CSV — same BOM/CRLF/quoted-cell concessions as `fleetCsv`. */
+export function fleetCostCsv(rows: readonly FleetCostRow[], locale: Locale): string {
+  const headers =
+    locale === 'ar'
+      ? ['التاريخ', 'النوع', 'اللوحة', 'التفصيل', 'اللترات', 'العداد (كم)', 'المبلغ (ر.ي)']
+      : ['Date', 'Kind', 'Plate', 'Detail', 'Litres', 'Odometer (km)', 'Amount (YER)'];
+
+  const kind =
+    locale === 'ar'
+      ? { fuel: 'وقود', maintenance: 'صيانة' }
+      : { fuel: 'fuel', maintenance: 'maintenance' };
+
+  const body = rows.map((row) =>
+    [
+      cell(row.occurredOn),
+      cell(kind[row.kind] ?? row.kind),
+      cell(row.plateNumber),
+      cell(row.detail),
+      cell(row.litres),
+      cell(row.odometerKm),
+      cell(row.amountYer),
+    ].join(','),
+  );
+
+  return ['\ufeff' + headers.map(cell).join(','), ...body].join('\r\n');
+}
+
+/**
  * The fleet rollup as CSV.
  *
  * Same three concessions as the manifest (`manifestCsv`): a UTF-8 BOM so Windows Excel does not open

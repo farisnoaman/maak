@@ -58,6 +58,20 @@ const ROUTES = [
   // Phase 3 surfaces
   { path: '/ar/operator/fleet', lang: 'ar', dir: 'rtl', account: 'owner' },
   { path: '/en/operator/fleet', lang: 'en', dir: 'ltr', account: 'owner' },
+  // Phase 8.1: the printable fleet report. Pro in the dev seed, so this exercises the sheet itself; the
+  // locked variant is covered by the plan test rather than by a second route.
+  {
+    path: '/ar/operator/fleet/report?org=aaaaaaaa-0000-4000-8000-000000000001',
+    lang: 'ar',
+    dir: 'rtl',
+    account: 'owner',
+  },
+  {
+    path: '/en/operator/fleet/report?org=aaaaaaaa-0000-4000-8000-000000000001',
+    lang: 'en',
+    dir: 'ltr',
+    account: 'owner',
+  },
   { path: '/ar/operator/vehicles', lang: 'ar', dir: 'rtl', account: 'owner' },
   { path: '/en/operator/vehicles', lang: 'en', dir: 'ltr', account: 'owner' },
   { path: '/ar/operator/vehicles/new', lang: 'ar', dir: 'rtl', account: 'owner' },

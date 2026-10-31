@@ -665,7 +665,9 @@ select is(
 
 select is(
   (select count(*)::int from public.plan_limits),
-  18,
+  21,
+  -- 3 plans × 7 metrics: the six Phase 3 metrics plus Phase 8's `fleet_reports`, which is a feature flag
+  -- (1 or NULL = allowed, 0 = not on this plan) rather than an accumulating counter.
   'plan limits cover every plan × metric pair'
 );
 
