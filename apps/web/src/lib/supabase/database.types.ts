@@ -41,23 +41,24 @@ export type VehicleStatus = 'draft' | 'active' | 'suspended' | 'retired';
 export type DriverStatus = 'invited' | 'active' | 'suspended' | 'revoked';
 export type OdometerKind = 'baseline' | 'trip_start' | 'trip_end' | 'service';
 
-export type TripStatus = 'draft' | 'pending_verification' | 'published' | 'cancelled' | 'completed';
+export type TripStatus = 'draft' | 'pending' | 'published' | 'cancelled' | 'completed';
 export type TripEventKind =
   | 'created'
   | 'updated'
   | 'stops_changed'
+  | 'submitted'
+  | 'approved'
+  | 'rejected'
   | 'published'
   | 'unpublished'
-  | 'verification_submitted'
-  | 'verification_approved'
-  | 'verification_rejected'
-  | 'cancelled';
+  | 'cancelled'
+  | 'completed';
 export type TripBookingMode = 'per_seat' | 'whole_trip' | 'both';
 export type TripPricingMode = 'flat' | 'per_stop';
 export type TripDiscountKind = 'none' | 'fixed' | 'percent';
 export type TripDiscountScope = 'per_seat' | 'whole_trip' | 'all';
-export type TripGenderPolicy = 'any' | 'men_only' | 'women_only';
-export type TripPaymentPolicy = 'cash' | 'deposit' | 'prepaid';
+export type TripGenderPolicy = 'any' | 'women_only' | 'men_only';
+export type TripPaymentPolicy = 'cash' | 'transfer' | 'deposit';
 export type PlaceKind =
   | 'city'
   | 'town'

@@ -247,8 +247,84 @@ async function seed(client, log = () => {}) {
      on conflict do nothing`,
   );
 
+  await seedDemoFleet(client);
+
   await grantDemoScope(client);
   log(`  demo sign-in: admin@maak.test / ${DEMO_PASSWORD}`);
+}
+
+/**
+ * One real vehicle and one real driver, so the console is not a wall of empty states.
+ *
+ * This exists because of a smaller failure than it looks: with no rows, the vehicle detail page — the
+ * screen that renders all sixty attributes — was never parsed by `check-a11y.mjs`, and every screenshot
+ * of Phase 3 showed "0 vehicles". The insurance expiry is deliberately 20 days out so the amber badge
+ * has something to colour, and the odometer baseline row matches the vehicle's odometer.
+ *
+ * Fixed ids, `on conflict do nothing`: re-running the seed is a no-op and a row edited in the UI stays
+ * edited. The vehicle belongs to the company, which is also what fills the `?org=` context switcher.
+ */
+async function seedDemoFleet(client) {
+  await client.query(
+    `insert into public.vehicles (
+       id, owner_org_id, make, model, model_year, trim, plate_number, plate_governorate_id,
+       vin, chassis_no, color, body_type, drive_type, transmission, fuel_type, engine_cc, cylinders,
+       fuel_tank_l, tyre_size, tyre_count, spare_tyre, vehicle_condition, ownership_kind,
+       seats_passenger, seats_total, luggage_capacity_l, roof_rack,
+       air_conditioning, heating, reclining_seats, usb_charging, curtains,
+       airbags, abs, esp, seatbelts_all, fire_extinguisher, first_aid, emergency_exit, gps_device,
+       child_seat, step_assist,
+       insurance_company, insurance_policy_no, insurance_expiry, inspection_expiry,
+       registration_expiry, transport_permit_expiry,
+       exterior_condition, interior_condition, odometer_km, status, verification_status,
+       verified_by, verified_at, created_by
+     )
+     values (
+       '7925cdf3-5648-4b52-9f84-8ad8fa68aae2',
+       'aaaaaaaa-0000-4000-8000-000000000001',
+       'Toyota', 'Hiace', 2019, 'GL', '12345-ع',
+       (select id from public.governorates where code = 'YE-AD'),
+       'JTFSK22P7J0123456', 'CH-2019-88421', 'أبيض', 'van', 'rear_wheel_drive', 'manual', 'diesel',
+       2982, 4, 70, '195R15', 5, true, 'used', 'owned',
+       13, 14, 1200, true,
+       true, true, true, true, true,
+       2, true, false, true, true, true, true, true,
+       true, false,
+       'شركة اليمن للتأمين', 'POL-2026-004178', current_date + 20, current_date + 240,
+       current_date + 300, current_date + 90,
+       'good', 'good', 184320, 'active', 'verified',
+       '22222222-2222-4222-8222-222222222222', now(), '33333333-3333-4333-8333-333333333333'
+     )
+     on conflict (id) do nothing`,
+  );
+
+  await client.query(
+    `insert into public.odometer_readings (id, vehicle_id, reading_km, kind, recorded_by, note)
+     values ('7925cdf3-0000-4000-8000-00000000a001', '7925cdf3-5648-4b52-9f84-8ad8fa68aae2',
+             184320, 'baseline', '33333333-3333-4333-8333-333333333333', 'قراءة خط الأساس')
+     on conflict (id) do nothing`,
+  );
+
+  await client.query(
+    `insert into public.driver_profiles (
+       id, invited_phone, full_name, org_id, invited_by, licence_no, licence_class,
+       licence_expiry, status, verification_status, verified_by, verified_at
+     )
+     values (
+       '7925cdf3-0000-4000-8000-00000000d001', '+967733000101', 'خالد الحميري',
+       'aaaaaaaa-0000-4000-8000-000000000001', '33333333-3333-4333-8333-333333333333',
+       'YE-DL-448213', 'C', current_date + 420, 'active', 'verified',
+       '22222222-2222-4222-8222-222222222222', now()
+     )
+     on conflict (id) do nothing`,
+  );
+
+  await client.query(
+    `insert into public.vehicle_driver_assignments (id, vehicle_id, driver_id, assigned_by)
+     values ('7925cdf3-0000-4000-8000-00000000b001', '7925cdf3-5648-4b52-9f84-8ad8fa68aae2',
+             '7925cdf3-0000-4000-8000-00000000d001', '33333333-3333-4333-8333-333333333333')
+     on conflict (id) do nothing`,
+  );
 }
 
 /**
