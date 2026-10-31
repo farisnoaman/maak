@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 /**
  * The marketplace's filter panel: a disclosure on a phone, a sidebar on a laptop.
@@ -17,39 +17,42 @@ import { useEffect, useState, type ReactNode } from 'react';
  * keys off `data-enhanced`). Before that — no JavaScript, or a page whose hydration never ran — the
  * summary stays visible and the panel can still be opened by hand. The failure mode is a disclosure one
  * click away, never a form nobody can reach.
+ *
+ * **`open` is never a React prop, and that is not an accident.** It is mutable DOM state that the *user*
+ * owns: tapping the summary flips it with no React involvement. Rendering it from state made React the
+ * authority on an attribute anybody can change, so a tap that landed while a slow hydration was still in
+ * flight — panel open in the DOM, `open={false}` in props — produced *"a tree hydrated but some attributes
+ * of the server rendered HTML didn't match"*. Driving the element through a ref after mount means React
+ * never renders the attribute, so there is nothing for hydration to disagree with. Opening the panel on a
+ * phone is left entirely to the person holding it: doing it here, a frame after first paint, would shove
+ * the results half a screen down for no reason.
  */
 const WIDE = '(min-width: 900px)';
 
-export function FilterDisclosure({
-  defaultOpen,
-  children,
-}: {
-  readonly defaultOpen: boolean;
-  readonly children: ReactNode;
-}) {
-  const [open, setOpen] = useState(defaultOpen);
+export function FilterDisclosure({ children }: { readonly children: ReactNode }) {
+  const details = useRef<HTMLDetailsElement | null>(null);
   const [enhanced, setEnhanced] = useState(false);
 
   useEffect(() => {
+    const element = details.current;
+    if (!element) return;
+
     const query = window.matchMedia(WIDE);
     const sync = () => {
       setEnhanced(true);
-      // Wide: always open, because there is no summary left to open it with. Narrow: back to what the
-      // server decided, which is "closed unless filters are already on".
-      setOpen(query.matches ? true : defaultOpen);
+      // Wide: always open, because the summary above is hidden and there is nothing left to open it with.
+      // Narrow: untouched — it is a disclosure, and the count beside "Filter" already says it has something
+      // in it.
+      if (query.matches) element.open = true;
     };
+
     sync();
     query.addEventListener('change', sync);
     return () => query.removeEventListener('change', sync);
-  }, [defaultOpen]);
+  }, []);
 
   return (
-    <details
-      className="trip-filters"
-      data-enhanced={enhanced ? 'true' : undefined}
-      open={open}
-      onToggle={(event) => setOpen(event.currentTarget.open)}
-    >
+    <details className="trip-filters" data-enhanced={enhanced ? 'true' : undefined} ref={details}>
       {children}
     </details>
   );

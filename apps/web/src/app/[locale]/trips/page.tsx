@@ -105,7 +105,7 @@ export default async function TripsPage({
         </header>
 
         <div className="trips-layout">
-          <FilterDisclosure defaultOpen={activeCount > 0}>
+          <FilterDisclosure>
             <summary>
               {t('trips.search.filter')}
               {activeCount > 0 ? <span className="trip-filters__count">{activeCount}</span> : null}

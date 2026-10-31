@@ -418,6 +418,27 @@ for (const file of pageFiles) {
   }
 }
 
+// --- 15. React may not own `<details open>` ------------------------------------------------------
+// `open` on a disclosure is mutable state the *user* holds: tapping the summary flips it with no React
+// involvement, and the browser restores it on back/forward. Rendering it from props or state makes React
+// the authority on an attribute anybody can change, so a tap that lands while hydration is still running
+// is a hydration mismatch — the panel open in the DOM, `open={false}` in props, and the error *"a tree
+// hydrated but some attributes of the server rendered HTML didn't match"*. It happened once, on the
+// marketplace filter panel, which had also been relying on that prop to make the panel reachable at all.
+// Drive the element through a ref in an effect (`element.open = true`) instead; this keeps the shortcut
+// from coming back now that the symptom is fixed.
+for (const file of await walk(join(root, 'apps', 'web', 'src'), (f) => f.endsWith('.tsx'))) {
+  const source = await readFile(file, 'utf8');
+  const pattern = /<\s*details\b[^>]*?\sopen\s*=/gs;
+  for (const match of source.matchAll(pattern)) {
+    const line = source.slice(0, match.index).split('\n').length;
+    failures.push(
+      `${rel(file)}:${line}: renders \`open\` on <details> — that attribute belongs to the user, and a ` +
+        `controlled version is a hydration mismatch waiting for a fast tap; set element.open in an effect`,
+    );
+  }
+}
+
 if (failures.length > 0) {
   console.error(`✗ ${failures.length} guard failure(s):\n`);
   for (const failure of failures) console.error(`  - ${failure}`);

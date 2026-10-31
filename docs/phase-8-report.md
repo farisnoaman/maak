@@ -301,6 +301,17 @@ at all.
 
 With those fixed, the rest was layout:
 
+**The first version of that fix caused a hydration error, and it is worth recording why.** It rendered `open`
+from React state, which makes React the authority on an attribute the *user* owns: tapping the summary flips it
+with no React involvement, so a tap that landed while a slow hydration was still running left the panel open in
+the DOM and `open={false}` in props — and React reported *"a tree hydrated but some attributes of the server
+rendered HTML didn't match"*, `open=""` on one side and `open={false}` on the other. `open` is not a prop any
+more: the element is driven through a ref after mount (`element.open = true` from 900px up), so React never
+renders the attribute and there is nothing for hydration to disagree with. Opening the panel on a phone went
+with it, deliberately — doing that a frame after first paint shoves the results half a screen down — and the
+count beside "Filter" already says the filters are in force. `check:guards` rule 15 now fails any `<details>`
+that renders `open`, proved by putting the prop back and watching the build fail with the line number.
+
 | At 320–719px | At 720px and up |
 | --- | --- |
 | Filters behind one 44px row: *Filter* + a brand badge with the number in force; the panel opens into full-width fields | A 16–18rem sidebar, always open, summary gone |
@@ -367,6 +378,6 @@ parsed.
 **What was not verified: pixels.** There is no headless browser in this environment, so every layout claim in
 this section was checked in the served HTML and by CSS arithmetic — DOM shape, computed widths at 320 / 360 /
 720 / 900 / 1280, direction-sensitive rules, and the two class audits — and never by looking at a screenshot.
-The one behaviour that is neither markup nor stylesheet, `FilterDisclosure` setting `open`, is a `matchMedia`
-subscription on mount with a server default that degrades to a visible summary; it is described here rather than
-claimed as observed.
+The one behaviour that is neither markup nor stylesheet, `FilterDisclosure` setting `open` from a `matchMedia`
+subscription on mount, is described here rather than claimed as observed; its failure mode is a visible
+summary, which is checked — the server response for a filtered page now carries no `open` attribute at all.
