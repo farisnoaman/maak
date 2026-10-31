@@ -93,40 +93,42 @@ export function RoleConsole({
     <div className="card console-panel">
       <h2 style={{ fontSize: '1.05rem' }}>{t('admin.roles')}</h2>
 
-      <table className="data-table">
-        <caption className="visually-hidden">{t('admin.users')}</caption>
-        <thead>
-          <tr>
-            <th scope="col">{t('admin.users')}</th>
-            <th scope="col">{t('admin.roles')}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((user) => (
-            <tr key={user.id}>
-              <td>
-                <span>{user.name ?? '—'}</span>
-                <span className="form-hint" dir="ltr" style={{ display: 'block' }}>
-                  {user.email ?? user.id}
-                </span>
-              </td>
-              <td>
-                {user.roles.length === 0 ? (
-                  <span className="form-hint">{t('admin.noRoles')}</span>
-                ) : (
-                  <span style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
-                    {user.roles.map((existing) => (
-                      <Badge key={existing} tone="info">
-                        {ROLE_LABEL[existing] ? t(ROLE_LABEL[existing]!) : existing}
-                      </Badge>
-                    ))}
-                  </span>
-                )}
-              </td>
+      <div className="table-scroll" tabIndex={0}>
+        <table className="data-table">
+          <caption className="visually-hidden">{t('admin.users')}</caption>
+          <thead>
+            <tr>
+              <th scope="col">{t('admin.users')}</th>
+              <th scope="col">{t('admin.roles')}</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map((user) => (
+              <tr key={user.id}>
+                <td>
+                  <span>{user.name ?? '—'}</span>
+                  <span className="form-hint" dir="ltr" style={{ display: 'block' }}>
+                    {user.email ?? user.id}
+                  </span>
+                </td>
+                <td>
+                  {user.roles.length === 0 ? (
+                    <span className="form-hint">{t('admin.noRoles')}</span>
+                  ) : (
+                    <span style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+                      {user.roles.map((existing) => (
+                        <Badge key={existing} tone="info">
+                          {ROLE_LABEL[existing] ? t(ROLE_LABEL[existing]!) : existing}
+                        </Badge>
+                      ))}
+                    </span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       <fieldset className="invite-box">
         <legend>{t('admin.grant')}</legend>

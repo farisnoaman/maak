@@ -1,15 +1,32 @@
 import { describe, expect, it } from 'vitest';
 import {
+  driveTypeSchema,
   fleetActionSchema,
   fleetCommandArgs,
   fleetCommandSpec,
   fleetScope,
+  fuelTypeSchema,
+  transmissionSchema,
+  vehicleBodyTypeSchema,
   vehicleFieldErrors,
   vehicleInputSchema,
+  vehicleStatusSchema,
   type VehicleInput,
 } from '../src/api/fleet';
 import { parseQuotaDetail, quotaMetricKey, quotaOf } from '../src/api/quota';
-import { isVehicleOperational, vehicleBadges, VEHICLE_WIZARD_STEPS } from '../src/domain/vehicle';
+import {
+  DRIVE_TYPE_KEY,
+  DRIVER_STATUS_KEY,
+  FUEL_TYPE_KEY,
+  isVehicleOperational,
+  TRANSMISSION_KEY,
+  VEHICLE_BODY_TYPE_KEY,
+  VEHICLE_STATUS_KEY,
+  VERIFICATION_KEY,
+  vehicleBadges,
+  VEHICLE_WIZARD_STEPS,
+} from '../src/domain/vehicle';
+import { translate } from '../src/i18n/dictionaries';
 import { policyDenial, type Actor } from '../src/domain/policy';
 
 const audit = { p_request_id: 'req-1', p_ip: null };
@@ -130,6 +147,13 @@ describe('fleet actions', () => {
       { action: 'driver.invite', phone: '+967733111222', fullName: 'سالم' },
       { action: 'driver.accept' },
       {
+        action: 'driver.setLicence',
+        driverId: '11111111-1111-4111-8111-111111111111',
+        licenceNo: 'YE-DL-4411',
+        licenceExpiry: '2030-01-01',
+        photoPath: '22222222-2222-4222-8222-222222222222/licence.jpg',
+      },
+      {
         action: 'driver.verify',
         driverId: '11111111-1111-4111-8111-111111111111',
         outcome: 'approve',
@@ -154,6 +178,109 @@ describe('fleet actions', () => {
     // Eleven actions, eleven distinct commands: no action can silently reuse another's function.
     expect(new Set(functions).size).toBe(actions.length);
     expect(fleetCommandSpec.path).toBe('fleet');
+  });
+
+  it('carries a fill through to the command with every field the screen collected', () => {
+    const parsed = fleetActionSchema.parse({
+      action: 'fuel.log',
+      vehicleId: '11111111-1111-4111-8111-111111111111',
+      odometerKm: 125_300,
+      litres: 38,
+      pricePerLitreYer: 500,
+      isFullTank: true,
+      // The phone sends a code, the web form sends an id: both must survive the mapping, because only the
+      // database knows which trips a vehicle actually drove.
+      tripCode: 'AD-SA-9B01',
+      stationName: 'محطة الروضة — عدن',
+      stationPlaceId: '22222222-2222-4222-8222-222222222222',
+      receiptPath: '11111111-1111-4111-8111-111111111111/receipt/1.jpg',
+    });
+    const { fn, args } = fleetCommandArgs(parsed, 'u-owner', audit);
+    expect(fn).toBe('cmd_log_fuel');
+    expect(JSON.parse(String(args.p_log))).toEqual({
+      odometerKm: 125_300,
+      litres: 38,
+      pricePerLitreYer: 500,
+      isFullTank: true,
+      filledAt: null,
+      tripId: null,
+      tripCode: 'AD-SA-9B01',
+      stationName: 'محطة الروضة — عدن',
+      stationPlaceId: '22222222-2222-4222-8222-222222222222',
+      receiptPath: '11111111-1111-4111-8111-111111111111/receipt/1.jpg',
+      note: null,
+    });
+  });
+
+  it('keeps the invoice with the service it paid for', () => {
+    const parsed = fleetActionSchema.parse({
+      action: 'maintenance.done',
+      scheduleId: '33333333-3333-4333-8333-333333333333',
+      odometerKm: 125_300,
+      costYer: 18_000,
+      vendor: 'مؤسسة الإطارات الحديثة',
+      note: 'front tyres',
+      attachmentPath: '11111111-1111-4111-8111-111111111111/maintenance/1.jpg',
+    });
+    const { fn, args } = fleetCommandArgs(parsed, 'u-owner', audit);
+    expect(fn).toBe('cmd_mark_maintenance_done');
+    expect(JSON.parse(String(args.p_record))).toMatchObject({
+      costYer: 18_000,
+      note: 'front tyres',
+      attachmentPath: '11111111-1111-4111-8111-111111111111/maintenance/1.jpg',
+    });
+  });
+
+  it('maps the rest of the Phase 8 actions onto their own commands', () => {
+    const odometer = fleetActionSchema.parse({
+      action: 'odometer.record',
+      vehicleId: '11111111-1111-4111-8111-111111111111',
+      odometerKm: 125_300,
+      photoPath: '11111111-1111-4111-8111-111111111111/odometer/1.jpg',
+      overrideReason: 'meter replaced',
+    });
+    expect(fleetCommandArgs(odometer, 'u-owner', audit).fn).toBe('cmd_record_manual_odometer');
+    expect(
+      JSON.parse(String(fleetCommandArgs(odometer, 'u-owner', audit).args.p_reading)),
+    ).toMatchObject({ overrideReason: 'meter replaced' });
+
+    const work = fleetActionSchema.parse({
+      action: 'maintenance.log',
+      vehicleId: '11111111-1111-4111-8111-111111111111',
+      kind: 'oil_change',
+      performedOn: '2026-10-31',
+      costYer: 18_000,
+    });
+    expect(fleetCommandArgs(work, 'u-owner', audit).fn).toBe('cmd_log_maintenance');
+    expect(
+      JSON.parse(String(fleetCommandArgs(work, 'u-owner', audit).args.p_record)),
+    ).toMatchObject({ kind: 'oil_change', costYer: 18_000, scheduleId: null });
+
+    const schedule = fleetActionSchema.parse({
+      action: 'maintenance.schedule',
+      vehicleId: '11111111-1111-4111-8111-111111111111',
+      kind: 'oil_change',
+      intervalKm: 5_000,
+      lastDoneKm: 120_000,
+    });
+    expect(fleetCommandArgs(schedule, 'u-owner', audit).fn).toBe('cmd_upsert_maintenance_schedule');
+    expect(
+      JSON.parse(String(fleetCommandArgs(schedule, 'u-owner', audit).args.p_schedule)),
+    ).toMatchObject({ intervalKm: 5_000, lastDoneKm: 120_000 });
+
+    const settings = fleetActionSchema.parse({
+      action: 'fleet.settings',
+      remindKm: 800,
+      remindDays: 21,
+      blockOverdueAssignment: true,
+    });
+    const mapped = fleetCommandArgs(settings, 'u-owner', audit);
+    expect(mapped.fn).toBe('cmd_update_fleet_settings');
+    expect(JSON.parse(String(mapped.args.p_settings))).toMatchObject({
+      remindKm: 800,
+      blockOverdueAssignment: true,
+      fuelAnomalyPercent: 25,
+    });
   });
 
   it('scopes an organization action to the membership, and a personal one to ownership', () => {
@@ -259,6 +386,33 @@ describe('vehicle badges', () => {
     expect(expired.find((badge) => badge.code === 'inspectionExpired')?.tone).toBe('bad');
   });
 
+  it('keeps a maintenance slot that stays quiet until there is a service date', () => {
+    // Phase 3 has no maintenance schedule, so the placeholder must never invent a badge.
+    expect(vehicleBadges({ verification_status: 'verified' }, today).map((b) => b.code)).toEqual([
+      'verified',
+    ]);
+
+    const due = vehicleBadges(
+      { verification_status: 'verified', nextMaintenanceDue: '2026-06-21' },
+      today,
+    );
+    expect(due.find((badge) => badge.code === 'maintenanceDue')?.tone).toBe('warn');
+    expect(due.find((badge) => badge.code === 'maintenanceDue')?.days).toBe(20);
+
+    const overdue = vehicleBadges(
+      { verification_status: 'verified', nextMaintenanceDue: '2026-05-20' },
+      today,
+    );
+    expect(overdue.find((badge) => badge.code === 'maintenanceOverdue')?.tone).toBe('bad');
+
+    // A service date months away is not worth a badge at all.
+    const later = vehicleBadges(
+      { verification_status: 'verified', nextMaintenanceDue: '2026-09-01' },
+      today,
+    );
+    expect(later.map((badge) => badge.code)).toEqual(['verified']);
+  });
+
   it('says nothing about a document that is comfortably in date', () => {
     const badges = vehicleBadges(
       { verification_status: 'verified', insuranceExpiry: '2027-01-01' },
@@ -315,5 +469,34 @@ describe('wizard steps', () => {
   it('round-trips a parsed vehicle back into the schema', () => {
     const parsed: VehicleInput = vehicleInputSchema.parse(vehicle);
     expect(vehicleInputSchema.parse(parsed).plateNumber).toBe('12345-أ');
+  });
+});
+
+describe('enum labels', () => {
+  // The acceptance criterion is literal: no raw `four_wheel_drive` on a screen. A missing table entry
+  // would fall back to `fleet.unknown` in the UI, so the table and the schema are compared here rather
+  // than trusted to stay in step.
+  const tables = [
+    ['body type', vehicleBodyTypeSchema.options, VEHICLE_BODY_TYPE_KEY],
+    ['drive type', driveTypeSchema.options, DRIVE_TYPE_KEY],
+    ['transmission', transmissionSchema.options, TRANSMISSION_KEY],
+    ['fuel type', fuelTypeSchema.options, FUEL_TYPE_KEY],
+    ['vehicle status', vehicleStatusSchema.options, VEHICLE_STATUS_KEY],
+    ['verification', ['unverified', 'pending', 'verified', 'rejected'], VERIFICATION_KEY],
+    ['driver status', ['invited', 'active', 'suspended', 'revoked'], DRIVER_STATUS_KEY],
+  ] as const;
+
+  it('has a localized label for every value of every fleet enum', () => {
+    for (const [name, values, table] of tables) {
+      for (const value of values as readonly string[]) {
+        const key = table[value];
+        expect(key, `${name}: ${value} has no label`).toBeDefined();
+        for (const locale of ['ar', 'en'] as const) {
+          const label = translate(locale, key!);
+          expect(label, `${name}: ${value} in ${locale}`).not.toBe(value);
+          expect(label, `${name}: ${value} in ${locale}`).not.toContain('_');
+        }
+      }
+    }
   });
 });

@@ -136,6 +136,34 @@ const GEO_CAPABILITY = {
   'place.setActive': 'place.setActive',
 };
 
+const TRIPS_CAPABILITY = {
+  'trip.create': 'trip.create',
+  'trip.update': 'trip.update',
+  'trip.setStops': 'trip.update',
+  'trip.publish': 'trip.update',
+  'trip.submitVerification': 'trip.update',
+  'trip.decideVerification': 'trip.verify',
+  'trip.cancel': 'trip.cancel',
+  'trip.start': 'trip.start',
+  'trip.stopReached': 'trip.start',
+  'trip.end': 'trip.start',
+  'trip.recordPing': 'trip.start',
+  'trip.bulkVerify': 'trip.verify',
+  'trip.rotateQr': 'trip.update',
+};
+
+const BOOKINGS_CAPABILITY = {
+  'booking.create': 'booking.create',
+  'booking.setDocument': 'booking.create',
+  'booking.accept': 'booking.accept',
+  'booking.bulkAccept': 'booking.accept',
+  'booking.reject': 'booking.accept',
+  'booking.cancelByPassenger': 'booking.cancelAsPassenger',
+  'booking.cancelByOperator': 'booking.cancelAsOperator',
+  'booking.markNoShow': 'booking.accept',
+  'booking.shareLink': 'booking.create',
+};
+
 const FLEET_CAPABILITY = {
   'vehicle.create': 'vehicle.create',
   'vehicle.update': 'vehicle.update',
@@ -145,9 +173,16 @@ const FLEET_CAPABILITY = {
   'vehicle.setPhotos': 'vehicle.update',
   'driver.invite': 'driver.invite',
   'driver.accept': 'driver.accept',
+  'driver.setLicence': 'driver.setLicence',
   'driver.verify': 'driver.verify',
   'driver.assign': 'driver.assign',
   'driver.unassign': 'driver.assign',
+  'fuel.log': 'fuel.log',
+  'odometer.record': 'odometer.record',
+  'maintenance.log': 'maintenance.log',
+  'maintenance.schedule': 'maintenance.schedule',
+  'maintenance.done': 'maintenance.complete',
+  'fleet.settings': 'fleet.settings',
 };
 
 function invalid(fields) {
@@ -242,6 +277,78 @@ export async function handleFunction({ name, body, userId, client, core, request
     }
 
     const { fn, args } = core.fleetCommandArgs(parsed.data, userId, {
+      p_request_id: requestId,
+      p_ip: null,
+    });
+    try {
+      const result = await runCommand(client, fn, args);
+      return { status: 200, body: { ...result, requestId } };
+    } catch (error) {
+      const mapped = mapDbError(error, core);
+      return { ...mapped, body: { ...mapped.body, requestId } };
+    }
+  }
+
+  if (name === 'trips') {
+    const parsed = core.tripsActionSchema.safeParse(body);
+    if (!parsed.success) return mapZod(parsed.error);
+
+    const resolved = await resolveActor(client, userId);
+    const denial = core.policyDenial(
+      resolved.actor,
+      TRIPS_CAPABILITY[parsed.data.action],
+      core.tripsScope(parsed.data),
+    );
+    if (denial) {
+      return {
+        status: denial === 'UNAUTHENTICATED' ? 401 : 403,
+        body: {
+          code: denial,
+          detail:
+            denial === 'NOT_VERIFIED'
+              ? 'Account is not verified'
+              : 'You do not have permission to perform this action',
+        },
+      };
+    }
+
+    const { fn, args } = core.tripsCommandArgs(parsed.data, userId, {
+      p_request_id: requestId,
+      p_ip: null,
+    });
+    try {
+      const result = await runCommand(client, fn, args);
+      return { status: 200, body: { ...result, requestId } };
+    } catch (error) {
+      const mapped = mapDbError(error, core);
+      return { ...mapped, body: { ...mapped.body, requestId } };
+    }
+  }
+
+  if (name === 'bookings') {
+    const parsed = core.bookingsActionSchema.safeParse(body);
+    if (!parsed.success) return mapZod(parsed.error);
+
+    const resolved = await resolveActor(client, userId);
+    const denial = core.policyDenial(
+      resolved.actor,
+      BOOKINGS_CAPABILITY[parsed.data.action],
+      core.bookingsScope(parsed.data),
+    );
+    if (denial) {
+      return {
+        status: denial === 'UNAUTHENTICATED' ? 401 : 403,
+        body: {
+          code: denial,
+          detail:
+            denial === 'NOT_VERIFIED'
+              ? 'Account is not verified'
+              : 'You do not have permission to perform this action',
+        },
+      };
+    }
+
+    const { fn, args } = core.bookingsCommandArgs(parsed.data, userId, {
       p_request_id: requestId,
       p_ip: null,
     });

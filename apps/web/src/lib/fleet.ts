@@ -99,6 +99,8 @@ export interface DriverRow {
   readonly phone: string;
   readonly licenceNo: string | null;
   readonly licenceExpiry: string | null;
+  /** Path inside the private `driver-documents` bucket, or null when nothing was uploaded. */
+  readonly licencePhotoPath: string | null;
   readonly status: string;
   readonly verificationStatus: string;
   readonly verificationNote: string | null;
@@ -400,6 +402,7 @@ function previewFleet(): FleetData {
         phone: '+967 733 000 002',
         licenceNo: 'LIC-9931',
         licenceExpiry: later,
+        licencePhotoPath: null,
         status: 'active',
         verificationStatus: 'verified',
         verificationNote: null,
@@ -482,7 +485,7 @@ export async function loadFleet(context: AccountContext): Promise<FleetData> {
     client
       .from('driver_profiles')
       .select(
-        'id, user_id, org_id, full_name, invited_phone, licence_no, licence_expiry, status, verification_status, verification_note, created_at',
+        'id, user_id, org_id, full_name, invited_phone, licence_no, licence_expiry, licence_photo_path, status, verification_status, verification_note, created_at',
       )
       .eq('is_active', true)
       .order('created_at', { ascending: false })
@@ -513,7 +516,7 @@ export async function loadFleet(context: AccountContext): Promise<FleetData> {
       ? client
           .from('driver_profiles')
           .select(
-            'id, user_id, org_id, full_name, invited_phone, licence_no, licence_expiry, status, verification_status, verification_note, created_at',
+            'id, user_id, org_id, full_name, invited_phone, licence_no, licence_expiry, licence_photo_path, status, verification_status, verification_note, created_at',
           )
           .eq('verification_status', 'pending')
           .order('created_at', { ascending: true })
@@ -535,6 +538,7 @@ export async function loadFleet(context: AccountContext): Promise<FleetData> {
       phone: String(row.invited_phone ?? ''),
       licenceNo: str(row.licence_no),
       licenceExpiry: str(row.licence_expiry),
+      licencePhotoPath: str(row.licence_photo_path),
       status: String(row.status ?? 'invited'),
       verificationStatus: String(row.verification_status ?? 'unverified'),
       verificationNote: str(row.verification_note),
@@ -581,6 +585,7 @@ export async function loadFleet(context: AccountContext): Promise<FleetData> {
       phone: String(row.invited_phone ?? ''),
       licenceNo: str(row.licence_no),
       licenceExpiry: str(row.licence_expiry),
+      licencePhotoPath: str(row.licence_photo_path),
       status: String(row.status ?? 'invited'),
       verificationStatus: String(row.verification_status ?? 'unverified'),
       verificationNote: str(row.verification_note),

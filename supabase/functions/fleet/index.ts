@@ -31,9 +31,16 @@ const CAPABILITY: Record<FleetAction['action'], Capability> = {
   'vehicle.setPhotos': 'vehicle.update',
   'driver.invite': 'driver.invite',
   'driver.accept': 'driver.accept',
+  'driver.setLicence': 'driver.setLicence',
   'driver.verify': 'driver.verify',
   'driver.assign': 'driver.assign',
   'driver.unassign': 'driver.assign',
+  'fuel.log': 'fuel.log',
+  'odometer.record': 'odometer.record',
+  'maintenance.log': 'maintenance.log',
+  'maintenance.schedule': 'maintenance.schedule',
+  'maintenance.done': 'maintenance.complete',
+  'fleet.settings': 'fleet.settings',
 };
 
 export default defineCommand({ schema }, async (ctx) => {

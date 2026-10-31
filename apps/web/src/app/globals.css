@@ -9,6 +9,21 @@
   box-sizing: border-box;
 }
 
+/* A phone must never zoom out to fit a too-wide element: the layout is the thing that gives way. */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Nothing may be wider than the screen it is on. Fixed-width images and <video> are the classic
+ * cause of "the page scrolls sideways on my phone". */
+img,
+svg,
+video {
+  max-inline-size: 100%;
+  block-size: auto;
+}
+
 html,
 body {
   margin: 0;
@@ -62,7 +77,14 @@ a {
 .shell {
   max-inline-size: var(--content-max);
   margin-inline: auto;
-  padding-inline: var(--space-5);
+  /* 16px of gutter on a phone, 24px from tablet up: a 360px screen cannot spare 48px of margins. */
+  padding-inline: var(--space-4);
+}
+
+@media (min-width: 720px) {
+  .shell {
+    padding-inline: var(--space-5);
+  }
 }
 
 /* ---------- header ---------- */
@@ -103,11 +125,24 @@ a {
   box-shadow: var(--shadow-sm);
 }
 
+.brand__text {
+  display: grid;
+  line-height: 1.2;
+}
+
 .brand__sub {
+  /* The tagline is the first thing to go on a 320px screen: it costs three lines of header. */
+  display: none;
   font-size: 0.75rem;
   font-weight: 500;
   color: var(--ink-500);
   line-height: 1.2;
+}
+
+@media (min-width: 480px) {
+  .brand__sub {
+    display: block;
+  }
 }
 
 .header__spacer {
@@ -128,7 +163,9 @@ a {
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--ink-600);
-  min-block-size: 34px;
+  /* Language is the one control a phone user reaches for first; it gets a real target size. */
+  min-block-size: var(--tap-target);
+  min-inline-size: var(--tap-target);
   display: grid;
   place-items: center;
 }
@@ -144,7 +181,7 @@ a {
 .hero {
   position: relative;
   overflow: hidden;
-  padding-block: var(--space-16) var(--space-12);
+  padding-block: var(--space-10) var(--space-8);
   background:
     radial-gradient(80% 120% at 15% 0%, var(--brand-50) 0%, transparent 60%),
     radial-gradient(60% 100% at 90% 10%, var(--sand-100) 0%, transparent 55%);
@@ -154,6 +191,12 @@ a {
   display: grid;
   gap: var(--space-10);
   align-items: center;
+}
+
+@media (min-width: 720px) {
+  .hero {
+    padding-block: var(--space-16) var(--space-12);
+  }
 }
 
 @media (min-width: 940px) {
@@ -280,7 +323,7 @@ a {
 
 .calc__fields {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr));
   gap: var(--space-3);
   margin-block-start: var(--space-5);
 }
@@ -341,7 +384,13 @@ a {
 /* ---------- sections ---------- */
 
 .section {
-  padding-block: var(--space-16);
+  padding-block: var(--space-10);
+}
+
+@media (min-width: 720px) {
+  .section {
+    padding-block: var(--space-16);
+  }
 }
 
 .section--muted {
@@ -411,7 +460,7 @@ a {
   display: grid;
   gap: var(--space-4);
   margin-block-start: var(--space-8);
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr));
 }
 
 .console-card {
@@ -462,10 +511,18 @@ a {
 /* ---------- footer ---------- */
 
 .site-footer {
-  padding-block: var(--space-10);
+  /* `viewportFit: cover` lets the phone draw under the home indicator; the footer is the last thing
+   * on the page, so it pays for that inset. */
+  padding-block: var(--space-8) max(var(--space-8), env(safe-area-inset-bottom));
   border-block-start: 1px solid var(--surface-sunken);
   color: var(--ink-500);
   font-size: 0.82rem;
+}
+
+@media (min-width: 720px) {
+  .site-footer {
+    padding-block: var(--space-10) max(var(--space-10), env(safe-area-inset-bottom));
+  }
 }
 
 .site-footer__inner {
@@ -510,6 +567,12 @@ a {
   opacity: 0.55;
   cursor: not-allowed;
   transform: none;
+}
+/* The default size, written out. `--md` is what half the screens spell, and a modifier with no rule at
+   all is exactly how a size bug hides: it looks like it was chosen. */
+.ui-btn--md {
+  min-block-size: var(--tap-target);
+  padding-inline: var(--space-5);
 }
 .ui-btn--sm {
   min-block-size: 36px;
@@ -871,20 +934,40 @@ a {
 /* ---------- app shell (consoles) ---------- */
 .console-layout {
   display: grid;
-  gap: var(--space-8);
-  padding-block: var(--space-10);
+  gap: var(--space-5);
+  padding-block: var(--space-6);
 }
 @media (min-width: 900px) {
   .console-layout {
     grid-template-columns: 240px 1fr;
+    gap: var(--space-8);
+    padding-block: var(--space-10);
   }
 }
 .console-nav {
-  display: grid;
-  gap: var(--space-1);
-  align-content: start;
+  /* A phone gets a scrollable row of chips instead of a stack that pushes the content down. */
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin-inline: calc(var(--space-4) * -1);
+  padding-inline: var(--space-4);
+}
+.console-nav::-webkit-scrollbar {
+  display: none;
+}
+@media (min-width: 900px) {
+  .console-nav {
+    display: grid;
+    align-content: start;
+    gap: var(--space-1);
+    overflow: visible;
+    margin-inline: 0;
+    padding-inline: 0;
+  }
 }
 .console-nav a {
+  white-space: nowrap;
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-md);
   font-size: 0.9rem;
@@ -902,7 +985,13 @@ a {
   background: var(--surface-muted);
 }
 .console-panel {
-  padding: var(--space-6);
+  padding: var(--space-4);
+}
+
+@media (min-width: 720px) {
+  .console-panel {
+    padding: var(--space-6);
+  }
 }
 .console-panel h1 {
   font-size: 1.3rem;
@@ -913,11 +1002,21 @@ a {
   color: var(--ink-600);
   font-size: 0.9rem;
 }
+/*
+ * One column by default, and that default is the fix for a real defect: `auto-fill` with a single child
+ * puts that child in the first 220px track, so every console *content* page (fleet, vehicles, health…)
+ * rendered as a narrow strip beside a row of empty tracks. Only the three overview screens are tile
+ * grids, and they say so (`layout="tiles"`).
+ */
 .console-grid {
   display: grid;
   gap: var(--space-4);
   margin-block-start: var(--space-6);
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.console-grid--tiles {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
 }
 .console-tile {
   padding: var(--space-5);
@@ -937,7 +1036,7 @@ a {
 .nav-link {
   display: inline-flex;
   align-items: center;
-  min-block-size: 36px;
+  min-block-size: var(--tap-target);
   padding-inline: var(--space-3);
   border-radius: var(--radius-sm);
   font-size: 0.85rem;
@@ -948,9 +1047,121 @@ a {
   background: var(--surface-muted);
   color: var(--ink-900);
 }
-@media (max-width: 720px) {
-  .site-header__inner nav {
+/* ---------- mobile menu (no JavaScript) ----------
+ * Below 720px the links are a disclosure: `<summary>` is the button, the panel is the menu. Above
+ * 720px the summary disappears and the very same links sit inline. Nothing is duplicated and no
+ * stylesheet hides navigation without offering it somewhere else.
+ */
+.site-nav {
+  display: flex;
+  align-items: center;
+}
+
+.site-menu {
+  position: relative;
+}
+
+.site-menu__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: var(--tap-target);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+}
+
+.site-menu__toggle::-webkit-details-marker {
+  display: none;
+}
+
+/* 320px: the brand loses its subtitle and the menu button loses its word, but nothing is hidden
+ * that has not been replaced. The summary keeps its accessible name through `aria-label`. */
+@media (max-width: 479px) {
+  .site-header__inner {
+    gap: var(--space-2);
+  }
+
+  .brand {
+    gap: var(--space-2);
+    font-size: 1rem;
+  }
+
+  .brand__mark {
+    inline-size: 32px;
+    block-size: 32px;
+    font-size: 0.95rem;
+  }
+
+  .site-menu__toggle {
+    padding-inline: var(--space-2);
+  }
+
+  .site-menu__label {
     display: none;
+  }
+
+  .locale-switch a {
+    padding-inline: var(--space-3);
+  }
+}
+
+.site-menu[open] > .site-menu__toggle {
+  border-color: var(--brand-500);
+  color: var(--brand-700);
+}
+
+.site-menu__links {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-block-start: var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-md);
+}
+
+/* The panel is a sheet on a phone: it must not push the page around, and it must stay reachable
+ * with one thumb, so it is anchored to the inline-end edge of the header. */
+@media (max-width: 719px) {
+  .site-menu__links {
+    position: absolute;
+    inset-block-start: calc(100% + var(--space-2));
+    inset-inline-end: 0;
+    z-index: 25;
+    min-inline-size: 14rem;
+  }
+
+  .site-menu__links .nav-link {
+    inline-size: 100%;
+    min-block-size: var(--tap-target);
+  }
+}
+
+@media (min-width: 720px) {
+  .site-menu__toggle {
+    display: none;
+  }
+
+  .site-menu__links {
+    /* Author styles beat the UA rule that hides a closed <details>' children. */
+    display: flex !important;
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-1);
+    position: static;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
   }
 }
 
@@ -984,7 +1195,7 @@ a {
 .form-grid {
   display: grid;
   gap: var(--space-4);
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
   margin-block: var(--space-4);
 }
 
@@ -1010,6 +1221,37 @@ a {
   color: var(--danger-700, #8c1d1d);
   font-size: 0.85rem;
   font-weight: 600;
+}
+
+/*
+ * A failed command, shown as a block rather than a line of text.
+ *
+ * This class was used by the booking form and the booking detail page from Phase 5 without ever being
+ * defined, so a refused booking rendered as an ordinary grey paragraph at the top of a form whose
+ * submit button is at the bottom — indistinguishable from nothing happening at all. Defined here, once,
+ * with the same tone as `.form-error` so every failure in the product reads the same.
+ */
+.ui-alert {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+  margin-block-start: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  border-inline-start: 4px solid currentColor;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.ui-alert--error {
+  background: var(--danger-50, #fdecec);
+  color: var(--danger-700, #8c1d1d);
+}
+
+.ui-alert--warning {
+  background: var(--surface-muted);
+  color: var(--ink-700, #3b4149);
+  border-inline-start-color: var(--state-warning);
 }
 
 .form-success {
@@ -1106,8 +1348,17 @@ a {
   font-weight: 600;
 }
 
+/* Team and role tables have five columns: they scroll inside their own box instead of widening
+ * the document, which is what makes a phone page scroll sideways. */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-inline-size: 100%;
+}
+
 .data-table {
   inline-size: 100%;
+  min-inline-size: 34rem;
   border-collapse: collapse;
   margin-block: var(--space-4);
   font-size: 0.86rem;
@@ -1186,7 +1437,7 @@ a {
 .account-orgs {
   display: grid;
   gap: var(--space-3);
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
   margin-block: var(--space-4);
 }
 
@@ -1194,14 +1445,130 @@ a {
   display: grid;
   gap: var(--space-2);
   padding: var(--space-4);
-  border: 1px solid var(--line-200, #eaeaea);
-  border-radius: var(--radius-md);
-  background: #fff;
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
 }
 
 .account-org--active {
   border-color: var(--brand-500, #0d7a5f);
   box-shadow: 0 0 0 1px var(--brand-500, #0d7a5f);
+}
+
+/* ---------------------------------------------------------------------------
+ * The account area — one shell for five screens
+ *
+ * Not a console: no sidebar, no tables, no filters. This is a person checking their own details, usually
+ * on a phone, so the navigation is a row of pills that scrolls sideways instead of a menu that must be
+ * opened first, and every section below it is a card with a heading.
+ * ------------------------------------------------------------------------- */
+
+/* Five screens, one measure: a form or a card that runs the full 1120px of the shell is a page nobody
+   can read. */
+.account-page {
+  max-inline-size: 56rem;
+}
+
+.account-head h1 {
+  margin-block-end: var(--space-1);
+}
+
+.account-nav {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  margin-block: var(--space-4) var(--space-5);
+  padding-block-end: var(--space-2);
+  scrollbar-width: thin;
+}
+
+/* With room the whole set fits, so it wraps into rows rather than scrolling under a hidden edge. */
+@media (min-width: 720px) {
+  .account-nav {
+    flex-wrap: wrap;
+    overflow-x: visible;
+    padding-block-end: 0;
+  }
+}
+
+.account-nav__link {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  min-block-size: var(--tap-target);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-pill);
+  background: var(--surface-base);
+  color: var(--ink-700);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.account-nav__link:hover {
+  background: var(--surface-muted);
+}
+
+.account-nav__link[aria-current='page'] {
+  border-color: var(--brand-600);
+  background: var(--brand-600);
+  color: #fff;
+}
+
+.account-card {
+  padding: var(--space-4);
+}
+
+@media (min-width: 720px) {
+  .account-card {
+    padding: var(--space-6);
+  }
+}
+
+.account-name {
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.account-section {
+  margin-block-start: var(--space-6);
+}
+
+.account-section > h2 {
+  margin-block-end: var(--space-3);
+  font-size: 1.1rem;
+}
+
+/* The doorways out of the account: tiles, because they are all the same size and all lead somewhere. */
+.account-links {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-2);
+}
+
+@media (min-width: 560px) {
+  .account-links {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  }
+}
+
+.account-links .ui-btn {
+  min-block-size: var(--tap-target);
+  justify-content: center;
+}
+
+/* Signing out is not one of the actions of the page, so it sits below them, behind a rule, with its own
+   line of explanation. */
+.account-signout {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+  margin-block-start: var(--space-8);
+  padding-block-start: var(--space-4);
+  border-block-start: 1px solid var(--surface-sunken);
 }
 
 /* --- geography (Phase 2) --------------------------------------------------- */
@@ -1229,7 +1596,7 @@ a {
 .geo-check-grid {
   display: grid;
   gap: var(--space-2);
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr));
   margin-block-end: var(--space-3);
 }
 .geo-check {
@@ -1255,6 +1622,44 @@ a {
 }
 
 /* ---------------------------------------------------------------------------
+ * Mobile safety net.
+ *
+ * Three things overflow a narrow screen even when the layout is correct, and all three are one
+ * declaration away from being fixed: a <fieldset> (its default min-inline-size is min-content, so it
+ * refuses to shrink inside a grid), a grid item holding a long unbroken string, and a native file
+ * input, whose button plus filename is wider than a 240px column.
+ * ------------------------------------------------------------------------- */
+
+fieldset {
+  min-inline-size: 0;
+}
+
+.fleet-fields > *,
+.form-grid > *,
+.console-grid > *,
+.fleet-grid > *,
+.fleet-grid > * > * {
+  min-inline-size: 0;
+}
+
+input[type='file'] {
+  inline-size: 100%;
+  max-inline-size: 100%;
+  font-size: 0.85rem;
+}
+
+input[type='file']::file-selector-button {
+  min-block-size: 36px;
+  margin-inline-end: var(--space-2);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-sm);
+  background: var(--surface-base);
+  font: inherit;
+  cursor: pointer;
+}
+
+/* ---------------------------------------------------------------------------
  * Phase 3 — fleet: cards, the wizard, photo grids, review queues.
  * Logical properties only, like everything above: RTL is a direction, not a second stylesheet.
  * ------------------------------------------------------------------------- */
@@ -1272,7 +1677,7 @@ a {
 .fleet-grid {
   display: grid;
   gap: var(--space-4);
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
   inline-size: 100%;
 }
 
@@ -1375,6 +1780,7 @@ a {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
+  white-space: nowrap;
   min-block-size: var(--tap-target);
   padding-inline: var(--space-3);
   border: 1px solid var(--surface-sunken);
@@ -1411,7 +1817,7 @@ a {
 .fleet-fields {
   display: grid;
   gap: var(--space-3);
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
   border: 1px solid var(--surface-sunken);
   border-radius: var(--radius-lg);
   padding: var(--space-4);
@@ -1442,9 +1848,50 @@ a {
   font-size: 0.85rem;
 }
 
+/* Two class names the licence screen has used since Phase 3 without either ever existing in this file —
+   which is why `/account/licence` rendered as an unbordered stack of fields. A panel is a card, and the
+   form inside it is one column until there is room for two. */
+.fleet-panel {
+  display: grid;
+  gap: var(--space-3);
+  margin-block-start: var(--space-5);
+  padding: var(--space-4);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+}
+
+@media (min-width: 720px) {
+  .fleet-panel {
+    padding: var(--space-6);
+  }
+}
+
+.fleet-form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-3);
+}
+
+@media (min-width: 560px) {
+  .fleet-form-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
 .fleet-note {
   background: var(--surface-muted);
   border-inline-start: 4px solid var(--state-info);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+}
+
+/* A warning is not an error: nothing failed, the operator just needs to see it before moving on. */
+.fleet-warning {
+  background: var(--surface-muted);
+  border-inline-start: 4px solid var(--state-warning);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
   font-size: 0.9rem;
@@ -1471,6 +1918,16 @@ a {
   flex-wrap: wrap;
   gap: var(--space-2);
   align-items: center;
+}
+
+/* Below 560px a row of buttons is a row of tiny targets; each one gets a full line. */
+@media (max-width: 559px) {
+  .fleet-actions .btn,
+  .form-actions .btn,
+  .hero__actions .btn,
+  .fleet-inline .btn {
+    inline-size: 100%;
+  }
 }
 
 .fleet-inline {
@@ -1502,9 +1959,16 @@ a {
 .fleet-summary {
   grid-column: 1 / -1;
   display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: var(--space-1) var(--space-4);
+  grid-template-columns: 1fr;
+  gap: var(--space-1);
   margin: 0;
+}
+
+@media (min-width: 480px) {
+  .fleet-summary {
+    grid-template-columns: max-content 1fr;
+    gap: var(--space-1) var(--space-4);
+  }
 }
 
 .fleet-summary dt {
@@ -1551,7 +2015,7 @@ a {
 .fleet-photo-grid {
   display: grid;
   gap: var(--space-2);
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 140px), 1fr));
   list-style: none;
   margin: 0;
   padding: 0;
@@ -1587,7 +2051,9 @@ a {
 }
 
 .fleet-doc-list a {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--tap-target);
   padding: var(--space-1) var(--space-3);
   border: 1px solid var(--surface-sunken);
   border-radius: var(--radius-pill);
@@ -1607,9 +2073,17 @@ a {
 
 .fleet-table__row {
   display: grid;
-  grid-template-columns: minmax(140px, 1fr) 2fr;
-  gap: var(--space-3);
+  /* One column on a phone: a label and a value side by side at 320px leaves 12 characters each. */
+  grid-template-columns: 1fr;
+  gap: 0;
   padding: var(--space-2) var(--space-3);
+}
+
+@media (min-width: 560px) {
+  .fleet-table__row {
+    grid-template-columns: minmax(min(100%, 120px), 1fr) 2fr;
+    gap: var(--space-3);
+  }
 }
 
 .fleet-table__row:nth-child(odd) {
@@ -1629,7 +2103,7 @@ a {
 .fleet-submit {
   display: grid;
   gap: var(--space-3);
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
   align-items: end;
 }
 
@@ -1674,7 +2148,14 @@ a {
   flex-direction: column;
   gap: var(--space-2);
   align-items: flex-start;
-  min-inline-size: 220px;
+  inline-size: 100%;
+}
+
+@media (min-width: 560px) {
+  .fleet-row__side {
+    inline-size: auto;
+    min-inline-size: 220px;
+  }
 }
 
 .fleet-drivers,
@@ -1692,6 +2173,9 @@ a {
 }
 
 .fleet-context a {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--tap-target);
   padding: var(--space-1) var(--space-3);
   border: 1px solid var(--surface-sunken);
   border-radius: var(--radius-pill);
@@ -1700,8 +2184,2183 @@ a {
 }
 
 .fleet-context a[aria-current='page'] {
+  background: var(--brand-100);
+  border-color: var(--brand-300);
+  /* `--brand-700` is not remapped for dark mode; the ink token is, so the current context stays legible. */
+  color: var(--ink-900);
+  font-weight: 700;
+}
+
+/* ---------------------------------------------------------------------------
+   trips (Phase 4) — built mobile-first
+   ---------------------------------------------------------------------------
+   The marketplace is where passengers are, and passengers are on phones. Every rule below starts at
+   the narrowest column and only *adds* columns when there is room, so a 360px screen gets one card per
+   row, a thumb-sized target and no horizontal scroll; a 1280px screen gets a grid. Nothing here hides
+   content on a phone — a narrower screen reflows, it does not lose the route, the price or the CTA.
+   --------------------------------------------------------------------------- */
+
+.trip-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.trips-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+  margin-block-start: var(--space-5);
+}
+
+@media (min-width: 720px) {
+  .trips-grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
+  }
+}
+
+.trip-card {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+@media (min-width: 560px) {
+  .trip-card {
+    padding: var(--space-5);
+  }
+}
+
+.trip-card__route {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+/* One glyph for "and then, over there". The arrow has to point along the reading direction, which in
+   Arabic is the mirror image of English, so it is flipped by the same `--icon-flip` token the chevrons
+   in `DirectionalIcon` use — no second glyph and no second stylesheet. */
+.trip-card__arrow,
+.route-arrow,
+.back-arrow {
+  display: inline-block;
+  transform: scaleX(var(--icon-flip, 1));
+}
+
+.trip-card__arrow,
+.route-arrow {
+  color: var(--ink-400);
+}
+
+.trip-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  font-size: 0.85rem;
+  color: var(--ink-600);
+}
+
+.trip-card__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--surface-sunken);
+}
+
+/* On a phone the price and the link stack; the link stays a full-width tap target. */
+@media (max-width: 479px) {
+  .trip-card__footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .trip-card__footer .btn {
+    inline-size: 100%;
+  }
+}
+
+.trip-price {
+  font-size: 1.05rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.trip-price small {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ink-500);
+}
+
+/* ---------- the trip form (wizard + edit) ---------- */
+
+.trip-form {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.trip-form__row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-3);
+}
+
+@media (min-width: 560px) {
+  .trip-form__row--2 {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.trip-steps {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  padding-block-end: var(--space-2);
+  margin-block-end: var(--space-4);
+  scrollbar-width: thin;
+}
+
+.trip-steps button {
+  flex: 0 0 auto;
+  min-block-size: var(--tap-target);
+  padding-inline: var(--space-4);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-pill);
+  background: var(--surface-muted);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--ink-600);
+  cursor: pointer;
+}
+
+.trip-steps button[aria-current='step'] {
+  background: var(--brand-600);
+  border-color: var(--brand-600);
+  color: #fff;
+}
+
+.trip-stop {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-md);
+  background: var(--surface-muted);
+}
+
+@media (min-width: 640px) {
+  .trip-stop {
+    grid-template-columns: minmax(0, 1fr) 8rem 8rem auto;
+    align-items: end;
+  }
+}
+
+.trip-stop__remove {
+  min-block-size: var(--tap-target);
+  min-inline-size: var(--tap-target);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-sm);
+  background: var(--surface-base);
+  font: inherit;
+  color: var(--ink-600);
+  cursor: pointer;
+}
+
+/* ---------- the route timeline (detail page) ---------- */
+
+.trip-timeline {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.trip-timeline li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-1) var(--space-3);
+  align-items: center;
+}
+
+/* The marker carries the stop's sequence number. It used to be a 0.7rem dot with the digit inside it,
+   which drew the number over the circle instead of in the middle of it; a pin the size of the number is
+   the only version of that idea that reads. */
+.trip-timeline__marker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 1.5rem;
+  block-size: 1.5rem;
+  border-radius: 50%;
+  background: var(--brand-600);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.trip-timeline__name {
+  font-weight: 700;
+}
+
+.trip-timeline__meta {
+  grid-column: 2;
+  font-size: 0.8rem;
+  color: var(--ink-500);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (min-width: 560px) {
+  /* With room, the arrival and the fare sit on the stop's own line; on a phone they drop beneath the
+     name instead of squeezing it into two letters. */
+  .trip-timeline li {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: baseline;
+  }
+
+  .trip-timeline__marker {
+    align-self: start;
+  }
+
+  .trip-timeline__meta {
+    grid-column: auto;
+    text-align: end;
+  }
+}
+
+/* ---------- the marketplace filters ---------- */
+
+.trip-filters {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+}
+
+.trip-filters > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: var(--tap-target);
+  font-weight: 800;
+  cursor: pointer;
+  /* `display: flex` removes the built-in triangle, and `list-style` alone does not put it back in every
+     engine, so the disclosure draws its own chevron below. Without one the row reads as a heading and
+     nothing says the panel opens. */
+  list-style: none;
+}
+
+.trip-filters > summary::-webkit-details-marker {
+  display: none;
+}
+
+.trip-filters > summary::after {
+  content: '⌄';
+  margin-inline-start: auto;
+  color: var(--ink-500);
+  font-weight: 800;
+  line-height: 1;
+  transition: transform 120ms ease;
+}
+
+.trip-filters[open] > summary::after {
+  transform: rotate(180deg);
+}
+
+@media (min-width: 900px) {
+  /* From a laptop up the filters are a sidebar, not a disclosure. That only works once the panel is
+     *actually open*: a closed `<details>` hides its own content and no stylesheet can bring it back, so
+     the client component that opens it also marks it `data-enhanced`. Until that attribute is there —
+     no JavaScript, or a hydration that never ran — the summary stays visible and the panel can always
+     be opened by hand. */
+  .trip-filters[data-enhanced='true'] > summary {
+    display: none;
+  }
+}
+
+/* Every group zeroes its own margins (a `<fieldset>` needs that), so the form supplies the rhythm between
+   them — without this the nine controls stack flush against each other. */
+.trip-filters > form {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.trip-filters__group {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.trip-filters__group > label:not(.trip-filters__option) {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--ink-600);
+}
+
+.trip-filters__group legend {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--ink-600);
+  padding: 0;
+}
+
+.trip-filters__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.trip-filters__option {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: var(--tap-target);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-pill);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.trip-filters__option input {
+  margin: 0;
+  inline-size: 1rem;
+  block-size: 1rem;
+}
+
+.trip-filters__option:has(input:checked) {
+  border-color: var(--brand-500);
+  background: var(--brand-50);
+  font-weight: 700;
+}
+
+/* The facet count, and the number of filters in force. One class for both because they answer the same
+   question — "how many" — and an unstyled number after a label reads as part of the label. */
+.trip-filters__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: 1.5rem;
+  min-block-size: 1.25rem;
+  padding-inline: var(--space-1);
+  border-radius: var(--radius-pill);
+  background: var(--surface-sunken);
+  color: var(--ink-700);
+  font-size: 0.72rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+/* Inside the summary the count is the badge that says "you have filters on", so it is the brand colour
+   rather than a neutral chip. */
+.trip-filters > summary .trip-filters__count {
+  background: var(--brand-600);
+  color: #fff;
+}
+
+/* The clear-filters link and the filter button: two full-width targets on a phone, a row from 560px. */
+.trip-filters__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.trip-filters__actions .btn,
+.trip-filters__actions .ui-btn {
+  flex: 1 1 auto;
+}
+
+@media (min-width: 560px) {
+  .trip-filters__actions .btn,
+  .trip-filters__actions .ui-btn {
+    flex: 0 0 auto;
+  }
+}
+
+/* ---------- the sticky book bar (mobile) ---------- */
+
+.trip-cta {
+  display: grid;
+  gap: var(--space-2);
+  /* On a phone this is a bar pinned to the bottom of the screen. A full-bleed bar inside a padded shell
+     leaves the page scrolling past its gutters, so it is a floating card instead — same tap target, no
+     seam. From 720px it is one row of buttons in the article, and none of this applies. */
+  padding: var(--space-3);
+  position: sticky;
+  inset-block-end: var(--space-2);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-lg);
+}
+
+@media (min-width: 720px) {
+  .trip-cta {
+    position: static;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+}
+
+.trip-cta .btn {
+  inline-size: 100%;
+}
+
+/* The bar owns the gap between its buttons; the shared action row would add a second one. */
+.trip-cta .trip-form__actions {
+  margin-block-start: 0;
+}
+
+.trip-summary {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-lg);
+  background: var(--surface-muted);
+}
+
+.trip-summary__row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font-size: 0.9rem;
+}
+
+.trip-summary__row--total {
+  font-size: 1rem;
+  font-weight: 800;
+  padding-block-start: var(--space-2);
+  border-block-start: 1px solid var(--surface-sunken);
+}
+
+.trip-summary__row dt {
+  color: var(--ink-600);
+}
+
+.trip-summary__row dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------------------
+   trips — console and marketplace furniture
+   ---------------------------------------------------------------------------
+   Only what the trip screens need beyond the card/form primitives above: a status tab strip that
+   scrolls sideways on a phone instead of wrapping into four lines, a hint line, an action row, and the
+   two-column marketplace layout that becomes a sidebar at 900px.
+   --------------------------------------------------------------------------- */
+
+.trip-form__hint {
+  color: var(--ink-600);
+  font-size: 0.85rem;
+  margin-block: var(--space-1);
+}
+
+.trip-form__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-block-start: var(--space-4);
+}
+
+.trip-form__actions .ui-btn {
+  min-height: var(--tap-target);
+}
+
+.trip-form__wide {
+  grid-column: 1 / -1;
+}
+
+.trip-stop-list {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.trip-tabs {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  padding-block-end: var(--space-2);
+  margin-block: var(--space-3);
+  scrollbar-width: thin;
+}
+
+.trip-tabs a {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 0 0 auto;
+  min-height: var(--tap-target);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--surface-muted);
+  border-radius: var(--radius-pill);
+  color: var(--ink-700, var(--ink-600));
+  white-space: nowrap;
+}
+
+.trip-tabs a[aria-current='page'] {
   background: var(--brand-50);
   border-color: var(--brand-300);
   color: var(--brand-700);
   font-weight: 700;
+}
+
+.trip-tabs__count {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-500);
+  font-size: 0.8rem;
+}
+
+.trip-note {
+  border-inline-start: 3px solid var(--brand-500);
+  background: var(--surface-sunken);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+}
+
+.trip-back {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap-target);
+  color: var(--ink-600);
+}
+
+.trip-detail__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.trip-detail__head h1,
+.trip-detail__head h2 {
+  margin-block: var(--space-1);
+  font-size: 1.2rem;
+}
+
+.trip-detail__head h1 {
+  /* The route is the page title, so it sets the scale; the code above it stays a hint. */
+  font-size: clamp(1.3rem, 3.2vw, 1.7rem);
+}
+
+/* One column of blocks, deliberately *not* a grid: `position: sticky` on the book bar needs the article
+   to be its containing block, and a grid item is confined to its own row — a grid here silently unpins
+   the bar. The rhythm comes from the sibling rule instead. */
+.trip-detail {
+  max-inline-size: 48rem;
+}
+
+.trip-detail > * + * {
+  margin-block-start: var(--space-5);
+}
+
+.trip-detail h2 {
+  font-size: 1.05rem;
+  margin-block: 0 var(--space-2);
+}
+
+.trip-detail section > * + * {
+  margin-block-start: var(--space-2);
+}
+
+@media (max-width: 719.98px) {
+  /* Clearance for the sticky book bar, which floats over the article's last line on a phone. */
+  .trip-detail {
+    padding-block-end: var(--space-6);
+  }
+}
+
+.trip-cancel {
+  display: grid;
+  gap: var(--space-3);
+  margin-block-start: var(--space-4);
+  padding: var(--space-3);
+  border: 1px solid var(--surface-muted);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+
+.trip-queue {
+  display: grid;
+  gap: var(--space-3);
+  list-style: none;
+  padding: 0;
+  margin-block: var(--space-4);
+}
+
+.trip-queue__item {
+  padding: var(--space-4);
+}
+
+.trip-queue__item h3 {
+  font-size: 1rem;
+  margin-block-end: var(--space-1);
+}
+
+/* Marketplace ----------------------------------------------------------------------------------- */
+
+.trips-hero {
+  margin-block: var(--space-5) var(--space-3);
+}
+
+.trips-hero h1 {
+  font-size: clamp(1.35rem, 4vw, 1.9rem);
+  margin-block-end: var(--space-2);
+}
+
+.trips-hero p {
+  color: var(--ink-600);
+  max-inline-size: 46ch;
+}
+
+.trips-layout {
+  display: grid;
+  gap: var(--space-4);
+}
+
+@media (min-width: 900px) {
+  .trips-layout {
+    grid-template-columns: minmax(min(100%, 16rem), 18rem) 1fr;
+    align-items: start;
+    gap: var(--space-5);
+  }
+}
+
+.trips-results {
+  min-inline-size: 0;
+}
+
+.trips-count {
+  color: var(--ink-600);
+  font-size: 0.9rem;
+}
+
+.trips-pager {
+  display: flex;
+  justify-content: center;
+  margin-block: var(--space-5);
+}
+
+.trips-pager .ui-btn {
+  min-width: 10rem;
+  min-height: var(--tap-target);
+}
+
+/* The governorate a filter matched, so a result does not look unrelated to the search. */
+.trip-match {
+  text-decoration: underline;
+  text-decoration-color: var(--brand-500);
+  text-underline-offset: 0.2em;
+}
+
+/* Operator calendar ------------------------------------------------------------------------------ */
+
+.trip-calendar__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-block: var(--space-4);
+}
+
+.trip-calendar__bar .ui-btn {
+  min-height: var(--tap-target);
+}
+
+.trip-calendar__month {
+  font-weight: 800;
+  font-size: 1.05rem;
+}
+
+.trip-calendar {
+  width: 100%;
+  border-collapse: collapse;
+  min-inline-size: 44rem;
+}
+
+.trip-calendar th {
+  text-align: start;
+  font-size: 0.8rem;
+  color: var(--ink-600);
+  padding: var(--space-2);
+  border-block-end: 1px solid var(--surface-muted);
+}
+
+.trip-calendar td {
+  vertical-align: top;
+  padding: var(--space-2);
+  border: 1px solid var(--surface-muted);
+  inline-size: 14.28%;
+  block-size: 6rem;
+}
+
+.trip-calendar td[aria-current='date'] {
+  background: var(--brand-50);
+}
+
+.trip-calendar__empty {
+  background: var(--surface-sunken);
+}
+
+.trip-calendar__day {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--ink-500);
+  font-variant-numeric: tabular-nums;
+}
+
+.trip-calendar__list {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+  font-size: 0.75rem;
+}
+
+.trip-calendar__list a {
+  display: block;
+  color: var(--ink-900);
+}
+
+.trip-share {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.trip-share .ui-btn {
+  min-height: var(--tap-target);
+}
+
+/* Staff trip search ------------------------------------------------------------------------------- */
+
+.trip-search {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--surface-muted);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  margin-block-end: var(--space-4);
+}
+
+.trip-search > summary {
+  display: none;
+}
+
+.trip-table {
+  inline-size: 100%;
+  min-inline-size: 46rem;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.trip-table th,
+.trip-table td {
+  text-align: start;
+  padding: var(--space-2);
+  border-block-end: 1px solid var(--surface-muted);
+  vertical-align: top;
+}
+
+.trip-table th {
+  color: var(--ink-600);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+/*
+ * Below 720px the same table becomes a stack of cards: no horizontal scrolling to read one row, and the
+ * header text moves into each cell as a label (`data-label`), so nothing is lost. The markup stays a real
+ * `<table>` — a screen reader still gets rows, columns and their headers; only the presentation changes.
+ */
+@media (max-width: 719.98px) {
+  .table-cards {
+    min-inline-size: 0;
+  }
+
+  .table-cards thead {
+    display: none;
+  }
+
+  .table-cards,
+  .table-cards tbody,
+  .table-cards tr,
+  .table-cards td {
+    display: block;
+    inline-size: 100%;
+  }
+
+  .table-cards tr {
+    margin-block: var(--space-3);
+    padding: var(--space-3);
+    border: 1px solid var(--surface-sunken);
+    border-radius: var(--radius-md);
+    background: var(--surface-base);
+  }
+
+  .table-cards td {
+    display: grid;
+    grid-template-columns: 7rem 1fr;
+    gap: var(--space-2);
+    padding-block: var(--space-1);
+    border: 0;
+  }
+
+  .table-cards td::before {
+    content: attr(data-label);
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--ink-500);
+  }
+}
+
+/* ---------------------------------------------------------------------------------------------
+   The phone's bottom navigation.
+
+   Hidden — not just visually — above 720px: the header carries the full navigation there, and two
+   navigations on one screen is one too many. Below 720px it is the only fixed element in the product,
+   so `body` is padded by exactly its height (plus the safe-area inset) to keep the last row of a page
+   reachable instead of underneath a bar.
+   --------------------------------------------------------------------------------------------- */
+
+.mobile-tabbar {
+  display: none;
+}
+
+@media (max-width: 719.98px) {
+  .mobile-tabbar {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    position: fixed;
+    inset-block-end: 0;
+    inset-inline: 0;
+    z-index: 30;
+    background: var(--surface-base);
+    border-block-start: 1px solid var(--surface-sunken);
+    padding-block-end: env(safe-area-inset-bottom);
+  }
+
+  body:has(.mobile-tabbar) {
+    padding-block-end: calc(var(--tap-target) + var(--space-2) + env(safe-area-inset-bottom));
+  }
+}
+
+.tabbar__link {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 2px;
+  min-block-size: var(--tap-target);
+  padding-block: var(--space-2);
+  font-size: 0.7rem;
+  line-height: 1.2;
+  color: var(--ink-600);
+  text-decoration: none;
+}
+
+.tabbar__link[aria-current='page'] {
+  color: var(--brand-600);
+  font-weight: 700;
+}
+
+@media print {
+  .mobile-tabbar {
+    display: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------------------------
+   The home page's search box: one column at 320px, a row from 640px, never a horizontal form on a phone.
+   --------------------------------------------------------------------------------------------- */
+
+.hero-search {
+  display: grid;
+  gap: var(--space-3);
+  margin-block: var(--space-5);
+  padding: var(--space-4);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+}
+
+.hero-search__field {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.hero-search__field label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--ink-600);
+}
+
+.hero-search__submit {
+  min-block-size: var(--tap-target);
+}
+
+@media (min-width: 640px) {
+  .hero-search {
+    grid-template-columns: repeat(3, minmax(min(100%, 8rem), 1fr)) auto;
+    align-items: end;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Phase 5 — bookings
+ *
+ * Everything here is one column by default, because the person booking a seat is holding a phone at a
+ * bus stop. The wider layout is the enhancement, never the starting point.
+ * ------------------------------------------------------------------------- */
+
+.booking-form,
+.booking-identity {
+  display: grid;
+  gap: var(--space-4);
+  max-inline-size: 34rem;
+}
+
+/* The form *is* the page, so it gets the surface: one card to fill in instead of fields floating on the
+   page background. The confirmations and the list of bookings belong to the same family. */
+.booking-form {
+  margin-block-start: var(--space-5);
+  padding: var(--space-4);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+}
+
+@media (min-width: 720px) {
+  .booking-form {
+    padding: var(--space-6);
+  }
+}
+
+.booking-total {
+  margin-block-start: var(--space-1);
+}
+
+.booking-done {
+  display: grid;
+  gap: var(--space-3);
+  max-inline-size: 34rem;
+  margin-block-start: var(--space-5);
+  padding: var(--space-5);
+  border: 1px solid var(--surface-sunken);
+  border-block-start: 4px solid var(--state-success);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.booking-done__code {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin: 0;
+  /* A reference number, not a word: stays readable in either direction. */
+  font-variant-numeric: tabular-nums;
+}
+
+.booking-list {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.booking-card {
+  display: grid;
+  gap: var(--space-2);
+  min-inline-size: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.booking-card__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* The route is the link into the booking: a thumb-sized target, and no underline until it is hovered. */
+.booking-card__code {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: var(--tap-target);
+  min-inline-size: 0;
+  font-weight: 700;
+  color: var(--ink-900);
+  text-decoration: none;
+}
+
+a.booking-card__code:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.booking-card__meta {
+  margin: 0;
+  color: var(--ink-600);
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.booking-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+
+.booking-actions__confirm,
+.booking-actions__reject,
+.booking-share {
+  display: grid;
+  gap: 0.5rem;
+  inline-size: 100%;
+}
+
+.booking-share__url {
+  margin: 0;
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+
+.booking-detail__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  margin-block-end: var(--space-3);
+}
+
+/* The booking page's own heading: the back link already separates it from the header. */
+.booking-page h1 {
+  margin-block: 0 var(--space-2);
+}
+
+/* The passenger's booking is a stack of blocks, not a grid — same reason as `.trip-detail`: a grid item
+   is confined to its own row, and anything sticky inside it would stop sticking. */
+.booking-view > * {
+  margin-block: 0;
+}
+
+.booking-view > * + * {
+  margin-block-start: var(--space-4);
+}
+
+.booking-view__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.booking-manifest {
+  inline-size: 100%;
+  border-collapse: collapse;
+}
+
+.booking-manifest th,
+.booking-manifest td {
+  padding: 0.5rem;
+  text-align: start;
+  vertical-align: top;
+  border-block-end: 1px solid color-mix(in srgb, currentColor 14%, transparent);
+}
+
+/* A watermark that is a reminder, not a redaction: it repeats the booking code and the viewer's name so
+ * a screenshot identifies who took it. Decorative for assistive tech, and it never blocks the page. */
+.watermark {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-block-end: 1rem;
+  opacity: 0.35;
+  pointer-events: none;
+  font-size: 0.75rem;
+  overflow: hidden;
+}
+
+.watermark span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  transform: rotate(-12deg);
+}
+
+@media (min-width: 720px) {
+  .booking-form,
+  .booking-identity {
+    max-inline-size: 40rem;
+  }
+
+  .watermark {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* The boarding ticket: a code an operator can scan, with the caption as its accessible name. */
+.ticket {
+  display: grid;
+  gap: 0.35rem;
+  justify-items: start;
+  margin: 0 0 1rem;
+  padding: 0.75rem;
+  border: 1px solid color-mix(in srgb, currentColor 16%, transparent);
+  border-radius: var(--radius-md, 0.75rem);
+  inline-size: fit-content;
+}
+
+.ticket__qr svg {
+  display: block;
+  inline-size: 11rem;
+  block-size: auto;
+}
+
+.ticket__caption {
+  font-size: 0.85rem;
+  color: color-mix(in srgb, currentColor 72%, transparent);
+  max-inline-size: 16rem;
+}
+
+/* ---------- the live trip screen (Phase 6.2) ---------- */
+
+.live-panel {
+  display: grid;
+  gap: var(--space-4);
+  margin-block-start: var(--space-5);
+  padding: var(--space-5);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-md);
+}
+
+.live-panel__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.live-panel__code {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-500);
+}
+
+.live-panel__now {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.live-panel__meta {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--ink-500);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A native progress element would be styled differently by every browser; this is a bar the page can
+   label properly (`role="progressbar"` with the percentage as its value). */
+.live-bar {
+  block-size: 0.7rem;
+  border-radius: 999px;
+  background: var(--surface-sunken);
+  overflow: hidden;
+}
+
+.live-bar__fill {
+  display: block;
+  block-size: 100%;
+  background: var(--brand-500);
+  /* `inline-size`, not `width`: the bar grows towards the end of the line, whichever direction that is. */
+  transition: inline-size 600ms ease;
+}
+
+/* ---------- the driver's console (Phase 6.2) ---------- */
+
+.trip-run {
+  display: grid;
+  gap: var(--space-4);
+  margin-block-start: var(--space-5);
+  padding: var(--space-5);
+}
+
+.trip-run h2 {
+  font-size: 1.05rem;
+  margin-block-end: var(--space-2);
+}
+
+.trip-run h3 {
+  font-size: 0.95rem;
+  margin-block: var(--space-4) var(--space-2);
+}
+
+.trip-timeline li.is-reached .trip-timeline__marker {
+  background: var(--state-success, #1c7a4d);
+}
+
+.trip-timeline li.is-reached .trip-timeline__name {
+  color: var(--ink-500);
+}
+
+/* ---------- the driver's trip list ---------- */
+
+.card-list {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card-list .card {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+.card__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-bar__fill {
+    transition: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------------------------
+   Phase 7 — staff operations: the dashboard, the scanner, and the sheet that goes on the clipboard.
+
+   The manifest is the only screen in the product that is *designed to leave* the app. Everything else
+   here is a console; this is a page that gets printed, folded and handed to a driver, so it is written
+   in physical units (mm) and the screen version is the preview of the paper.
+   --------------------------------------------------------------------------------------------- */
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
+  gap: var(--space-3);
+  margin-block-end: var(--space-5);
+}
+
+.stat {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-4);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+}
+
+.stat__value--text {
+  font-size: 0.95rem;
+}
+
+.ops-scan {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.ops-scan__manual {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.ops-scan__input {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1.1rem;
+  letter-spacing: 0.08em;
+}
+
+.ops-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.ops-facts dt {
+  font-size: 0.8rem;
+  color: var(--ink-500);
+}
+
+.ops-facts dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.ops-picklist,
+.ops-results,
+.ops-scanlist {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ops-pick {
+  display: flex;
+  gap: var(--space-2);
+  align-items: start;
+  padding: var(--space-2);
+  border-block-end: 1px solid var(--surface-sunken);
+}
+
+.ops-pick input {
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+  margin-block-start: 0.15rem;
+}
+
+.ops-results li,
+.ops-scanlist li {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+  padding-block: var(--space-1);
+  border-block-end: 1px solid var(--surface-sunken);
+}
+
+.ops-ok {
+  color: var(--state-success);
+}
+
+.ops-deny {
+  color: var(--state-danger);
+}
+
+.ops-bulk {
+  display: grid;
+  gap: var(--space-3);
+}
+
+/* ---------- the sheet ---------- */
+
+.manifest {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.manifest__bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.manifest__sheet {
+  margin-inline: auto;
+  inline-size: 210mm;
+  max-inline-size: 100%;
+  min-block-size: 297mm;
+  padding: 12mm 10mm;
+  /* Paper is white in both themes: a manifest printed from dark mode is unreadable. */
+  background: #ffffff;
+  color: #111111;
+  border: 1px solid var(--surface-sunken);
+  font-size: 10.5pt;
+  line-height: 1.45;
+}
+
+.manifest__head {
+  display: flex;
+  gap: var(--space-4);
+  align-items: start;
+  justify-content: space-between;
+  padding-block-end: 4mm;
+  border-block-end: 2px solid #111111;
+}
+
+.manifest__eyebrow {
+  margin: 0 0 1mm;
+  font-size: 8pt;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #444444;
+}
+
+.manifest__head h1 {
+  margin: 0;
+  font-size: 16pt;
+  line-height: 1.2;
+}
+
+.manifest__route {
+  margin: 1mm 0 0;
+  font-size: 12pt;
+  font-weight: 700;
+}
+
+.manifest__meta {
+  margin: 1mm 0 0;
+  font-size: 9.5pt;
+  color: #333333;
+}
+
+.manifest__qr {
+  margin: 0;
+  text-align: center;
+}
+
+.manifest__qr-code {
+  inline-size: 34mm;
+  block-size: 34mm;
+}
+
+.manifest__qr-code svg {
+  inline-size: 100%;
+  block-size: 100%;
+  display: block;
+}
+
+.manifest__qr-token {
+  display: inline-block;
+  margin-block-start: 1mm;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 6.5pt;
+  letter-spacing: 0.02em;
+  color: #444444;
+}
+
+.manifest__blocks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2mm 6mm;
+  margin: 4mm 0;
+  padding: 3mm 0;
+  border-block-end: 1px solid #bbbbbb;
+}
+
+.manifest__blocks dt {
+  font-size: 7.5pt;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #555555;
+}
+
+.manifest__blocks dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+.manifest__stops {
+  margin: 0 0 3mm;
+  font-size: 9pt;
+  color: #333333;
+}
+
+.manifest__columns {
+  display: block;
+}
+
+.manifest__columns--split {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 6mm;
+}
+
+.manifest__table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-size: 8.5pt;
+}
+
+.manifest__columns--split .manifest__table {
+  font-size: 7.5pt;
+}
+
+.manifest__table th {
+  text-align: start;
+  font-size: 7.5pt;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #555555;
+  border-block-end: 1px solid #111111;
+  padding: 1mm 1.5mm;
+}
+
+.manifest__table td {
+  padding: 1.2mm 1.5mm;
+  border-block-end: 1px solid #e2e2e2;
+  /* A long Arabic name wraps; it must not push the column into its neighbour. */
+  overflow-wrap: anywhere;
+}
+
+.manifest__num {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.manifest__note {
+  font-size: 0.85em;
+  color: #555555;
+}
+
+.manifest__empty {
+  margin: 6mm 0;
+  padding: 4mm;
+  border: 1px dashed #999999;
+  text-align: center;
+  color: #444444;
+}
+
+.manifest__foot {
+  display: flex;
+  gap: var(--space-4);
+  justify-content: space-between;
+  margin-block-start: 4mm;
+  padding-block-start: 2mm;
+  border-block-start: 1px solid #bbbbbb;
+  font-size: 7.5pt;
+  color: #555555;
+}
+
+@media print {
+  /* The document is the page: no shell, no chrome, no second sheet from a stray margin. */
+  body:has(.manifest) .site-header,
+  body:has(.manifest) .mobile-tabbar,
+  .no-print {
+    display: none !important;
+  }
+
+  .manifest {
+    display: block;
+  }
+
+  .manifest__sheet {
+    inline-size: auto;
+    min-block-size: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  /* Page geometry in millimetres, not `A4` by name: a printer with a 6 mm non-printable edge still
+     fits the sheet, because the margins are the sheet's own padding. */
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
+
+  .manifest__table tr {
+    break-inside: avoid;
+  }
+}
+
+/* ==========================================================================
+   Phase 8 — vehicle operations: the rollup, the health card, the money
+   ==========================================================================
+
+   The numbers here are the ones the trip gate already refused a van over, so the design job is not
+   decoration: a state has to be readable across a workshop forecourt (`--state-*` on a badge), and a
+   table has to survive 320px without becoming a spreadsheet you scroll sideways.                     */
+
+/*
+ * The fleet dashboard (Phase 8.2).
+ *
+ * Mobile first, and the mobile shape is not a shrunken desktop: the five totals become two columns of
+ * cards, the fleet stops being a table and becomes a list of cards with labelled values, and every
+ * action is a full-width target. Above 720px the same markup spreads into a five-column stat row and a
+ * table whose numbers line up. Nothing is hidden at any width — a narrow screen reflows, it does not
+ * lose the overdue count.
+ */
+
+.fleet-ops {
+  display: grid;
+  gap: var(--space-6);
+  min-inline-size: 0;
+}
+
+/* The page head already closes with a rule; a second one 24px below it reads as a mistake. */
+.fleet-ops > .fleet-section:first-of-type {
+  border-block-start: 0;
+  padding-block-start: 0;
+}
+
+/* Count and context on one line, the switcher on the next when there is no room for both. */
+.fleet-page-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+  padding-block-end: var(--space-3);
+  border-block-end: 1px solid var(--surface-sunken);
+}
+
+.fleet-page-head__count {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: baseline;
+  margin: 0;
+  font-weight: 700;
+}
+
+.fleet-page-head__context {
+  color: var(--ink-500);
+  font-weight: 500;
+  font-size: 0.85rem;
+}
+
+/* A wide row of organization chips is a horizontal scroll on a phone, not a wrapped mess of pills. */
+@media (max-width: 719.98px) {
+  .fleet-page-head .fleet-context {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin-inline: calc(var(--space-4) * -1);
+    padding-inline: var(--space-4);
+    inline-size: calc(100% + var(--space-4) * 2);
+  }
+
+  .fleet-page-head .fleet-context::-webkit-scrollbar {
+    display: none;
+  }
+
+  .fleet-page-head .fleet-context a {
+    flex: 0 0 auto;
+  }
+}
+
+.fleet-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: start;
+  justify-content: space-between;
+}
+
+.fleet-head__text {
+  display: grid;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+.fleet-head__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* On a phone the two exports sit side by side and share the width; they are the page's primary verbs. */
+@media (max-width: 719.98px) {
+  .fleet-head__actions {
+    inline-size: 100%;
+  }
+
+  .fleet-head__actions .ui-btn {
+    flex: 1 1 8rem;
+    justify-content: center;
+  }
+}
+
+.fleet-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 128px), 1fr));
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fleet-stat {
+  /* The accent is a custom property so one ruleset colours every state card. */
+  --fleet-tone: var(--surface-sunken);
+  display: grid;
+  gap: var(--space-1);
+  align-content: start;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--surface-sunken);
+  border-inline-start: 3px solid var(--fleet-tone);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+}
+
+.fleet-stat[data-tone='danger'] {
+  --fleet-tone: var(--state-danger);
+}
+
+.fleet-stat[data-tone='warning'] {
+  --fleet-tone: var(--state-warning);
+}
+
+.fleet-stat[data-tone='ok'] {
+  --fleet-tone: var(--state-success);
+}
+
+.fleet-stat[data-tone='brand'] {
+  --fleet-tone: var(--brand-500);
+}
+
+/* Money reads as the biggest number on the page after the state counts. */
+.fleet-stat--money dd {
+  font-size: 1.05rem;
+}
+
+.fleet-stat dt {
+  color: var(--ink-500);
+  font-size: 0.78rem;
+  letter-spacing: 0.01em;
+}
+
+.fleet-stat dd {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+  line-height: 1.1;
+  /* A plate, a kilometre figure and a riyal total are Latin digits inside Arabic text. */
+  font-variant-numeric: tabular-nums;
+}
+
+/* A secondary line inside a cell or a card: the model under the plate, km/L under L/100km. */
+.fleet-model {
+  display: block;
+  color: var(--ink-500);
+  font-size: 0.8rem;
+  font-weight: 400;
+}
+
+.fleet-stat-suffix {
+  color: var(--ink-500);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+/* One sentence where the numbers are, so "3" means something without reading a legend. */
+.fleet-callout {
+  --fleet-tone: var(--state-warning);
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--surface-sunken);
+  border-inline-start: 3px solid var(--fleet-tone);
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+  color: var(--ink-700);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.fleet-callout[data-tone='danger'] {
+  --fleet-tone: var(--state-danger);
+}
+
+.fleet-list__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Filter chips: as wide as their text, and a full target height on a phone. */
+.fleet-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.fleet-filter {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+  min-block-size: var(--tap-target);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-pill);
+  background: var(--surface-base);
+  color: var(--ink-600);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.fleet-filter:hover {
+  border-color: var(--brand-300);
+  color: var(--ink-900);
+}
+
+.fleet-filter[aria-pressed='true'] {
+  border-color: var(--brand-500);
+  background: var(--brand-100);
+  color: var(--ink-900);
+}
+
+.fleet-filter__count {
+  padding-inline: var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--surface-sunken);
+  color: var(--ink-600);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.fleet-filter[aria-pressed='true'] .fleet-filter__count {
+  background: var(--surface-base);
+  color: var(--ink-700);
+}
+
+/*
+ * A real <table>, unlike `.fleet-table` (which is a definition list) — and a *different class name* from
+ * `.fleet-grid`, which is the card grid above. Sharing that name meant every fleet table inherited
+ * `display: grid` and was drawn as a column of 280px cells.
+ */
+.fleet-ledger {
+  inline-size: 100%;
+  min-inline-size: 34rem;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.fleet-ledger th,
+.fleet-ledger td {
+  padding: var(--space-3);
+  text-align: start;
+  vertical-align: middle;
+  border-block-end: 1px solid var(--surface-sunken);
+}
+
+.fleet-ledger thead th {
+  background: var(--surface-muted);
+  color: var(--ink-500);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border-block-end: 1px solid var(--surface-sunken);
+  white-space: nowrap;
+}
+
+.fleet-ledger tbody th {
+  font-weight: 600;
+  white-space: normal;
+}
+
+/* Numbers line up down the column, and a kilometric figure never wraps mid-value. */
+.fleet-ledger tbody td {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.fleet-ledger tbody tr:hover th,
+.fleet-ledger tbody tr:hover td {
+  background: var(--surface-muted);
+}
+
+.fleet-ledger tbody tr:last-child th,
+.fleet-ledger tbody tr:last-child td {
+  border-block-end: 0;
+}
+
+.fleet-ledger tbody th .ui-badge {
+  margin-block-start: var(--space-1);
+}
+
+.fleet-ledger__plate {
+  display: block;
+  font-weight: 800;
+  /* A plate is a Latin string inside Arabic text; it must not be reordered by the bidi algorithm. */
+  font-variant-numeric: tabular-nums;
+}
+
+.fleet-cost {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: space-between;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.fleet-cost__label {
+  color: var(--ink-500);
+  font-size: 0.75rem;
+}
+
+.fleet-ledger__actions {
+  text-align: end;
+}
+
+/*
+ * Below 720px the ledger becomes a list of cards. The header moves into each cell as `data-label`, so
+ * "8.44 L/100km" still says what it is; the plate becomes the card's title and the action button gets
+ * the full width. The markup stays a real <table>, so a screen reader keeps its row and column headers.
+ */
+@media (max-width: 719.98px) {
+  .fleet-ledger--cards {
+    min-inline-size: 0;
+    font-size: 0.95rem;
+  }
+
+  .fleet-ledger--cards thead {
+    display: none;
+  }
+
+  .fleet-ledger--cards,
+  .fleet-ledger--cards tbody {
+    display: block;
+    inline-size: 100%;
+  }
+
+  .fleet-ledger--cards tbody tr {
+    display: grid;
+    gap: var(--space-1);
+    margin-block-end: var(--space-3);
+    padding: var(--space-3);
+    border: 1px solid var(--surface-sunken);
+    border-radius: var(--radius-md);
+    background: var(--surface-base);
+  }
+
+  .fleet-ledger--cards tbody tr:last-child {
+    margin-block-end: 0;
+  }
+
+  .fleet-ledger--cards tbody th,
+  .fleet-ledger--cards tbody td {
+    display: grid;
+    grid-template-columns: 7.5rem minmax(0, 1fr);
+    gap: var(--space-2);
+    align-items: baseline;
+    padding: 0;
+    border: 0;
+    white-space: normal;
+    text-align: start;
+  }
+
+  /* The plate cell is the card's heading: no label, and a rule under it. */
+  .fleet-ledger--cards tbody th {
+    grid-template-columns: minmax(0, 1fr);
+    padding-block-end: var(--space-2);
+    border-block-end: 1px solid var(--surface-sunken);
+    margin-block-end: var(--space-2);
+  }
+
+  .fleet-ledger--cards tbody td::before {
+    content: attr(data-label);
+    color: var(--ink-500);
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+
+  /* The value is one grid item, so a cell with two lines (L/100km above km/L) keeps both beside its
+     label instead of dropping the second one back under it. */
+  .fleet-ledger--cards .fleet-cell {
+    display: grid;
+    gap: 2px;
+  }
+
+  .fleet-ledger--cards tbody td.fleet-ledger__actions {
+    display: block;
+    margin-block-start: var(--space-2);
+  }
+
+  .fleet-ledger--cards tbody td.fleet-ledger__actions::before {
+    content: none;
+  }
+
+  .fleet-ledger--cards tbody td.fleet-ledger__actions .ui-btn {
+    inline-size: 100%;
+    justify-content: center;
+  }
+}
+
+/* The date-range export: two dates and a verb, stacked on a phone. */
+.fleet-range {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: end;
+}
+
+.fleet-range__fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+  flex: 1 1 20rem;
+  gap: var(--space-3);
+  min-inline-size: 0;
+}
+
+.fleet-range .ui-field {
+  min-inline-size: 0;
+}
+
+@media (max-width: 719.98px) {
+  .fleet-range .ui-btn {
+    inline-size: 100%;
+    justify-content: center;
+  }
+}
+
+/* Thresholds: a two-column form on a tablet, one column on a phone. */
+.fleet-settings {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: var(--space-3);
+}
+
+.fleet-settings .ui-field {
+  min-inline-size: 0;
+}
+
+.fleet-check--card {
+  grid-column: 1 / -1;
+  align-items: start;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-md);
+  background: var(--surface-muted);
+}
+
+.fleet-check--card input {
+  margin-block-start: 3px;
+}
+
+.fleet-check--card .fleet-hint {
+  display: block;
+  margin-block-start: var(--space-1);
+  font-weight: 400;
+}
+
+.fleet-settings__foot {
+  display: flex;
+  justify-content: end;
+}
+
+@media (max-width: 719.98px) {
+  .fleet-settings__foot .ui-btn {
+    inline-size: 100%;
+    justify-content: center;
+  }
+}
+
+.fleet-check {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  min-block-size: var(--tap-target);
+  font-size: 0.9rem;
+}
+
+.fleet-check input[type='checkbox'] {
+  inline-size: 1.15rem;
+  block-size: 1.15rem;
+}
+
+.fleet-check select {
+  inline-size: 100%;
+}
+
+.fleet-done-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
+  gap: var(--space-2);
+  align-items: end;
+  inline-size: 100%;
+  margin-block-start: var(--space-2);
+  padding: var(--space-3);
+  border: 1px dashed var(--surface-sunken);
+  border-radius: var(--radius-md);
+}
+
+.fleet-list__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-md);
+}
+
+.fleet-list__row > div:first-child {
+  flex: 1 1 220px;
+}
+
+/* The printable fleet report reuses the manifest's paper geometry and its print rules; these are the two
+   pieces that are report-specific. Paper is white in both themes for the same reason a manifest is. */
+.fleet-report {
+  display: block;
+}
+
+.fleet-report__totals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 32mm), 1fr));
+  gap: 2mm 4mm;
+  margin: 4mm 0;
+  padding: 2mm 0;
+  border-block: 1px solid #e2e2e2;
+}
+
+.fleet-report h2#report-title {
+  margin: 0;
+  font-size: 15pt;
+}
+
+.fleet-report__totals dt {
+  font-size: 7.5pt;
+  color: #555555;
+}
+
+.fleet-report__totals dd {
+  margin: 0;
+  font-size: 10pt;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+@media print {
+  .fleet-report {
+    inline-size: auto;
+    border: 0;
+    padding: 0;
+  }
 }

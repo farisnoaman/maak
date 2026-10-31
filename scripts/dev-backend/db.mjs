@@ -179,6 +179,17 @@ const DEMO_USERS = [
     role: null,
     verified: 'unverified',
   },
+  {
+    // The driver the seeded fleet already had a profile for (`+967733000101`). Without an account to
+    // bind it to, the licence screen answered "no driver profile" and the whole photo flow — the one
+    // thing the screen exists for — could not be tried on a laptop at all.
+    id: '55555555-5555-4555-8555-555555555555',
+    email: 'driver@maak.test',
+    phone: '+967733000101',
+    name: 'خالد الحميري',
+    role: null,
+    verified: 'verified',
+  },
 ];
 
 async function seed(client, log = () => {}) {
@@ -247,8 +258,587 @@ async function seed(client, log = () => {}) {
      on conflict do nothing`,
   );
 
+  // Pro, not Basic, and deliberately: a Basic organization may hold one vehicle, one driver and five
+  // trips, which turns every console into a demo of empty states and — worse — makes the second-invite,
+  // second-vehicle and quota-refusal paths untestable without hand-editing the database. The demo
+  // account is not sold anything; it exists to be exercised.
+  await client.query(
+    `update public.organizations set plan = 'pro' where id = 'aaaaaaaa-0000-4000-8000-000000000001'`,
+  );
+
+  await seedDemoFleet(client);
+
+  // Fuel and maintenance, through the commands. Without it the fleet dashboard and the health card are
+  // empty on every reset — and a Phase 8 screen that has never shown a consumption figure is a screen
+  // nobody has looked at.
+  try {
+    await seedDemoOperations(client, log);
+  } catch (error) {
+    log(`  (demo operations skipped: ${error.message})`);
+  }
+
+  // Bookable inventory, created through the same three commands the console uses. Without it the
+  // marketplace is an empty page after every reset and there is nothing to book — which is how a
+  // booking defect stays invisible until somebody hand-inserts a trip.
+  try {
+    await seedDemoTrip(client, log);
+  } catch (error) {
+    log(`  (demo trip skipped: ${error.message})`);
+  }
+
+  // Two more vans, so the fleet dashboard is a fleet and not a single row: one overdue, one healthy, one
+  // due soon. Seeded after the primary van so the phase-8 acceptance numbers on 7925cdf3 stay identical.
+  await client.query(
+    `insert into public.vehicles (
+       id, owner_org_id, make, model, model_year, plate_number, plate_governorate_id,
+       fuel_type, seats_passenger, seats_total, odometer_km, status, verification_status,
+       insurance_expiry, inspection_expiry, registration_expiry, created_by
+     )
+     values
+       ('7925cdf3-0000-4000-8000-00000000c001', 'aaaaaaaa-0000-4000-8000-000000000001',
+        'Toyota', 'Coaster', 2017, '8-4471',
+        (select id from public.governorates where code = 'YE-AD'),
+        'diesel', 22, 23, 340_900, 'active', 'verified',
+        current_date + 120, current_date + 60, current_date + 200,
+        '33333333-3333-4333-8333-333333333333'),
+       ('7925cdf3-0000-4000-8000-00000000c002', 'aaaaaaaa-0000-4000-8000-000000000001',
+        'Hyundai', 'County', 2021, '5-2210',
+        (select id from public.governorates where code = 'YE-AD'),
+        'diesel', 25, 26, 95_400, 'active', 'verified',
+        current_date + 260, current_date + 310, current_date + 340,
+        '33333333-3333-4333-8333-333333333333')
+     on conflict (id) do nothing`,
+  );
+
+  // Now that the two extra vans exist, the marketplace can have more than one departure.
+  try {
+    await seedMarketplaceTrips(client, log);
+  } catch (error) {
+    log(`  (extra demo trips skipped: ${error.message})`);
+  }
+
+  try {
+    await seedDemoBooking(client, log);
+  } catch (error) {
+    log(`  (demo booking skipped: ${error.message})`);
+  }
+
+  await seedExtraFleetOperations(client, log);
+
   await grantDemoScope(client);
-  log(`  demo sign-in: admin@maak.test / ${DEMO_PASSWORD}`);
+  log(`  demo sign-in: admin@maak.test · owner@maak.test · driver@maak.test / ${DEMO_PASSWORD}`);
+}
+
+/**
+ * One real vehicle and one real driver, so the console is not a wall of empty states.
+ *
+ * This exists because of a smaller failure than it looks: with no rows, the vehicle detail page — the
+ * screen that renders all sixty attributes — was never parsed by `check-a11y.mjs`, and every screenshot
+ * of Phase 3 showed "0 vehicles". The insurance expiry is deliberately 20 days out so the amber badge
+ * has something to colour, and the odometer baseline row matches the vehicle's odometer.
+ *
+ * Fixed ids, `on conflict do nothing`: re-running the seed is a no-op and a row edited in the UI stays
+ * edited. The vehicle belongs to the company, which is also what fills the `?org=` context switcher.
+ */
+async function seedDemoFleet(client) {
+  await client.query(
+    `insert into public.vehicles (
+       id, owner_org_id, make, model, model_year, trim, plate_number, plate_governorate_id,
+       vin, chassis_no, color, body_type, drive_type, transmission, fuel_type, engine_cc, cylinders,
+       fuel_tank_l, tyre_size, tyre_count, spare_tyre, vehicle_condition, ownership_kind,
+       seats_passenger, seats_total, luggage_capacity_l, roof_rack,
+       air_conditioning, heating, reclining_seats, usb_charging, curtains,
+       airbags, abs, esp, seatbelts_all, fire_extinguisher, first_aid, emergency_exit, gps_device,
+       child_seat, step_assist,
+       insurance_company, insurance_policy_no, insurance_expiry, inspection_expiry,
+       registration_expiry, transport_permit_expiry,
+       exterior_condition, interior_condition, odometer_km, status, verification_status,
+       verified_by, verified_at, created_by
+     )
+     values (
+       '7925cdf3-5648-4b52-9f84-8ad8fa68aae2',
+       'aaaaaaaa-0000-4000-8000-000000000001',
+       'Toyota', 'Hiace', 2019, 'GL', '12345-ع',
+       (select id from public.governorates where code = 'YE-AD'),
+       'JTFSK22P7J0123456', 'CH-2019-88421', 'أبيض', 'van', 'rear_wheel_drive', 'manual', 'diesel',
+       2982, 4, 70, '195R15', 5, true, 'used', 'owned',
+       13, 14, 1200, true,
+       true, true, true, true, true,
+       2, true, false, true, true, true, true, true,
+       true, false,
+       'شركة اليمن للتأمين', 'POL-2026-004178', current_date + 20, current_date + 240,
+       current_date + 300, current_date + 90,
+       'good', 'good', 184320, 'active', 'verified',
+       '22222222-2222-4222-8222-222222222222', now(), '33333333-3333-4333-8333-333333333333'
+     )
+     on conflict (id) do nothing`,
+  );
+
+  await client.query(
+    `insert into public.odometer_readings (id, vehicle_id, reading_km, kind, recorded_by, note)
+     values ('7925cdf3-0000-4000-8000-00000000a001', '7925cdf3-5648-4b52-9f84-8ad8fa68aae2',
+             184320, 'baseline', '33333333-3333-4333-8333-333333333333', 'قراءة خط الأساس')
+     on conflict (id) do nothing`,
+  );
+
+  await client.query(
+    `insert into public.driver_profiles (
+       id, invited_phone, full_name, org_id, invited_by, licence_no, licence_class,
+       licence_expiry, status, verification_status, verified_by, verified_at
+     )
+     values (
+       '7925cdf3-0000-4000-8000-00000000d001', '+967733000101', 'خالد الحميري',
+       'aaaaaaaa-0000-4000-8000-000000000001', '33333333-3333-4333-8333-333333333333',
+       'YE-DL-448213', 'C', current_date + 420, 'active', 'verified',
+       '22222222-2222-4222-8222-222222222222', now()
+     )
+     on conflict (id) do nothing`,
+  );
+
+  // Bind the seeded driver profile to the seeded driver account, once. A row edited in the UI stays
+  // edited: the condition is "nobody", not "not this user".
+  await client.query(
+    `update public.driver_profiles
+        set user_id = '55555555-5555-4555-8555-555555555555'
+      where id = '7925cdf3-0000-4000-8000-00000000d001' and user_id is null`,
+  );
+
+  await client.query(
+    `insert into public.vehicle_driver_assignments (id, vehicle_id, driver_id, assigned_by)
+     values ('7925cdf3-0000-4000-8000-00000000b001', '7925cdf3-5648-4b52-9f84-8ad8fa68aae2',
+             '7925cdf3-0000-4000-8000-00000000d001', '33333333-3333-4333-8333-333333333333')
+     on conflict (id) do nothing`,
+  );
+}
+
+/**
+ * Two full tanks 450 km apart and an oil rule that is nearly due.
+ *
+ * These are the plan's own acceptance numbers, seeded as data: 38 litres over 450 km is the 8.44 L/100km
+ * the dashboard is supposed to show, and "oil every 5 000 km from 179 500" puts the van 180 km from a
+ * 184 500 due point — inside the 500 km window, so the badge is amber rather than green. A demo that
+ * only ever shows "ok" does not demonstrate the feature.
+ *
+ * Written through `cmd_log_fuel` / `cmd_upsert_maintenance_schedule` rather than inserts, for the same
+ * reason as the trip seed: the seed then proves the commands still work.
+ */
+async function seedDemoOperations(client, log = () => {}) {
+  const owner = '33333333-3333-4333-8333-333333333333';
+  const vehicle = '7925cdf3-5648-4b52-9f84-8ad8fa68aae2';
+
+  const existing = await client.query(
+    'select 1 from public.fuel_logs where vehicle_id = $1 limit 1',
+    [vehicle],
+  );
+  if (existing.rows.length > 0) return;
+
+  log('  seeding demo fuel and maintenance…');
+
+  // Two real stations in the directory, because the picker is only worth demonstrating with something in
+  // it: a fuel form whose "station from the directory" list offers a market is a control that looks broken.
+  // They are `kind = 'station'` and public, so they belong to the geo directory rather than to the seed's
+  // private gathering point.
+  await client.query(`
+    insert into public.places (kind, name_ar, name_en, lat, lng, is_public, created_by,
+                               verification_status)
+    select v.kind, v.ar, v.en, v.lat, v.lng, true, '11111111-1111-4111-8111-111111111111',
+           'verified'
+    from (values
+      ('station', 'محطة الروضة — عدن', 'Al Rawda Station — Aden', 12.7855, 45.0184),
+      ('station', 'محطة النور — الزنجبار', 'Al Noor Station — Zinjibar', 13.1289, 45.3807)
+    ) as v(kind, ar, en, lat, lng)
+    where not exists (select 1 from public.places p where p.name_ar = v.ar)
+  `);
+
+  const stationId = async (name) => {
+    const found = await client.query('select id from public.places where name_ar = $1 limit 1', [
+      name,
+    ]);
+    return found.rows[0]?.id ?? null;
+  };
+
+  const fill = async (odometerKm, litres, daysAgo, station) => {
+    await client.query('select public.cmd_log_fuel($1::uuid, $2::uuid, $3::jsonb, $4, null)', [
+      owner,
+      vehicle,
+      JSON.stringify({
+        odometerKm,
+        litres,
+        pricePerLitreYer: 500,
+        isFullTank: true,
+        filledAt: new Date(Date.now() - daysAgo * 86_400_000).toISOString(),
+        stationName: station,
+        // Linked as well as named, so the demo shows the directory doing its job rather than a text field
+        // that happens to be filled in.
+        stationPlaceId: await stationId(station),
+      }),
+      `dev-seed-fuel-${odometerKm}`,
+    ]);
+  };
+
+  // Above the seeded baseline (184 320), because the odometer only goes forward for the seed too — the
+  // commands would refuse a fill that pretends the van un-drove its last delivery.
+  await fill(184_770, 41, 12, 'محطة الروضة — عدن');
+  await fill(185_220, 40, 7, 'محطة النور — الزنجبار');
+  await fill(185_670, 38, 2, 'محطة الروضة — عدن');
+
+  await client.query(
+    'select public.cmd_upsert_maintenance_schedule($1::uuid, $2::uuid, $3::jsonb, $4, null)',
+    [
+      owner,
+      vehicle,
+      JSON.stringify({
+        kind: 'oil_change',
+        // Due at 186 000 with the van at 185 670: 330 km out, inside the 500 km window, so the badge is
+        // amber. A seed that only ever shows "ok" does not demonstrate the feature.
+        intervalKm: 5000,
+        lastDoneKm: 181_000,
+        note: 'زيت المحرك والفلتر',
+      }),
+      'dev-seed-schedule-oil',
+    ],
+  );
+
+  await client.query(
+    'select public.cmd_upsert_maintenance_schedule($1::uuid, $2::uuid, $3::jsonb, $4, null)',
+    [
+      owner,
+      vehicle,
+      JSON.stringify({
+        kind: 'inspection',
+        intervalDays: 180,
+        lastDoneOn: new Date(Date.now() - 150 * 86_400_000).toISOString().slice(0, 10),
+      }),
+      'dev-seed-schedule-inspection',
+    ],
+  );
+
+  // This month's maintenance figure needs something in it, or the rollup shows a zero that reads like a
+  // bug. Five days ago is inside the current month; the brake job below is the one that lands outside it.
+  await client.query('select public.cmd_log_maintenance($1::uuid, $2::uuid, $3::jsonb, $4, null)', [
+    owner,
+    vehicle,
+    JSON.stringify({
+      kind: 'tyres',
+      performedOn: new Date(Date.now() - 5 * 86_400_000).toISOString().slice(0, 10),
+      costYer: 18_000,
+      vendor: 'مؤسسة الإطارات الحديثة — عدن',
+      note: 'إطاران خلفيان',
+    }),
+    'dev-seed-tyres',
+  ]);
+
+  await client.query('select public.cmd_log_maintenance($1::uuid, $2::uuid, $3::jsonb, $4, null)', [
+    owner,
+    vehicle,
+    JSON.stringify({
+      kind: 'brakes',
+      // No odometer on purpose: this happened before the seeded fills, and a maintenance record is
+      // evidence of work, not a claim about when the van last moved.
+      performedOn: new Date(Date.now() - 40 * 86_400_000).toISOString().slice(0, 10),
+      costYer: 12_000,
+      vendor: 'ورشة الدائري — عدن',
+    }),
+    'dev-seed-brakes',
+  ]);
+}
+
+/**
+ * One published trip, three stops out, so `/trips` has something to show and the booking form has
+ * something to book.
+ *
+ * Created with `cmd_create_trip` → `cmd_set_trip_stops` → `cmd_publish_trip` rather than with an insert:
+ * the seed then exercises the same rules a real operator does (quota, verification, search refresh,
+ * events), and a regression in any of them breaks the seed instead of hiding behind it.
+ *
+ * The check is "is there a *future* published trip", not "is there a trip": a stack left running for a
+ * week would otherwise keep announcing a departure that left on Monday.
+ */
+async function seedDemoTrip(client, log = () => {}) {
+  const owner = '33333333-3333-4333-8333-333333333333';
+  const org = 'aaaaaaaa-0000-4000-8000-000000000001';
+  const vehicle = '7925cdf3-5648-4b52-9f84-8ad8fa68aae2';
+  const driver = '7925cdf3-0000-4000-8000-00000000d001';
+
+  const existing = await client.query(
+    `select 1 from public.trips
+      where owner_org_id = $1
+        and status = 'published'
+        and departure_at > now() + interval '12 hours'
+      limit 1`,
+    [org],
+  );
+  if (existing.rows.length > 0) return;
+
+  const governorateId = async (code) =>
+    (await client.query('select id from public.governorates where code = $1', [code])).rows[0]
+      ?.id ?? null;
+
+  const created = await client.query(
+    `select public.cmd_create_trip($1::uuid, $2::uuid, $3::jsonb, 'dev-seed', null) as result`,
+    [
+      owner,
+      org,
+      JSON.stringify({
+        vehicleId: vehicle,
+        driverId: driver,
+        originGovernorateId: await governorateId('YE-AD'),
+        destinationGovernorateId: await governorateId('YE-SA'),
+        // A day and a bit out, at a tidy hour, so "departs tomorrow morning" reads like a timetable.
+        departureAt: new Date(Date.now() + 39 * 60 * 60 * 1000).toISOString(),
+        arriveEstimateMinutes: 480,
+        seatsTotal: 14,
+        bookingMode: 'per_seat',
+        pricingMode: 'flat',
+        pricePerSeatYer: 5000,
+        discountKind: 'none',
+        discountValue: 0,
+        genderPolicy: 'any',
+        paymentPolicy: 'cash',
+        luggageAllowanceKg: 20,
+        notes: 'رحلة تجريبية من عدن إلى صنعاء.',
+      }),
+    ],
+  );
+  const tripId = created.rows[0].result.trip.id;
+
+  // The stops are gazetteer places, not free text, so the demo trip has coordinates: without them the
+  // live screen can say which stop is next but never how far away it is, and Phase 6's distance story
+  // would be invisible in every demo. The ids are looked up by name rather than hard-coded, because the
+  // geography seed owns them.
+  const { rows: cityRows } = await client.query(
+    `select id, name_ar from public.places
+      where name_ar = any($1::text[]) and lat is not null and lng is not null`,
+    [['عدن', 'تعز', 'صنعاء']],
+  );
+  const placeId = new Map(cityRows.map((row) => [row.name_ar, row.id]));
+
+  await client.query(
+    `select public.cmd_set_trip_stops($1::uuid, $2::uuid, $3::jsonb, 'dev-seed', null)`,
+    [
+      owner,
+      tripId,
+      JSON.stringify([
+        {
+          placeId: placeId.get('عدن') ?? null,
+          nameAr: 'عدن',
+          nameEn: 'Aden',
+          arriveOffsetMinutes: 0,
+        },
+        {
+          placeId: placeId.get('تعز') ?? null,
+          nameAr: 'تعز',
+          nameEn: 'Taiz',
+          arriveOffsetMinutes: 240,
+        },
+        {
+          placeId: placeId.get('صنعاء') ?? null,
+          nameAr: 'صنعاء',
+          nameEn: 'Sanaa',
+          arriveOffsetMinutes: 480,
+        },
+      ]),
+    ],
+  );
+
+  await client.query(`select public.cmd_publish_trip($1::uuid, $2::uuid, 'dev-seed', null)`, [
+    owner,
+    tripId,
+  ]);
+
+  log(`  seeded a bookable trip: ${created.rows[0].result.trip.code}`);
+}
+
+/**
+ * Two more departures, so the marketplace is a marketplace.
+ *
+ * One published trip is enough to prove the booking flow works and far too little to prove the
+ * marketplace does: with a single card there is no second column to get wrong, no sort to change, no
+ * origin facet with two counts in it, and the "direct" badge — the one that says a trip has no stops —
+ * can never appear at all. Every layout bug that only shows up with a real list stays invisible in the
+ * demo that is meant to show the list.
+ *
+ * The extra vans are seeded first (this runs after them), so these are three departures on three
+ * different vehicles and two different routes. Written through the same three commands as the primary
+ * trip, so a reset re-proves `cmd_create_trip`, `cmd_set_trip_stops` and `cmd_publish_trip` for each.
+ */
+async function seedMarketplaceTrips(client, log = () => {}) {
+  const owner = '33333333-3333-4333-8333-333333333333';
+  const org = 'aaaaaaaa-0000-4000-8000-000000000001';
+  const driver = '7925cdf3-0000-4000-8000-00000000d001';
+
+  const governorateId = async (code) =>
+    (await client.query('select id from public.governorates where code = $1', [code])).rows[0]
+      ?.id ?? null;
+  const placeId = async (nameAr) =>
+    (
+      await client.query(
+        'select id from public.places where name_ar = $1 and lat is not null and lng is not null limit 1',
+        [nameAr],
+      )
+    ).rows[0]?.id ?? null;
+
+  const departures = [
+    {
+      vehicle: '7925cdf3-0000-4000-8000-00000000c001',
+      origin: 'YE-AD',
+      destination: 'YE-TA',
+      inHours: 55,
+      arriveEstimateMinutes: 300,
+      seatsTotal: 22,
+      pricePerSeatYer: 2_500,
+      luggageAllowanceKg: 15,
+      notes: 'رحلة تجريبية مباشرة من عدن إلى تعز.',
+      // No stops at all: this is the trip that gives the "direct" badge and the direct filter a count.
+      stops: [],
+    },
+    {
+      vehicle: '7925cdf3-0000-4000-8000-00000000c002',
+      origin: 'YE-SA',
+      destination: 'YE-AD',
+      inHours: 74,
+      arriveEstimateMinutes: 480,
+      seatsTotal: 26,
+      pricePerSeatYer: 4_500,
+      genderPolicy: 'women_only',
+      luggageAllowanceKg: 25,
+      notes: 'رحلة تجريبية من صنعاء إلى عدن عبر تعز.',
+      stops: [
+        { nameAr: 'صنعاء', nameEn: 'Sanaa', arriveOffsetMinutes: 0 },
+        { nameAr: 'تعز', nameEn: 'Taiz', arriveOffsetMinutes: 240 },
+        { nameAr: 'عدن', nameEn: 'Aden', arriveOffsetMinutes: 480 },
+      ],
+    },
+  ];
+
+  for (const spec of departures) {
+    const originId = await governorateId(spec.origin);
+    const destinationId = await governorateId(spec.destination);
+    if (!originId || !destinationId) continue;
+
+    // Per route, not per organization: a stack that was left running must not grow a second copy of the
+    // same departure every time it restarts, and the primary trip already exists by the time this runs.
+    const already = await client.query(
+      `select 1 from public.trips
+        where owner_org_id = $1
+          and status = 'published'
+          and origin_governorate_id = $2
+          and destination_governorate_id = $3
+          and departure_at > now() + interval '12 hours'
+        limit 1`,
+      [org, originId, destinationId],
+    );
+    if (already.rows.length > 0) continue;
+
+    const created = await client.query(
+      `select public.cmd_create_trip($1::uuid, $2::uuid, $3::jsonb, 'dev-seed', null) as result`,
+      [
+        owner,
+        org,
+        JSON.stringify({
+          vehicleId: spec.vehicle,
+          driverId: driver,
+          originGovernorateId: originId,
+          destinationGovernorateId: destinationId,
+          departureAt: new Date(Date.now() + spec.inHours * 60 * 60 * 1000).toISOString(),
+          arriveEstimateMinutes: spec.arriveEstimateMinutes,
+          seatsTotal: spec.seatsTotal,
+          bookingMode: 'per_seat',
+          pricingMode: 'flat',
+          pricePerSeatYer: spec.pricePerSeatYer,
+          discountKind: 'none',
+          discountValue: 0,
+          genderPolicy: spec.genderPolicy ?? 'any',
+          paymentPolicy: 'cash',
+          luggageAllowanceKg: spec.luggageAllowanceKg,
+          notes: spec.notes,
+        }),
+      ],
+    );
+    const trip = created.rows[0].result.trip;
+
+    if (spec.stops.length > 0) {
+      const stops = [];
+      for (const stop of spec.stops) {
+        stops.push({
+          placeId: await placeId(stop.nameAr),
+          nameAr: stop.nameAr,
+          nameEn: stop.nameEn,
+          arriveOffsetMinutes: stop.arriveOffsetMinutes,
+        });
+      }
+      await client.query(
+        `select public.cmd_set_trip_stops($1::uuid, $2::uuid, $3::jsonb, 'dev-seed', null)`,
+        [owner, trip.id, JSON.stringify(stops)],
+      );
+    }
+
+    await client.query(`select public.cmd_publish_trip($1::uuid, $2::uuid, 'dev-seed', null)`, [
+      owner,
+      trip.id,
+    ]);
+
+    log(`  seeded a marketplace trip: ${trip.code}`);
+  }
+}
+
+/**
+ * One passenger booking, accepted, so `/account/bookings` is a list rather than an empty state.
+ *
+ * The booking card — route, status badge, reference, fare, and the "finish identity" action — is the whole
+ * screen when a passenger has bookings, and it was never rendered by the demo. Booked on the *direct* trip
+ * because that one has no stops: the flow then runs with a null destination stop, which is the branch a
+ * stop-priced trip never reaches.
+ *
+ * Accepted, not pending: a pending booking carries a 30-minute hold, and a demo that expires while somebody
+ * is looking at it is worse than no demo. Accepted by the owner account because that is the actor
+ * `cmd_accept_booking` accepts for this trip, and it is also the account the accessibility guard signs in as.
+ */
+async function seedDemoBooking(client, log = () => {}) {
+  const owner = '33333333-3333-4333-8333-333333333333';
+  const org = 'aaaaaaaa-0000-4000-8000-000000000001';
+
+  const existing = await client.query(
+    `select 1 from public.bookings b
+       join public.trips t on t.id = b.trip_id
+      where b.passenger_id = $1
+        and b.status in ('pending', 'accepted')
+        and t.departure_at > now()
+      limit 1`,
+    [owner],
+  );
+  if (existing.rows.length > 0) return;
+
+  const trip = (
+    await client.query(
+      `select t.id from public.trips t
+        where t.owner_org_id = $1
+          and t.status = 'published'
+          and t.departure_at > now() + interval '24 hours'
+          and not exists (select 1 from public.trip_stops s where s.trip_id = t.id)
+        order by t.departure_at
+        limit 1`,
+      [org],
+    )
+  ).rows[0];
+  if (!trip) return;
+
+  // `p_claimed_total` is null on purpose: this is a seed, not a client, and a claim it cannot compute is a
+  // `PRICE_CHANGED` the seed has no business arguing with.
+  const created = await client.query(
+    `select public.cmd_create_booking(
+       $1::uuid, $2::uuid, 1, null, null, 'مستخدم تجريبي', '+967733000101', null, null, 'dev-seed', null
+     ) as result`,
+    [owner, trip.id],
+  );
+  const booking = created.rows[0].result.booking;
+
+  await client.query(`select public.cmd_accept_booking($1::uuid, $2::uuid, 'dev-seed', null)`, [
+    owner,
+    booking.id,
+  ]);
+
+  log(`  seeded a passenger booking: ${booking.code}`);
 }
 
 /**
@@ -292,4 +882,75 @@ async function grantDemoScope(client) {
         and title_key = 'notifications.placePending'
     )
   `);
+}
+
+/**
+ * The other two vans: an overdue service and a healthy one.
+ *
+ * Everything here is dated **last month**, which is the point — the fleet dashboard's month columns must
+ * keep showing the phase-8 acceptance numbers (59 500 fuel, 18 000 maintenance) while the *list* has
+ * enough rows to be worth laying out. A demo with one row cannot show a filter, a stacked card, or a
+ * three-state column, and every screenshot of this page would be a single line of table.
+ *
+ * Written through the commands, like every other seed, so a reset also re-proves them.
+ */
+async function seedExtraFleetOperations(client, log = () => {}) {
+  const owner = '33333333-3333-4333-8333-333333333333';
+  const dueVan = '7925cdf3-0000-4000-8000-00000000c001';
+  const fineVan = '7925cdf3-0000-4000-8000-00000000c002';
+
+  const existing = await client.query(
+    'select 1 from public.fuel_logs where vehicle_id = $1 limit 1',
+    [dueVan],
+  );
+  if (existing.rows.length > 0) return;
+
+  log('  seeding the rest of the fleet…');
+
+  const fill = async (vehicle, odometerKm, litres, daysAgo, station) => {
+    await client.query('select public.cmd_log_fuel($1::uuid, $2::uuid, $3::jsonb, $4, null)', [
+      owner,
+      vehicle,
+      JSON.stringify({
+        odometerKm,
+        litres,
+        pricePerLitreYer: 500,
+        isFullTank: true,
+        filledAt: new Date(Date.now() - daysAgo * 86_400_000).toISOString(),
+        stationName: station,
+      }),
+      `dev-seed-fuel-${vehicle.slice(-4)}-${odometerKm}`,
+    ]);
+  };
+
+  // 900 km on 108 litres across two tanks — about 12 L/100km, which is what an old Coaster does.
+  await fill(dueVan, 341_100, 55, 46, 'محطة الروضة — عدن');
+  await fill(dueVan, 341_550, 53, 39, 'محطة النور — الزنجبار');
+  // 640 km on 52 litres — a newer van, better economy, the contrast the list is meant to show. Dated two
+  // months back on purpose: anything inside the current month moves the dashboard's month totals, and the
+  // phase-8 acceptance figures (59 500 / 18 000) are quoted in the report.
+  await fill(fineVan, 95_600, 52, 60, 'محطة الروضة — عدن');
+  await fill(fineVan, 96_240, 48, 52, 'محطة الروضة — عدن');
+
+  // Due at 340 000 with the van at 341 550: overdue by 1 550 km, so the red badge, the filter chip and
+  // the callout all have a real vehicle behind them.
+  await client.query(
+    'select public.cmd_upsert_maintenance_schedule($1::uuid, $2::uuid, $3::jsonb, $4, null)',
+    [
+      owner,
+      dueVan,
+      JSON.stringify({ kind: 'oil_change', intervalKm: 5000, lastDoneKm: 335_000 }),
+      'dev-seed-schedule-due',
+    ],
+  );
+  // And one that is comfortably inside its interval, so "ok" is not an empty state either.
+  await client.query(
+    'select public.cmd_upsert_maintenance_schedule($1::uuid, $2::uuid, $3::jsonb, $4, null)',
+    [
+      owner,
+      fineVan,
+      JSON.stringify({ kind: 'oil_change', intervalKm: 5000, lastDoneKm: 94_000 }),
+      'dev-seed-schedule-fine',
+    ],
+  );
 }

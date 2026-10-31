@@ -21,6 +21,7 @@ export function ConsoleShell({
   subtitle,
   phase,
   items,
+  layout = 'content',
   children,
 }: {
   readonly locale: Locale;
@@ -28,6 +29,12 @@ export function ConsoleShell({
   readonly subtitle: TranslationKey;
   readonly phase: string;
   readonly items: readonly ConsoleNavItem[];
+  /**
+   * `content` is one full-width column — the right shape for a table, a form or a list. `tiles` is the
+   * auto-filling card grid the three overview screens use. The old default was the tile grid, which
+   * silently rendered every content page inside a 220px track.
+   */
+  readonly layout?: 'content' | 'tiles';
   readonly children: ReactNode;
 }) {
   const t = (key: TranslationKey) => translate(locale, key);
@@ -56,7 +63,9 @@ export function ConsoleShell({
           </Badge>
         </div>
         <p>{t(subtitle)}</p>
-        <div className="console-grid">{children}</div>
+        <div className={layout === 'tiles' ? 'console-grid console-grid--tiles' : 'console-grid'}>
+          {children}
+        </div>
       </section>
     </main>
   );

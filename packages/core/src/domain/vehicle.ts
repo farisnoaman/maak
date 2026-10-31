@@ -16,6 +16,12 @@ export interface VehicleDocumentDates {
 }
 
 export interface VehicleLike extends VehicleDocumentDates {
+  /**
+   * When the next service is due. Phase 3 has no maintenance schedule yet — only the odometer
+   * baseline — so nothing fills this in; the badge below is the placeholder the plan asks for, and it
+   * lights up the day the maintenance table starts writing this date.
+   */
+  readonly nextMaintenanceDue?: string | null;
   // Strings, not the literal unions: rows arrive from PostgREST typed as `string`, and narrowing here
   // would force every caller to cast what it already knows is valid.
   readonly verification_status?: VehicleVerificationStatus | string;
@@ -33,6 +39,8 @@ export interface VehicleBadge {
     | 'pending'
     | 'rejected'
     | 'unverified'
+    | 'maintenanceDue'
+    | 'maintenanceOverdue'
     | 'insuranceExpiring'
     | 'insuranceExpired'
     | 'inspectionExpiring'
@@ -131,6 +139,25 @@ export function vehicleBadges(vehicle: VehicleLike, today = new Date()): Vehicle
   mount('inspection');
   mount('registration');
   mount('permit');
+
+  // Maintenance comes last: it is a soft signal, while an expired certificate is a legal one. Negative
+  // means overdue (the van is past its service interval); inside the same 30-day window it is amber.
+  const maintenanceDays = daysUntil(vehicle.nextMaintenanceDue, today);
+  if (maintenanceDays !== null && maintenanceDays < 0) {
+    badges.push({
+      code: 'maintenanceOverdue',
+      tone: 'bad',
+      labelKey: 'fleet.badgeMaintenanceOverdue',
+      days: maintenanceDays,
+    });
+  } else if (maintenanceDays !== null && maintenanceDays <= EXPIRY_WARNING_DAYS) {
+    badges.push({
+      code: 'maintenanceDue',
+      tone: 'warn',
+      labelKey: 'fleet.badgeMaintenanceDue',
+      days: maintenanceDays,
+    });
+  }
 
   return badges;
 }

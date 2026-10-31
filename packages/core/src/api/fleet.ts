@@ -238,6 +238,15 @@ export const verifyDriverSchema = z.object({
   reason: z.string().trim().max(500).optional(),
 });
 
+export const setDriverLicenceSchema = z.object({
+  action: z.literal('driver.setLicence'),
+  driverId: uuid,
+  licenceNo: z.string().trim().min(3).max(60).nullish(),
+  licenceExpiry: isoDate.nullish(),
+  licenceClass: z.string().trim().max(10).nullish(),
+  photoPath: z.string().trim().max(300).nullish(),
+});
+
 export const assignDriverSchema = z.object({
   action: z.literal('driver.assign'),
   vehicleId: uuid,
@@ -249,6 +258,124 @@ export const unassignDriverSchema = z.object({
   vehicleId: uuid,
 });
 
+/**
+ * Phase 8 — vehicle operations.
+ *
+ * The same one-action-one-`cmd_*` shape as the Phase 3 fleet actions, on the same edge function: a fuel
+ * receipt and a vehicle edit belong to the same domain, and a second function would mean a second copy
+ * of the dispatch map, the rate limiter and the policy check.
+ */
+
+export const maintenanceKindSchema = z.enum([
+  'oil_change',
+  'oil_filter',
+  'air_filter',
+  'fuel_filter',
+  'cabin_filter',
+  'tyres',
+  'brakes',
+  'battery',
+  'timing_belt',
+  'coolant',
+  'transmission',
+  'suspension',
+  'electrical',
+  'bodywork',
+  'inspection',
+  'other',
+]);
+
+/** An instant, as the client sends it. `''` means "now", the same as absent. */
+const isoInstant = z
+  .union([z.literal(''), z.string().datetime({ offset: true })])
+  .nullish()
+  .transform((value) => (value === '' || value == null ? null : value));
+
+export const logFuelSchema = z.object({
+  action: z.literal('fuel.log'),
+  vehicleId: uuid,
+  odometerKm: z.number().int().min(0).max(5_000_000),
+  litres: z.number().positive().max(2000),
+  pricePerLitreYer: z.number().int().min(0).max(1_000_000),
+  /** A partial fill still counts towards consumption; the segment is closed by the next full tank. */
+  isFullTank: z.boolean().default(true),
+  filledAt: isoInstant,
+  tripId: uuid.nullish(),
+  /** The printed code, for the phone: a driver has a code on the manifest, not a uuid. */
+  tripCode: z.string().trim().min(4).max(20).nullish(),
+  stationName: z.string().trim().max(120).nullish(),
+  stationPlaceId: uuid.nullish(),
+  receiptPath: z.string().trim().max(300).nullish(),
+  note: z.string().trim().max(500).nullish(),
+});
+
+export const recordOdometerSchema = z.object({
+  action: z.literal('odometer.record'),
+  vehicleId: uuid,
+  odometerKm: z.number().int().min(0).max(5_000_000),
+  photoPath: z.string().trim().max(300).nullish(),
+  /**
+   * Only an owner may send this, and only to correct a reading that went backwards. The SQL refuses it
+   * from anybody else rather than silently honouring it.
+   */
+  overrideReason: z.string().trim().min(3).max(300).nullish(),
+  note: z.string().trim().max(300).nullish(),
+});
+
+export const logMaintenanceSchema = z.object({
+  action: z.literal('maintenance.log'),
+  vehicleId: uuid,
+  /** Names the rule this work answers, without closing it. */
+  scheduleId: uuid.nullish(),
+  kind: maintenanceKindSchema,
+  performedOn: isoDate,
+  odometerKm: z.number().int().min(0).max(5_000_000).nullish(),
+  costYer: z.number().int().min(0).max(1_000_000_000).default(0),
+  vendor: z.string().trim().max(120).nullish(),
+  note: z.string().trim().max(1000).nullish(),
+  attachmentPath: z.string().trim().max(300).nullish(),
+});
+
+export const upsertMaintenanceScheduleSchema = z
+  .object({
+    action: z.literal('maintenance.schedule'),
+    vehicleId: uuid,
+    /** Present edits that row; absent creates one. */
+    scheduleId: uuid.nullish(),
+    kind: maintenanceKindSchema,
+    intervalKm: z.number().int().min(100).max(500_000).nullish(),
+    intervalDays: z.number().int().min(1).max(3650).nullish(),
+    lastDoneKm: z.number().int().min(0).max(5_000_000).nullish(),
+    lastDoneOn: isoDate,
+    note: z.string().trim().max(500).nullish(),
+    isActive: z.boolean().optional(),
+  })
+  .refine((value) => value.intervalKm != null || value.intervalDays != null, {
+    message: 'give an interval in kilometres or days',
+    path: ['intervalKm'],
+  });
+
+export const markMaintenanceDoneSchema = z.object({
+  action: z.literal('maintenance.done'),
+  scheduleId: uuid,
+  odometerKm: z.number().int().min(0).max(5_000_000).nullish(),
+  performedOn: isoDate,
+  costYer: z.number().int().min(0).max(1_000_000_000).default(0),
+  vendor: z.string().trim().max(120).nullish(),
+  note: z.string().trim().max(1000).nullish(),
+  attachmentPath: z.string().trim().max(300).nullish(),
+});
+
+export const updateFleetSettingsSchema = z.object({
+  action: z.literal('fleet.settings'),
+  /** Absent = the actor's own thresholds (a personal owner). */
+  orgId: uuid.nullish(),
+  remindKm: z.number().int().min(0).max(50_000).default(500),
+  remindDays: z.number().int().min(0).max(365).default(14),
+  blockOverdueAssignment: z.boolean().default(false),
+  fuelAnomalyPercent: z.number().int().min(0).max(200).default(25),
+});
+
 export const fleetActionSchema = z.discriminatedUnion('action', [
   createVehicleSchema,
   updateVehicleSchema,
@@ -258,9 +385,16 @@ export const fleetActionSchema = z.discriminatedUnion('action', [
   setVehiclePhotosSchema,
   inviteDriverSchema,
   acceptDriverInviteSchema,
+  setDriverLicenceSchema,
   verifyDriverSchema,
   assignDriverSchema,
   unassignDriverSchema,
+  logFuelSchema,
+  recordOdometerSchema,
+  logMaintenanceSchema,
+  upsertMaintenanceScheduleSchema,
+  markMaintenanceDoneSchema,
+  updateFleetSettingsSchema,
 ]);
 
 export type FleetAction = z.infer<typeof fleetActionSchema>;
@@ -276,8 +410,10 @@ export function fleetScope(input: FleetAction): Resource {
   switch (input.action) {
     case 'vehicle.create':
     case 'driver.invite':
+    case 'fleet.settings':
       return input.orgId ? { isOrgMember: true } : { isOwner: true };
     case 'driver.accept':
+    case 'driver.setLicence':
       return {};
     default:
       return { isOwner: true, isOrgMember: true };
@@ -313,6 +449,16 @@ export const fleetResultSchema = z
     linkedImmediately: z.boolean().optional(),
     orgId: uuid.nullish(),
     requestId: z.string().optional(),
+    // Phase 8 — what a fill, a reading or a service reports back.
+    fuelLog: z.record(z.string(), z.unknown()).optional(),
+    reading: z.record(z.string(), z.unknown()).optional(),
+    schedule: z.record(z.string(), z.unknown()).optional(),
+    record: z.record(z.string(), z.unknown()).optional(),
+    settings: z.record(z.string(), z.unknown()).optional(),
+    override: z.boolean().optional(),
+    anomaly: z.boolean().optional(),
+    lPer100Km: z.union([z.number(), z.string()]).nullish(),
+    lastOdometerKm: z.number().nullish(),
   })
   .passthrough();
 
@@ -428,6 +574,19 @@ export function fleetCommandArgs(
           ...audit,
         },
       };
+    case 'driver.setLicence':
+      return {
+        fn: 'cmd_set_driver_licence',
+        args: {
+          p_actor: actorId,
+          p_driver_id: action.driverId,
+          p_licence_no: action.licenceNo ?? null,
+          p_licence_expiry: action.licenceExpiry ?? null,
+          p_licence_class: action.licenceClass ?? null,
+          p_photo_path: action.photoPath ?? null,
+          ...audit,
+        },
+      };
     case 'driver.assign':
       return {
         fn: 'cmd_assign_driver',
@@ -443,5 +602,123 @@ export function fleetCommandArgs(
         fn: 'cmd_unassign_driver',
         args: { p_actor: actorId, p_vehicle_id: action.vehicleId, ...audit },
       };
+    case 'fuel.log':
+      return {
+        fn: 'cmd_log_fuel',
+        args: {
+          p_actor: actorId,
+          p_vehicle_id: action.vehicleId,
+          p_log: json(fuelPayload(action)),
+          ...audit,
+        },
+      };
+    case 'odometer.record':
+      return {
+        fn: 'cmd_record_manual_odometer',
+        args: {
+          p_actor: actorId,
+          p_vehicle_id: action.vehicleId,
+          p_reading: json({
+            odometerKm: action.odometerKm,
+            photoPath: action.photoPath ?? null,
+            overrideReason: action.overrideReason ?? null,
+            note: action.note ?? null,
+          }),
+          ...audit,
+        },
+      };
+    case 'maintenance.log':
+      return {
+        fn: 'cmd_log_maintenance',
+        args: {
+          p_actor: actorId,
+          p_vehicle_id: action.vehicleId,
+          p_record: json({
+            scheduleId: action.scheduleId ?? null,
+            kind: action.kind,
+            performedOn: action.performedOn ?? null,
+            odometerKm: action.odometerKm ?? null,
+            costYer: action.costYer,
+            vendor: action.vendor ?? null,
+            note: action.note ?? null,
+            attachmentPath: action.attachmentPath ?? null,
+          }),
+          ...audit,
+        },
+      };
+    case 'maintenance.schedule':
+      return {
+        fn: 'cmd_upsert_maintenance_schedule',
+        args: {
+          p_actor: actorId,
+          p_vehicle_id: action.vehicleId,
+          p_schedule: json({
+            id: action.scheduleId ?? null,
+            kind: action.kind,
+            intervalKm: action.intervalKm ?? null,
+            intervalDays: action.intervalDays ?? null,
+            lastDoneKm: action.lastDoneKm ?? null,
+            lastDoneOn: action.lastDoneOn ?? null,
+            note: action.note ?? null,
+            isActive: action.isActive,
+          }),
+          ...audit,
+        },
+      };
+    case 'maintenance.done':
+      return {
+        fn: 'cmd_mark_maintenance_done',
+        args: {
+          p_actor: actorId,
+          p_schedule_id: action.scheduleId,
+          p_record: json({
+            odometerKm: action.odometerKm ?? null,
+            performedOn: action.performedOn ?? null,
+            costYer: action.costYer,
+            vendor: action.vendor ?? null,
+            note: action.note ?? null,
+            attachmentPath: action.attachmentPath ?? null,
+          }),
+          ...audit,
+        },
+      };
+    case 'fleet.settings':
+      return {
+        fn: 'cmd_update_fleet_settings',
+        args: {
+          p_actor: actorId,
+          p_org_id: action.orgId ?? null,
+          p_settings: json({
+            remindKm: action.remindKm,
+            remindDays: action.remindDays,
+            blockOverdueAssignment: action.blockOverdueAssignment,
+            fuelAnomalyPercent: action.fuelAnomalyPercent,
+          }),
+          ...audit,
+        },
+      };
   }
+}
+
+/**
+ * The JSON a fill submits.
+ *
+ * Written out rather than spread so a field renamed in the schema cannot silently keep an old SQL key —
+ * the mobile quick-log screen and the web form send the same body, and this is the only place that
+ * decides what the database hears.
+ */
+function fuelPayload(action: z.infer<typeof logFuelSchema>): Record<string, unknown> {
+  return {
+    odometerKm: action.odometerKm,
+    litres: action.litres,
+    pricePerLitreYer: action.pricePerLitreYer,
+    isFullTank: action.isFullTank,
+    filledAt: action.filledAt ?? null,
+    tripId: action.tripId ?? null,
+    tripCode: action.tripCode ?? null,
+    stationName: action.stationName ?? null,
+    stationPlaceId: action.stationPlaceId ?? null,
+    receiptPath: action.receiptPath ?? null,
+    note: action.note ?? null,
+  };
 }

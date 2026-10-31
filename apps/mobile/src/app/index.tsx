@@ -85,8 +85,31 @@ export default function HomeScreen() {
         <Text style={styles.linkText}>{t('fleet.driverProfile')}</Text>
       </Pressable>
 
+      {/* Phase 8: the driver logs the fill where it happens — at the pump. */}
+      <Pressable
+        accessibilityRole="link"
+        onPress={() => router.push('/driver/fuel')}
+        style={styles.link}
+      >
+        <Text style={styles.linkText}>{t('fleetOps.logFuel')}</Text>
+      </Pressable>
+
+      {/* Phase 4: search is the passenger's door into the product. */}
+      <Pressable accessibilityRole="link" onPress={() => router.push('/trips')} style={styles.link}>
+        <Text style={styles.linkText}>{t('trips.search.title')}</Text>
+      </Pressable>
+
+      {/* Phase 5: a booking is the passenger's own record, so it is reachable from the first screen. */}
+      <Pressable
+        accessibilityRole="link"
+        onPress={() => router.push('/bookings')}
+        style={styles.link}
+      >
+        <Text style={styles.linkText}>{t('bookings.myTitle')}</Text>
+      </Pressable>
+
       <Text style={styles.note}>
-        {LOCALE_LABEL[locale]} · {t('common.phase')} 3
+        {LOCALE_LABEL[locale]} · {t('common.phase')} 5
       </Text>
     </ScrollView>
   );

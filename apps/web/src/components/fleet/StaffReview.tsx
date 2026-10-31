@@ -36,6 +36,8 @@ interface PendingDriver {
   readonly phone: string;
   readonly licenceNo: string | null;
   readonly licenceExpiry: string | null;
+  /** Authenticated proxy URL of the private object, or null when nothing was uploaded. */
+  readonly licencePhotoUrl: string | null;
   readonly status: string;
 }
 
@@ -228,6 +230,13 @@ export function StaffReview({
                     {t('fleet.driverLicence')}: {driver.licenceNo ?? t('fleet.unknown')} ·{' '}
                     {driver.licenceExpiry ?? t('fleet.unknown')}
                   </p>
+                  {driver.licencePhotoUrl ? (
+                    <a href={driver.licencePhotoUrl} target="_blank" rel="noreferrer">
+                      {t('fleet.licencePhoto')}
+                    </a>
+                  ) : (
+                    <p className="fleet-row__meta">{t('fleet.licencePhotoMissing')}</p>
+                  )}
                   <Badge>{t(DRIVER_STATUS_KEY[driver.status] ?? 'fleet.driverInvited')}</Badge>
                 </div>
                 <div className="fleet-row__side">

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { NotificationPanel } from '@/components/account/NotificationPanel';
 import { CreateOrganizationForm } from '@/components/account/CreateOrganizationForm';
 import { DeletionPanel } from '@/components/account/DeletionPanel';
+import { AccountNav } from '@/components/account/AccountNav';
 import { activeOrganization, loadAccountContext, type AccountContext } from '@/lib/account';
 import { previewAccount } from '@/lib/preview-data';
 
@@ -52,16 +53,20 @@ export default async function AccountPage({
   return (
     <>
       <SiteHeader locale={locale} pathname="/account" />
-      <main id="main" className="shell section">
-        <h1>{t('account.title')}</h1>
-        <p className="form-hint">{t('account.subtitle')}</p>
+      <main id="main" className="shell section account-page">
+        <header className="account-head">
+          <h1>{t('account.title')}</h1>
+          <p className="form-hint">{t('account.subtitle')}</p>
+        </header>
+
+        <AccountNav locale={locale} current="/account" />
 
         {preview ? <PreviewBanner locale={locale} /> : null}
 
-        <div className="card console-panel" style={{ marginBlockStart: 'var(--space-5)' }}>
+        <section className="card account-card" aria-labelledby="account-profile-title">
           <div className="panel-head">
             <div>
-              <p style={{ fontSize: '1.15rem', fontWeight: 800 }}>
+              <p className="account-name" id="account-profile-title">
                 {profile?.fullName ?? t('account.personal')}
               </p>
               <p className="form-hint" dir="ltr">
@@ -86,28 +91,44 @@ export default async function AccountPage({
             >
               {t('nav.verification')}
             </Link>
+            {/* A booking is the thing a passenger comes back to check, so it is the second action and not
+                a link buried in a list of doorways. */}
             <Link
-              className="ui-btn ui-btn--ghost ui-btn--md"
+              className="ui-btn ui-btn--primary ui-btn--md"
+              href={`/${locale}/account/bookings`}
+            >
+              {t('bookings.myTitle')}
+            </Link>
+            {/* A driver's licence is a document about the person, so it lives with the account — and it
+                must be reachable from the account, or the only way to add one is to know the URL. */}
+            <Link className="ui-btn ui-btn--ghost ui-btn--md" href={`/${locale}/account/licence`}>
+              {t('fleet.accountLicence')}
+            </Link>
+          </div>
+        </section>
+
+        {/* The consoles belong to other audiences, but a driver who is never shown the door will drive
+            without logging the trip. They are doorways, so they look like doorways — one size, one grid. */}
+        <section className="account-section" aria-labelledby="account-links-title">
+          <h2 id="account-links-title">{t('account.quickLinks')}</h2>
+          <div className="account-links">
+            <Link className="ui-btn ui-btn--subtle ui-btn--md" href={`/${locale}/driver`}>
+              {t('driver.title')}
+            </Link>
+            <Link
+              className="ui-btn ui-btn--subtle ui-btn--md"
               href={`/${locale}/staff/verifications`}
             >
               {t('nav.verificationQueue')}
             </Link>
-            <Link className="ui-btn ui-btn--ghost ui-btn--md" href={`/${locale}/admin/users`}>
+            <Link className="ui-btn ui-btn--subtle ui-btn--md" href={`/${locale}/admin/users`}>
               {t('nav.roles')}
             </Link>
-            {/* Signing out is a POST: the session lives in an httpOnly cookie, so only the server can
-                clear it — and a GET must never change state. */}
-            <form method="post" action="/api/auth/sign-out">
-              <input type="hidden" name="locale" value={locale} />
-              <Button type="submit" variant="subtle">
-                {t('nav.signOut')}
-              </Button>
-            </form>
           </div>
-        </div>
+        </section>
 
-        <section style={{ marginBlockStart: 'var(--space-8)' }}>
-          <h2>{t('account.organizations')}</h2>
+        <section className="account-section" aria-labelledby="account-orgs-title">
+          <h2 id="account-orgs-title">{t('account.organizations')}</h2>
           {data.organizations.length === 0 ? (
             <p className="form-hint">{t('account.noOrganizations')}</p>
           ) : (
@@ -118,7 +139,7 @@ export default async function AccountPage({
                   className={`account-org${org.id === current?.id ? ' account-org--active' : ''}`}
                 >
                   <div className="panel-head">
-                    <p style={{ fontWeight: 700 }}>{org.name}</p>
+                    <p className="account-name">{org.name}</p>
                     <Badge tone={STATUS_TONE[org.verificationStatus]}>
                       {t(STATUS_LABEL[org.verificationStatus])}
                     </Badge>
@@ -148,8 +169,8 @@ export default async function AccountPage({
           <CreateOrganizationForm locale={locale} configured={!preview} />
         </section>
 
-        <section style={{ marginBlockStart: 'var(--space-8)' }}>
-          <h2>{t('account.notifications')}</h2>
+        <section className="account-section" aria-labelledby="account-notifications-title">
+          <h2 id="account-notifications-title">{t('account.notifications')}</h2>
           <NotificationPanel
             locale={locale}
             configured={!preview}
@@ -164,13 +185,27 @@ export default async function AccountPage({
           />
         </section>
 
-        <section style={{ marginBlockStart: 'var(--space-8)' }}>
+        <section className="account-section" aria-labelledby="account-deletion-title">
+          <h2 id="account-deletion-title">{t('account.deletion')}</h2>
           <DeletionPanel
             locale={locale}
             configured={!preview}
             pending={Boolean(profile?.deletionRequestedAt)}
           />
         </section>
+
+        {/* Signing out is not one of the actions of this page; it ends the session. Below a rule, on its
+            own, with the sentence that says so. Signing out is a POST because the session lives in an
+            httpOnly cookie, and a GET must never change state. */}
+        <div className="account-signout">
+          <form method="post" action="/api/auth/sign-out">
+            <input type="hidden" name="locale" value={locale} />
+            <Button type="submit" variant="subtle">
+              {t('nav.signOut')}
+            </Button>
+          </form>
+          <p className="form-hint">{t('account.signOutHint')}</p>
+        </div>
       </main>
     </>
   );
