@@ -189,6 +189,24 @@ preserved. Together they explain any redirect or cookie oddity in one request.
 running at all, sign-in says so explicitly ("could not reach the database") instead of blaming the
 password.
 
+## When the browser refuses to keep the session at all
+
+Some browsers (Safari and Firefox by default, Chrome for some users) block third-party storage
+outright. Inside the preview's iframe that means the session cookie is stored and never sent back, and
+nothing server-side can change that — `/api/auth/status` shows it as
+`sessionCookiePresent: false` with `secFetchDest: "iframe"`.
+
+Three things are in place, in order of preference:
+
+1. **Storage Access API.** The sign-in form asks `document.requestStorageAccess()` on submit — a click
+   is the user gesture it requires — and grants unpartitioned storage. `StorageAccessPrompt` also
+   offers an explicit "Allow access in this window" button when the browser reports it is blocked.
+   This is progressive enhancement: with JavaScript off, the plain form still posts.
+2. **Open in its own tab.** A first-party page has no third-party restrictions. The header shows that
+   link whenever the app is embedded, and the sign-in error state repeats it.
+3. **A plain explanation.** If neither path applies, the sign-in screen says the browser blocked the
+   session instead of pretending the password was wrong.
+
 ## Signing in inside a preview frame
 
 The hosted preview renders the app in a **cross-site iframe**, and that changes cookie rules: a

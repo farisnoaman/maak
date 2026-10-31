@@ -42,6 +42,11 @@ export async function GET(request: Request) {
         forwardedProto: headers.get('x-forwarded-proto'),
         origin: headers.get('origin'),
         referer: headers.get('referer'),
+        // `cross-site` + `iframe` is the embedded preview. A browser that blocks third-party cookies
+        // will store our session and never send it back, which is what an empty session looks like.
+        secFetchSite: headers.get('sec-fetch-site'),
+        secFetchDest: headers.get('sec-fetch-dest'),
+        secFetchMode: headers.get('sec-fetch-mode'),
       },
       note: !cookieSent
         ? 'no session cookie reached the server — the browser is not storing or not sending it'

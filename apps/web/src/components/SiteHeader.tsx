@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { translate, type Locale, type TranslationKey } from '@maak/core';
 import { LocaleSwitch } from './LocaleSwitch';
+import { OpenInTab } from './OpenInTab';
 
 /**
  * Shared header for every page. Server-rendered: navigation and the language switcher work
@@ -51,6 +52,8 @@ export function SiteHeader({
           <Link className="nav-link" href={withQuery('/account')}>
             {t('nav.account')}
           </Link>
+          {/* Only renders inside an iframe: a first-party tab if the browser blocks the session here. */}
+          <OpenInTab locale={locale} path={withQuery('/auth/sign-in')} />
         </nav>
 
         <LocaleSwitch

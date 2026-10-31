@@ -163,18 +163,15 @@ if (!useApi) {
     String(hostile.location),
   );
 
-  // Two legitimate shapes: a real 3xx, or a self-navigating document when the proxy hides the host and
-  // the browser has said nothing yet. Both must land on the sign-in page.
   const redirect = await fetch(`${BASE}/ar/account`, { redirect: 'manual' });
-  const redirectBody = await redirect.text();
   const location = redirect.headers.get('location');
-  const selfNavigating = /url=\/[a-z]{2}\/auth\/sign-in/.test(redirectBody);
   check(
     'a protected page still sends you to sign-in',
-    Boolean(location) || selfNavigating,
+    redirect.status === 307 || redirect.status === 303,
     `status ${redirect.status}`,
   );
   if (location) {
+    // The redirect must point at an address the browser can actually reach — never the listening one.
     const bounced = new URL(location, BASE);
     check(
       'and the bounce keeps the browser on a reachable host',

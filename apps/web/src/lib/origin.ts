@@ -14,23 +14,12 @@
 export const LOOPBACK = /^(localhost|127\.0\.0\.1|\[::1\]|0\.0\.0\.0)(:\d+)?$/i;
 
 /**
- * True when the resolved origin can be trusted in a `Location` header.
- */
-export function isTrustedOrigin(context: RequestContext): boolean {
-  // `Origin`/`Referer` are first-hand evidence even on loopback — that is the local case and it is
-  // exactly right. A non-loopback host is trustworthy because a proxy forwarded it. Only "a loopback
-  // `Host` and nothing else" is a guess, and there the path goes back to the browser to resolve.
-  if (context.evidence === 'origin' || context.evidence === 'referer') return true;
-  return !LOOPBACK.test(context.host);
-}
-
-/**
- * Last known public origin per (loopback) `Host` header, plus per public host.
+ * Last known public origin per `Host` header.
  *
- * One navigation usually carries a `Referer`, but a bookmark or a typed URL does not — and by then the
+ * A navigation usually carries a `Referer`, but a bookmark or a typed URL does not — and by then the
  * browser has already told us where it is at least once (the sign-in POST always does). Remembering it
- * keeps the session cookie's attributes stable instead of flipping between `Lax` and `None` and
- * invalidating the session on a refresh.
+ * keeps the cookie attributes stable instead of flipping between `Lax` and `None` and invalidating the
+ * session on a refresh.
  */
 const remembered = new Map<string, string>();
 
@@ -38,7 +27,7 @@ export type OriginEvidence =
   'origin' | 'referer' | 'forwarded' | 'remembered' | 'host' | 'fallback';
 
 export interface RequestContext {
-  /** e.g. `https://3000-abc123.e2b.app` — safe to use in `Location` and as a cookie `Domain`-free base. */
+  /** e.g. `https://3000-abc123.e2b.app` — safe to use in `Location`. */
   readonly origin: string;
   /** `https:` or `http:`. */
   readonly protocol: string;
@@ -101,8 +90,7 @@ export function resolveRequest(request: { headers: Headers }): RequestContext {
   }
 
   // 3. Something we learned earlier for this host.
-  const memory = remembered.get(host.toLowerCase());
-  const memo = parseUrl(memory);
+  const memo = parseUrl(remembered.get(host.toLowerCase()));
   if (memo) {
     return {
       origin: memo.origin,
@@ -112,7 +100,7 @@ export function resolveRequest(request: { headers: Headers }): RequestContext {
     };
   }
 
-  // 4. Local development, or a proxy that forwards nothing at all.
+  // 4. A direct local request: `Host` is genuinely the browser's address.
   const protocol = protocolFor(host, forwardedProto);
   const localHost = host || 'localhost:3000';
   return {

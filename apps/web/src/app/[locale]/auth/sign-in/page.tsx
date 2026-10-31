@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { isLocale, translate, type Locale, type TranslationKey } from '@maak/core';
 import { isSupabaseConfigured } from '@/lib/supabase/config';
 import { SignInForm, type SignInTab } from '@/components/auth/SignInForm';
+import { StorageAccessPrompt } from '@/components/auth/StorageAccessPrompt';
 
 export default async function SignInPage({
   params,
@@ -30,6 +31,7 @@ export default async function SignInPage({
   return (
     <main id="main" className="auth-shell">
       <div className="shell">
+        <StorageAccessPrompt locale={locale} />
         <SignInForm
           locale={locale}
           configured={isSupabaseConfigured()}

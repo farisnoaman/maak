@@ -106,6 +106,9 @@ export const ar = {
     'رُفض الطلب لأنه جاء من مصدر غير معروف. أعد تحميل الصفحة ثم حاول مرة أخرى.',
   'auth.backendDown':
     'تعذّر الوصول إلى قاعدة البيانات. شغّل الخادم المحلي بالأمر npm run dev:api ثم أعد المحاولة.',
+  'auth.storageAccessBody':
+    'المتصفح يمنع حفظ الجلسة داخل هذه النافذة لأن التطبيق معروض داخل إطار. اسمح بالوصول ثم أعد المحاولة.',
+  'auth.storageAccessEnable': 'السماح بالوصول داخل هذه النافذة',
 
   'console.subtitle.operator': 'إدارة المركبات والسائقين والرحلات والحجوزات.',
   'console.subtitle.staff': 'التحقق من الحسابات والمركبات والرحلات، ومسح رموز QR.',
@@ -537,6 +540,9 @@ export const en: Record<TranslationKey, string> = {
     'The request came from an unrecognised origin, so it was rejected. Reload the page and try again.',
   'auth.backendDown':
     'Could not reach the database. Start the local backend with `npm run dev:api`, then try again.',
+  'auth.storageAccessBody':
+    'This browser blocks the session inside an embedded frame. Allow access, then try again.',
+  'auth.storageAccessEnable': 'Allow access in this window',
 
   'console.subtitle.operator': 'Manage vehicles, drivers, trips and bookings.',
   'console.subtitle.staff': 'Verify accounts, vehicles and trips; scan QR codes.',
