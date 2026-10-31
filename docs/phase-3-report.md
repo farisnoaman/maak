@@ -9,6 +9,9 @@ when billing arrives.
 
 Legend: ✅ verified in this environment · ⚠️ code complete, needs a device/Docker · ⛔ not done
 
+> Reviewed against the plan after merge: `docs/phase-3-review.md` (acceptance criteria, deliverable
+> audit, the gaps this report understated).
+
 ---
 
 ## 1. What was built

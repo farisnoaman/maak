@@ -412,6 +412,9 @@ export function VehicleWizard({
   const [touched, setTouched] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  // A duplicate plate does not block the save (a genuinely re-registered vehicle exists), so the
+  // wizard stays on the page long enough to say it out loud instead of navigating past the warning.
+  const [duplicate, setDuplicate] = useState<{ href: string; text: string } | null>(null);
   const hydrated = useRef(false);
 
   const editing = Boolean(initial);
@@ -509,6 +512,7 @@ export function VehicleWizard({
     try {
       let vehicleId = initial?.id ?? '';
       let reverificationRequired = false;
+      let duplicateNotice: { href: string; text: string } | null = null;
 
       if (editing) {
         const result = await callFleet(client, {
@@ -535,11 +539,26 @@ export function VehicleWizard({
           reportFailure(result.error);
           return;
         }
-        const created = (result.data as { vehicle?: { id?: string } }).vehicle;
-        vehicleId = String(created?.id ?? '');
+        const created = result.data as {
+          vehicle?: { id?: string };
+          warnings?: { code: string; make?: string; model?: string }[];
+        };
+        vehicleId = String(created.vehicle?.id ?? '');
         if (!vehicleId) {
           setError(t('errors.INTERNAL'));
           return;
+        }
+        const plateDuplicate = created.warnings?.find(
+          (warning) => warning.code === 'PLATE_DUPLICATE',
+        );
+        if (plateDuplicate) {
+          duplicateNotice = {
+            href: `/${locale}/operator/vehicles/${vehicleId}`,
+            text: t('fleet.plateDuplicate', {
+              make: plateDuplicate.make ?? '',
+              model: plateDuplicate.model ?? '',
+            }),
+          };
         }
       }
 
@@ -612,6 +631,7 @@ export function VehicleWizard({
         setMessage(`${t('fleet.vehicleUpdated')} ${t('fleet.reverificationRequired')}`);
 
       if (onSaved) onSaved(vehicleId);
+      else if (duplicateNotice) setDuplicate(duplicateNotice);
       else router.push(`/${locale}/operator/vehicles/${vehicleId}`);
     } finally {
       setBusy(false);
@@ -728,6 +748,14 @@ export function VehicleWizard({
       {message ? (
         <p className="fleet-success" role="status">
           {message}
+        </p>
+      ) : null}
+      {duplicate ? (
+        <p className="fleet-warning" role="status">
+          {duplicate.text}{' '}
+          <a className="btn btn--ghost" href={duplicate.href}>
+            {t('fleet.plateDuplicateContinue')}
+          </a>
         </p>
       ) : null}
 

@@ -1,15 +1,32 @@
 import { describe, expect, it } from 'vitest';
 import {
+  driveTypeSchema,
   fleetActionSchema,
   fleetCommandArgs,
   fleetCommandSpec,
   fleetScope,
+  fuelTypeSchema,
+  transmissionSchema,
+  vehicleBodyTypeSchema,
   vehicleFieldErrors,
   vehicleInputSchema,
+  vehicleStatusSchema,
   type VehicleInput,
 } from '../src/api/fleet';
 import { parseQuotaDetail, quotaMetricKey, quotaOf } from '../src/api/quota';
-import { isVehicleOperational, vehicleBadges, VEHICLE_WIZARD_STEPS } from '../src/domain/vehicle';
+import {
+  DRIVE_TYPE_KEY,
+  DRIVER_STATUS_KEY,
+  FUEL_TYPE_KEY,
+  isVehicleOperational,
+  TRANSMISSION_KEY,
+  VEHICLE_BODY_TYPE_KEY,
+  VEHICLE_STATUS_KEY,
+  VERIFICATION_KEY,
+  vehicleBadges,
+  VEHICLE_WIZARD_STEPS,
+} from '../src/domain/vehicle';
+import { translate } from '../src/i18n/dictionaries';
 import { policyDenial, type Actor } from '../src/domain/policy';
 
 const audit = { p_request_id: 'req-1', p_ip: null };
@@ -259,6 +276,33 @@ describe('vehicle badges', () => {
     expect(expired.find((badge) => badge.code === 'inspectionExpired')?.tone).toBe('bad');
   });
 
+  it('keeps a maintenance slot that stays quiet until there is a service date', () => {
+    // Phase 3 has no maintenance schedule, so the placeholder must never invent a badge.
+    expect(vehicleBadges({ verification_status: 'verified' }, today).map((b) => b.code)).toEqual([
+      'verified',
+    ]);
+
+    const due = vehicleBadges(
+      { verification_status: 'verified', nextMaintenanceDue: '2026-06-21' },
+      today,
+    );
+    expect(due.find((badge) => badge.code === 'maintenanceDue')?.tone).toBe('warn');
+    expect(due.find((badge) => badge.code === 'maintenanceDue')?.days).toBe(20);
+
+    const overdue = vehicleBadges(
+      { verification_status: 'verified', nextMaintenanceDue: '2026-05-20' },
+      today,
+    );
+    expect(overdue.find((badge) => badge.code === 'maintenanceOverdue')?.tone).toBe('bad');
+
+    // A service date months away is not worth a badge at all.
+    const later = vehicleBadges(
+      { verification_status: 'verified', nextMaintenanceDue: '2026-09-01' },
+      today,
+    );
+    expect(later.map((badge) => badge.code)).toEqual(['verified']);
+  });
+
   it('says nothing about a document that is comfortably in date', () => {
     const badges = vehicleBadges(
       { verification_status: 'verified', insuranceExpiry: '2027-01-01' },
@@ -315,5 +359,34 @@ describe('wizard steps', () => {
   it('round-trips a parsed vehicle back into the schema', () => {
     const parsed: VehicleInput = vehicleInputSchema.parse(vehicle);
     expect(vehicleInputSchema.parse(parsed).plateNumber).toBe('12345-أ');
+  });
+});
+
+describe('enum labels', () => {
+  // The acceptance criterion is literal: no raw `four_wheel_drive` on a screen. A missing table entry
+  // would fall back to `fleet.unknown` in the UI, so the table and the schema are compared here rather
+  // than trusted to stay in step.
+  const tables = [
+    ['body type', vehicleBodyTypeSchema.options, VEHICLE_BODY_TYPE_KEY],
+    ['drive type', driveTypeSchema.options, DRIVE_TYPE_KEY],
+    ['transmission', transmissionSchema.options, TRANSMISSION_KEY],
+    ['fuel type', fuelTypeSchema.options, FUEL_TYPE_KEY],
+    ['vehicle status', vehicleStatusSchema.options, VEHICLE_STATUS_KEY],
+    ['verification', ['unverified', 'pending', 'verified', 'rejected'], VERIFICATION_KEY],
+    ['driver status', ['invited', 'active', 'suspended', 'revoked'], DRIVER_STATUS_KEY],
+  ] as const;
+
+  it('has a localized label for every value of every fleet enum', () => {
+    for (const [name, values, table] of tables) {
+      for (const value of values as readonly string[]) {
+        const key = table[value];
+        expect(key, `${name}: ${value} has no label`).toBeDefined();
+        for (const locale of ['ar', 'en'] as const) {
+          const label = translate(locale, key!);
+          expect(label, `${name}: ${value} in ${locale}`).not.toBe(value);
+          expect(label, `${name}: ${value} in ${locale}`).not.toContain('_');
+        }
+      }
+    }
   });
 });

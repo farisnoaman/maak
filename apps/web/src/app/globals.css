@@ -1450,6 +1450,15 @@ a {
   font-size: 0.9rem;
 }
 
+/* A warning is not an error: nothing failed, the operator just needs to see it before moving on. */
+.fleet-warning {
+  background: var(--surface-muted);
+  border-inline-start: 4px solid var(--state-warning);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+}
+
 .fleet-subhead {
   grid-column: 1 / -1;
   font-weight: 700;
