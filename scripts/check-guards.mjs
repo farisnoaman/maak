@@ -329,6 +329,72 @@ for (const file of pageFiles) {
   );
 }
 
+// --- 14. The web app is installable, and it says so on purpose --------------------------------
+//
+// A manifest is easy to add and easy to break: a renamed icon, a lost `start_url`, a service worker
+// deleted by a tidy-up, and the install prompt silently stops existing — no error anywhere, just an app
+// that is no longer an app. These are the facts the prompt depends on, and the one policy that keeps the
+// offline page honest: this worker caches nothing, because the app ships often and a cached shell fights
+// the build stamp the layout already carries.
+
+{
+  const manifest = await readFile(join(root, 'apps/web/src/app/manifest.ts'), 'utf8').catch(
+    () => '',
+  );
+
+  if (manifest === '') {
+    failures.push('apps/web/src/app/manifest.ts is missing — a phone cannot install the web app');
+  } else {
+    for (const [needle, message] of [
+      ['start_url:', 'the manifest has no `start_url` — installability requires one'],
+      [
+        "display: 'standalone'",
+        'the manifest does not open standalone, so it installs as a bookmark',
+      ],
+      ['/icons/192', 'the manifest has no 192px icon — Android needs it to offer the install'],
+      ['/icons/512', 'the manifest has no 512px icon — Android needs it for the splash screen'],
+    ]) {
+      if (!manifest.includes(needle)) failures.push(`apps/web/src/app/manifest.ts: ${message}`);
+    }
+  }
+
+  const icons = await readFile(join(root, 'apps/web/src/app/icons/[size]/route.tsx'), 'utf8').catch(
+    () => '',
+  );
+  if (icons === '') {
+    failures.push(
+      'apps/web/src/app/icons/[size]/route.tsx is missing — the manifest points at nothing',
+    );
+  }
+
+  const sw = await readFile(join(root, 'apps/web/public/sw.js'), 'utf8').catch(() => '');
+  if (sw === '') {
+    failures.push(
+      'apps/web/public/sw.js is missing — without a service worker there is no offline page',
+    );
+  } else {
+    if (!/addEventListener\(['"]fetch['"]/.test(sw)) {
+      failures.push(
+        'apps/web/public/sw.js has no fetch handler — a navigation cannot fall back offline',
+      );
+    }
+    if (/caches\.open|cache\.add|cache\.put/.test(sw)) {
+      failures.push(
+        'apps/web/public/sw.js caches something — this app ships often, and a cached shell fights the build stamp',
+      );
+    }
+  }
+
+  const layout = await readFile(join(root, 'apps/web/src/app/[locale]/layout.tsx'), 'utf8').catch(
+    () => '',
+  );
+  if (!layout.includes('<ServiceWorker />')) {
+    failures.push(
+      'apps/web/src/app/[locale]/layout.tsx does not render <ServiceWorker /> — the worker never registers',
+    );
+  }
+}
+
 if (failures.length > 0) {
   console.error(`✗ ${failures.length} guard failure(s):\n`);
   for (const failure of failures) console.error(`  - ${failure}`);

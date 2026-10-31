@@ -6,6 +6,7 @@ import '@maak/design-tokens/tokens.css';
 import '../globals.css';
 import { ToastProvider } from '@/components/ui/Toast';
 import { MobileTabBar } from '@/components/MobileTabBar';
+import { ServiceWorker } from '@/components/ServiceWorker';
 import { SessionTokenKeeper } from '@/components/SessionTokenKeeper';
 import { StaleBuildBanner } from '@/components/StaleBuildBanner';
 import { BUILD } from '@/lib/build';
@@ -31,6 +32,10 @@ export const metadata: Metadata = {
   title: 'Maak — إدارة الرحلات',
   description:
     'منصة إدارة الرحلات في اليمن: حسابات أفراد وشركات، مركبات وسائقون موثّقون، رحلات عامة، دفع ومحاسبة.',
+  // iOS ignores the manifest's icons and reads this one; `appleWebApp` is what makes "Add to Home
+  // Screen" open without browser chrome.
+  icons: { apple: '/icons/180' },
+  appleWebApp: { capable: true, title: 'معك', statusBarStyle: 'default' },
 };
 
 export function generateStaticParams() {
@@ -54,6 +59,7 @@ export default async function LocaleLayout({
           {locale === 'ar' ? 'تخطَّ إلى المحتوى' : 'Skip to content'}
         </a>
         <SessionTokenKeeper />
+        <ServiceWorker />
         <StaleBuildBanner build={BUILD} locale={locale as Locale} />
         <ToastProvider>{children}</ToastProvider>
         {/* The phone's primary navigation. Rendered for every screen; CSS keeps it out of the way on

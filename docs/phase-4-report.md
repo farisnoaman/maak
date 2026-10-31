@@ -65,6 +65,11 @@ needs (home, marketplace, my trips, console), the home page opens with a three-f
 result is a shareable URL rather than a modal, and `/console` forwards a staff member to `/staff` and an
 operator to `/operator` so the tab bar never guesses a role it cannot know.
 
+The web app is also installable: `app/manifest.ts` (standalone, `/ar/trips` as `start_url`), icons rendered
+by `app/icons/[size]` so no PNG can go stale against the tokens, and `public/sw.js` — which caches nothing
+by design and only answers a failed navigation with a bilingual offline page. `check:guards` §14 fails the
+build if any of the four installability facts disappears, or if the worker starts caching.
+
 ---
 
 ## 2. Defects the tests found (and fixed)
