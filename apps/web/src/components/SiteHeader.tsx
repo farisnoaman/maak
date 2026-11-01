@@ -31,6 +31,9 @@ export function SiteHeader({
     { key: 'nav.trips', href: withQuery('/trips') },
     { key: 'console.navVehicles', href: withQuery('/operator/vehicles') },
     { key: 'nav.styleguide', href: withQuery('/styleguide') },
+    // The two documents a store listing and an app review both ask for, reachable without an account.
+    { key: 'nav.privacy', href: withQuery('/privacy') },
+    { key: 'nav.terms', href: withQuery('/terms') },
     { key: 'nav.signIn', href: withQuery('/auth/sign-in') },
     { key: 'nav.account', href: withQuery('/account') },
   ];

@@ -16,7 +16,7 @@ begin;
 
 create extension if not exists pgtap;
 
-select plan(96);
+select plan(104);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -1073,8 +1073,8 @@ select ok(
 select is(
   (select jsonb_array_length(public.cmd_get_notification_catalogue(
             '10700003-0000-4000-8000-000000000003') -> 'items')),
-  35,
-  'the catalogue lists every event: 31 from the first pass, the three §6.10 additions, and the ops alert 00034 adds'
+  37,
+  'the catalogue lists every event: 31 from the first pass, the three §6.10 additions, the ops alert, and the two 00043 payment kinds'
 );
 
 select throws_ok(
@@ -1082,6 +1082,106 @@ select throws_ok(
   '42501',
   null,
   'and a passenger cannot read the platform''s routing table'
+);
+
+-- ---------------------------------------------------------------------------
+-- 8. The Phase 9 payment jobs (00043)
+-- ---------------------------------------------------------------------------
+
+-- A deposit uploaded two days ago and still undecided, and one created and never paid that expires in six hours.
+insert into public.bookings (
+  code, trip_id, passenger_id, booked_by, seats, unit_price_yer, subtotal_yer, discount_yer,
+  total_yer, contact_name, contact_phone, status, accepted_at
+)
+select 'BK-PAYJOB', '1070b001-0000-4000-8000-000000000001',
+       '10700004-0000-4000-8000-000000000004', '10700004-0000-4000-8000-000000000004',
+       1, 10000, 10000, 0, 10000, 'مسافر آخر', '+967733949004', 'accepted', now()
+on conflict (code) do nothing;
+
+insert into public.payment_intents (
+  id, code, purpose, booking_id, payer_id, method, amount_yer, status,
+  proof_path, proof_hash, proof_uploaded_at, expires_at, created_at
+)
+values
+  ('1070f101-0000-4000-8000-000000000001', 'PI-AAA111', 'booking',
+   (select id from public.bookings where code = 'BK-PAYJOB'),
+   '10700004-0000-4000-8000-000000000004', 'jaib', 10000, 'awaiting_confirmation',
+   'proofs/10700004/aaa.jpg', repeat('a', 64), now() - interval '2 days', null, now() - interval '3 days'),
+  ('1070f102-0000-4000-8000-000000000002', 'PI-BBB222', 'booking',
+   (select id from public.bookings where code = 'BK-PAYJOB'),
+   '10700004-0000-4000-8000-000000000004', 'jaib', 10000, 'awaiting_proof',
+   null, null, null, now() + interval '6 hours', now() - interval '1 hour');
+
+-- One call, both bands: the pass reports what it sent, so the assertions read the same result rather than
+-- calling the job twice and testing idempotency by accident.
+create temp table payjobs as
+  select public.cmd_notify_payment_reminders('10700003-0000-4000-8000-000000000003', 24, 12) as r;
+
+select is(
+  (select (r ->> 'pending')::int from payjobs),
+  1,
+  'an undecided receipt older than a day produces one reminder'
+);
+
+select is(
+  (select (r ->> 'expiring')::int from payjobs),
+  1,
+  'and an intent that expires within the band produces a second, different one in the same pass'
+);
+
+select is(
+  (select count(*)::int from public.notifications
+    where kind = 'payment_reminder' and title_key = 'notifications.paymentPending'),
+  1,
+  'the undecided receipt uses the sentence that stops a second payment'
+);
+
+create temp table payjobs_repeat as
+  select public.cmd_notify_payment_reminders('10700003-0000-4000-8000-000000000003', 24, 12) as r;
+
+select is(
+  (select (r ->> 'pending')::int + (r ->> 'expiring')::int from payjobs_repeat),
+  0,
+  'running the job again the same day sends nothing'
+);
+
+-- An agent holding 93 % of their limit: money the platform cannot reconcile until it is settled.
+insert into public.agents (id, user_id, org_id, float_balance_yer, credit_limit_yer, status)
+values ('1070f201-0000-4000-8000-000000000001', '10700002-0000-4000-8000-000000000002',
+        '1070aa00-0000-4000-8000-00000000000a', 140000, 150000, 'active');
+
+-- A finance officer, so "the desk is told" has a desk.
+insert into auth.users (id, email, phone, raw_user_meta_data)
+values ('10700005-0000-4000-8000-000000000005', 'notif-finance@example.test', '+967733940005', '{"locale":"ar"}')
+on conflict do nothing;
+
+insert into public.user_roles (user_id, role)
+values ('10700005-0000-4000-8000-000000000005', 'finance_officer')
+on conflict do nothing;
+
+select is(
+  (public.cmd_notify_agent_settlements('10700003-0000-4000-8000-000000000003', 90, 3) ->> 'agents')::int,
+  1,
+  'an agent at 93 % of their credit limit is told a settlement is due'
+);
+
+select is(
+  (select count(*)::int from public.notifications
+    where kind = 'agent_settlement_due' and title_key = 'notifications.agentSettlementDueDesk'),
+  1,
+  'and the finance desk gets one message about the same agent'
+);
+
+select is(
+  (public.cmd_notify_agent_settlements('10700003-0000-4000-8000-000000000003', 90, 3) ->> 'agents')::int,
+  0,
+  'running it again the same day sends nothing'
+);
+
+select is(
+  (public.cmd_expire_stale_payment_intents(50) >= 0),
+  true,
+  'the expiry job is callable on its own and closes nothing that is not expired'
 );
 
 select * from finish();

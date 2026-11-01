@@ -56,6 +56,13 @@ Writes **only** go through `/functions/v1/*`. `GET /rest/v1/*` is read-only and 
 anything else, so the "one write path" rule is visible in the dev stack too rather than quietly
 bypassed.
 
+**Two identities, three roles.** A browser holds the anon key or a user session. Server-side jobs present
+`MAAK_SERVICE_ROLE_KEY` (default `maak-dev-service-key`, printed at startup) and execute as `service_role` — the
+same role hosted Supabase gives them, so a script calling a `service_role`-only function
+(`get_trips_needing_routes`, `cmd_store_trip_route`, `cmd_run_integrity_check`) behaves here exactly as it will
+there. Before this existed, those calls worked in production and 403'd on a laptop. Never put the service key in
+anything a browser loads; nothing in `apps/` reads it.
+
 ## How the browser reaches it
 
 `apps/web/.env.local` is git-ignored, so it exists in neither a fresh clone nor a restored sandbox

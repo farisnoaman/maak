@@ -37,6 +37,7 @@
     "perf:smoke": "node scripts/perf-smoke.mjs",
     "perf:db": "node scripts/perf-db.mjs",
     "perf:k6": "k6 run docs/perf/k6-search.js",
+    "routes:fill": "node scripts/route-fill.mjs",
     "drill:restore": "node scripts/restore-drill.mjs"
   },
   "devDependencies": {

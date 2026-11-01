@@ -1335,10 +1335,13 @@ select is(
       -- Phase 8's two vehicle reads take the actor the same way: the gateway resolves it from the
       -- bearer token, and the session-bound wrappers (`vehicle_health`, `fleet_summary`) are what a
       -- browser is given instead.
+      -- `get_trips_needing_routes` (00042) is the router's queue: it is platform infrastructure, it names
+      -- the coordinates of every upcoming trip, and the only caller is `scripts/route-fill.mjs` holding the
+      -- service key. No session has a reason to read it.
       and p.proname not in (
         'create_id_share_link', 'get_trip_manifest_data',
         'get_trip_for_staff', 'get_trip_manifest', 'staff_scope_summary',
-        'get_vehicle_health', 'get_fleet_summary'
+        'get_vehicle_health', 'get_fleet_summary', 'get_trips_needing_routes'
       )
       and not exists (
         select 1

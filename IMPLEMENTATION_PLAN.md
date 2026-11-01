@@ -262,15 +262,21 @@ not build the acceptance-criterion region and reference data that could never be
 - Mobile: driver profile + licence upload, vehicle quick view.
 
 ### Tasks
-- [ ] Migration (~60 columns) + enums (`drive_type`, `transmission`, `fuel_type`, `body_type`, `vehicle_status`)
-      + constraints (year range, seats > 0, VIN length when present).
-- [ ] RLS: owner/org isolation; staff read-all; verification-gated writes.
+- [x] Migration (~60 columns) + enums (`drive_type`, `transmission`, `fuel_type`, `body_type`, `vehicle_status`)
+      + constraints (year range, seats > 0, VIN length when present) — `00013_fleet.sql` (this box was stale:
+      the phase shipped, the list was never ticked).
+- [x] RLS: owner/org isolation; staff read-all; verification-gated writes — `00013`, asserted in
+      `supabase/tests/0005_fleet.test.sql`.
 - [x] Commands (edge fn + atomic `cmd_*` SQL): `create_vehicle`, `update_vehicle`, `submit_vehicle_verification`, `decide_vehicle_verification`,
       `invite_driver`, `accept_driver_invite`, `verify_driver`, `assign_driver_to_vehicle`, `set_vehicle_status`.
-- [ ] Storage `vehicle-photos` (public) + `vehicle-documents` (private) policies.
-- [ ] Web `/operator/vehicles` (list, wizard, detail), `/operator/drivers`, `/staff/vehicles`.
-- [ ] Mobile `/driver/profile`, `/driver/vehicle/[id]`.
-- [ ] pgTAP: unverified cannot insert vehicle; org A cannot read org B vehicles; Basic owner blocked at 2nd vehicle.
+- [x] Storage `vehicle-photos` (public) + `vehicle-documents` (private) policies — `00013` §12 (buckets, size
+      and MIME limits, folder-scoped policies), swept by `0013_vehicle_ops_gaps.test.sql`.
+- [x] Web `/operator/vehicles` (list, wizard, detail), `/operator/drivers`, `/staff/vehicles` — in
+      `apps/web/src/app/[locale]`, all four reachable and in `check:a11y`.
+- [x] Mobile `/driver/profile`, `/driver/vehicle/[id]` — `apps/mobile/src/app/driver/profile.tsx` and
+      `driver/vehicle/[id].tsx`.
+- [x] pgTAP: unverified cannot insert vehicle; org A cannot read org B vehicles; Basic owner blocked at 2nd
+      vehicle — `0005_fleet.test.sql` (72 assertions).
 
 ### Acceptance criteria
 - Verified individual registers a 2019 Toyota Hiace with full trim/mechanical/comfort data, 3 photos, insurance
@@ -411,8 +417,12 @@ not build the acceptance-criterion region and reference data that could never be
       (monthly partitions), `trip_progress`, `trip_route_geometry` and the driver's read policy (`00023`, `00024`).
 - [x] `app.recompute_trip_progress`: nearest upcoming stop, haversine chain, ETA from rolling speed with a
       timetable fallback — `supabase/migrations/00023_trip_tracking.sql`.
-- [ ] Routing provider at publish (cached; OSRM/ORS) + graceful fallback — the straight-line fallback and the
-      `trip_route_geometry` seam exist; no provider is called yet.
+- [x] Routing provider at publish (cached; OSRM/ORS) + graceful fallback — `00042_trip_routes.sql` (corridor
+      cache, `get_trips_needing_routes`, validated `cmd_store_trip_route`, `cmd_attach_cached_route`) and
+      `npm run routes:fill` (OSRM client in `@maak/core`, one provider call per corridor, timeout and retries).
+      With no provider, no network or a malformed answer nothing is stored and the straight line stays.
+      `app.trip_route_for()` now prefers trip geometry → corridor → straight line; 24 assertions in
+      `0019_trip_routes.test.sql`, 15 unit tests in `packages/core/tests/routing.test.ts`.
 - [x] Commands (edge fn + atomic `cmd_*` SQL): `start_trip`, `end_trip`, `mark_stop_reached`, `record_ping`,
       and the visibility-checked read `get_trip_progress`. (`check_in_passenger` and a dedicated
       `get_driver_trips_today` are folded into the read policy + `/driver` for now. **`check_in_passenger` did
@@ -601,14 +611,20 @@ reminder dedupe, and the trip gate's `MAINTENANCE_OVERDUE` refusal.
 ### Tasks
 - [x] Migrations + enums (`payment_method`, `payment_status`, `purpose`, `account_status`, `agent_tx_kind`) + constraints.
 - [x] RLS: payer sees own intents, owner org sees trip-related, finance sees all, agents see own float.
-- [ ] Commands (edge fn + atomic `cmd_*` SQL): `create_payment_intent`, `submit_payment_proof`, `confirm_payment`, `reject_payment`,
+- [x] Commands (edge fn + atomic `cmd_*` SQL): `create_payment_intent`, `submit_payment_proof`, `confirm_payment`, `reject_payment`,
       `cancel_payment_intent`, `expire_stale_payments`, `request_refund`, `decide_refund`, `pay_refund`,
       `create_payment_account`, `verify_payment_account`, `archive_payment_account`,
-      `agent_cash_in`, `request_payout`, `approve_payout`, `mark_payout_paid`.
+      `agent_cash_in`, `request_payout`, `approve_payout`, `mark_payout_paid` — all sixteen in
+      `00030_payments.sql` (this box was stale, like the Phase 4 ones).
 - [x] Ledger **posting stubs** for confirm/refund (entries created; full ledger from Phase 10 lands here or there —
       decided: ledger tables ship in Phase 10, Phase 9 writes to an outbox table so no money event is ever lost).
 - [x] Storage `payment-proofs` + policies + 180-day retention job + proof hashing.
-- [ ] Cron: stale intent expiry, unmatched-deposit reminders, agent settlement reminders.
+- [x] Cron: stale intent expiry, unmatched-deposit reminders, agent settlement reminders — `00043` (the two new
+      kinds alone) and `00044` (the jobs): `payments-expiry` schedules the expiry command that `00030` shipped and
+      nothing called, `payment-reminders` tells a payer their receipt is still undecided after 24 h and that an
+      unpaid intent expires within 12 h, `agent-settlements` tells an agent at 90 % of their credit limit (or with
+      no movement for three days) and the finance desk. Registered in `NOTIFICATION_JOB_FN`, so an unscheduled job
+      is a type error; each is idempotent per day. 9 assertions in `0016`.
 - [x] Web `/pay/[intent]`, `/operator/payments`, `/finance/payments`, `/finance/accounts`, `/finance/agents`, `/operator/payouts`.
 - [x] Mobile pay/upload/status + driver cash-collect sheet.
 - [x] pgTAP: double-confirm prevented (idempotency), proof reuse blocked, out-of-scope account edits denied,
@@ -780,17 +796,38 @@ reminder dedupe, and the trip gate's `MAINTENANCE_OVERDUE` refusal.
 - [x] Account deletion executed rather than merely requested: `cmd_delete_account` (`00039`) anonymises the person
       and keeps the books, with six refusals, `platform_admin` only and no self-service; 30 pgTAP assertions in
       `0018` and `docs/admin-guide.md` §6a for the operator's half (Storage objects, `authScrubbed`).
-- [ ] Security checklist execution + fixes; `supabase db lint`, `plpgsql_check`, `npm audit` clean.
+- [~] Security checklist execution + fixes; `supabase db lint`, `plpgsql_check`, `npm audit` clean.
+      **Done:** the review is a gate (`sql:check`'s security-posture block: RLS everywhere, definer search_path
+      pinned, no client-executable command), plus `0018`'s deletion checks and the write-lockdown suite.
+      **Not done, and not possible here:** `plpgsql_check` and `supabase db lint` need extensions/CLI the sandbox
+      does not have. `npm audit --omit=dev` reports **19 advisories (18 moderate, 1 high)**, every one inside the
+      React Native / Expo toolchain (`image-size`, `minimatch`, `glob`, `jscodeshift`, metro/codegen plugins).
+      `npm audit fix` cannot move them without an Expo SDK upgrade, which is a device-tested change, not a
+      lockfile edit — and `npm audit fix` was tried and reverted: it rewrote 4,404 lockfile lines and fixed
+      nothing.
 - [x] Restore drill executed rather than described: `npm run drill:restore` takes a hot backup, restores it into a
       second cluster and fails unless 24 checks match the source (counts, ledger, `cmd_run_integrity_check`, RLS and
       definer posture, Storage, a `search_public_trips()` answer). **0.47 s end to end** at 49,998 trips, written to
       `docs/perf/restore-drill.txt`; the hosted-project run, with its download and PITR replay, is what settles the
       RTO for launch (`docs/runbook.md` §3).
-- [ ] Alerts: error rate, stale live trips, failed notifications, imbalanced journals, verification backlog,
-      payment confirmation SLA breach.
-- [ ] EAS build/submit config, store listings, privacy policy + terms (AR/EN).
-- [ ] UAT script + sessions + issue burn-down.
-- [ ] Tag `v1.0.0`, changelog, handover session.
+- [x] Alerts: error rate, stale live trips, failed notifications, imbalanced journals, verification backlog,
+      payment confirmation SLA breach — `00034_ops_alerts.sql` ships all six (`error_rate`, `stale_trips`,
+      `dead_deliveries`, `unbalanced_journals`, `verification_backlog`, `payment_sla`), each with a runbook
+      section and a `0017` assertion.
+- [x] EAS build/submit config, store listings, privacy policy + terms (AR/EN) — `apps/mobile/eas.json`
+      (development / preview / production, submit config with the two account ids as explicit placeholders),
+      `docs/store-listing.md` (copy in both languages, the privacy answers review asks for, the pre-submission
+      checklist), and `/ar|en/privacy` + `/ar|en/terms` generated from `apps/web/src/lib/legal.ts` with a parity
+      test. **What is left is outside the repository:** the Expo, Play and App Store accounts.
+- [~] UAT script + sessions + issue burn-down. **Script written** — `docs/uat.md`: the pre-session checklist,
+      the step-by-step paths per role with a pass condition each, the P1–P4 severity ladder, the session record
+      template and the burn-down table with its launch gate. **Sessions are a calendar item** with three real
+      operators; nobody can run them from a sandbox, and pretending otherwise is how a launch skips them.
+- [~] Tag `v1.0.0`, changelog, handover session. **Changelog and handover written** — `CHANGELOG.md` (grouped by
+      release, with the numbers) and `docs/handover.md` (the shape of the repo, the gates, the jobs, where every
+      decision is written down, and the seven things still open). **The tag waits for UAT and the hosted restore
+      run**, per `docs/phase-12-report.md` §6. The handover *session* is a meeting; the document it would have
+      produced exists.
 
 ### Acceptance criteria
 - Search p95 < 300 ms, write RPC p95 < 250 ms, finance dashboard p95 < 500 ms under stated load.

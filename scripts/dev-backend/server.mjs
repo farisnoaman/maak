@@ -41,6 +41,17 @@ const signedObjects = new Map();
 export const API_PORT = Number(process.env.MAAK_API_PORT ?? 54321);
 export const ANON_KEY = process.env.MAAK_ANON_KEY ?? 'maak-dev-anon-key';
 
+/**
+ * The service key — the identity server-side jobs present.
+ *
+ * Hosted Supabase has a `service_role`; this backend had only `anon` and `authenticated`, so a script calling a
+ * `service_role`-only function (the route filler, `cmd_run_integrity_check`) worked in production and 403'd on a
+ * laptop — a difference found by whoever needed it, at the worst possible time. Presenting this key executes as
+ * `service_role`, which is what the migrations already grant: RLS bypassed, commands callable, and nothing a
+ * browser ever holds.
+ */
+export const SERVICE_KEY = process.env.MAAK_SERVICE_ROLE_KEY ?? 'maak-dev-service-key';
+
 const CORS = {
   'access-control-allow-origin': '*',
   'access-control-allow-headers':
@@ -71,6 +82,7 @@ async function loadCore() {
 function claimsFor(request) {
   const token = tokenFromRequest(request);
   if (!token || token === ANON_KEY) return { role: 'anon' };
+  if (token === SERVICE_KEY) return { role: 'service_role' };
   const claims = verifyJwt(token);
   if (!claims || claims.kind === 'refresh') return null;
   return { ...claims, role: 'authenticated' };
@@ -395,6 +407,7 @@ async function main() {
   server.listen(API_PORT, '0.0.0.0', () => {
     console.log(`  ready on http://0.0.0.0:${API_PORT}`);
     console.log(`  anon key: ${ANON_KEY}`);
+    console.log(`  service key: ${SERVICE_KEY} (server-side jobs only)`);
     console.log('  sign in:  admin@maak.test / Maak!2026');
   });
 

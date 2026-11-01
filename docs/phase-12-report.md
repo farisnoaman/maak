@@ -256,7 +256,7 @@ sibling has been fooled by once already.
 
 `0007` gained four assertions: the buckets sum to the public future trips, bucket arithmetic equals row
 arithmetic for a gender filter and for three dimensions at once, and a dimension-filtered search's origin facet
-equals `app.trip_matches()`'s grouping. 41 migrations, 954 assertions across 18 suites.
+equals `app.trip_matches()`'s grouping. 44 migrations, 986 assertions across 19 suites.
 
 The contracts that keep "faster" from meaning "different" are in 0007 rather than in this report: the generated
 keys equal `app.trip_rank()` to the digit for all three sorts, the bucketed counts equal `app.trip_matches()`
@@ -358,6 +358,53 @@ download, the PITR replay and pointing the app at the result), it rehearses the 
 
 ---
 
+### 1.11 The plan's last boxes, opened one by one
+
+`IMPLEMENTATION_PLAN.md` had fourteen unticked boxes when the merge to `main` happened. Eight of them were **stale**
+— the phase had shipped and nobody had ticked the list: the Phase 4 migration, RLS, storage policies, the four web
+screens, the two mobile screens and its pgTAP suite; all sixteen Phase 9 payment commands; and all six Phase 12
+ops alerts. A plan that misreports its own state is worse than no plan, because the next person budgets for work
+that exists. Those are now ticked with the file and suite that prove each one.
+
+The others were real, and four of them are now closed:
+
+**Routing** (`00042`, `npm run routes:fill`). The seam `00023` left — `trip_route_geometry`, the straight-line
+fallback, and a comment saying no provider was called — is filled. Three decisions shaped it. A **corridor cache**
+keyed on the two endpoints rounded to four decimals (~11 m), because a route is a function of two points and 200
+departures on the Aden–Sana'a road are one provider call; a trip still keeps its own copy, so a republished
+corridor cannot change a route under a passenger. The **fetch is outside the transaction**: Postgres cannot make an
+HTTPS call and should not learn how, so `get_trips_needing_routes()` is the queue and `cmd_store_trip_route()` is
+the one write, validated (`ALL` coordinates in range, at least two points, a non-negative distance) because a
+network answer is the least trustworthy input in the system. And the **fallback stays the default**: no provider,
+no network, a timeout or a malformed answer all mean nothing is stored and the straight line remains. The traps are
+covered by 15 unit tests that need no network — the [lng, lat] → {lat, lng} swap that would put every route in the
+Indian Ocean, and a plausibility band (0.5×–1.8× the great-circle distance) that rejects an answer about another
+place. Verified end to end against a stub OSRM: two trips filled, four-point geometry stored, two audit rows, second
+pass empty, and with no provider URL it degrades to `queued: 0`.
+
+**The payment cron** (`00043`, `00044`). The Phase 9 list named three jobs; one command existed (`cmd_expire_stale_
+payment_intents`) and nothing called it, and the other two had never been written. Now `payments-expiry` schedules
+it, `payment-reminders` tells a payer their receipt is still being checked after 24 h (the sentence that stops a
+second payment) and that an unpaid intent expires within 12 h, and `agent-settlements` tells an agent at 90 % of
+their credit limit — or with no transaction for three days — that a settlement is due, with one message per agent
+to the finance desk. Three jobs rather than one because they fail differently; all registered in
+`NOTIFICATION_JOB_FN`, so an unscheduled job is a type error rather than a silent gap. Running the worker live
+shows all **13 jobs** and the two new counts.
+
+Two smaller things this found and fixed along the way. The dev backend had no service identity at all, so a script
+calling a `service_role`-only function worked in production and 403'd on a laptop; it now accepts
+`MAAK_SERVICE_ROLE_KEY` and executes as `service_role`. And `alter type ... add value` cannot be *used* in the same
+transaction, which means the two new notification kinds had to land in their own migration (`00043`) before
+`00044` could insert their catalogue rows — a bug that only appears on a fresh database, which is the worst kind,
+and the reason the split exists rather than a comment saying it works.
+
+**The launch paperwork** — `/ar|en/privacy` and `/ar|en/terms` generated from one typed source
+(`apps/web/src/lib/legal.ts`) with a test for section parity, script and date; `apps/mobile/eas.json` with the two
+store account ids as explicit placeholders; `docs/store-listing.md` with the listing copy in both languages and the
+privacy answers review asks for; `docs/uat.md` with the session script, the pass conditions, the P1–P4 ladder and
+the burn-down gate; `CHANGELOG.md` and `docs/handover.md`. The sessions, the store accounts and the tag remain
+what they always were: things that need people.
+
 ## 2. In flight
 
 1. **The `k6` run.** The suites exist (`docs/perf/k6-search.js`, `k6-booking-race.js`, `k6-ping-ingest.js`,
@@ -379,11 +426,11 @@ download, the PITR replay and pointing the app at the result), it rehearses the 
 | Gate | Result |
 | --- | --- |
 | `npm run check:all` | green |
-| `npm run sql:check` | 41 migrations · 18 pgTAP suites · **954 assertions** · types in sync · **security posture green** |
-| `npm test` | **651 tests**, 26 files |
+| `npm run sql:check` | 44 migrations · 19 pgTAP suites · **986 assertions** · types in sync · **security posture green** |
+| `npm test` | **668 tests**, 27 files |
 | `npm run test:coverage` | 95.77 % statements · 87.09 % branches · 96.46 % functions · 96.72 % lines |
-| `npm run check:guards` | 31 core files · 177 style files · 41 migrations · 131 commands |
-| `npm run check:a11y` | 107 routes, both directions |
+| `npm run check:guards` | 32 core files · 180 style files · 44 migrations · 135 commands |
+| `npm run check:a11y` | 111 routes, both directions |
 | worker against a fresh dev database | 10 jobs, `maintenance: {sent: 2}`, `ops-alerts: {counts: all zero}`, exit 0 |
 | `npm run perf:smoke` at 50,000 trips | search 6.0 ms p95 cold / 2.8 ms cached · write 10.2 ms · dashboard 88.3 ms |
 | `npm run drill:restore` at 49,998 trips | hot backup → second cluster → 24 checks against the source in 0.47 s |

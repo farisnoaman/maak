@@ -31,6 +31,12 @@ const ROUTES = [
   { path: '/en', lang: 'en', dir: 'ltr', account: null },
   { path: '/ar/styleguide', lang: 'ar', dir: 'rtl', account: null },
   { path: '/en/styleguide', lang: 'en', dir: 'ltr', account: null },
+  // The two documents a store review and a lawyer both open, and the only pages a visitor reaches from a link
+  // outside the product. Long text is where a heading hierarchy goes wrong quietly.
+  { path: '/ar/privacy', lang: 'ar', dir: 'rtl', account: null },
+  { path: '/en/privacy', lang: 'en', dir: 'ltr', account: null },
+  { path: '/ar/terms', lang: 'ar', dir: 'rtl', account: null },
+  { path: '/en/terms', lang: 'en', dir: 'ltr', account: null },
   { path: '/ar/auth/sign-in', lang: 'ar', dir: 'rtl', account: null },
   { path: '/en/auth/sign-in', lang: 'en', dir: 'ltr', account: null },
   { path: '/ar/operator', lang: 'ar', dir: 'rtl', account: 'owner' },

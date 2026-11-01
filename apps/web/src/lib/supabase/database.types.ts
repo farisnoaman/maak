@@ -1,5 +1,5 @@
-// migrations-sha256: f77d5a17416cfef9a4d48e2333e7f4d97c70ed0d63a19bce168c1f8ed60b2c9d
-/* Generated from 41 migrations. Run `npm run db:types` after changing the schema. */
+// migrations-sha256: 1c46fc11bea7eb7c1fd533131aa59c3f7e9bcc0d651cfc0fbe4711ada5c0ece3
+/* Generated from 44 migrations. Run `npm run db:types` after changing the schema. */
 
 /**
  * Schema types for RLS-filtered reads (Phase 0 subset).
@@ -1035,6 +1035,15 @@ export interface SearchCountRow {
   refreshed_at: string;
 }
 
+/** `00042`. Road geometry per corridor, filled by `npm run routes:fill`. Read only through app.* functions. */
+export interface RouteCacheRow {
+  route_key: string;
+  provider: string;
+  polyline: Json;
+  distance_km: number;
+  computed_at: string;
+}
+
 export interface SearchBucketRow {
   origin_governorate_id: string;
   destination_governorate_id: string;
@@ -1865,6 +1874,16 @@ export interface Database {
         Row: SearchCountRow;
         Insert: Partial<SearchCountRow> & { dimension: SearchCountRow['dimension']; value: string };
         Update: Partial<SearchCountRow>;
+      };
+      route_cache: {
+        Row: RouteCacheRow;
+        Insert: Partial<RouteCacheRow> & {
+          route_key: string;
+          provider: string;
+          polyline: Json;
+          distance_km: number;
+        };
+        Update: Partial<RouteCacheRow>;
       };
       region_governorates: {
         Row: RegionGovernorate;

@@ -306,6 +306,9 @@ describe('notification actions', () => {
       'expiring',
       'verification-sla',
       'retry',
+      'payments-expiry',
+      'payment-reminders',
+      'agent-settlements',
     ] as const) {
       map[job] = notificationCommandArgs(parse({ action: 'notifications.job.run', job }), actor).fn;
     }
@@ -316,6 +319,9 @@ describe('notification actions', () => {
       expiring: 'cmd_notify_subscription_expiring',
       'verification-sla': 'cmd_notify_pending_verifications',
       retry: 'cmd_retry_notifications',
+      'payments-expiry': 'cmd_expire_stale_payment_intents',
+      'payment-reminders': 'cmd_notify_payment_reminders',
+      'agent-settlements': 'cmd_notify_agent_settlements',
     });
   });
 
@@ -689,11 +695,15 @@ describe('the job map the worker schedules from', () => {
   });
 
   it('routes every job through the command builder with the actor it was given', () => {
+    // `payments-expiry` is the exception, and it is a real distinction: it closes intents nobody finished and
+    // sends nothing, so it has no actor to attribute a notification to. Every job that *notifies* carries one.
+    const housekeeping = new Set(['payments-expiry']);
     for (const job of jobs) {
       const parsed = notificationJobSchema.parse({ action: 'notifications.job.run', job });
       const command = notificationCommandArgs(parsed, 'actor-1');
       expect(command.fn).toBe(NOTIFICATION_JOB_FN[job]);
-      expect(command.args.p_actor).toBe('actor-1');
+      if (housekeeping.has(job)) expect(command.args.p_actor).toBeUndefined();
+      else expect(command.args.p_actor).toBe('actor-1');
     }
   });
 
