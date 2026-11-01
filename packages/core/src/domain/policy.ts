@@ -107,7 +107,14 @@ export type Capability =
   | 'maintenance.schedule'
   | 'maintenance.complete'
   | 'maintenance.view'
-  | 'fleet.settings';
+  | 'fleet.settings'
+  // Phase 10 — money, plans and the books.
+  | 'expense.record'
+  | 'expense.void'
+  | 'subscription.manage'
+  | 'invoice.manage'
+  | 'reconciliation.manage'
+  | 'quota.override';
 
 interface Rule {
   readonly roles: readonly Role[];
@@ -241,6 +248,17 @@ const RULES: Record<Capability, Rule> = {
   'plan.subscribe': { roles: [...OPERATOR], verified: true, scoped: 'orgMember' },
   'plan.manage': { roles: ['platform_admin'] },
   'commission.manage': { roles: ['platform_admin'] },
+
+  // Phase 10 — the books. Recording a cost is the person who paid it; voiding one is the owner or finance.
+  // The subscription verbs name a row rather than an owner, so the command re-derives whose it is from the
+  // session — a scoped rule cannot see inside a payload it has not read.
+  'expense.record': { roles: ['driver', ...OPERATOR, 'org_accountant', ...FINANCE] },
+  'expense.void': { roles: [...OPERATOR, ...FINANCE], scoped: 'owner' },
+  'subscription.manage': { roles: [...OPERATOR, 'org_accountant', ...FINANCE] },
+  'invoice.manage': { roles: [...FINANCE] },
+  'reconciliation.manage': { roles: [...FINANCE] },
+  // An override is an exception to a commercial rule, so it belongs to the person who owns the rule.
+  'quota.override': { roles: ['platform_admin'] },
 
   // Phase 8 — vehicle operations. Logging fuel and work is the driver's job as much as the owner's
   // (the person at the pump is usually the driver), so `driver` is in all three; the `cmd_*` re-derives

@@ -182,6 +182,44 @@ const PAYMENTS_CAPABILITY = {
   'payout.pay': 'payout.approve',
 };
 
+/**
+ * Phase 10. The edge function upgrades three of these at runtime (`finance.viewAll` for a platform-wide
+ * read, and the desk-only actions), and so does the branch below — the map is the *default*, which is why
+ * both sides can be compared key by key by check-guards.
+ */
+const FINANCE_CAPABILITY = {
+  'finance.journal.post': 'finance.adjust',
+  'finance.journal.reverse': 'finance.adjust',
+  'expense.record': 'expense.record',
+  'expense.void': 'expense.void',
+  'subscription.start': 'subscription.manage',
+  'subscription.changePlan': 'subscription.manage',
+  'subscription.cancel': 'subscription.manage',
+  'invoice.pay': 'invoice.manage',
+  'invoice.void': 'invoice.manage',
+  'finance.export': 'finance.viewOwn',
+  'finance.reconciliation.import': 'reconciliation.manage',
+  'finance.reconciliation.resolve': 'reconciliation.manage',
+  'plan.update': 'plan.manage',
+  'commission.rule.save': 'commission.manage',
+  'quota.override.grant': 'quota.override',
+  'quota.override.revoke': 'quota.override',
+  'finance.dashboard': 'finance.viewOwn',
+  'finance.statement': 'finance.viewOwn',
+  'finance.job.run': 'finance.viewAll',
+};
+
+/** Finance-desk work, whatever scope it is called with. Mirrors `PLATFORM_ONLY` in the edge function. */
+const FINANCE_PLATFORM_ONLY = new Set([
+  'finance.journal.post',
+  'finance.journal.reverse',
+  'invoice.pay',
+  'invoice.void',
+  'finance.reconciliation.import',
+  'finance.reconciliation.resolve',
+  'finance.job.run',
+]);
+
 const FLEET_CAPABILITY = {
   'vehicle.create': 'vehicle.create',
   'vehicle.update': 'vehicle.update',
@@ -404,6 +442,46 @@ export async function handleFunction({ name, body, userId, client, core, request
     }
 
     const { fn, args } = core.paymentsCommandArgs(parsed.data, userId, {
+      p_request_id: requestId,
+      p_ip: null,
+    });
+    try {
+      const result = await runCommand(client, fn, args);
+      return { status: 200, body: { ...result, requestId } };
+    } catch (error) {
+      const mapped = mapDbError(error, core);
+      return { ...mapped, body: { ...mapped.body, requestId } };
+    }
+  }
+
+  if (name === 'finance') {
+    const parsed = core.financeActionSchema.safeParse(body);
+    if (!parsed.success) return mapZod(parsed.error);
+
+    const input = parsed.data;
+    const resolved = await resolveActor(client, userId);
+    const capability = FINANCE_PLATFORM_ONLY.has(input.action)
+      ? 'finance.viewAll'
+      : input.action === 'finance.dashboard' || input.action === 'finance.statement'
+        ? input.platform
+          ? 'finance.viewAll'
+          : 'finance.viewOwn'
+        : FINANCE_CAPABILITY[input.action];
+    const denial = core.policyDenial(resolved.actor, capability, core.financeScope(input));
+    if (denial) {
+      return {
+        status: denial === 'UNAUTHENTICATED' ? 401 : 403,
+        body: {
+          code: denial,
+          detail:
+            denial === 'NOT_VERIFIED'
+              ? 'Account is not verified'
+              : 'You do not have permission to perform this action',
+        },
+      };
+    }
+
+    const { fn, args } = core.financeCommandArgs(input, userId, {
       p_request_id: requestId,
       p_ip: null,
     });

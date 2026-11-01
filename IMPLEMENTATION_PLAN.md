@@ -628,6 +628,10 @@ reminder dedupe, and the trip gate's `MAINTENANCE_OVERDUE` refusal.
 
 **Goal:** one financial truth and a working monetisation engine.
 
+**Status: complete (2026-11-01).** Evidence: [`docs/phase-10-report.md`](./docs/phase-10-report.md).
+31 migrations · 105 commands · 10 edge functions · 15 pgTAP suites (774 assertions) · 522 unit tests ·
+101 a11y routes.
+
 ### Deliverables
 - Double-entry ledger: `ledger_accounts` (platform + per-owner chart), `journal_entries`, `ledger_entries` with
   balance-constraint triggers, immutability (no UPDATE/DELETE), reversing entries, `suspense` handling.
@@ -649,22 +653,22 @@ reminder dedupe, and the trip gate's `MAINTENANCE_OVERDUE` refusal.
   commission editor, subscription overview, quota override with expiry.
 
 ### Tasks
-- [ ] Migrations: ledger tables + `assert_balanced_journal()` deferred constraint trigger + revoke UPDATE/DELETE.
-- [ ] `post_journal(entries[], source)` helper + one posting function per money event (payment, refund, payout,
+- [x] Migrations: ledger tables + `assert_balanced_journal()` deferred constraint trigger + revoke UPDATE/DELETE.
+- [x] `post_journal(entries[], source)` helper + one posting function per money event (payment, refund, payout,
       invoice, commission, subscription, adjustment) — the only writers.
-- [ ] Plans/limits/subscriptions migrations + seeds (Basic/Pro/Business from §6.14) + `app.owner_effective_plan()`
+- [x] Plans/limits/subscriptions migrations + seeds (Basic/Pro/Business from §6.14) + `app.owner_effective_plan()`
       replacing the Phase 1 stub with real resolution (Basic fallback, trial, grace, expiry, overrides).
-- [ ] `app.assert_quota()` wired into every guarded RPC + `usage_counters` upsert + `quota_violations` logging.
-- [ ] Commands (edge fn + atomic `cmd_*` SQL): `start_subscription`, `change_plan`, `cancel_subscription`, `renew_subscription` (idempotent on invoice),
+- [x] `app.assert_quota()` wired into every guarded RPC + `usage_counters` upsert + `quota_violations` logging.
+- [x] Commands (edge fn + atomic `cmd_*` SQL): `start_subscription`, `change_plan`, `cancel_subscription`, `renew_subscription` (idempotent on invoice),
       `expire_subscriptions`, `request_payout`, `approve_payout`, `mark_payout_paid`, `issue_invoice`, `void_invoice`,
       `post_manual_journal`, `import_reconciliation`, `get_finance_dashboard`, `get_statement`, `export_finance`.
-- [ ] Cron: subscription expiry/grace, usage period rollover, statement generation, integrity job.
-- [ ] PDF: invoice + statement templates (AR/EN, RTL/LTR) with the same font pipeline as the manifest.
-- [ ] Web `/finance/*` (dashboard, invoices, statements, payouts, reconciliation), `/operator/billing`,
+- [x] Cron: subscription expiry/grace, usage period rollover, statement generation, integrity job.
+- [x] PDF: invoice + statement templates (AR/EN, RTL/LTR) with the same font pipeline as the manifest.
+- [x] Web `/finance/*` (dashboard, invoices, statements, payouts, reconciliation), `/operator/billing`,
       `/admin/plans`, `/admin/commissions`, `/admin/subscriptions`.
-- [ ] pgTAP: journal always balances; double posting impossible; commission math; refund math; payout limits;
+- [x] pgTAP: journal always balances; double posting impossible; commission math; refund math; payout limits;
       quota boundaries per metric; downgrade keeps existing resources; trial→expiry fallback; period rollover.
-- [ ] Vitest: finance formatters, proration, commission rounding, statement math parity with SQL.
+- [x] Vitest: finance formatters, proration, commission rounding, statement math parity with SQL.
 
 ### Acceptance criteria
 - Confirming a 10,000 YER booking with 5% commission posts exactly two journal pairs (receivable/operator payable +

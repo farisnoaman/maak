@@ -32,6 +32,10 @@ export const ERROR_CODES = [
   'PROOF_ALREADY_USED',
   'DUPLICATE_REFERENCE',
   'PAYMENT_ALREADY_CONFIRMED',
+  // Phase 10: the ledger refuses an edit and a journal that does not balance. Both are user-facing
+  // outcomes with their own sentence, not "an unexpected error" — somebody typed a number wrong.
+  'UNBALANCED_JOURNAL',
+  'IMMUTABLE',
   'RATE_LIMITED',
   'IDEMPOTENCY_CONFLICT',
   'INTERNAL',
@@ -85,6 +89,8 @@ const ERROR_KEYS: Record<ErrorCode, TranslationKey> = {
   PROOF_ALREADY_USED: 'errors.VALIDATION_FAILED',
   DUPLICATE_REFERENCE: 'errors.DUPLICATE_REFERENCE',
   PAYMENT_ALREADY_CONFIRMED: 'errors.CONFLICT',
+  UNBALANCED_JOURNAL: 'errors.UNBALANCED_JOURNAL',
+  IMMUTABLE: 'errors.IMMUTABLE',
   RATE_LIMITED: 'errors.RATE_LIMITED',
   IDEMPOTENCY_CONFLICT: 'errors.CONFLICT',
   INTERNAL: 'errors.INTERNAL',
@@ -128,6 +134,8 @@ export const HTTP_STATUS_BY_CODE: Record<ErrorCode, number> = {
   PROOF_ALREADY_USED: 409,
   DUPLICATE_REFERENCE: 409,
   PAYMENT_ALREADY_CONFIRMED: 409,
+  UNBALANCED_JOURNAL: 422,
+  IMMUTABLE: 409,
   RATE_LIMITED: 429,
   IDEMPOTENCY_CONFLICT: 409,
   INTERNAL: 500,

@@ -665,9 +665,12 @@ select is(
 
 select is(
   (select count(*)::int from public.plan_limits),
-  21,
-  -- 3 plans × 7 metrics: the six Phase 3 metrics plus Phase 8's `fleet_reports`, which is a feature flag
-  -- (1 or NULL = allowed, 0 = not on this plan) rather than an accumulating counter.
+  (select count(*)::int from public.plans)
+    * (select count(distinct l.metric)::int from public.plan_limits l),
+  -- Every plan is configured for every metric some plan knows about — the assertion is the *coverage*, not
+  -- the number. Phase 8 added `fleet_reports` (a feature flag: 1 or NULL = allowed, 0 = not on this plan) and
+  -- Phase 10 added `finance_exports` (a rate, counted per month). A phase that adds a metric without adding a
+  -- row for each plan fails here, which is the failure that actually matters.
   'plan limits cover every plan × metric pair'
 );
 

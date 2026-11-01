@@ -122,6 +122,26 @@ const ROUTES = [
   { path: '/en/finance/agents', lang: 'en', dir: 'ltr', account: 'staff' },
   { path: '/ar/finance/payouts', lang: 'ar', dir: 'rtl', account: 'staff' },
   { path: '/en/finance/payouts', lang: 'en', dir: 'ltr', account: 'staff' },
+  // Phase 10 surfaces: the ledger, the desks and the two pricing screens. Both languages, because a money
+  // table is where an RTL bug hides — the currency symbol and the bdi wrapper are the things that break.
+  { path: '/ar/finance/dashboard', lang: 'ar', dir: 'rtl', account: 'staff' },
+  { path: '/en/finance/dashboard', lang: 'en', dir: 'ltr', account: 'staff' },
+  { path: '/ar/finance/invoices', lang: 'ar', dir: 'rtl', account: 'staff' },
+  { path: '/en/finance/invoices', lang: 'en', dir: 'ltr', account: 'staff' },
+  { path: '/ar/finance/statements', lang: 'ar', dir: 'rtl', account: 'staff' },
+  { path: '/en/finance/statements', lang: 'en', dir: 'ltr', account: 'staff' },
+  { path: '/ar/finance/ledger', lang: 'ar', dir: 'rtl', account: 'staff' },
+  { path: '/en/finance/ledger', lang: 'en', dir: 'ltr', account: 'staff' },
+  { path: '/ar/finance/reconciliation', lang: 'ar', dir: 'rtl', account: 'staff' },
+  { path: '/en/finance/reconciliation', lang: 'en', dir: 'ltr', account: 'staff' },
+  { path: '/ar/operator/billing', lang: 'ar', dir: 'rtl', account: 'owner' },
+  { path: '/en/operator/billing', lang: 'en', dir: 'ltr', account: 'owner' },
+  { path: '/ar/operator/expenses', lang: 'ar', dir: 'rtl', account: 'owner' },
+  { path: '/en/operator/expenses', lang: 'en', dir: 'ltr', account: 'owner' },
+  { path: '/ar/admin/plans', lang: 'ar', dir: 'rtl', account: 'staff' },
+  { path: '/en/admin/plans', lang: 'en', dir: 'ltr', account: 'staff' },
+  { path: '/ar/admin/subscriptions', lang: 'ar', dir: 'rtl', account: 'staff' },
+  { path: '/en/admin/subscriptions', lang: 'en', dir: 'ltr', account: 'staff' },
 ];
 
 const failures = [];

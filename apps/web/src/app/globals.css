@@ -4492,3 +4492,92 @@ a.booking-card__code:hover {
     max-inline-size: 40rem;
   }
 }
+
+/* ── Phase 10: finance and billing ─────────────────────────────────────────────
+   Three shapes: a figure list (`.finance-summary`), a desk (a form above a queue) and a wide form. All of
+   them use logical properties, and the summary is a grid of `min(100%, …)` tracks so a narrow phone gets
+   one column rather than a scrollbar. */
+
+.finance-summary {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-4) 0;
+  padding: 0;
+}
+
+.finance-summary__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: baseline;
+  justify-content: space-between;
+  min-inline-size: 0;
+  padding-block: var(--space-2);
+  border-block-end: 1px solid var(--surface-sunken);
+}
+
+.finance-summary dt {
+  color: var(--ink-600);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.finance-summary dd {
+  margin: 0;
+  /* Amounts line up down the column, which is the only way a figure list is readable. */
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.finance-summary dd[data-tone='good'] {
+  color: var(--state-success-ink);
+}
+
+.finance-summary dd[data-tone='bad'] {
+  color: var(--state-danger-ink);
+}
+
+.finance-desk,
+.finance-form,
+.billing,
+.plans {
+  display: grid;
+  gap: var(--space-4);
+  min-inline-size: 0;
+}
+
+.finance-desk__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: end;
+}
+
+.finance-desk section > h2,
+.plans section > h2,
+.billing section > h2 {
+  margin-block-end: var(--space-3);
+}
+
+/* The journal editor is a table in a form: the selects and the amount input sit in cells, so they must not
+   push the row wider than the scroll container. */
+.finance-form .ui-field {
+  min-inline-size: 0;
+}
+
+.finance-desk .table-scroll .ui-field,
+.finance-form .table-scroll .ui-field {
+  margin-block-end: 0;
+}
+
+@media (min-width: 900px) {
+  .finance-summary {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+    column-gap: var(--space-6);
+  }
+
+  .finance-form {
+    max-inline-size: 52rem;
+  }
+}

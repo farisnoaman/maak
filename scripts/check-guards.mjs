@@ -211,6 +211,7 @@ for (const file of await walk(join(root, 'apps', 'web', 'src'), (f) => /\.(tsx|t
 // tests that talk to the other, so it is checked here, by name.
 const GATEWAY_MAP = {
   bookings: 'BOOKINGS_CAPABILITY',
+  finance: 'FINANCE_CAPABILITY',
   fleet: 'FLEET_CAPABILITY',
   geography: 'GEO_CAPABILITY',
   payments: 'PAYMENTS_CAPABILITY',

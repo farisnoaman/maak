@@ -331,6 +331,15 @@ async function seed(client, log = () => {}) {
 
   await seedExtraFleetOperations(client, log);
 
+  // Phase 10 data, through the commands the screens call. A finance desk that has never had a journal in it
+  // shows only empty states, and the one thing this phase must not do is look plausible while posting
+  // nothing: the ledger, the invoice and the expenses below are real rows with real double entries.
+  try {
+    await seedDemoFinance(client, log);
+  } catch (error) {
+    log(`  (demo finance skipped: ${error.message})`);
+  }
+
   await grantDemoScope(client);
   log(`  demo sign-in: admin@maak.test · owner@maak.test · driver@maak.test / ${DEMO_PASSWORD}`);
 }
@@ -927,6 +936,93 @@ async function seedDemoPayments(client, log = () => {}) {
  * Gives the demo staff account a supervisor assignment over the seeded region, so the
  * "districts covered" number on /admin/regions is not a hardcoded zero.
  */
+/**
+ * Money, from the events Phase 9 already queued.
+ *
+ * The outbox is drained first (`cmd_consume_outbox`), because that is what turns the confirmed payments the
+ * seed created into journals — and draining it is also the code path the nightly job takes, so a broken job
+ * shows up on the demo laptop rather than in production. Then one subscription, paid, and two expenses: one
+ * from the operator's own pocket (no journal) and one settled from the balance (a journal), which is the
+ * distinction the expenses screen exists to teach.
+ */
+async function seedDemoFinance(client, log = () => {}) {
+  const ADMIN = '11111111-1111-4111-8111-111111111111';
+  const OWNER = '33333333-3333-4333-8333-333333333333';
+  const ORG = 'aaaaaaaa-0000-4000-8000-000000000001';
+
+  // The Phase 9 seed leaves one receipt awaiting confirmation — that is what the payments desk is for. It is
+  // confirmed here so the ledger has a *booking* journal (cash, commission and the operator's payable), not
+  // only the subscription one: a ledger with a single kind of entry proves very little.
+  const pending = await client.query(
+    `select id from public.payment_intents
+      where status = 'awaiting_confirmation'
+      order by created_at desc limit 1`,
+  );
+  if (pending.rows.length > 0) {
+    await client.query('select public.cmd_confirm_payment($1, $2, $3, $4, null)', [
+      ADMIN,
+      pending.rows[0].id,
+      'تأكيد تجريبي',
+      'seed',
+    ]);
+  }
+
+  await client.query('select public.cmd_consume_outbox($1, $2)', [ADMIN, 200]);
+
+  // One subscription, started without a trial so an invoice exists, then paid so the revenue side of the
+  // ledger has something in it. Idempotent: the commands refuse a second live subscription.
+  const existing = await client.query(
+    `select 1 from public.subscriptions where owner_org_id = $1 limit 1`,
+    [ORG],
+  );
+  if (existing.rowCount === 0) {
+    const started = await client.query(
+      `select public.cmd_start_subscription($1, jsonb_build_object(
+         'orgId', $2::text, 'planCode', 'pro', 'trial', false)) as result`,
+      [ADMIN, ORG],
+    );
+    // The invoice is issued by the same command, so it is looked up rather than returned: the start command
+    // answers with the subscription, and the bill is the next fact about it.
+    const invoice = await client.query(
+      `select id from public.invoices
+        where subscription_id = $1 and status in ('issued', 'overdue')
+        order by issued_at desc limit 1`,
+      [started.rows[0]?.result?.subscription?.id ?? null],
+    );
+    const invoiceId = invoice.rows[0]?.id;
+    if (invoiceId) {
+      await client.query(`select public.cmd_pay_invoice($1, $2, 'ADP-2026-0001', 'seed', null)`, [
+        ADMIN,
+        invoiceId,
+      ]);
+    }
+  }
+
+  const expenses = await client.query(`select count(*)::int as count from public.expenses`);
+  if (expenses.rows[0].count === 0) {
+    await client.query(
+      `select public.cmd_record_expense($1, jsonb_build_object(
+         'orgId', $2::text, 'category', 'fuel', 'amountYer', 4200,
+         'incurredOn', (current_date - 3)::text,
+         'description', 'ديزل — خط عدن/المنصورة', 'settleFromBalance', true), 'seed', null)`,
+      [OWNER, ORG],
+    );
+    await client.query(
+      `select public.cmd_record_expense($1, jsonb_build_object(
+         'orgId', $2::text, 'category', 'maintenance', 'amountYer', 15000,
+         'incurredOn', (current_date - 6)::text,
+         'description', 'صيانة فرامل — من جيب المشغّل', 'settleFromBalance', false), 'seed', null)`,
+      [OWNER, ORG],
+    );
+  }
+
+  const checks = await client.query('select public.cmd_run_integrity_check($1) as result', [ADMIN]);
+  const failed = checks.rows[0]?.result?.failed ?? 0;
+  log(
+    `  finance seeded: journals, one paid subscription, two expenses, ${failed} integrity alert(s)`,
+  );
+}
+
 async function grantDemoScope(client) {
   await client.query(`
     insert into public.geo_assignments (user_id, region_id, granted_by, reason)
