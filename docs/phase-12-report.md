@@ -173,12 +173,14 @@ things this round:
    An older reading of the code would have documented Pro as *unlimited*, which it is not.
 3. **Identity documents are purged 90 days after the booking closes**, not after the trip, and the share link is
    a 72-hour, single-live-token document share — not a general "share my booking" link.
-4. **Quota warnings come from two places and disagree about `Basic`.** `app.quota_state()` only sets `warning`
-   when the plan is *soft* (Pro, Business), so the create-trip response warns at 80 % for those two and never for
-   Basic; the `quota` notification job does not read that flag and fires at 80 % and 100 % for every plan with a
-   limit, Basic included. Neither is wrong in isolation — the job's message is informational, the in-flow warning
-   is an instruction — but they should be one decision in one place. Documented rather than changed, because
-   changing it this late means deciding which behaviour the product wants, and that is not a documentation task.
+4. ~~Quota warnings come from two places and disagree about `Basic`.~~ **Closed in `00041`.** The finding was
+   right and incomplete: the two paths disagreed twice. They disagreed about *who* — `app.quota_state()` set
+   `warning` only for soft plans, so the create-trip response said nothing while the job mailed a Basic owner —
+   and about *when*, because the response tested the next unit (`(used + 1) * 5 >= limit * 4`) while the job
+   tested the current usage (`used * 100 / limit >= 80`): at a limit of 50, `used = 39` against `used = 40`.
+   The product call the finding asked for is made: the 80 % notice is universal and arrives when the next unit
+   crosses it. `threshold` is a field of the state — 100 at the limit, 80 when the next unit crosses, null
+   otherwise — and the job consumes it instead of computing its own.
 5. ~~Account deletion is a request with no executor.~~ **Closed in `00039` (§1.9):** `cmd_delete_account`
    anonymises the person and keeps the books. The gap is worth reading in full, though, because it is the one
    this report found by *writing prose* rather than by running a test: the column comment promised a staff
@@ -254,7 +256,7 @@ sibling has been fooled by once already.
 
 `0007` gained four assertions: the buckets sum to the public future trips, bucket arithmetic equals row
 arithmetic for a gender filter and for three dimensions at once, and a dimension-filtered search's origin facet
-equals `app.trip_matches()`'s grouping. 40 migrations, 948 assertions across 18 suites.
+equals `app.trip_matches()`'s grouping. 41 migrations, 954 assertions across 18 suites.
 
 The contracts that keep "faster" from meaning "different" are in 0007 rather than in this report: the generated
 keys equal `app.trip_rank()` to the digit for all three sorts, the bucketed counts equal `app.trip_matches()`
@@ -304,6 +306,16 @@ carries the queue — a read through `profiles_select_staff` (so a passenger who
 the requester's own words beside the reason the operator must type, and the row removed on success rather than
 greyed out. Verified against the dev stack in both directions: as `platform_admin` the pending request appears in
 `/ar/admin/users` and `/en/admin/users`; as a passenger the same query returns `[]`.
+
+The same screen had a second, quieter gap, and it was the one that made "grant a role" a screen that could only
+grant roles to yourself: the directory it rendered was built from the caller's own session, so the only row was
+the operator looking at it. `profiles_select_staff` and `user_roles_select_staff` had allowed the read since
+`00004`; nothing made it. `/admin/users` now lists the 50 most recent accounts with their verification badge, the
+contact each one has, a *Deletion requested* badge, and the roles each holds — a plain RLS read, one query for
+profiles and one for roles (two statements rather than an embed, so neither depends on the other's policy), with
+the cap stated when it bites and the *User ID* field left as the way to reach anyone past it. `0002` grew the two
+assertions that make the read a policy rather than a hope: a passenger cannot read another user's roles, and
+platform staff can.
 
 ---
 
@@ -367,10 +379,10 @@ download, the PITR replay and pointing the app at the result), it rehearses the 
 | Gate | Result |
 | --- | --- |
 | `npm run check:all` | green |
-| `npm run sql:check` | 39 migrations · 18 pgTAP suites · **944 assertions** · types in sync · **security posture green** |
+| `npm run sql:check` | 41 migrations · 18 pgTAP suites · **954 assertions** · types in sync · **security posture green** |
 | `npm test` | **651 tests**, 26 files |
 | `npm run test:coverage` | 95.77 % statements · 87.09 % branches · 96.46 % functions · 96.72 % lines |
-| `npm run check:guards` | 31 core files · 176 style files · 39 migrations · 131 commands |
+| `npm run check:guards` | 31 core files · 177 style files · 41 migrations · 131 commands |
 | `npm run check:a11y` | 107 routes, both directions |
 | worker against a fresh dev database | 10 jobs, `maintenance: {sent: 2}`, `ops-alerts: {counts: all zero}`, exit 0 |
 | `npm run perf:smoke` at 50,000 trips | search 6.0 ms p95 cold / 2.8 ms cached · write 10.2 ms · dashboard 88.3 ms |
@@ -403,12 +415,15 @@ download, the PITR replay and pointing the app at the result), it rehearses the 
    account id with no person behind it. What the command cannot do — delete the files in Storage, or ban a login
    in a project whose `auth.users` it cannot write — it *reports* instead of pretending, and the admin guide
    says to act on both.
-8. **Quota warnings come from two places and disagree about Basic.** `app.quota_state()` sets `warning` only for
-   soft plans (Pro, Business), so the create-trip response warns at 80 % for those two and never for Basic; the
-   `quota` notification job does not read that flag and fires at 80 % and 100 % for every plan with a limit,
-   Basic included. Neither is wrong alone — the job's message is informational, the in-flow warning is an
-   instruction — but it should be one decision in one place, and making it is a product call rather than a
-   documentation one.
+8. ~~Quota warnings come from two places and disagree about Basic.~~ **Closed in `00041` (§1.7 finding 4).**
+   `app.quota_state()` now returns `threshold` — 100 at the limit, 80 when the *next* unit would cross 80 %,
+   null otherwise — computed once, for every plan, and `warning` is `threshold is not null`. The monthly job
+   reads that field instead of `used * 100 / limit`, so the two paths cannot drift again. Two consequences
+   worth naming: a Basic operator is now warned in-flow at 80 % (the behaviour change the old note was waiting
+   on a decision for), and the notice arrives one unit earlier than the job used to send it, because the
+   response's rule was the better of the two. The `QUOTA_SOFT_WARNING` code keeps its name — it is a value a
+   client may switch on, and renaming it in the same migration as the behaviour would break the screen that
+   reads it.
 9. **Failure alerting for the worker itself.** The workflow fails loudly, which reaches GitHub's notification
    settings; there is no dedicated on-call rotation or pager, and for a launch with three pilots that is the
    right size.

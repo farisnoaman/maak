@@ -162,7 +162,9 @@ Two of these deserve a warning label.
 
 **Plans.** `plan_limits` is what `app.quota_state()` reads on every publish and every vehicle, so an edit is live
 at once — no deploy, no cache. Lowering a limit does not retroactively delete anything: an operator over the new
-limit simply cannot add more until they are under it again, and the next `quota` job warns them.
+limit simply cannot add more until they are under it again, and the next `quota` job warns them — at 80 % and
+at 100 %, on every plan: the boundary is `app.quota_state()`'s `threshold`, so the in-flow warning and the email
+cannot disagree about it.
 
 **The notification catalogue.** `default_channels` is the *offer*, not a promise: `in_app` always happens, and a
 person's own preferences decide the rest. Marking an event `critical` is what lets it through quiet hours

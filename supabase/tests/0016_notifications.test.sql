@@ -16,7 +16,7 @@ begin;
 
 create extension if not exists pgtap;
 
-select plan(94);
+select plan(96);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -759,6 +759,23 @@ select is(
   (select min(params ->> 'threshold') from public.notifications where kind = 'quota_threshold'),
   '100',
   'and every metric at its limit is reported as reached, not only the first'
+);
+
+-- The same decision, read by the other caller. This subscription is `basic` — a hard limit — and before
+-- 00041 `app.quota_state()` never set `warning` for it while the job mailed its owner anyway.
+select is(
+  (app.quota_state(null, '1070aa00-0000-4000-8000-00000000000a', 'vehicles') ->> 'threshold')::int,
+  100,
+  'a metric at its limit reports 100 on a plan with no soft limit'
+);
+
+select is(
+  (select count(*)::int from public.notifications n
+    where n.kind = 'quota_threshold'
+      and (n.params ->> 'threshold')::int is distinct from
+          (app.quota_state(null, '1070aa00-0000-4000-8000-00000000000a', n.params ->> 'metric') ->> 'threshold')::int),
+  0,
+  'and every notice carries the threshold the state function decided, not one of its own'
 );
 
 select is(
