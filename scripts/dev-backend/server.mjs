@@ -380,6 +380,14 @@ async function main() {
       } catch {
         /* no transaction open */
       }
+      // A denied capability is not a defect. Production's `defineCommand` maps `requirePolicy` to a
+      // clean 403; in the dev gateway the check runs before the command, so the throw reaches here
+      // and used to answer 500 with the same sentence — the exact dev/prod divergence `mapDbError`
+      // was written to stop.
+      if (error instanceof core.PolicyError) {
+        send({ status: 403, body: { code: 'FORBIDDEN', detail: String(error.message) } });
+        return;
+      }
       send({ status: 500, body: { code: 'INTERNAL', detail: String(error.message ?? error) } });
     }
   });

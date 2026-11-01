@@ -30,12 +30,29 @@ describe('identity action union', () => {
       { action: 'member.leave', orgId: UUID },
       { action: 'account.requestDeletion', reason: 'leaving' },
       { action: 'account.cancelDeletion' },
+      { action: 'account.delete', userId: UUID, reason: 'طلب المستخدم عبر الدعم' },
       { action: 'notification.read' },
     ];
 
     for (const input of valid) {
       expect(identityActionSchema.safeParse(input).success, JSON.stringify(input)).toBe(true);
     }
+  });
+
+  it('a staff deletion names the account and carries a reason', () => {
+    // The reason is not decoration: `cmd_delete_account` refuses without one, because the audit row is the only
+    // place a future reader can find out why an account was erased.
+    expect(
+      identityActionSchema.safeParse({ action: 'account.delete', userId: UUID, reason: '   ' })
+        .success,
+    ).toBe(false);
+    expect(
+      identityActionSchema.safeParse({ action: 'account.delete', userId: 'nope', reason: 'x' })
+        .success,
+    ).toBe(false);
+    expect(identityActionSchema.safeParse({ action: 'account.delete', reason: 'x' }).success).toBe(
+      false,
+    );
   });
 
   it('rejects an unknown action and a missing discriminator', () => {

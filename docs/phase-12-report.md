@@ -179,10 +179,10 @@ things this round:
    limit, Basic included. Neither is wrong in isolation — the job's message is informational, the in-flow warning
    is an instruction — but they should be one decision in one place. Documented rather than changed, because
    changing it this late means deciding which behaviour the product wants, and that is not a documentation task.
-5. **Account deletion is a request with no executor.** `cmd_request_account_deletion` sets
-   `deletion_requested_at` and `/account` shows it, but the column's comment promises a staff action in Phase 7
-   and no such command exists. That is now open item 8 in §6: a support queue that can receive a request it has
-   no tool to answer is worse than not offering the button.
+5. ~~Account deletion is a request with no executor.~~ **Closed in `00039` (§1.9):** `cmd_delete_account`
+   anonymises the person and keeps the books. The gap is worth reading in full, though, because it is the one
+   this report found by *writing prose* rather than by running a test: the column comment promised a staff
+   action and no such command existed.
 
 The guides also cross-reference each other and the runbook rather than repeating it: emergencies live in
 `docs/runbook.md`, the day-to-day in the operator and admin guides, and the passenger view in Arabic only,
@@ -233,6 +233,41 @@ dimension by dimension with a filter on, the stored counts equal the counting fu
 after the last one page 1 showed, and a stale aggregate is refreshed by the first request that notices. Ten new
 assertions, 113 in that suite.
 
+### 1.9 The deletion that finally has an executor
+
+§1.7 ended with the worst kind of gap: `/account` offers a **delete my account** button, the database records the
+request with a reason, and nothing on the platform side could complete it. The column's own comment said "a staff
+action (Phase 7)", and Phase 7 shipped without one. A support queue that can accept work it has no tool to
+answer is worse than no button at all — and a privacy policy that promises erasure makes it a legal problem, not
+a UX one.
+
+Making the decision was the hard part. `delete from auth.users` is not available: `bookings.passenger_id`,
+`trips.owner_user_id`, `invoices.owner_user_id` and `payouts.requested_by` are all `ON DELETE RESTRICT`, because
+those rows are the books, and a ledger that stops adding up to hide a name is not a trade anybody gets to make.
+So `00039` deletes the *person* and keeps the *records*:
+
+- **Erased:** name, phone, email, national id and its type, birth place and date, avatar, verification status and
+  notes, the ID photographs, licence number and photo, bank account number and holder, push tokens, notification
+  bodies, saved searches, roles, geo assignments, share tokens. The login in `auth.users` is scrubbed and — where
+  the project allows it — banned.
+- **Kept, with the person removed from them:** the `profiles` row itself (an unnamed shell every financial row
+  still points at), bookings with their amounts and statuses but `محذوف` where a name used to be, invoices,
+  payouts, refunds, journal entries, subscriptions, and the audit log.
+- **Refused while the answer would be a lie:** live bookings, live trips, a vehicle registered to the account, an
+  organization they own, a non-zero available balance. The command is `platform_admin`-only and refuses the
+  actor's own account, so a deletion always has a second pair of eyes.
+
+Two details worth the paragraph. The **audit row carries flags, not facts** — `hadEmail: true`, never the email —
+because an immutable log is exactly where an erasure could quietly survive. And the command **reports what it
+could not do**: `documentsToErase` hands back the Storage paths (the rows are ours, the objects are not) and
+`authScrubbed` says whether the login was removed, so a project whose `auth.users` this role cannot write gets a
+truthful "outstanding" rather than a false "done".
+
+`0018_account_deletion.test.sql` proves it in 30 assertions: six refusals that leave the account untouched, the
+erasure across nine tables, the booking that keeps its 10,000 YER and loses its name, the audit row with no
+personal data in it, the storage paths handed back, and a second run that is idempotent instead of destructive.
+`docs/admin-guide.md` §6a is the operator's half: what to delete in Storage, and how to read `authScrubbed`.
+
 ---
 
 ## 2. In flight
@@ -256,10 +291,10 @@ assertions, 113 in that suite.
 | Gate | Result |
 | --- | --- |
 | `npm run check:all` | green |
-| `npm run sql:check` | 38 migrations · 17 pgTAP suites · **914 assertions** · types in sync · **security posture green** |
-| `npm test` | **649 tests**, 26 files |
+| `npm run sql:check` | 39 migrations · 18 pgTAP suites · **944 assertions** · types in sync · **security posture green** |
+| `npm test` | **651 tests**, 26 files |
 | `npm run test:coverage` | 95.77 % statements · 87.09 % branches · 96.46 % functions · 96.72 % lines |
-| `npm run check:guards` | 31 core files · 176 style files · 38 migrations · 130 commands |
+| `npm run check:guards` | 31 core files · 176 style files · 39 migrations · 131 commands |
 | `npm run check:a11y` | 107 routes, both directions |
 | worker against a fresh dev database | 10 jobs, `maintenance: {sent: 2}`, `ops-alerts: {counts: all zero}`, exit 0 |
 | `npm run perf:smoke` at 50,000 trips | search 5.6 ms p95 cold / 2.7 ms cached · write 4.2 ms · dashboard 83.5 ms |
@@ -284,11 +319,11 @@ assertions, 113 in that suite.
    alert now goes through `app.enqueue_notification`, deduped per day, with the delivery rows the worker drains.
 5. **No pilot UAT.** Three operators, a full cycle each, unaided — that is a calendar item with real people.
 6. **Store releases and the tag.** `v1.0.0`, the changelog and the handover session come after the UAT burn-down.
-7. **Account deletion has a request and no executor.** `cmd_request_account_deletion` records the request and a
-   reason, `/account` shows it and allows a cancel; the column comment says the deletion is a staff action and no
-   such command was written. Financial and audit rows must be retained, so the fix is an anonymise-and-close
-   command (profile, contact details, device tokens, personal documents) rather than a `delete from auth.users`,
-   and it needs a decision on what a retained ledger line refers to afterwards.
+7. ~~Account deletion has a request and no executor.~~ **Closed in `00039`.** The decision the item asked for was
+   made rather than deferred: the profile row survives and is anonymised, so a retained ledger line refers to an
+   account id with no person behind it. What the command cannot do — delete the files in Storage, or ban a login
+   in a project whose `auth.users` it cannot write — it *reports* instead of pretending, and the admin guide
+   says to act on both.
 8. **Quota warnings come from two places and disagree about Basic.** `app.quota_state()` sets `warning` only for
    soft plans (Pro, Business), so the create-trip response warns at 80 % for those two and never for Basic; the
    `quota` notification job does not read that flag and fires at 80 % and 100 % for every plan with a limit,

@@ -1,5 +1,5 @@
-// migrations-sha256: 659da2000afec6452690d1c4a46ab96f83c09fcb6557233331fb6295d0da5ad6
-/* Generated from 38 migrations. Run `npm run db:types` after changing the schema. */
+// migrations-sha256: 0a1fe0acd3e0929886dab0fbcfc5eb787338d327e0ec4d650f902e4749998556
+/* Generated from 39 migrations. Run `npm run db:types` after changing the schema. */
 
 /**
  * Schema types for RLS-filtered reads (Phase 0 subset).
@@ -306,6 +306,9 @@ export interface Profile {
   verification_note: string | null;
   deletion_requested_at: string | null;
   deletion_reason: string | null;
+  /** Set by cmd_delete_account (00039): every identifying column is null by then. */
+  deleted_at: string | null;
+  deleted_by: string | null;
   onboarded_at: string | null;
   last_seen_at: string | null;
   created_at: string;

@@ -696,6 +696,17 @@ export async function handleFunction({ name, body, userId, client, core, request
         args = { p_actor: actorId, ...audit };
         break;
 
+      case 'account.delete':
+        requirePolicy('account.delete');
+        fn = 'cmd_delete_account';
+        args = {
+          p_actor: actorId,
+          p_user_id: input.userId,
+          p_reason: input.reason,
+          ...audit,
+        };
+        break;
+
       case 'verification.submit': {
         requirePolicy('verification.submit');
         if (input.subjectType === 'individual') {

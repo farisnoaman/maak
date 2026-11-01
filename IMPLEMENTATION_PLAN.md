@@ -774,6 +774,9 @@ reminder dedupe, and the trip gate's `MAINTENANCE_OVERDUE` refusal.
 - [x] `EXPLAIN ANALYZE` review where it mattered: search was 15,690 ms at 50k, 112 ms after `00036` (one plpgsql
       call per row per facet; a non-inlineable sort key) and 5.6 ms after `00038` (the facet scan and the sort
       removed). Autovacuum tuning for the pings table remains.
+- [x] Account deletion executed rather than merely requested: `cmd_delete_account` (`00039`) anonymises the person
+      and keeps the books, with six refusals, `platform_admin` only and no self-service; 30 pgTAP assertions in
+      `0018` and `docs/admin-guide.md` §6a for the operator's half (Storage objects, `authScrubbed`).
 - [ ] Security checklist execution + fixes; `supabase db lint`, `plpgsql_check`, `npm audit` clean.
 - [ ] Backup restore into a scratch project with documented timings.
 - [ ] Alerts: error rate, stale live trips, failed notifications, imbalanced journals, verification backlog,

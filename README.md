@@ -41,7 +41,7 @@ supabase/     Migrations, RLS, RPCs, cron, seed geography/plans, pgTAP tests
 
 ```bash
 npm install                 # web, mobile and core workspaces
-npm test                    # 649 unit tests, ~2s, no database required
+npm test                    # 651 unit tests, ~2s, no database required
 npm run lint                # ESLint + 5 custom architecture rules
 npm run check:guards        # boundaries, RTL, secrets, migration naming
 npm run test:coverage       # coverage thresholds (98% statements, 99% functions)
@@ -68,13 +68,13 @@ supabase test db            # the same pgTAP suites on the real stack (auth, sto
 
 ## Status
 
-**Phases 0–11 complete; Phase 12 (hardening and launch) in progress.** 38 migrations, 130 commands, 11 edge
-functions, **649 unit tests**, **914 pgTAP assertions across 17 suites**, 107 a11y routes, and a bilingual web
+**Phases 0–11 complete; Phase 12 (hardening and launch) in progress.** 39 migrations, 131 commands, 11 edge
+functions, **651 unit tests**, **944 pgTAP assertions across 18 suites**, 107 a11y routes, and a bilingual web
 app plus the Expo client.
 
 | Gate | What it proves |
 |---|---|
-| `npm test` / `npm run test:coverage` | 649 tests, coverage 95.8 / 87.1 / 96.5 / 96.7 |
+| `npm test` / `npm run test:coverage` | 651 tests, coverage 95.8 / 87.1 / 96.5 / 96.7 |
 | `npm run sql:check` | migrations apply to a real PostgreSQL, every pgTAP suite passes, types do not drift, RLS + definer posture holds |
 | `npm run check:a11y` | 107 routes in both directions: one `<h1>`, landmarks, skip link, labelled controls, no physical margins |
 | `npm run check:guards` | boundaries, one write path, no secrets, dictionary keys present in both locales |

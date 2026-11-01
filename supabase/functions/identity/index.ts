@@ -202,6 +202,20 @@ export default defineCommand({ schema }, async (ctx) => {
       return { ...result, requestId: ctx.requestId };
     }
 
+    case 'account.delete': {
+      // `platform_admin` only, and `cmd_delete_account` refuses the actor's own account on top of that: the
+      // clean 403 here is for the client, the rule is the one in SQL.
+      requirePolicy(actor, 'account.delete');
+      await enforceRateLimit(actorId, 'account.delete');
+      const result = await run('cmd_delete_account', {
+        p_actor: actorId,
+        p_user_id: input.userId,
+        p_reason: input.reason,
+        ...audit,
+      });
+      return { ...result, requestId: ctx.requestId };
+    }
+
     case 'verification.submit': {
       requirePolicy(actor, 'verification.submit');
 

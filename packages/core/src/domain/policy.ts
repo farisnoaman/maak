@@ -58,6 +58,7 @@ export type Capability =
   | 'verification.submit'
   | 'verification.decide'
   | 'role.manage'
+  | 'account.delete'
   | 'notification.read'
   | 'trip.browse'
   | 'trip.create'
@@ -162,6 +163,10 @@ const RULES: Record<Capability, Rule> = {
   'verification.submit': { roles: AUTHENTICATED },
   'verification.decide': { roles: [...STAFF] },
   'role.manage': { roles: ['platform_admin'] },
+  // The one command in the system that cannot be undone. Same role as granting roles, for the same reason:
+  // whoever can hand out authority should be the one spending it. `cmd_delete_account` additionally refuses
+  // the actor's own account, and the two checks cannot drift because both are asserted in 0018.
+  'account.delete': { roles: ['platform_admin'] },
   'notification.read': { roles: AUTHENTICATED },
   // Phase 11. Everyone may choose their own channels and quiet hours; these are their own rows, and the
   // command takes the user from the session rather than from the payload.

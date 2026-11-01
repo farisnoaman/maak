@@ -195,7 +195,7 @@ an alert.
 | You want to… | What happens | Because |
 | --- | --- | --- |
 | Delete a trip, booking or journal | There is no such command | A dispute in month three is settled by the history; a history with holes settles nothing |
-| Delete a user account | The user can *request* it (`cmd_request_account_deletion`, at `/account`) and cancel the request; nothing on the platform side executes it yet — see the note below | — |
+| Delete a user account | `cmd_delete_account` (platform_admin, never your own account): the person is erased, the books are kept — see §6a | Financial rows are `ON DELETE RESTRICT`; the ledger has to keep adding up |
 | Edit a posted ledger entry | `IMMUTABLE` | Money that can be edited is money that can be hidden. Corrections are reversing entries |
 | Approve your own verification or payout | `FORBIDDEN: own request`, `PAYOUT_SELF_APPROVAL` | The control that fails silently is the one that matters |
 | Revoke your own last admin role | `SELF_LOCKOUT` | Somebody has to be able to answer the phone |
@@ -205,12 +205,46 @@ an alert.
 Every one of those refusals is a `cmd_*` function with a code and a sentence, tested in the pgTAP suites. If you
 find one that does not hold, that is a bug with a name, not an opinion.
 
-> **A gap found while writing this guide.** `cmd_request_account_deletion` records
-> `profiles.deletion_requested_at` and a reason, `/account` shows the pending request, and it can be cancelled —
-> but the comment on that column says "the deletion itself is a staff action (Phase 7)" and no such action was
-> ever written. So today a request is a *record*, not a process: support can see that somebody asked, and the
-> account stays. That is not a data-protection answer, and it is now listed as open in
-> `docs/phase-12-report.md` §6 rather than buried in a column comment.
+### 6a. Answering an account-deletion request
+
+A user asks from `/account` (`cmd_request_account_deletion`, which sets `profiles.deletion_requested_at` and a
+reason) and can cancel while it is pending. Completing it is `cmd_delete_account` — the `account.delete` action
+on the `identity` function — and it is a **platform_admin** command, not staff work, because it is the one thing
+in this system that cannot be undone.
+
+It is an **anonymisation, not a `DELETE`**. Bookings, trips, invoices, payouts and refunds reference the profile
+with `ON DELETE RESTRICT`, because those rows are the books; so the profile row survives as an unnamed shell that
+the money still points at, and everything that identifies a human is removed:
+
+| Erased | Kept |
+| --- | --- |
+| name, phone, email, national id and type, birth place and date, avatar | the `profiles` row itself, and the id every financial row references |
+| verification status and notes, and the ID photographs in Storage | completed and cancelled bookings, with their amounts and statuses |
+| driver licence number and photo; bank account number and holder name | invoices, payouts, refunds, journal entries, subscriptions |
+| push tokens, notifications and their bodies, saved searches and their matches | the audit trail — including the `account.deleted` row |
+| roles (revoked), geo assignments, share tokens | the trip(s) the person travelled on, and their history |
+
+It refuses, with the reason in the message, while the answer would be a lie: live bookings, live trips (draft
+included), a vehicle registered to the account, an organization they own, or a non-zero available balance. Each
+of those is something you can fix *for* the user rather than around them.
+
+Three things to do around it:
+
+1. **Delete the Storage objects** it hands back in `documentsToErase` (verification and passenger ID photographs).
+   The rows are gone; the files are not the command's to delete.
+2. **Read `authScrubbed` in the result and in the audit row.** When it is `true` the login was removed and — on
+   Supabase — the user was banned. When it is `false` (a project whose `auth.users` this role cannot write), the
+   anonymisation still stands and you must complete the ban in the dashboard. The command says which it was
+   rather than assuming.
+3. **Never run it on your own account.** It refuses (`FORBIDDEN: a deletion needs a second pair of eyes`), and
+   that is the same rule as `SELF_LOCKOUT`: somebody has to be able to answer the phone.
+
+The whole thing is asserted in `0018_account_deletion.test.sql` — 30 assertions, including the two refusals that
+matter most: a live booking and a published trip.
+
+> **This was a gap found while writing this guide.** Until `00039` the request was a *record*, not a process: the
+> column's comment promised a staff action and no such action existed. Writing the admin guide is what surfaced
+> it; `docs/phase-12-report.md` §1.9 and §6 item 7 record it.
 
 ---
 
