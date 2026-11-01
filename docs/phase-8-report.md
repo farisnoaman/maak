@@ -325,6 +325,11 @@ still be restored open by the browser. The server HTML still renders `open` nowh
 `<details class="trip-filters">`, so what was mismatched was never the markup, only the state of the page by the
 time the JavaScript arrived.
 
+Proved rather than argued, with a throwaway jsdom harness (not committed — it would need a dependency the build
+does not otherwise want): render the component to a string, hydrate it into a DOM whose `<details>` was already
+open, and capture `console.error`. The copy **without** `suppressHydrationWarning` reproduces the report word for
+word, including the `- open=""` line; the shipped component logs nothing.
+
 | At 320–719px | At 720px and up |
 | --- | --- |
 | Filters behind one 44px row: *Filter* + a brand badge with the number in force; the panel opens into full-width fields | A 16–18rem sidebar, always open, summary gone |
