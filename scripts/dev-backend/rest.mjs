@@ -250,9 +250,13 @@ export async function handleRest({ client, mutex, request, url, claims, fks, col
 
       await client.query('begin');
       // The whole point: run as the client's role, with the client's claims. RLS applies.
-      await client.query(
-        claims.role === 'anon' ? 'set local role anon' : 'set local role authenticated',
-      );
+      const role =
+        claims.role === 'service_role'
+          ? 'service_role'
+          : claims.role === 'anon'
+            ? 'anon'
+            : 'authenticated';
+      await client.query(`set local role ${role}`);
       await client.query(`select set_config('request.jwt.claims', $1, true)`, [
         JSON.stringify(claims),
       ]);
@@ -304,7 +308,13 @@ export async function handleRpc({ client, mutex, url, body, claims }) {
     try {
       await client.query('begin');
       await client.query(
-        claims.role === 'anon' ? 'set local role anon' : 'set local role authenticated',
+        `set local role ${
+          claims.role === 'service_role'
+            ? 'service_role'
+            : claims.role === 'anon'
+              ? 'anon'
+              : 'authenticated'
+        }`,
       );
       await client.query(`select set_config('request.jwt.claims', $1, true)`, [
         JSON.stringify(claims),

@@ -173,12 +173,14 @@ things this round:
    An older reading of the code would have documented Pro as *unlimited*, which it is not.
 3. **Identity documents are purged 90 days after the booking closes**, not after the trip, and the share link is
    a 72-hour, single-live-token document share — not a general "share my booking" link.
-4. **Quota warnings come from two places and disagree about `Basic`.** `app.quota_state()` only sets `warning`
-   when the plan is *soft* (Pro, Business), so the create-trip response warns at 80 % for those two and never for
-   Basic; the `quota` notification job does not read that flag and fires at 80 % and 100 % for every plan with a
-   limit, Basic included. Neither is wrong in isolation — the job's message is informational, the in-flow warning
-   is an instruction — but they should be one decision in one place. Documented rather than changed, because
-   changing it this late means deciding which behaviour the product wants, and that is not a documentation task.
+4. ~~Quota warnings come from two places and disagree about `Basic`.~~ **Closed in `00041`.** The finding was
+   right and incomplete: the two paths disagreed twice. They disagreed about *who* — `app.quota_state()` set
+   `warning` only for soft plans, so the create-trip response said nothing while the job mailed a Basic owner —
+   and about *when*, because the response tested the next unit (`(used + 1) * 5 >= limit * 4`) while the job
+   tested the current usage (`used * 100 / limit >= 80`): at a limit of 50, `used = 39` against `used = 40`.
+   The product call the finding asked for is made: the 80 % notice is universal and arrives when the next unit
+   crosses it. `threshold` is a field of the state — 100 at the limit, 80 when the next unit crosses, null
+   otherwise — and the job consumes it instead of computing its own.
 5. ~~Account deletion is a request with no executor.~~ **Closed in `00039` (§1.9):** `cmd_delete_account`
    anonymises the person and keeps the books. The gap is worth reading in full, though, because it is the one
    this report found by *writing prose* rather than by running a test: the column comment promised a staff
@@ -254,7 +256,7 @@ sibling has been fooled by once already.
 
 `0007` gained four assertions: the buckets sum to the public future trips, bucket arithmetic equals row
 arithmetic for a gender filter and for three dimensions at once, and a dimension-filtered search's origin facet
-equals `app.trip_matches()`'s grouping. 40 migrations, 948 assertions across 18 suites.
+equals `app.trip_matches()`'s grouping. 44 migrations, 986 assertions across 19 suites.
 
 The contracts that keep "faster" from meaning "different" are in 0007 rather than in this report: the generated
 keys equal `app.trip_rank()` to the digit for all three sorts, the bucketed counts equal `app.trip_matches()`
@@ -305,6 +307,16 @@ the requester's own words beside the reason the operator must type, and the row 
 greyed out. Verified against the dev stack in both directions: as `platform_admin` the pending request appears in
 `/ar/admin/users` and `/en/admin/users`; as a passenger the same query returns `[]`.
 
+The same screen had a second, quieter gap, and it was the one that made "grant a role" a screen that could only
+grant roles to yourself: the directory it rendered was built from the caller's own session, so the only row was
+the operator looking at it. `profiles_select_staff` and `user_roles_select_staff` had allowed the read since
+`00004`; nothing made it. `/admin/users` now lists the 50 most recent accounts with their verification badge, the
+contact each one has, a *Deletion requested* badge, and the roles each holds — a plain RLS read, one query for
+profiles and one for roles (two statements rather than an embed, so neither depends on the other's policy), with
+the cap stated when it bites and the *User ID* field left as the way to reach anyone past it. `0002` grew the two
+assertions that make the read a policy rather than a hope: a passenger cannot read another user's roles, and
+platform staff can.
+
 ---
 
 ### 1.10 The restore that is now a measurement
@@ -346,6 +358,53 @@ download, the PITR replay and pointing the app at the result), it rehearses the 
 
 ---
 
+### 1.11 The plan's last boxes, opened one by one
+
+`IMPLEMENTATION_PLAN.md` had fourteen unticked boxes when the merge to `main` happened. Eight of them were **stale**
+— the phase had shipped and nobody had ticked the list: the Phase 4 migration, RLS, storage policies, the four web
+screens, the two mobile screens and its pgTAP suite; all sixteen Phase 9 payment commands; and all six Phase 12
+ops alerts. A plan that misreports its own state is worse than no plan, because the next person budgets for work
+that exists. Those are now ticked with the file and suite that prove each one.
+
+The others were real, and four of them are now closed:
+
+**Routing** (`00042`, `npm run routes:fill`). The seam `00023` left — `trip_route_geometry`, the straight-line
+fallback, and a comment saying no provider was called — is filled. Three decisions shaped it. A **corridor cache**
+keyed on the two endpoints rounded to four decimals (~11 m), because a route is a function of two points and 200
+departures on the Aden–Sana'a road are one provider call; a trip still keeps its own copy, so a republished
+corridor cannot change a route under a passenger. The **fetch is outside the transaction**: Postgres cannot make an
+HTTPS call and should not learn how, so `get_trips_needing_routes()` is the queue and `cmd_store_trip_route()` is
+the one write, validated (`ALL` coordinates in range, at least two points, a non-negative distance) because a
+network answer is the least trustworthy input in the system. And the **fallback stays the default**: no provider,
+no network, a timeout or a malformed answer all mean nothing is stored and the straight line remains. The traps are
+covered by 15 unit tests that need no network — the [lng, lat] → {lat, lng} swap that would put every route in the
+Indian Ocean, and a plausibility band (0.5×–1.8× the great-circle distance) that rejects an answer about another
+place. Verified end to end against a stub OSRM: two trips filled, four-point geometry stored, two audit rows, second
+pass empty, and with no provider URL it degrades to `queued: 0`.
+
+**The payment cron** (`00043`, `00044`). The Phase 9 list named three jobs; one command existed (`cmd_expire_stale_
+payment_intents`) and nothing called it, and the other two had never been written. Now `payments-expiry` schedules
+it, `payment-reminders` tells a payer their receipt is still being checked after 24 h (the sentence that stops a
+second payment) and that an unpaid intent expires within 12 h, and `agent-settlements` tells an agent at 90 % of
+their credit limit — or with no transaction for three days — that a settlement is due, with one message per agent
+to the finance desk. Three jobs rather than one because they fail differently; all registered in
+`NOTIFICATION_JOB_FN`, so an unscheduled job is a type error rather than a silent gap. Running the worker live
+shows all **13 jobs** and the two new counts.
+
+Two smaller things this found and fixed along the way. The dev backend had no service identity at all, so a script
+calling a `service_role`-only function worked in production and 403'd on a laptop; it now accepts
+`MAAK_SERVICE_ROLE_KEY` and executes as `service_role`. And `alter type ... add value` cannot be *used* in the same
+transaction, which means the two new notification kinds had to land in their own migration (`00043`) before
+`00044` could insert their catalogue rows — a bug that only appears on a fresh database, which is the worst kind,
+and the reason the split exists rather than a comment saying it works.
+
+**The launch paperwork** — `/ar|en/privacy` and `/ar|en/terms` generated from one typed source
+(`apps/web/src/lib/legal.ts`) with a test for section parity, script and date; `apps/mobile/eas.json` with the two
+store account ids as explicit placeholders; `docs/store-listing.md` with the listing copy in both languages and the
+privacy answers review asks for; `docs/uat.md` with the session script, the pass conditions, the P1–P4 ladder and
+the burn-down gate; `CHANGELOG.md` and `docs/handover.md`. The sessions, the store accounts and the tag remain
+what they always were: things that need people.
+
 ## 2. In flight
 
 1. **The `k6` run.** The suites exist (`docs/perf/k6-search.js`, `k6-booking-race.js`, `k6-ping-ingest.js`,
@@ -367,11 +426,11 @@ download, the PITR replay and pointing the app at the result), it rehearses the 
 | Gate | Result |
 | --- | --- |
 | `npm run check:all` | green |
-| `npm run sql:check` | 39 migrations · 18 pgTAP suites · **944 assertions** · types in sync · **security posture green** |
-| `npm test` | **651 tests**, 26 files |
+| `npm run sql:check` | 44 migrations · 19 pgTAP suites · **986 assertions** · types in sync · **security posture green** |
+| `npm test` | **668 tests**, 27 files |
 | `npm run test:coverage` | 95.77 % statements · 87.09 % branches · 96.46 % functions · 96.72 % lines |
-| `npm run check:guards` | 31 core files · 176 style files · 39 migrations · 131 commands |
-| `npm run check:a11y` | 107 routes, both directions |
+| `npm run check:guards` | 32 core files · 180 style files · 44 migrations · 135 commands |
+| `npm run check:a11y` | 111 routes, both directions |
 | worker against a fresh dev database | 10 jobs, `maintenance: {sent: 2}`, `ops-alerts: {counts: all zero}`, exit 0 |
 | `npm run perf:smoke` at 50,000 trips | search 6.0 ms p95 cold / 2.8 ms cached · write 10.2 ms · dashboard 88.3 ms |
 | `npm run drill:restore` at 49,998 trips | hot backup → second cluster → 24 checks against the source in 0.47 s |
@@ -403,12 +462,15 @@ download, the PITR replay and pointing the app at the result), it rehearses the 
    account id with no person behind it. What the command cannot do — delete the files in Storage, or ban a login
    in a project whose `auth.users` it cannot write — it *reports* instead of pretending, and the admin guide
    says to act on both.
-8. **Quota warnings come from two places and disagree about Basic.** `app.quota_state()` sets `warning` only for
-   soft plans (Pro, Business), so the create-trip response warns at 80 % for those two and never for Basic; the
-   `quota` notification job does not read that flag and fires at 80 % and 100 % for every plan with a limit,
-   Basic included. Neither is wrong alone — the job's message is informational, the in-flow warning is an
-   instruction — but it should be one decision in one place, and making it is a product call rather than a
-   documentation one.
+8. ~~Quota warnings come from two places and disagree about Basic.~~ **Closed in `00041` (§1.7 finding 4).**
+   `app.quota_state()` now returns `threshold` — 100 at the limit, 80 when the *next* unit would cross 80 %,
+   null otherwise — computed once, for every plan, and `warning` is `threshold is not null`. The monthly job
+   reads that field instead of `used * 100 / limit`, so the two paths cannot drift again. Two consequences
+   worth naming: a Basic operator is now warned in-flow at 80 % (the behaviour change the old note was waiting
+   on a decision for), and the notice arrives one unit earlier than the job used to send it, because the
+   response's rule was the better of the two. The `QUOTA_SOFT_WARNING` code keeps its name — it is a value a
+   client may switch on, and renaming it in the same migration as the behaviour would break the screen that
+   reads it.
 9. **Failure alerting for the worker itself.** The workflow fails loudly, which reaches GitHub's notification
    settings; there is no dedicated on-call rotation or pager, and for a launch with three pilots that is the
    right size.

@@ -6,3 +6,4 @@ supabase/functions/_bundled
 package-lock.json
 *.md
 apps/web/next-env.d.ts
+.env.example

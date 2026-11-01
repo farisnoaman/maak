@@ -70,6 +70,9 @@ export const notificationKindSchema = z.enum([
   // Phase 12: one kind for the platform's own health, so an alert about a stuck trip is delivered, deduped and
   // auditable by the same machinery a passenger's message is.
   'ops_alert',
+  // 00043: the two the Phase 9 cron list named and no phase had written.
+  'payment_reminder',
+  'agent_settlement_due',
 ]);
 
 export type NotificationKind = z.infer<typeof notificationKindSchema>;
@@ -234,6 +237,11 @@ export const notificationJobSchema = z.object({
     'maintenance',
     'ops-alerts',
     'retry',
+    // 00043 — the Phase 9 cron list. Three jobs, because expiry, passenger reminders and agent settlements fail
+    // differently and should be switchable independently.
+    'payments-expiry',
+    'payment-reminders',
+    'agent-settlements',
   ]),
   limit: z.number().int().min(1).max(1000).default(200),
   /**
@@ -446,6 +454,19 @@ function jobArgs(
       return { fn: 'cmd_run_ops_alerts', args: { p_actor: actorId, p_now: null } };
     case 'retry':
       return { fn: 'cmd_retry_notifications', args: { p_actor: actorId, p_max_age: '7 days' } };
+    case 'payments-expiry':
+      // Housekeeping, not a message: closes intents nobody finished. Safe every hour.
+      return { fn: 'cmd_expire_stale_payment_intents', args: { p_limit: input.limit } };
+    case 'payment-reminders':
+      return {
+        fn: 'cmd_notify_payment_reminders',
+        args: { p_actor: actorId, p_staff_hours: 24, p_expiry_hours: 12 },
+      };
+    case 'agent-settlements':
+      return {
+        fn: 'cmd_notify_agent_settlements',
+        args: { p_actor: actorId, p_threshold_pct: 90, p_stale_days: 3 },
+      };
   }
 }
 
@@ -669,6 +690,10 @@ export const SAMPLE_PARAMS: Record<NotificationKind, Readonly<Record<string, str
   agent_cash_in_settled: { amount: '120,000', balance: '35,000' },
   ops_alert: { count: 2, check: 'stale_trips' },
   no_show_alert: { tripCode: 'AD-SA-2988', count: 3, minutes: 45 },
+  payment_reminder: { amount: '9,000', code: 'BK-3C9923' },
+  // `agent` is a user id: rendering replaces it with a generic label rather than printing a uuid (see
+  // PARAM_LABELS), which is exactly what this sample is here to prove.
+  agent_settlement_due: { amount: '120,000', limit: '150,000', percent: 80, agent: 'سالم' },
 };
 
 /** The sample payload for one event, or an empty object for a kind the client does not know yet. */
@@ -913,4 +938,7 @@ export const NOTIFICATION_JOB_FN = {
   maintenance: 'cmd_run_maintenance_scan',
   'ops-alerts': 'cmd_run_ops_alerts',
   retry: 'cmd_retry_notifications',
+  'payments-expiry': 'cmd_expire_stale_payment_intents',
+  'payment-reminders': 'cmd_notify_payment_reminders',
+  'agent-settlements': 'cmd_notify_agent_settlements',
 } as const satisfies Record<NotificationJob, string>;

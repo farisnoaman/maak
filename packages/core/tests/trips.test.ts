@@ -166,6 +166,34 @@ describe('trip action contract', () => {
     }
   });
 
+  it('names the driver payload exactly as the phone sends it', () => {
+    // A position report is `lat`/`lng`, and the two names a native screen reaches for first —
+    // `latitude`/`longitude` — are *dropped*, not coerced, because the object is not strict: the command would
+    // then run with no coordinates and 400 at best, or record a ping at (0, 0) at worst. This is the shape
+    // `apps/mobile/src/app/driver/trips/[code].tsx` sends, pinned so the next screen cannot drift.
+    const ping = tripsActionSchema.parse({
+      action: 'trip.recordPing',
+      tripId: TRIP,
+      lat: 12.7855,
+      lng: 45.0187,
+      accuracyM: 18,
+      recordedAt: '2026-11-01T08:00:00.000Z',
+      source: 'app',
+    });
+    expect(tripsCommandArgs(ping, 'u-1', audit).args).toMatchObject({
+      p_lat: 12.7855,
+      p_lng: 45.0187,
+    });
+
+    const wrongShape = tripsActionSchema.safeParse({
+      action: 'trip.recordPing',
+      tripId: TRIP,
+      latitude: 12.7855,
+      longitude: 45.0187,
+    });
+    expect(wrongShape.success).toBe(false);
+  });
+
   it('refuses an action it does not know', () => {
     expect(tripsActionSchema.safeParse({ action: 'trip.teleport' }).success).toBe(false);
   });

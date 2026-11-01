@@ -41,7 +41,7 @@ supabase/     Migrations, RLS, RPCs, cron, seed geography/plans, pgTAP tests
 
 ```bash
 npm install                 # web, mobile and core workspaces
-npm test                    # 651 unit tests, ~2s, no database required
+npm test                    # 668 unit tests, ~5s, no database required
 npm run lint                # ESLint + 5 custom architecture rules
 npm run check:guards        # boundaries, RTL, secrets, migration naming
 npm run test:coverage       # coverage thresholds (98% statements, 99% functions)
@@ -66,15 +66,27 @@ supabase test db            # the same pgTAP suites on the real stack (auth, sto
 > `npm run dev:api` is the way around that — a real PostgreSQL cluster, the real migrations and real
 > RLS, sign in with `admin@maak.test` / `Maak!2026`. Details: [`docs/dev-database.md`](./docs/dev-database.md).
 
+## Where the apps are
+
+- **Mobile — `apps/mobile`** (Expo SDK 52 / RN 0.76.5): one app, two roles. The driver gets *My trips today*,
+  start / share position / stop reached / end, licence upload and fuel logging; the passenger gets search, booking,
+  payment with a receipt, bookings, notifications and preferences; staff get ticket scanning.
+- **Web — `apps/web`** (Next.js 16): the full console per role — passenger, driver, operator, staff, finance, admin.
+
+`docs/apps.md` maps every screen to its file and its commands, lists what is deliberately not built (background
+location, the offline queue), and has the **install paths**: the web app as a PWA (needs nothing but a browser),
+Expo Go for the inner loop, `eas build --profile preview` for an installable APK. Start with it when you cannot find
+a screen — or a way to put one on a phone.
+
 ## Status
 
-**Phases 0–11 complete; Phase 12 (hardening and launch) in progress.** 40 migrations, 131 commands, 11 edge
-functions, **651 unit tests**, **948 pgTAP assertions across 18 suites**, 107 a11y routes, and a bilingual web
+**Phases 0–11 complete; Phase 12 (hardening and launch) in progress.** 44 migrations, 135 commands, 11 edge
+functions, **668 unit tests**, **986 pgTAP assertions across 19 suites**, 111 a11y routes, and a bilingual web
 app plus the Expo client.
 
 | Gate | What it proves |
 |---|---|
-| `npm test` / `npm run test:coverage` | 651 tests, coverage 95.8 / 87.1 / 96.5 / 96.7 |
+| `npm test` / `npm run test:coverage` | 668 tests, coverage 95.8 / 87.1 / 96.5 / 96.7 |
 | `npm run sql:check` | migrations apply to a real PostgreSQL, every pgTAP suite passes, types do not drift, RLS + definer posture holds |
 | `npm run check:a11y` | 107 routes in both directions: one `<h1>`, landmarks, skip link, labelled controls, no physical margins |
 | `npm run check:guards` | boundaries, one write path, no secrets, dictionary keys present in both locales |

@@ -251,13 +251,12 @@ number in the refusal is the true one.
 - Pro and Business start with a **14-day trial**.
 - **Every plan stops at 100 %.** The sixth trip on Basic, the 51st on Pro and the 6th vehicle on Pro are all
   `QUOTA_EXCEEDED` with `{ metric, limit, used }` in the payload.
-- **Pro and Business warn at 80 % in the flow**: the response to the trip you just created carries
-  `QUOTA_SOFT_WARNING` with the metric, the limit and the usage, so the screen can say it before the wall. Basic
-  has no in-flow warning — the plan is marked hard, and a warning on a wall you cannot move is noise.
-- **The `quota` job notifies at 80 % and 100 % for every plan with a limit**, to the owner and every manager, once
-  per metric per threshold per month. So a Basic owner does get a bell at four trips out of five; what they do not
-  get is a warning inside the wizard. (That is a small inconsistency between the two paths, written down in
-  `docs/phase-12-report.md` §1.7 rather than papered over.)
+- **Every plan warns at 80 %, in the flow and by notification**: the response to the trip you just created
+  carries `QUOTA_SOFT_WARNING` with the metric, the limit and the usage, and the `quota` job sends the same
+  boundary to the owner and every manager, once per metric per threshold per month. Basic used to be the
+  exception — the code name and the plan's `soft_limit` flag suggested a warning on a hard wall was noise — but
+  80 % of five trips is the moment before you cannot create another one, which is the most useful moment there
+  is. `threshold` (80 or 100) is decided once, in `app.quota_state()`, and both paths read it.
 - The warnings are per metric, so five vehicles and thirty trips are two conversations, not one.
 - Upgrading is immediate; the period is not pro-rated in v1, and `/operator/billing` says so.
 - **Featured slots are automatic.** Publishing a trip spends one if your plan has a free slot, and boosts it for

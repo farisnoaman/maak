@@ -12,20 +12,24 @@
       "bundleIdentifier": "ye.maak.app",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "يُستخدم موقعك لعرض تقدّم الرحلة للمسافرين. Your location is used to show trip progress to passengers.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "يُرسل موقع الرحلة كل ١٠ دقائق أثناء التشغيل. Trip location is sent every 10 minutes while a trip is running.",
         "NSCameraUsageDescription": "لتصوير عدّاد المسافة وإيصالات الدفع. To photograph the odometer and payment receipts."
       }
     },
     "android": {
       "package": "ye.maak.app",
-      "permissions": [
-        "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION",
-        "ACCESS_BACKGROUND_LOCATION",
-        "CAMERA"
-      ]
+      "permissions": ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION", "CAMERA"]
     },
-    "plugins": ["expo-router", "expo-localization", "expo-secure-store"],
+    "plugins": [
+      "expo-router",
+      "expo-localization",
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "يُرسل موقع الرحلة أثناء التشغيل فقط. Trip location is sent only while the trip is running."
+        }
+      ]
+    ],
     "experiments": {
       "typedRoutes": true
     },

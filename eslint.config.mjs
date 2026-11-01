@@ -57,6 +57,20 @@ export default tseslint.config(
   },
 
   {
+    // Node scripts that talk to the network use the WHATWG fetch API's abort pair. They exist in Node 18+
+    // (`node:globals` does not list the DOM's AbortController under that name in this config), and the rest of
+    // the file is linted as usual so a typo is still caught.
+    files: ['scripts/*.mjs'],
+    languageOptions: {
+      globals: {
+        AbortController: 'readonly',
+        clearTimeout: 'readonly',
+        setTimeout: 'readonly',
+      },
+    },
+  },
+
+  {
     // The service worker is not a module in a page: it has no `window` and does have `self`. Browsers run
     // it in a worker scope, so the rules that guess a browser environment are wrong here.
     files: ['apps/web/public/**/*.js'],

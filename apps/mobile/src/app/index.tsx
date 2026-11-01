@@ -76,6 +76,16 @@ export default function HomeScreen() {
         <Text style={styles.linkText}>{t('picker.title')}</Text>
       </Pressable>
 
+      {/* Phase 6, closed on mobile: the trips the driver has to run, and the four commands that run them.
+          Before this the only console was the web one, so "start the trip" meant remembering a URL. */}
+      <Pressable
+        accessibilityRole="link"
+        onPress={() => router.push('/driver/trips')}
+        style={styles.link}
+      >
+        <Text style={styles.linkText}>{t('driver.title')}</Text>
+      </Pressable>
+
       {/* Phase 3: the driver's own screens. A driver is invited by phone, so this is the entry point. */}
       <Pressable
         accessibilityRole="link"

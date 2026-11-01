@@ -21,7 +21,7 @@ begin;
 
 create extension if not exists pgtap;
 
-select plan(117);
+select plan(119);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -665,6 +665,26 @@ select is(
   true,
   'and is warned at 40 of 50 — 80% is where a soft limit speaks up'
 );
+
+-- The notice is not a soft-plan privilege. `soft_limit` decides whether *overage is charged*; it used to
+-- decide whether anybody was told at all, which left a Basic operator — at 80% of a hard limit, two trips
+-- from being blocked — the one person never told. `threshold` is the boundary itself, so no caller (the
+-- response, the monthly job) has an arithmetic of its own to drift from.
+update public.plans set soft_limit = false where code = 'pro';
+
+select is(
+  (app.quota_state('eeee0006-6666-4666-8666-eeeeeeeeeeee', 'eeee00a0-0000-4000-8000-eeeeeeeeeeee', 'trips') ->> 'warning')::boolean,
+  true,
+  'the 80% notice does not depend on the plan being soft'
+);
+
+select is(
+  (app.quota_state('eeee0006-6666-4666-8666-eeeeeeeeeeee', 'eeee00a0-0000-4000-8000-eeeeeeeeeeee', 'trips') ->> 'threshold')::int,
+  80,
+  'and names the boundary, so nothing downstream re-derives it'
+);
+
+update public.plans set soft_limit = true where code = 'pro';
 
 -- ---------------------------------------------------------------------------
 -- 7. The marketplace: what is visible, what is filterable, how it pages
@@ -1315,10 +1335,13 @@ select is(
       -- Phase 8's two vehicle reads take the actor the same way: the gateway resolves it from the
       -- bearer token, and the session-bound wrappers (`vehicle_health`, `fleet_summary`) are what a
       -- browser is given instead.
+      -- `get_trips_needing_routes` (00042) is the router's queue: it is platform infrastructure, it names
+      -- the coordinates of every upcoming trip, and the only caller is `scripts/route-fill.mjs` holding the
+      -- service key. No session has a reason to read it.
       and p.proname not in (
         'create_id_share_link', 'get_trip_manifest_data',
         'get_trip_for_staff', 'get_trip_manifest', 'staff_scope_summary',
-        'get_vehicle_health', 'get_fleet_summary'
+        'get_vehicle_health', 'get_fleet_summary', 'get_trips_needing_routes'
       )
       and not exists (
         select 1

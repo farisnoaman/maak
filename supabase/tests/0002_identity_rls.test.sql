@@ -1,7 +1,7 @@
 -- 0002 — identity isolation and the append-only audit log
 --
 -- Two promises are verified here:
---   1. a signed-in user can read only their own profile (and staff can read all)
+--   1. a signed-in user can read only their own profile and roles (and staff can read all)
 --   2. nobody can rewrite history: audit.log rejects UPDATE, DELETE and TRUNCATE
 --
 -- Run with: supabase test db   (requires Docker)
@@ -10,7 +10,7 @@ begin;
 
 create extension if not exists pgtap;
 
-select plan(9);
+select plan(11);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures: two users, one of them platform staff. Inserted as the superuser so the
@@ -23,7 +23,9 @@ values
   ('22222222-2222-4222-8222-222222222222', 'staff@example.test', '{"locale":"en"}');
 
 insert into public.user_roles (user_id, role)
-values ('22222222-2222-4222-8222-222222222222', 'platform_staff');
+values
+  ('22222222-2222-4222-8222-222222222222', 'platform_staff'),
+  ('11111111-1111-4111-8111-111111111111', 'finance_officer');
 
 select is(
   (select count(*)::int from public.profiles where id = '11111111-1111-4111-8111-111111111111'),
@@ -56,6 +58,12 @@ select is(
   'another user''s profile is invisible'
 );
 
+select is(
+  (select count(*)::int from public.user_roles where user_id = '22222222-2222-4222-8222-222222222222'),
+  0,
+  'another user''s roles are invisible'
+);
+
 select throws_ok(
   $$ insert into public.profiles (id) values ('33333333-3333-4333-8333-333333333333') $$,
   '42501',
@@ -73,6 +81,12 @@ select is(
   (select count(*)::int from public.profiles),
   2,
   'platform staff can read every profile'
+);
+
+select is(
+  (select count(*)::int from public.user_roles where user_id = '11111111-1111-4111-8111-111111111111'),
+  1,
+  'platform staff can read another user''s roles'
 );
 
 -- ---------------------------------------------------------------------------

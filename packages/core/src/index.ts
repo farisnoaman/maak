@@ -21,6 +21,7 @@ export * from './domain/tracking';
 export * from './domain/manifest';
 export * from './domain/fleet-ops';
 export * from './domain/deep-link';
+export * from './domain/routing';
 
 export * from './api/errors';
 export * from './api/gateway';

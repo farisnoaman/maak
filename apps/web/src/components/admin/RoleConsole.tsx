@@ -19,8 +19,11 @@ export interface AdminUserRow {
   readonly id: string;
   readonly name: string | null;
   readonly email: string | null;
+  readonly phone?: string | null;
   readonly verification: string;
   readonly roles: readonly string[];
+  /** `profiles.deletion_requested_at` is set: the row is one the deletion executor is waiting for. */
+  readonly deletionPending?: boolean;
 }
 
 const ROLE_LABEL: Record<string, TranslationKey> = {
@@ -39,10 +42,13 @@ export function RoleConsole({
   locale,
   users,
   configured,
+  truncated = false,
 }: {
   readonly locale: Locale;
   readonly users: readonly AdminUserRow[];
   readonly configured: boolean;
+  /** The read is capped; say so, because a silent cap reads as "this is everyone". */
+  readonly truncated?: boolean;
 }) {
   const t = (key: TranslationKey) => translate(locale, key);
   const [rows, setRows] = useState(users);
@@ -92,6 +98,7 @@ export function RoleConsole({
   return (
     <div className="card console-panel">
       <h2 style={{ fontSize: '1.05rem' }}>{t('admin.roles')}</h2>
+      <p className="form-hint">{truncated ? t('admin.usersCap') : t('admin.usersRecent')}</p>
 
       <div className="table-scroll" tabIndex={0}>
         <table className="data-table">
@@ -99,17 +106,33 @@ export function RoleConsole({
           <thead>
             <tr>
               <th scope="col">{t('admin.users')}</th>
+              <th scope="col">{t('admin.verification')}</th>
               <th scope="col">{t('admin.roles')}</th>
             </tr>
           </thead>
           <tbody>
+            {rows.length === 0 ? (
+              <tr>
+                <td colSpan={3}>
+                  <span className="form-hint">{t('admin.noUsers')}</span>
+                </td>
+              </tr>
+            ) : null}
             {rows.map((user) => (
               <tr key={user.id}>
                 <td>
-                  <span>{user.name ?? '—'}</span>
+                  <span>{user.name ?? t('admin.deletionUnnamed')}</span>
                   <span className="form-hint" dir="ltr" style={{ display: 'block' }}>
-                    {user.email ?? user.id}
+                    {user.email ?? user.phone ?? user.id}
                   </span>
+                  {user.deletionPending ? (
+                    <Badge tone="warning">{t('admin.deletionPending')}</Badge>
+                  ) : null}
+                </td>
+                <td>
+                  <Badge tone={user.verification === 'verified' ? 'success' : 'neutral'}>
+                    {t(`verification.status.${user.verification}` as TranslationKey)}
+                  </Badge>
                 </td>
                 <td>
                   {user.roles.length === 0 ? (

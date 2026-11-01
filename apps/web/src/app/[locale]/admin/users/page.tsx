@@ -7,7 +7,7 @@ import { EmptyState } from '@/components/ui/Feedback';
 import { DeletionRequests } from '@/components/admin/DeletionRequests';
 import { RoleConsole } from '@/components/admin/RoleConsole';
 import { loadAccountContext } from '@/lib/account';
-import { loadDeletionRequests } from '@/lib/admin';
+import { loadAdminUsers, loadDeletionRequests } from '@/lib/admin';
 import { previewAccount, previewDeletionRequests, previewUsers } from '@/lib/preview-data';
 
 export default async function AdminUsersPage({ params }: { params: Promise<{ locale: string }> }) {
@@ -43,17 +43,21 @@ export default async function AdminUsersPage({ params }: { params: Promise<{ loc
     ? { configured: false, requests: previewDeletionRequests }
     : await loadDeletionRequests();
 
-  const users = preview
-    ? previewUsers.map((user) => ({ ...user, roles: [...user.roles] }))
-    : [
-        {
-          id: data.user?.id ?? '',
-          name: data.profile?.fullName ?? null,
-          email: data.user?.email ?? null,
-          verification: data.profile?.verificationStatus ?? 'unverified',
-          roles: [...data.roles],
-        },
-      ];
+  // The directory itself, not just the operator looking at it: `profiles_select_staff` and
+  // `user_roles_select_staff` have always allowed this read, and until now nothing made it.
+  const directory = preview
+    ? {
+        configured: false,
+        truncated: false,
+        users: previewUsers.map((user) => ({
+          ...user,
+          phone: null,
+          joinedAt: '',
+          deletionPending: false,
+          roles: [...user.roles],
+        })),
+      }
+    : await loadAdminUsers();
 
   return (
     <>
@@ -71,7 +75,12 @@ export default async function AdminUsersPage({ params }: { params: Promise<{ loc
         ]}
       >
         {preview ? <PreviewBanner locale={locale} /> : null}
-        <RoleConsole locale={locale} users={users} configured={!preview} />
+        <RoleConsole
+          locale={locale}
+          users={directory.users}
+          configured={!preview}
+          truncated={directory.truncated}
+        />
         <section>
           <h2>{t('admin.deletionTitle')}</h2>
           <DeletionRequests

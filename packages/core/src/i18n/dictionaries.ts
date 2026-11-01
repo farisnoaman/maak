@@ -64,6 +64,8 @@ export const ar = {
   'nav.tabConsole': 'لوحتي',
   'nav.tabbar': 'التنقل السريع',
   'nav.trips': 'الرحلات',
+  'nav.privacy': 'الخصوصية',
+  'nav.terms': 'الشروط',
   'nav.styleguide': 'دليل المكوّنات',
   'nav.signIn': 'تسجيل الدخول',
   'nav.signOut': 'تسجيل الخروج',
@@ -328,6 +330,12 @@ export const ar = {
   'admin.deletionFailed': 'تعذّر تنفيذ الحذف:',
   'admin.deletionNotConfigured': 'هذه الشاشة تحتاج قاعدة بيانات متصلة.',
   'admin.deletionUnnamed': 'مستخدم بلا اسم',
+  'admin.usersRecent': 'أحدث 50 حسابًا على المنصة.',
+  'admin.usersCap':
+    'يُعرض أحدث 50 حسابًا. لمنح دور لمستخدم غير موجود في القائمة، أدخل معرّفه أدناه.',
+  'admin.noUsers': 'لا توجد حسابات.',
+  'admin.verification': 'التحقق',
+  'admin.deletionPending': 'طلب حذف',
 
   'preview.banner': 'وضع المعاينة: لا توجد قاعدة بيانات متصلة، والبيانات أدناه توضيحية فقط.',
 
@@ -369,6 +377,17 @@ export const ar = {
   'notifications.ownershipTransferred': 'تم نقل ملكية الشركة إلى عضو آخر.',
   'notifications.paymentSubmitted':
     'وصل إثبات دفع بمبلغ {amount} ريال على الحجز {code}، بانتظار التأكيد.',
+  'notifications.paymentReminder': 'تذكير بالدفع',
+  'notifications.paymentPending':
+    'دفعتك بمبلغ {amount} ريال على الحجز {code} لا تزال قيد المراجعة. لا تعِد الدفع.',
+  'notifications.paymentExpiring':
+    'مهلة الدفع للمبلغ {amount} ريال على الحجز {code} تنتهي قريبًا. أكمل الدفع ليبقى الحجز.',
+  'notifications.agentSettlementDue': 'تسوية مستحقة',
+  'notifications.agentSettlementDueBody':
+    'الرصيد المحتفظ به لديك {amount} ريال من حدّ {limit} ريال. سوِّ المبلغ لتفريغ الحد.',
+  'notifications.agentSettlementDueDesk': 'تسوية وكيل مستحقة',
+  'notifications.agentSettlementDueDeskBody':
+    'الوكيل {agent} يحتفظ بمبلغ {amount} ريال ويحتاج إلى تسوية.',
   'notifications.paymentConfirmed': 'تم تأكيد دفع {amount} ريال على الحجز {code}.',
   'notifications.paymentRejected': 'رُفض إثبات الدفع على الحجز {code}: {reason}',
   'notifications.refundApproved': 'وافقنا على استرداد {amount} ريال عن الحجز {code}.',
@@ -556,6 +575,8 @@ export const ar = {
   'notifications.event.agent_cash_in_settled': 'تسوية توريد الوكيل',
   'notifications.event.no_show_alert': 'حجوزات لم تُحسم بعد الإقلاع',
   'notifications.event.ops_alert': 'تنبيه تشغيلي',
+  'notifications.event.payment_reminder': 'تذكير بالدفع',
+  'notifications.event.agent_settlement_due': 'تسوية وكيل مستحقة',
 
   // Phase 9 — payments. Amounts always carry their currency in the sentence, because a bare number in a
   // money screen is a number somebody will misread.
@@ -1927,6 +1948,8 @@ export const en: Record<TranslationKey, string> = {
   'nav.tabConsole': 'Console',
   'nav.tabbar': 'Quick navigation',
   'nav.trips': 'Trips',
+  'nav.privacy': 'Privacy',
+  'nav.terms': 'Terms',
   'nav.styleguide': 'Component guide',
   'nav.signIn': 'Sign in',
   'nav.signOut': 'Sign out',
@@ -2195,6 +2218,12 @@ export const en: Record<TranslationKey, string> = {
   'admin.deletionFailed': 'The deletion was refused:',
   'admin.deletionNotConfigured': 'This screen needs a connected database.',
   'admin.deletionUnnamed': 'Unnamed user',
+  'admin.usersRecent': 'The 50 most recent accounts.',
+  'admin.usersCap':
+    'Showing the 50 most recent accounts. To grant a role to someone who is not listed, enter their user id below.',
+  'admin.noUsers': 'No accounts.',
+  'admin.verification': 'Verification',
+  'admin.deletionPending': 'Deletion requested',
 
   'preview.banner': 'Preview mode: no database is connected, the data below is illustrative only.',
 
@@ -2241,6 +2270,17 @@ export const en: Record<TranslationKey, string> = {
   'notifications.ownershipTransferred': 'Company ownership was transferred to another member.',
   'notifications.paymentSubmitted':
     'A payment proof for {amount} YER on booking {code} is waiting for confirmation.',
+  'notifications.paymentReminder': 'A reminder about your payment',
+  'notifications.paymentPending':
+    'Your payment of {amount} YER on booking {code} is still being checked. Do not pay again.',
+  'notifications.paymentExpiring':
+    'The payment window for {amount} YER on booking {code} closes soon. Pay now to keep the booking.',
+  'notifications.agentSettlementDue': 'A settlement is due',
+  'notifications.agentSettlementDueBody':
+    'You are holding {amount} YER of a {limit} YER limit. Settle to free the limit again.',
+  'notifications.agentSettlementDueDesk': 'Agent settlement due',
+  'notifications.agentSettlementDueDeskBody':
+    'Agent {agent} is holding {amount} YER and needs to settle.',
   'notifications.paymentConfirmed': '{amount} YER was confirmed on booking {code}.',
   'notifications.paymentRejected': 'The payment proof for booking {code} was rejected: {reason}',
   'notifications.refundApproved': 'We approved a refund of {amount} YER on booking {code}.',
@@ -2425,6 +2465,8 @@ export const en: Record<TranslationKey, string> = {
   'notifications.event.agent_cash_in_settled': 'Agent cash-in settled',
   'notifications.event.no_show_alert': 'Bookings unresolved after departure',
   'notifications.event.ops_alert': 'Platform alert',
+  'notifications.event.payment_reminder': 'Payment reminder',
+  'notifications.event.agent_settlement_due': 'Agent settlement due',
 
   // Phase 9 — payments. Amounts always carry their currency in the sentence, because a bare number in a
   // money screen is a number somebody will misread.
