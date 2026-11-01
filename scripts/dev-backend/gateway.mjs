@@ -164,6 +164,24 @@ const BOOKINGS_CAPABILITY = {
   'booking.shareLink': 'booking.create',
 };
 
+const PAYMENTS_CAPABILITY = {
+  'payment.account.create': 'payment.account.manageOwn',
+  'payment.account.verify': 'payment.account.managePlatform',
+  'payment.account.archive': 'payment.account.manageOwn',
+  'payment.intent.create': 'payment.submit',
+  'payment.proof.submit': 'payment.submit',
+  'payment.intent.cancel': 'payment.submit',
+  'payment.confirm': 'payment.confirm',
+  'payment.reject': 'payment.confirm',
+  'refund.request': 'payment.submit',
+  'refund.decide': 'refund.approve',
+  'refund.pay': 'refund.approve',
+  'agent.cashIn': 'payment.account.manageOwn',
+  'payout.request': 'payout.request',
+  'payout.approve': 'payout.approve',
+  'payout.pay': 'payout.approve',
+};
+
 const FLEET_CAPABILITY = {
   'vehicle.create': 'vehicle.create',
   'vehicle.update': 'vehicle.update',
@@ -349,6 +367,43 @@ export async function handleFunction({ name, body, userId, client, core, request
     }
 
     const { fn, args } = core.bookingsCommandArgs(parsed.data, userId, {
+      p_request_id: requestId,
+      p_ip: null,
+    });
+    try {
+      const result = await runCommand(client, fn, args);
+      return { status: 200, body: { ...result, requestId } };
+    } catch (error) {
+      const mapped = mapDbError(error, core);
+      return { ...mapped, body: { ...mapped.body, requestId } };
+    }
+  }
+
+  if (name === 'payments') {
+    const parsed = core.paymentsActionSchema.safeParse(body);
+    if (!parsed.success) return mapZod(parsed.error);
+
+    const resolved = await resolveActor(client, userId);
+    // One action's capability depends on its payload: a platform account is finance's to open.
+    const capability =
+      parsed.data.action === 'payment.account.create' && parsed.data.kind === 'platform'
+        ? 'payment.account.managePlatform'
+        : PAYMENTS_CAPABILITY[parsed.data.action];
+    const denial = core.policyDenial(resolved.actor, capability, core.paymentsScope(parsed.data));
+    if (denial) {
+      return {
+        status: denial === 'UNAUTHENTICATED' ? 401 : 403,
+        body: {
+          code: denial,
+          detail:
+            denial === 'NOT_VERIFIED'
+              ? 'Account is not verified'
+              : 'You do not have permission to perform this action',
+        },
+      };
+    }
+
+    const { fn, args } = core.paymentsCommandArgs(parsed.data, userId, {
       p_request_id: requestId,
       p_ip: null,
     });

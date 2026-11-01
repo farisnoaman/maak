@@ -108,6 +108,20 @@ const ROUTES = [
     account: 'staff',
   },
   { path: '/en/staff/trips?verification=verified', lang: 'en', dir: 'ltr', account: 'staff' },
+  // Phase 9 surfaces. The pay page itself needs a real intent id, so it is exercised by the flow test in
+  // the phase report rather than here — an invented id would 404 and prove nothing.
+  { path: '/ar/operator/payments', lang: 'ar', dir: 'rtl', account: 'owner' },
+  { path: '/en/operator/payments', lang: 'en', dir: 'ltr', account: 'owner' },
+  { path: '/ar/operator/payouts', lang: 'ar', dir: 'rtl', account: 'owner' },
+  { path: '/en/operator/payouts', lang: 'en', dir: 'ltr', account: 'owner' },
+  { path: '/ar/finance/payments', lang: 'ar', dir: 'rtl', account: 'staff' },
+  { path: '/en/finance/payments', lang: 'en', dir: 'ltr', account: 'staff' },
+  { path: '/ar/finance/accounts', lang: 'ar', dir: 'rtl', account: 'staff' },
+  { path: '/en/finance/accounts', lang: 'en', dir: 'ltr', account: 'staff' },
+  { path: '/ar/finance/agents', lang: 'ar', dir: 'rtl', account: 'staff' },
+  { path: '/en/finance/agents', lang: 'en', dir: 'ltr', account: 'staff' },
+  { path: '/ar/finance/payouts', lang: 'ar', dir: 'rtl', account: 'staff' },
+  { path: '/en/finance/payouts', lang: 'en', dir: 'ltr', account: 'staff' },
 ];
 
 const failures = [];

@@ -15,6 +15,8 @@ import { SiteHeader } from '@/components/SiteHeader';
 import { Badge } from '@/components/ui/Feedback';
 import { IdentityForm, PassengerBookingActions } from '@/components/bookings/BookingActions';
 import { TicketQr } from '@/components/bookings/TicketQr';
+import { PaymentStart } from '@/components/payments/PaymentStart';
+import { RefundRequestForm } from '@/components/payments/RefundDesk';
 import { AccountNav } from '@/components/account/AccountNav';
 import { loadAccountContext } from '@/lib/account';
 import { loadBooking, logDocumentAccess, passengerIdSignedUrl } from '@/lib/bookings';
@@ -162,6 +164,32 @@ export default async function BookingDetailPage({
               <dd>{t(`bookings.payment.${booking.paymentStatus}` as TranslationKey)}</dd>
             </div>
           </dl>
+
+          {/* Phase 9 — money. The button appears only when the trip asks for it before the seat is held;
+              a cash trip deliberately shows nothing, because the driver collects on boarding. The amount
+              is left to the command: this page displays what the database will confirm, not a guess. */}
+          {live &&
+          booking.trip &&
+          booking.trip.paymentPolicy !== 'cash' &&
+          (booking.paymentStatus === 'unpaid' || booking.paymentStatus === 'deposit_paid') ? (
+            <PaymentStart
+              locale={locale}
+              bookingId={booking.id}
+              amountYer={null}
+              purpose={booking.trip.paymentPolicy === 'deposit' ? 'deposit' : 'booking'}
+            />
+          ) : null}
+
+          {/* Asking for money back is the passenger's own act; deciding it is not, and the form says so. */}
+          {live &&
+          (booking.paymentStatus === 'paid' || booking.paymentStatus === 'deposit_paid') &&
+          booking.refundYer === 0 ? (
+            <RefundRequestForm
+              locale={locale}
+              bookingId={booking.id}
+              maxAmountYer={booking.totalYer - booking.refundYer}
+            />
+          ) : null}
 
           {live ? (
             <PassengerBookingActions

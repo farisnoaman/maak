@@ -20,6 +20,9 @@ export interface BookingTripSummary {
   readonly originCode: string | null;
   readonly destinationCode: string | null;
   readonly operatorName: string | null;
+  /** Phase 9: `transfer` and `deposit` need money before the seat is held; `cash` does not. */
+  readonly paymentPolicy: string;
+  readonly depositPercent: number;
 }
 
 export interface PassengerBooking {
@@ -84,7 +87,7 @@ const BOOKING_COLUMNS =
   'id, code, status, seats, total_yer, refund_yer, payment_status, contact_name, contact_phone, passenger_gender, note, hold_expires_at, reject_reason, cancel_reason, created_at, trip_id' as const;
 
 const TRIP_COLUMNS =
-  'id, code, departure_at, seats_total, seats_available, origin_governorate_id, destination_governorate_id' as const;
+  'id, code, departure_at, seats_total, seats_available, origin_governorate_id, destination_governorate_id, payment_policy, deposit_percent' as const;
 
 const DOCUMENT_COLUMNS =
   'id, booking_id, id_type, id_number, birth_place, birth_date, photo_path' as const;
@@ -135,6 +138,8 @@ function toTripSummary(row: Row | null, names: Map<string, { name: string; code:
     originCode: origin?.code ?? null,
     destinationCode: destination?.code ?? null,
     operatorName: null,
+    paymentPolicy: String(row.payment_policy ?? 'cash'),
+    depositPercent: num(row.deposit_percent ?? 0),
   } satisfies BookingTripSummary;
 }
 
