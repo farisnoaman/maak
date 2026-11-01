@@ -21,7 +21,7 @@ begin;
 
 create extension if not exists pgtap;
 
-select plan(103);
+select plan(113);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -670,6 +670,11 @@ select is(
 -- 7. The marketplace: what is visible, what is filterable, how it pages
 -- ---------------------------------------------------------------------------
 
+-- The unfiltered facet counts are the *maintained* ones (`search_counts`, refreshed at most every thirty
+-- seconds by whoever notices they are stale). A test that has just built a marketplace has to say when that
+-- happened, so every assertion below is about the counts and not about the clock.
+select app.refresh_search_counts();
+
 select is(
   (public.search_public_trips('ar', '{}'::jsonb, 'soonest', null, 20) ->> 'total')::int,
   2,
@@ -904,6 +909,136 @@ select is(
     )
   ),
   'the direct and with-stops counts match the reference filter'
+);
+
+-- ---------------------------------------------------------------------------
+-- 7c. The counts are counted once, and the page comes from an index
+-- ---------------------------------------------------------------------------
+-- 00038 stopped recounting the marketplace per request: the facets are one grouping pass per filter set, the
+-- unfiltered ones are stored in `search_counts`, and the page is an index scan over a generated rank column.
+-- Faster is only allowed to mean faster — these are the contracts with the definitions it replaced.
+
+select is(
+  (
+    select count(*)::int from public.trips_search s
+    where s.rank_soonest is distinct from app.trip_rank(s.price_from_yer, s.departure_at, s.is_featured, 'soonest')
+       or s.rank_cheapest is distinct from app.trip_rank(s.price_from_yer, s.departure_at, s.is_featured, 'cheapest')
+       or s.rank_featured is distinct from app.trip_rank(s.price_from_yer, s.departure_at, s.is_featured, 'featured')
+  ),
+  0,
+  'the generated rank columns are the sort keys, to the digit — a cursor is a rank'
+);
+
+-- The bucketed counts must equal the reference definition, with a filter on, so the cascading skip is
+-- exercised rather than the unfiltered identity.
+select is(
+  (
+    select jsonb_object_agg(c.value, c.n)
+    from app.search_facet_counts(p_direct => true) c
+    where c.dimension = 'origin'
+  ),
+  (
+    select jsonb_object_agg(g.id::text, g.n)
+    from (
+      select s.origin_governorate_id as id, count(*)::int as n
+      from public.trips_search s
+      where s.is_public and s.departure_at > now()
+        and app.trip_matches(s, '{"direct": true}'::jsonb, 'origin')
+      group by s.origin_governorate_id
+    ) g
+  ),
+  'the bucketed origin counts equal the reference filter, cascading included'
+);
+
+select is(
+  (select c.n from app.search_facet_counts(p_booking => array['whole_trip']) c where c.dimension = 'total'),
+  (
+    select count(*)::int from public.trips_search s
+    where s.is_public and s.departure_at > now()
+      and app.trip_matches(s, '{"booking": ["whole_trip"]}'::jsonb, null)
+  ),
+  'and its total is the reference total for the same filter'
+);
+
+select is(
+  (
+    select count(*)::int from (
+      select dimension, value, count from public.search_counts
+      except
+      select dimension, value, n from app.search_facet_counts() where dimension <> 'total'
+    ) drifted
+  ),
+  0,
+  'every stored facet count is what the counting function currently answers'
+);
+
+select is(
+  (select count(*)::int from public.search_counts),
+  (select count(*)::int from app.search_facet_counts() where dimension <> 'total'),
+  'and the stored table has a row per live dimension value — nothing stale, nothing missing'
+);
+
+select is(
+  app.ensure_search_counts(),
+  false,
+  'a counts refresh that is not due does not happen'
+);
+
+update public.search_counts set refreshed_at = now() - interval '1 day';
+
+select is(
+  app.ensure_search_counts(),
+  true,
+  'and a stale aggregate is refreshed by the first request that notices'
+);
+
+-- The page is read from the index, so the cursor has to be the rank the sorted scan would have produced.
+select is(
+  (
+    select array_agg(item ->> 'id' order by ordinality)
+    from jsonb_array_elements(
+      public.search_public_trips('ar', '{}'::jsonb, 'cheapest', null, 2) -> 'items'
+    ) with ordinality as t(item, ordinality)
+  ),
+  (
+    select array_agg(x.trip_id::text)
+    from (
+      select s.trip_id from public.trips_search s
+      where s.is_public and s.departure_at > now()
+      order by s.rank_cheapest, s.trip_id
+      limit 2
+    ) x
+  ),
+  'the cheapest page is the first two trips of the stored ordering, in order'
+);
+
+select is(
+  (
+    select item ->> 'id'
+    from jsonb_array_elements(
+      public.search_public_trips(
+        'ar', '{}'::jsonb, 'soonest',
+        public.search_public_trips('ar', '{}'::jsonb, 'soonest', null, 1) ->> 'nextCursor', 1
+      ) -> 'items'
+    ) item
+  ),
+  (
+    select s.trip_id::text from public.trips_search s
+    where s.is_public and s.departure_at > now()
+    order by s.rank_soonest, s.trip_id
+    offset 1 limit 1
+  ),
+  'and a cursor page is the row after the last one page 1 showed'
+);
+
+select public.search_public_trips('ar', '{"priceMax": 7000}'::jsonb, 'soonest', null, 5);
+
+select is(
+  (
+    public.search_public_trips('ar', '{"priceMax": 7000}'::jsonb, 'soonest', null, 5) ->> 'cached'
+  )::boolean,
+  true,
+  'a repeated search is served from the cache — the page and the counts are cached separately'
 );
 
 -- ---------------------------------------------------------------------------

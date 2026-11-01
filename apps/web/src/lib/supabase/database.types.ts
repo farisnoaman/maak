@@ -1,5 +1,5 @@
-// migrations-sha256: 177bacd37c34fec4d7d2be3a5f2e98bf48373f967ed01a391d3e626eab10a01e
-/* Generated from 37 migrations. Run `npm run db:types` after changing the schema. */
+// migrations-sha256: 659da2000afec6452690d1c4a46ab96f83c09fcb6557233331fb6295d0da5ad6
+/* Generated from 38 migrations. Run `npm run db:types` after changing the schema. */
 
 /**
  * Schema types for RLS-filtered reads (Phase 0 subset).
@@ -1012,12 +1012,24 @@ export interface TripSearchRow {
   is_featured: boolean;
   search_text: string;
   updated_at: string;
+  /** Generated. The keyset sort key per sort — see 00038. Read-only. */
+  rank_soonest: number;
+  rank_cheapest: number;
+  rank_featured: number;
 }
 
 export interface SearchCacheRow {
   key: string;
   payload: Json;
   expires_at: string;
+}
+
+/** 00038. The unfiltered facet counts, maintained rather than recomputed per request. */
+export interface SearchCountRow {
+  dimension: 'origin' | 'destination' | 'gender' | 'booking' | 'direct';
+  value: string;
+  count: number;
+  refreshed_at: string;
 }
 
 export interface Booking {
@@ -1823,6 +1835,11 @@ export interface Database {
         Row: SearchCacheRow;
         Insert: Partial<SearchCacheRow> & { key: string; payload: Json };
         Update: Partial<SearchCacheRow>;
+      };
+      search_counts: {
+        Row: SearchCountRow;
+        Insert: Partial<SearchCountRow> & { dimension: SearchCountRow['dimension']; value: string };
+        Update: Partial<SearchCountRow>;
       };
       region_governorates: {
         Row: RegionGovernorate;

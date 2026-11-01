@@ -117,10 +117,10 @@ the page, the total and all five facet groupings from it; the sort key gained a 
 **112 ms p95 cold, 3 ms on a cache hit.** 0007 gains six assertions that the fast path and `app.trip_matches()`
 return the same totals and facets, because the rewrite is allowed to be faster and nothing else.
 
-What is still true, and written down rather than implied: cold search is O(public trips) at ~100–145 ms, so the
-capacity is ~7 cold searches/second/core and four concurrent cold searches on this two-core sandbox reach
-p95 316 ms. The 30 s cache is doing real work. `docs/perf/README.md` lists the three changes that would remove
-the limit — a maintained facet aggregate, cache warming, per-dimension partial indexes — in order of value.
+What was still true after it, and written down rather than implied: cold search was O(public trips) at
+~100–145 ms, so the capacity was ~7 cold searches/second/core and four concurrent cold searches on this
+two-core sandbox reached p95 316 ms. The 30 s cache was doing real work, and `docs/perf/README.md` listed the
+three changes that would remove the limit. Two of them are now in: §1.8.
 
 ### 1.6 The one alarm that never left the building
 
@@ -188,6 +188,51 @@ The guides also cross-reference each other and the runbook rather than repeating
 `docs/runbook.md`, the day-to-day in the operator and admin guides, and the passenger view in Arabic only,
 because that is the language of the person it is written for.
 
+### 1.8 The search ceiling, removed
+
+§1.5 made search forty times faster and then wrote down that it was still O(public trips). Being honest about a
+ceiling is not the same as accepting it, and the measurement said exactly where it was. At 50,000 trips one
+cold search cost 155 ms of which: **79.5 ms** was five facet aggregations, **54.8 ms** the total, **50.5 ms**
+ranking every public trip so the first twelve could be sorted out of it, and **66.8 ms** the page sort and its
+joins — four costs, all proportional to the catalogue, none of them a bug.
+
+`00038_search_counts.sql` removes two of them and leaves the other two understood:
+
+- **The counts are counted once.** Six facets in one pass, from one definition: group the public trips into
+  `(origin, destination, gender, booking, direct)` buckets — about thirty at this volume, 8,700 if every
+  governorate flew to every other — and every cascading count is then a sum over buckets. That is 35 ms instead
+  of 79, and the four dimension filters are applied to thirty rows instead of fifty thousand. A filtered search
+  calls it directly; the *unfiltered* answer, which is the homepage and most of the traffic, is stored in
+  `search_counts` and rebuilt by whichever request notices it is over thirty seconds old
+  (`app.ensure_search_counts()`, one refresher at a time behind an advisory lock).
+- **The page is no longer sorted.** `trips_search` gained three generated rank columns, one per sort, each
+  indexed with `trip_id` and partial on `is_public`. `ORDER BY rank, trip_id LIMIT 12` is now an index scan that
+  stops after twelve rows — 0.03 ms — and the keyset cursor is an index condition rather than a filter, so a
+  deep page costs what it has to skip and nothing more.
+- **The total stays exact.** It is an index-only `count(*)` (7 ms), because it is the number the user reads and
+  paginates against. The facet chips are allowed to be thirty seconds old; the count of results is not.
+
+Back to back on the same 49,998-trip database, with the facets compared for equality on every shape:
+
+| cold search, 12 rows | 00036 | 00038 |
+| --- | --- | --- |
+| unfiltered — the homepage | 161.6 ms | **12.9 ms** |
+| `priceMax: 1234` (matches almost nothing) | 112.6 ms | **3.0 ms** |
+| `priceMax: 9000000` (matches everything) | 159.7 ms | 42.0 ms |
+| `direct: true` | 155.1 ms | 41.6 ms |
+
+`perf:smoke`'s p95 fell from 112 ms to **5.6 ms**, `perf:db`'s worst case from 316 ms at four callers to 195 ms
+at eight, and the per-core capacity statement from ~7 cold searches/second to ~23. The 42 ms rows are the honest
+remainder: a filter cannot be answered by an aggregate computed over every filter, so its counts are still one
+pass — cached for thirty seconds, shared by every sort and every page of that filter set, and never done twice
+for the same one.
+
+The contracts that keep "faster" from meaning "different" are in 0007 rather than in this report: the generated
+keys equal `app.trip_rank()` to the digit for all three sorts, the bucketed counts equal `app.trip_matches()`
+dimension by dimension with a filter on, the stored counts equal the counting function, a cursor page is the row
+after the last one page 1 showed, and a stale aggregate is refreshed by the first request that notices. Ten new
+assertions, 113 in that suite.
+
 ---
 
 ## 2. In flight
@@ -211,21 +256,22 @@ because that is the language of the person it is written for.
 | Gate | Result |
 | --- | --- |
 | `npm run check:all` | green |
-| `npm run sql:check` | 37 migrations · 17 pgTAP suites · **904 assertions** · types in sync · **security posture green** |
+| `npm run sql:check` | 38 migrations · 17 pgTAP suites · **914 assertions** · types in sync · **security posture green** |
 | `npm test` | **649 tests**, 26 files |
 | `npm run test:coverage` | 95.77 % statements · 87.09 % branches · 96.46 % functions · 96.72 % lines |
-| `npm run check:guards` | 31 core files · 176 style files · 37 migrations · 130 commands |
+| `npm run check:guards` | 31 core files · 176 style files · 38 migrations · 130 commands |
 | `npm run check:a11y` | 107 routes, both directions |
 | worker against a fresh dev database | 10 jobs, `maintenance: {sent: 2}`, `ops-alerts: {counts: all zero}`, exit 0 |
-| `npm run perf:smoke` at 50,000 trips | search 112 ms p95 cold / 3 ms cached · write 5 ms · dashboard 79 ms |
+| `npm run perf:smoke` at 50,000 trips | search 5.6 ms p95 cold / 2.7 ms cached · write 4.2 ms · dashboard 83.5 ms |
 
 ---
 
 ## 6. What is still open
 
 1. **No load test at production volume has been run.** The p95 targets (search < 300 ms, writes < 250 ms, finance
-   dashboard < 500 ms) are verified *at 50,000 trips, one request at a time* — 112 ms, 5 ms, 79 ms — and the
-   concurrency limit that remains is documented in `docs/perf/README.md`. A k6 run on hardware with the stated
+   dashboard < 500 ms) are verified *at 50,000 trips, one request at a time* — 5.6 ms, 4.2 ms, 83.5 ms — and
+   the one linear cost that remains (an unselective filter's facet counts, 42 ms) is documented in
+   `docs/perf/README.md`. A k6 run on hardware with the stated
    load has not happened, because there is no such environment yet.
 2. **Dependency debt in the mobile toolchain.** `npm audit --omit=dev` reports 19 advisories (18 moderate, 1 high,
    0 critical), all inside Expo/React Native build tooling (`metro`, `@expo/cli`, `image-size`, `@react-native/*`)

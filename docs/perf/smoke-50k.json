@@ -1,35 +1,35 @@
 {
-  "at": "2026-11-01T17:29:38.105Z",
+  "at": "2026-11-01T18:24:43.324Z",
   "base": "http://127.0.0.1:54321",
-  "note": "50,000 seeded trips on the dev cluster (2 cores)",
+  "note": "demo volume",
   "runs": {
     "search": 40,
-    "write": 6,
-    "dashboard": 6
+    "write": 10,
+    "dashboard": 10
   },
   "concurrency": 1,
-  "gatewayQueueConcurrency": 8,
+  "gatewayQueueConcurrency": 0,
   "targets": {
     "search": 300,
     "write": 250,
     "dashboard": 500
   },
   "p50": {
-    "search": 105.983529,
-    "write": 3.497271,
-    "dashboard": 72.197449
+    "search": 4.498924,
+    "write": 3.904057,
+    "dashboard": 80.039675
   },
   "p95": {
-    "search": 112.202396,
-    "searchCached": 2.980453,
-    "gatewayQueue": 844.300278,
-    "write": 4.785832,
-    "dashboard": 79.355236
+    "search": 5.62382,
+    "searchCached": 2.685123,
+    "gatewayQueue": null,
+    "write": 4.180531,
+    "dashboard": 83.512366
   },
   "max": {
-    "search": 114.887397,
-    "write": 4.785832,
-    "dashboard": 79.355236
+    "search": 5.94768,
+    "write": 4.180531,
+    "dashboard": 83.512366
   },
   "failures": []
 }

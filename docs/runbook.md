@@ -145,6 +145,15 @@ human who knows what this file is.
 **Cadence:** five minutes for the reminder bands and the matcher. The daily jobs (maintenance, digest, ops
 alerts) dedupe themselves to once a day, so a faster cron does not mean more messages.
 
+**The marketplace counts are not a job.** The filter chips on `/trips` read `public.search_counts`, which any
+search request refreshes when it is more than thirty seconds old (`app.ensure_search_counts()`, one refresher at
+a time). No scheduler is involved, so nothing to restart — but after a bulk import, a restore, or a `search_counts`
+change by hand, force it rather than waiting for traffic:
+
+```sql
+select app.refresh_search_counts();   -- rewrites the chips; the result total is always exact and unaffected
+```
+
 ---
 
 ## 3. Backups and the restore drill
