@@ -15,6 +15,20 @@ on `main`; the tag is the last step, not the first.
 
 ### Added
 
+- **Install paths, written down** (`docs/apps.md` §"How to install it on a phone"): the web app as a PWA (works
+  today, no account), Expo Go for the inner loop, `eas build --profile preview` for an APK a tester keeps, and the
+  store route that waits on accounts. `apps/mobile/.env.example` lists the four variables the app reads.
+- **The driver can run a trip from the phone** (`apps/mobile/src/app/driver/trips/`): start, share position, mark a
+  stop, end — the same `trip.*` commands as the web console, with `expo-location`.
+
+### Fixed
+
+- **`eas.json` configured a variable nothing reads.** All three profiles set `EXPO_PUBLIC_API_URL`; the app reads
+  `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_ANON_KEY`, so every build would have installed and then said
+  "not configured". Profiles now name an EAS *environment* and the variables live there.
+- **`app.json` asked for `ACCESS_BACKGROUND_LOCATION` and the iOS "always" string** while nothing used them —
+  removed rather than left as a permission the app does not honour.
+
 - **The route a real road takes** (`00042`, `npm run routes:fill`). A router queue
   (`get_trips_needing_routes`), a validated write (`cmd_store_trip_route`) and a corridor cache keyed to four
   decimals, so 200 departures on one road cost one provider call. `app.trip_route_for()` now prefers the trip's

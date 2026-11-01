@@ -73,8 +73,10 @@ supabase test db            # the same pgTAP suites on the real stack (auth, sto
   payment with a receipt, bookings, notifications and preferences; staff get ticket scanning.
 - **Web — `apps/web`** (Next.js 16): the full console per role — passenger, driver, operator, staff, finance, admin.
 
-`docs/apps.md` maps every screen to its file and its commands, and lists what is deliberately not built (background
-location, the offline queue). Start with it when you cannot find a screen.
+`docs/apps.md` maps every screen to its file and its commands, lists what is deliberately not built (background
+location, the offline queue), and has the **install paths**: the web app as a PWA (needs nothing but a browser),
+Expo Go for the inner loop, `eas build --profile preview` for an installable APK. Start with it when you cannot find
+a screen — or a way to put one on a phone.
 
 ## Status
 
