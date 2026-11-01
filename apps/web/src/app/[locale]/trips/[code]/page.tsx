@@ -17,6 +17,7 @@ import { SiteHeader } from '@/components/SiteHeader';
 import { PreviewBanner } from '@/components/PreviewBanner';
 import { Badge, EmptyState } from '@/components/ui/Feedback';
 import { loadPublicTrip } from '@/lib/trips';
+import { isSupabaseConfigured } from '@/lib/supabase/config';
 import { ShareTrip } from '@/components/trips/ShareTrip';
 import { tripJsonLd, tripMetadata } from '@/lib/seo';
 
@@ -59,7 +60,7 @@ export default async function PublicTripPage({
     <>
       <SiteHeader locale={locale} pathname="/trips" />
       <main id="main" className="shell">
-        <PreviewBanner locale={locale} />
+        {!isSupabaseConfigured() ? <PreviewBanner locale={locale} /> : null}
 
         {!trip ? (
           <EmptyState
@@ -112,154 +113,188 @@ export default async function PublicTripPage({
               </p>
             ) : null}
 
-            <dl className="trip-summary">
-              <div className="trip-summary__row">
-                <dt>{t('trips.vehicle')}</dt>
-                <dd>{trip.vehicle?.label ?? '—'}</dd>
-              </div>
-              <div className="trip-summary__row">
-                <dt>{t('trips.seats')}</dt>
-                <dd>{t('trips.seatsAvailable', { count: trip.seatsAvailable })}</dd>
-              </div>
-              <div className="trip-summary__row">
-                <dt>{t('trips.bookingMode')}</dt>
-                <dd>{t(TRIP_BOOKING_KEY[trip.bookingMode] ?? 'trips.booking.per_seat')}</dd>
-              </div>
-              <div className="trip-summary__row">
-                <dt>{t('trips.genderPolicy')}</dt>
-                <dd>{t(TRIP_GENDER_KEY[trip.genderPolicy] ?? 'trips.gender.any')}</dd>
-              </div>
-              <div className="trip-summary__row">
-                <dt>{t('trips.paymentPolicy')}</dt>
-                <dd>{t(TRIP_PAYMENT_KEY[trip.paymentPolicy] ?? 'trips.payment.cash')}</dd>
-              </div>
-              {trip.luggageAllowanceKg != null ? (
-                <div className="trip-summary__row">
-                  <dt>{t('trips.luggage')}</dt>
-                  <dd>{trip.luggageAllowanceKg}</dd>
-                </div>
-              ) : null}
-              {trip.arriveEstimateMinutes > 0 ? (
-                <div className="trip-summary__row">
-                  <dt>{t('trips.arriveEstimate')}</dt>
-                  <dd>{t('trips.minutes', { count: trip.arriveEstimateMinutes })}</dd>
-                </div>
-              ) : null}
-              {trip.discount.kind !== 'none' ? (
-                <div className="trip-summary__row">
-                  <dt>{t('trips.discount')}</dt>
-                  <dd>
-                    {t(TRIP_DISCOUNT_KIND_KEY[trip.discount.kind] ?? 'trips.discountKind.none')}
-                    {trip.discount.kind === 'percent'
-                      ? ` · ${trip.discount.value / 100}%`
-                      : ` · ${formatMinor(trip.discount.value, 'YER', { locale })}`}
-                  </dd>
-                </div>
-              ) : null}
-              {trip.fare ? (
-                <>
+            {/* Two columns from 940px: what the trip *is* on one side, what it *costs* and how to take it on
+                the other. The fare used to sit at the bottom of a twelve-row table, under the luggage allowance
+                and the payment policy — the one number a passenger came for, last. */}
+            <div className="trip-detail__body">
+              <div className="trip-detail__main">
+                <dl className="trip-summary">
                   <div className="trip-summary__row">
-                    <dt>{t('trips.perSeatFare')}</dt>
-                    <dd>{formatMinor(trip.fare.unitFareMinor, 'YER', { locale })}</dd>
+                    <dt>{t('trips.vehicle')}</dt>
+                    <dd>{trip.vehicle?.label ?? '—'}</dd>
                   </div>
-                  {trip.fare.discountMinor > 0 ? (
+                  <div className="trip-summary__row">
+                    <dt>{t('trips.seats')}</dt>
+                    <dd>{t('trips.seatsAvailable', { count: trip.seatsAvailable })}</dd>
+                  </div>
+                  <div className="trip-summary__row">
+                    <dt>{t('trips.bookingMode')}</dt>
+                    <dd>{t(TRIP_BOOKING_KEY[trip.bookingMode] ?? 'trips.booking.per_seat')}</dd>
+                  </div>
+                  <div className="trip-summary__row">
+                    <dt>{t('trips.genderPolicy')}</dt>
+                    <dd>{t(TRIP_GENDER_KEY[trip.genderPolicy] ?? 'trips.gender.any')}</dd>
+                  </div>
+                  <div className="trip-summary__row">
+                    <dt>{t('trips.paymentPolicy')}</dt>
+                    <dd>{t(TRIP_PAYMENT_KEY[trip.paymentPolicy] ?? 'trips.payment.cash')}</dd>
+                  </div>
+                  {trip.luggageAllowanceKg != null ? (
                     <div className="trip-summary__row">
-                      <dt>{t('trips.subtotal')}</dt>
-                      <dd>{formatMinor(trip.fare.subtotalMinor, 'YER', { locale })}</dd>
+                      <dt>{t('trips.luggage')}</dt>
+                      <dd>{trip.luggageAllowanceKg}</dd>
                     </div>
                   ) : null}
-                  {trip.fare.discountMinor > 0 ? (
+                  {trip.arriveEstimateMinutes > 0 ? (
+                    <div className="trip-summary__row">
+                      <dt>{t('trips.arriveEstimate')}</dt>
+                      <dd>{t('trips.minutes', { count: trip.arriveEstimateMinutes })}</dd>
+                    </div>
+                  ) : null}
+                  {trip.discount.kind !== 'none' ? (
                     <div className="trip-summary__row">
                       <dt>{t('trips.discount')}</dt>
-                      <dd>− {formatMinor(trip.fare.discountMinor, 'YER', { locale })}</dd>
+                      <dd>
+                        {t(TRIP_DISCOUNT_KIND_KEY[trip.discount.kind] ?? 'trips.discountKind.none')}
+                        {trip.discount.kind === 'percent'
+                          ? ` · ${trip.discount.value / 100}%`
+                          : ` · ${formatMinor(trip.discount.value, 'YER', { locale })}`}
+                      </dd>
                     </div>
                   ) : null}
-                  <div className="trip-summary__row trip-summary__row--total">
-                    <dt>
+                </dl>
+
+                <h2>{t('trips.stops')}</h2>
+                {trip.stops.length === 0 ? (
+                  <p className="trip-form__hint">{t('trips.search.direct')}</p>
+                ) : (
+                  <ol className="trip-timeline">
+                    {trip.stops.map((stop) => (
+                      <li key={`${stop.seq}-${stop.name}`}>
+                        <span className="trip-timeline__marker" aria-hidden="true">
+                          {stop.seq}
+                        </span>
+                        <span className="trip-timeline__name">{stop.name}</span>
+                        <span className="trip-timeline__meta">
+                          {t('trips.stopOffsetValue', { minutes: stop.arriveOffsetMinutes })}
+                          {stop.priceFromOriginYer != null
+                            ? ` · ${formatMinor(stop.priceFromOriginYer, 'YER', { locale })}`
+                            : ''}
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+
+                {policyRows.length > 0 ? (
+                  <section aria-labelledby="policies-title">
+                    <h2 id="policies-title">{t('trips.detail.policies')}</h2>
+                    {/* Policies are free-form key/value pairs the operator chose; nothing is invented for a
+                    key we do not know, and nothing is hidden for a key we do. */}
+                    <dl className="trip-summary">
+                      {policyRows.map(([key, value]) => (
+                        <div className="trip-summary__row" key={key}>
+                          <dt>{key}</dt>
+                          <dd>{value}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </section>
+                ) : null}
+
+                {trip.notes ? (
+                  <section>
+                    <h2>{t('trips.notes')}</h2>
+                    <p>{trip.notes}</p>
+                  </section>
+                ) : null}
+
+                <section aria-labelledby="operator-title">
+                  <h2 id="operator-title">{t('trips.detail.operator')}</h2>
+                  <p>
+                    {trip.operator?.name ?? '—'}{' '}
+                    {trip.operator?.verified ? (
+                      <Badge tone="success">{t('trips.detail.operatorVerified')}</Badge>
+                    ) : null}
+                  </p>
+                </section>
+
+                <div className="trip-form__actions">
+                  <ShareTrip locale={locale} url={`/${locale}/trips/${trip.code}`} />
+                  <Link className="btn btn--ghost" href={`/${locale}/trips/${trip.code}/live`}>
+                    {t('live.open')}
+                  </Link>
+                  <Link className="btn btn--ghost" href={`/${locale}/trips`}>
+                    {t('trips.search.title')}
+                  </Link>
+                </div>
+              </div>
+
+              <aside className="trip-book" aria-labelledby="trip-book-title">
+                <h2 id="trip-book-title">{t('trips.detail.fare')}</h2>
+                {trip.fare ? (
+                  <>
+                    <p className="trip-book__price num">
+                      {formatMinor(trip.fare.totalMinor, 'YER', { locale })}
+                    </p>
+                    <p className="trip-book__per">
                       {trip.bookingMode === 'whole_trip'
                         ? t('trips.wholePrice')
                         : t('trips.pricePerSeat')}
-                    </dt>
-                    <dd>{formatMinor(trip.fare.totalMinor, 'YER', { locale })}</dd>
-                  </div>
-                </>
-              ) : null}
-            </dl>
+                    </p>
+                    <dl className="trip-book__breakdown">
+                      <div>
+                        <dt>{t('trips.perSeatFare')}</dt>
+                        <dd className="num">
+                          {formatMinor(trip.fare.unitFareMinor, 'YER', { locale })}
+                        </dd>
+                      </div>
+                      {trip.fare.discountMinor > 0 ? (
+                        <>
+                          <div>
+                            <dt>{t('trips.subtotal')}</dt>
+                            <dd className="num">
+                              {formatMinor(trip.fare.subtotalMinor, 'YER', { locale })}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt>{t('trips.discount')}</dt>
+                            <dd className="num">
+                              − {formatMinor(trip.fare.discountMinor, 'YER', { locale })}
+                            </dd>
+                          </div>
+                        </>
+                      ) : null}
+                    </dl>
+                  </>
+                ) : (
+                  <p className="trip-form__hint">{t('trips.detail.fareUnavailable')}</p>
+                )}
 
-            <h2>{t('trips.stops')}</h2>
-            {trip.stops.length === 0 ? (
-              <p className="trip-form__hint">{t('trips.search.direct')}</p>
-            ) : (
-              <ol className="trip-timeline">
-                {trip.stops.map((stop) => (
-                  <li key={`${stop.seq}-${stop.name}`}>
-                    <span className="trip-timeline__marker" aria-hidden="true">
-                      {stop.seq}
-                    </span>
-                    <span className="trip-timeline__name">{stop.name}</span>
-                    <span className="trip-timeline__meta">
-                      {t('trips.stopOffsetValue', { minutes: stop.arriveOffsetMinutes })}
-                      {stop.priceFromOriginYer != null
-                        ? ` · ${formatMinor(stop.priceFromOriginYer, 'YER', { locale })}`
-                        : ''}
-                    </span>
-                  </li>
-                ))}
-              </ol>
-            )}
+                <p className="trip-book__seats">
+                  {trip.seatsAvailable > 0
+                    ? t('trips.seatsAvailable', { count: trip.seatsAvailable })
+                    : t('trips.badgeSoldOut')}
+                </p>
 
-            {policyRows.length > 0 ? (
-              <section aria-labelledby="policies-title">
-                <h2 id="policies-title">{t('trips.detail.policies')}</h2>
-                {/* Policies are free-form key/value pairs the operator chose; nothing is invented for a
-                    key we do not know, and nothing is hidden for a key we do. */}
-                <dl className="trip-summary">
-                  {policyRows.map(([key, value]) => (
-                    <div className="trip-summary__row" key={key}>
-                      <dt>{key}</dt>
-                      <dd>{value}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </section>
-            ) : null}
-
-            {trip.notes ? (
-              <section>
-                <h2>{t('trips.notes')}</h2>
-                <p>{trip.notes}</p>
-              </section>
-            ) : null}
-
-            <section aria-labelledby="operator-title">
-              <h2 id="operator-title">{t('trips.detail.operator')}</h2>
-              <p>
-                {trip.operator?.name ?? '—'}{' '}
-                {trip.operator?.verified ? (
-                  <Badge tone="success">{t('trips.detail.operatorVerified')}</Badge>
-                ) : null}
-              </p>
-            </section>
-
-            <div className="trip-cta">
-              {/* One primary action, and only when it can actually work: a departed trip or a full one
-                  shows the reason instead of a button that leads to a closed form. */}
-              {trip.hasDeparted || trip.seatsAvailable < 1 ? (
-                <p className="trip-form__hint">{t('trips.detail.bookingSoon')}</p>
-              ) : (
-                <Link className="btn btn--primary" href={`/${locale}/trips/${trip.code}/book`}>
-                  {t('bookings.reserve')}
-                </Link>
-              )}
-              <div className="trip-form__actions">
-                <ShareTrip locale={locale} url={`/${locale}/trips/${trip.code}`} />
-                <Link className="btn btn--ghost" href={`/${locale}/trips/${trip.code}/live`}>
-                  {t('live.open')}
-                </Link>
-                <Link className="btn btn--ghost" href={`/${locale}/trips`}>
-                  {t('trips.search.title')}
-                </Link>
-              </div>
+                {/* One primary action, and only when it can actually work: a departed trip or a full one
+                    shows the reason instead of a button that leads to a closed form. */}
+                {trip.hasDeparted || trip.seatsAvailable < 1 ? (
+                  <p className="trip-form__hint">
+                    {trip.hasDeparted
+                      ? t('trips.detail.hasDeparted')
+                      : t('trips.detail.bookingSoon')}
+                  </p>
+                ) : (
+                  <Link
+                    className="btn btn--primary trip-book__cta"
+                    href={`/${locale}/trips/${trip.code}/book`}
+                  >
+                    {t('bookings.reserve')}
+                  </Link>
+                )}
+                <p className="trip-book__trust">{t('trips.detail.fareNote')}</p>
+              </aside>
             </div>
           </article>
         )}

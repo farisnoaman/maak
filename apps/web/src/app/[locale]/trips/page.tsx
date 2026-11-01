@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import {
   activeFilterCount,
+  formatMinor,
   isLocale,
   readTripFilters,
   type SavedSearchFilters,
@@ -16,7 +17,7 @@ import { EmptyState } from '@/components/ui/Feedback';
 import { FilterDisclosure } from '@/components/trips/FilterDisclosure';
 import { PublicTripCard } from '@/components/trips/PublicTripCard';
 import { SaveSearchControl } from '@/components/trips/SaveSearchControl';
-import { loadPublicTrips } from '@/lib/trips';
+import { loadPublicGovernorates, loadPublicTrips } from '@/lib/trips';
 import { tripsMetadata } from '@/lib/seo';
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
@@ -58,23 +59,129 @@ export default async function TripsPage({
   // silently drop every filter, which is exactly what "shareable in both locales" must not do.
   const suffix = searchSuffix(query, ['st']);
 
-  const page = await loadPublicTrips(
-    locale,
-    {
-      q: state.q,
-      origin: state.origin,
-      destination: state.destination,
-      gender: state.gender as ('any' | 'women_only' | 'men_only')[] | undefined,
-      booking: state.booking as ('per_seat' | 'whole_trip' | 'both')[] | undefined,
-      direct: state.direct,
-      priceMax: state.priceMax,
-      dateFrom: state.dateFrom,
-      dateTo: state.dateTo,
-    },
-    { sort: state.sort ?? 'soonest' },
-  );
+  const [governorates, page] = await Promise.all([
+    loadPublicGovernorates(),
+    loadPublicTrips(
+      locale,
+      {
+        q: state.q,
+        origin: state.origin,
+        destination: state.destination,
+        gender: state.gender as ('any' | 'women_only' | 'men_only')[] | undefined,
+        booking: state.booking as ('per_seat' | 'whole_trip' | 'both')[] | undefined,
+        direct: state.direct,
+        priceMax: state.priceMax,
+        dateFrom: state.dateFrom,
+        dateTo: state.dateTo,
+      },
+      { sort: state.sort ?? 'soonest' },
+    ),
+  ]);
 
   const base = `/${locale}/trips`;
+
+  /**
+   * The URL with some filters removed and others kept.
+   *
+   * Every control on this page is a link, which is what makes a filtered marketplace shareable — and it means
+   * "remove this one chip" has to be expressible as a URL. `drop` deletes a key entirely (all values of it),
+   * `dropValue` removes one value from a repeatable key, and `sort`/`cursor` are added deliberately.
+   */
+  const hrefWith = (options: {
+    drop?: readonly string[];
+    dropValue?: { key: string; value: string };
+    sort?: string;
+  }): string => {
+    const search = new URLSearchParams();
+    for (const [key, value] of Object.entries(query)) {
+      if (key === 'cursor' || value == null) continue;
+      if (options.drop?.includes(key)) continue;
+      if (options.sort && key === 'sort') continue;
+      for (const item of Array.isArray(value) ? value : [value]) {
+        if (options.dropValue?.key === key && options.dropValue.value === item) continue;
+        search.append(key, item);
+      }
+    }
+    if (options.sort) search.set('sort', options.sort);
+    const queryString = search.toString();
+    return queryString ? `${base}?${queryString}` : base;
+  };
+
+  /**
+   * What is currently filtering this list, as chips a person can take off one at a time.
+   *
+   * On a phone the filter panel is collapsed, so before this the only sign a filter was applied was the count on
+   * the summary — and the only way to undo one of five was "clear" and start again.
+   */
+  const applied: { key: string; label: string; href: string }[] = [];
+  const nameOf = (id: string) =>
+    governorates.find((governorate) => governorate.id === id)?.[
+      locale === 'ar' ? 'nameAr' : 'nameEn'
+    ] ??
+    governorates.find((governorate) => governorate.id === id)?.nameAr ??
+    // Last resort is the facet (which carries the localised name) and then the id, so a chip is never blank.
+    page.facets.origins.find((facet) => facet.id === id)?.name ??
+    page.facets.destinations.find((facet) => facet.id === id)?.name ??
+    id;
+
+  if (state.q) {
+    applied.push({
+      key: 'q',
+      label: `«${state.q}»`,
+      href: hrefWith({ drop: ['q'] }),
+    });
+  }
+  for (const id of state.origin ?? []) {
+    applied.push({
+      key: `origin:${id}`,
+      label: `${t('trips.origin')}: ${nameOf(id)}`,
+      href: hrefWith({ dropValue: { key: 'origin', value: id } }),
+    });
+  }
+  for (const id of state.destination ?? []) {
+    applied.push({
+      key: `destination:${id}`,
+      label: `${t('trips.destination')}: ${nameOf(id)}`,
+      href: hrefWith({ dropValue: { key: 'destination', value: id } }),
+    });
+  }
+  for (const value of state.gender ?? []) {
+    if (value === 'any') continue;
+    applied.push({
+      key: `gender:${value}`,
+      label: t(`trips.gender.${value}` as TranslationKey),
+      href: hrefWith({ dropValue: { key: 'gender', value } }),
+    });
+  }
+  if (state.direct) {
+    applied.push({
+      key: 'direct',
+      label: t('trips.search.direct'),
+      href: hrefWith({ drop: ['direct'] }),
+    });
+  }
+  if (state.priceMax != null) {
+    applied.push({
+      key: 'priceMax',
+      label: `${t('trips.search.priceMax')}: ${formatMinor(state.priceMax, 'YER', { locale })}`,
+      href: hrefWith({ drop: ['priceMax'] }),
+    });
+  }
+  if (state.dateFrom) {
+    applied.push({
+      key: 'dateFrom',
+      label: `${t('trips.search.dateFrom')}: ${state.dateFrom}`,
+      href: hrefWith({ drop: ['dateFrom'] }),
+    });
+  }
+  if (state.dateTo) {
+    applied.push({
+      key: 'dateTo',
+      label: `${t('trips.search.dateTo')}: ${state.dateTo}`,
+      href: hrefWith({ drop: ['dateTo'] }),
+    });
+  }
+  const currentSort = state.sort ?? 'soonest';
 
   // Keep every filter when paging: a "next" link that silently drops the search is a bug the user reads
   // as "there are no more results".
@@ -99,7 +206,7 @@ export default async function TripsPage({
     <>
       <SiteHeader locale={locale} pathname="/trips" search={suffix} />
       <main id="main" className="shell">
-        <PreviewBanner locale={locale} />
+        {!page.configured ? <PreviewBanner locale={locale} /> : null}
 
         <header className="trips-hero">
           <h1>{t('trips.search.title')}</h1>
@@ -244,21 +351,10 @@ export default async function TripsPage({
                 />
               </div>
 
-              <div className="trip-filters__group">
-                <label htmlFor="filter-sort">{t('trips.sortLabel')}</label>
-                <select
-                  id="filter-sort"
-                  name="sort"
-                  defaultValue={state.sort ?? 'soonest'}
-                  className="ui-select"
-                >
-                  {SORTS.map((sort) => (
-                    <option key={sort} value={sort}>
-                      {t(`trips.sort.${sort}` as TranslationKey)}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {/* Sort is not a filter: it does not narrow the list, and hiding it in a collapsed panel made the
+                  cheapest trip three taps away. The visible control is the row of links above the results; this
+                  hidden input is what keeps the chosen order when the filters are submitted. */}
+              <input type="hidden" name="sort" value={currentSort} />
 
               <div className="trip-filters__actions">
                 <button type="submit" className="ui-btn ui-btn--primary">
@@ -272,18 +368,59 @@ export default async function TripsPage({
           </FilterDisclosure>
 
           <section aria-live="polite" aria-atomic="true" className="trips-results">
-            <p className="trips-count" role="status">
-              {t('trips.search.results', { count: page.total })}
-            </p>
+            <div className="trips-toolbar">
+              <p className="trips-count" role="status">
+                {t('trips.search.results', { count: page.total })}
+              </p>
+              <nav className="trips-sort" aria-label={t('trips.sortLabel')}>
+                {SORTS.map((sort) => (
+                  <Link
+                    key={sort}
+                    href={hrefWith({ sort })}
+                    className="trips-sort__link"
+                    aria-current={currentSort === sort ? 'true' : undefined}
+                  >
+                    {t(`trips.sort.${sort}` as TranslationKey)}
+                  </Link>
+                ))}
+              </nav>
+            </div>
+
+            {applied.length > 0 ? (
+              <ul className="filter-chips" aria-label={t('trips.search.applied')}>
+                {applied.map((chip) => (
+                  <li key={chip.key}>
+                    <Link className="filter-chip" href={chip.href}>
+                      <span>{chip.label}</span>
+                      <span className="filter-chip__x" aria-hidden="true">
+                        ✕
+                      </span>
+                      <span className="sr-only">
+                        {t('trips.search.removeFilter', { name: chip.label })}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+                {applied.length > 1 && page.items.length > 0 ? (
+                  <li>
+                    <Link className="filter-chip filter-chip--clear" href={base}>
+                      {t('trips.search.clearAll')}
+                    </Link>
+                  </li>
+                ) : null}
+              </ul>
+            ) : null}
 
             {page.items.length === 0 ? (
               <EmptyState
                 title={t('trips.search.noResults')}
-                description={t('trips.search.subtitle')}
+                description={t('trips.search.noResultsBody')}
                 action={
-                  <Link className="btn btn--ghost" href={base}>
-                    {t('trips.search.clear')}
-                  </Link>
+                  applied.length > 0 ? (
+                    <Link className="btn btn--ghost" href={base}>
+                      {t('trips.search.clearAll')}
+                    </Link>
+                  ) : null
                 }
               />
             ) : (

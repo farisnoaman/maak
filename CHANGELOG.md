@@ -23,6 +23,12 @@ on `main`; the tag is the last step, not the first.
 
 ### Changed
 
+- **The marketplace list shows what is filtering it.** Applied filters are chips you can remove one at a time;
+  sort is a visible row above the results instead of a control buried in the collapsed panel; the card's route is
+  the link; a sold-out trip says so before it shows a price.
+- **The trip page leads with the fare.** A panel — first on a phone, sticky beside the facts on desktop — with the
+  price, the breakdown, seats left and one *reserve* button. It used to be the twelfth row of a table, under the
+  luggage allowance.
 - **The home page sells the trip instead of the build.** It showed a phase number, a unit-test count, three
   architecture cards and seven console cards of which five said "coming soon" — while `/trips` served real
   departures it never mentioned. Now: a search-first hero with the next three real departures beside it, trips you
@@ -38,6 +44,11 @@ on `main`; the tag is the last step, not the first.
 
 ### Fixed
 
+- **The preview banner appeared over real data.** `/trips` and `/trips/[code]` rendered "no database connected, the
+  data below is illustrative" unconditionally — a live marketplace calling its own listings fictional.
+  `loadPublicTrips` now reports `configured`, and the banner asks first.
+- **`.sr-only` was used but never defined** (the operator calendar caption rendered as visible text); it is now an
+  alias of the existing `.visually-hidden`.
 - **A finance assertion that had been counting all subscription invoices** — `0015` test 68 failed on a clean
   checkout, and it was the test that was wrong: an upgrade three screens earlier legitimately leaves a prorated
   invoice open, so "issued subscription invoices = 1" was really asserting "nothing else has been billed yet".

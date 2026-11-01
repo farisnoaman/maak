@@ -38,7 +38,6 @@ export const ar = {
 
   // The hero aside: real departures, not a promise.
   'home.nextDepartures': 'أقرب الانطلاقات',
-  'home.soldOut': 'مكتملة',
 
   'home.sectionFeatured': 'رحلات يمكنك حجزها الآن',
   'home.sectionFeaturedBody': 'مقاعد متاحة من مشغّلين موثّقين، تتحدّث مع كل حجز.',
@@ -1360,6 +1359,7 @@ export const ar = {
   'trips.payment.transfer': 'تحويل',
   'trips.payment.deposit': 'عربون',
   'trips.badgeFeatured': 'مميزة',
+  'trips.badgeSoldOut': 'مكتملة',
   'trips.badgeLastSeats': 'آخر المقاعد',
   'trips.sameRoute': 'نقطة الانطلاق والوصول لا يمكن أن تكونا نفس المحافظة.',
   'trips.departureInPast': 'موعد الانطلاق يجب أن يكون في المستقبل.',
@@ -1382,12 +1382,21 @@ export const ar = {
   'trips.search.dateTo': 'إلى تاريخ',
   'trips.search.q': 'ابحث باسم المحافظة أو المحطة',
   'trips.search.results': '{count} رحلة',
-  'trips.search.noResults': 'لا توجد رحلات مطابقة. وسّع نطاق البحث.',
+  'trips.search.noResults': 'لا توجد رحلات مطابقة.',
+  'trips.search.noResultsBody':
+    'جرّب توسيع نطاق التاريخ، أو إزالة أحد الفلاتر — الرحلات الجديدة تُنشر يوميًا.',
+  'trips.search.applied': 'الفلاتر المطبّقة',
+  'trips.search.removeFilter': 'إزالة الفلتر {name}',
+  'trips.search.clearAll': 'إزالة كل الفلاتر',
   'trips.search.submit': 'ابحث',
   'trips.sort.soonest': 'الأقرب موعدًا',
   'trips.sort.cheapest': 'الأرخص',
   'trips.sort.featured': 'المميزة',
   'trips.detail.operator': 'المنظّم',
+  'trips.detail.fare': 'السعر',
+  'trips.detail.fareUnavailable': 'السعر يُحتسب عند الحجز.',
+  'trips.detail.fareNote':
+    'السعر النهائي يُحسب ويُتحقق منه على الخادم عند الحجز — بما فيه الخصومات.',
   'trips.detail.policies': 'السياسات',
   'trips.detail.notFound': 'لم نجد هذه الرحلة، أو أنها لم تُنشر بعد.',
   'trips.detail.hasDeparted': 'انطلقت هذه الرحلة بالفعل.',
@@ -1954,7 +1963,6 @@ export const en: Record<TranslationKey, string> = {
   'home.trustTrack': 'Live trip tracking',
 
   'home.nextDepartures': 'Next departures',
-  'home.soldOut': 'Sold out',
 
   'home.sectionFeatured': 'Trips you can book now',
   'home.sectionFeaturedBody':
@@ -3306,6 +3314,7 @@ export const en: Record<TranslationKey, string> = {
   'trips.payment.transfer': 'Transfer',
   'trips.payment.deposit': 'Deposit',
   'trips.badgeFeatured': 'Featured',
+  'trips.badgeSoldOut': 'Sold out',
   'trips.badgeLastSeats': 'Last seats',
   'trips.sameRoute': 'Origin and destination cannot be the same governorate.',
   'trips.departureInPast': 'The departure has to be in the future.',
@@ -3328,12 +3337,21 @@ export const en: Record<TranslationKey, string> = {
   'trips.search.dateTo': 'To date',
   'trips.search.q': 'Search a governorate or a stop',
   'trips.search.results': '{count} trips',
-  'trips.search.noResults': 'No trips match. Widen the search.',
+  'trips.search.noResults': 'No trips match.',
+  'trips.search.noResultsBody':
+    'Try widening the dates, or removing one of the filters — new trips are published daily.',
+  'trips.search.applied': 'Applied filters',
+  'trips.search.removeFilter': 'Remove the {name} filter',
+  'trips.search.clearAll': 'Remove all filters',
   'trips.search.submit': 'Search',
   'trips.sort.soonest': 'Soonest',
   'trips.sort.cheapest': 'Cheapest',
   'trips.sort.featured': 'Featured',
   'trips.detail.operator': 'Operator',
+  'trips.detail.fare': 'Fare',
+  'trips.detail.fareUnavailable': 'The fare is calculated when you book.',
+  'trips.detail.fareNote':
+    'The final price is computed and verified on the server at booking — discounts included.',
   'trips.detail.policies': 'Policies',
   'trips.detail.notFound': 'We could not find this trip, or it is not published yet.',
   'trips.detail.hasDeparted': 'This trip has already departed.',

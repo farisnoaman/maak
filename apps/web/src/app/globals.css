@@ -1226,6 +1226,7 @@ a {
    Logical properties only (enforced by ESLint): the same rules serve ar and en.
    ───────────────────────────────────────────────────────────────────────────── */
 
+.sr-only,
 .visually-hidden {
   position: absolute;
   inline-size: 1px;
@@ -5275,4 +5276,210 @@ a.booking-card__code:hover {
 .teams__link:hover {
   background: var(--surface-muted);
   border-color: var(--brand-300);
+}
+
+/* ---------- marketplace: toolbar, sort, applied filters ----------
+ *
+ * Three things a filtered list needs and this page did not have: a way to see the order, a way to see what is
+ * filtering it, and a way to take one filter off without starting over. All three are links, so all three work
+ * before JavaScript and all three survive being shared.
+ */
+
+.trips-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: baseline;
+  justify-content: space-between;
+  margin-block-end: var(--space-4);
+}
+
+.trips-sort {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  padding: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-sunken);
+}
+
+.trips-sort__link {
+  display: inline-grid;
+  place-items: center;
+  min-block-size: 34px;
+  padding-inline: var(--space-3);
+  border-radius: var(--radius-pill);
+  color: var(--ink-600);
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.trips-sort__link:hover {
+  color: var(--ink-900);
+}
+
+.trips-sort__link[aria-current='true'] {
+  background: var(--surface-base);
+  color: var(--ink-900);
+  box-shadow: var(--shadow-sm);
+}
+
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0 0 var(--space-5);
+  padding: 0;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: 32px;
+  padding-inline: var(--space-3);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--brand-300);
+  background: var(--brand-50);
+  color: var(--brand-900);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.filter-chip:hover {
+  background: var(--brand-100);
+}
+
+.filter-chip__x {
+  font-size: 0.7rem;
+  opacity: 0.7;
+}
+
+.filter-chip--clear {
+  border-color: transparent;
+  background: transparent;
+  color: var(--ink-500);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.filter-chip--clear:hover {
+  background: transparent;
+  color: var(--ink-800);
+}
+/* The route doubles as the card's link: the biggest target on the card, and the one a thumb aims at naturally. */
+.trip-card__link {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  color: inherit;
+  text-decoration: none;
+}
+
+.trip-card__link:hover {
+  color: var(--brand-700);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ---------- trip detail: fare beside the facts ----------
+ *
+ * The fare was the last row of a twelve-row table, below luggage and payment policy. A passenger comes for one
+ * number, so the number gets a panel of its own next to the details — sticky on a wide screen, first on a phone.
+ */
+
+.trip-detail__body {
+  display: grid;
+  gap: var(--space-8);
+  align-items: start;
+}
+
+@media (min-width: 940px) {
+  .trip-detail__body {
+    grid-template-columns: minmax(0, 1fr) 320px;
+  }
+}
+
+.trip-book {
+  /* First on a phone — the fare is why the page was opened — and beside the facts on a desktop, where
+   * `order` below puts it back in the second column. */
+  order: -1;
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--surface-sunken);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-md);
+}
+
+@media (min-width: 940px) {
+  .trip-book {
+    position: sticky;
+    inset-block-start: var(--space-6);
+    order: 2;
+  }
+}
+
+.trip-book h2 {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ink-500);
+}
+
+.trip-book__price {
+  font-size: 1.9rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--ink-900);
+}
+
+.trip-book__per {
+  font-size: 0.85rem;
+  color: var(--ink-500);
+}
+
+.trip-book__breakdown {
+  margin: var(--space-2) 0 0;
+  display: grid;
+  gap: var(--space-1);
+  font-size: 0.82rem;
+  color: var(--ink-600);
+}
+
+.trip-book__breakdown > div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.trip-book__breakdown dd {
+  margin: 0;
+}
+
+.trip-book__seats {
+  margin-block-start: var(--space-2);
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--surface-sunken);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--brand-700);
+}
+
+.trip-book__cta {
+  margin-block-start: var(--space-1);
+  inline-size: 100%;
+}
+
+.trip-book__trust {
+  font-size: 0.75rem;
+  color: var(--ink-500);
+  line-height: 1.5;
 }

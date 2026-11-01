@@ -45,8 +45,8 @@ questions in the order they ask them.**
 | --- | --- | --- | --- |
 | 1 | **Home** (`/[locale]`) | Reads as a build report; ignores the trips it could show; promises five consoles | `[x]` rebuilt |
 | 2 | Header + footer | 8 nav links including *المركبات* and *دليل المكوّنات*; no footer anywhere but home | `[x]` trimmed nav, shared `SiteFooter` |
-| 3 | Trips list (`/trips`) | Strong already (filters, keyset paging, facets) — but the empty state and the first load are worth a pass | `[ ]` |
-| 4 | Trip detail (`/trips/[code]`) | Dense metadata; the booking button competes with badges | `[ ]` |
+| 3 | Trips list (`/trips`) | Strong already (filters, keyset paging, facets) — but nothing showed *what* was filtering, sort was hidden in the panel, and the "no database" banner appeared over real data | `[x]` |
+| 4 | Trip detail (`/trips/[code]`) | The fare was the twelfth row of a table, below the luggage allowance; the reserve button was at the very bottom | `[x]` |
 | 5 | Booking + pay (`/book`, `/pay`) | Two flows that work; the pay screen is the one people screenshot when it goes wrong | `[ ]` |
 | 6 | Account (`/account`) | Lists are correct, hierarchy is flat — "next departure" should be the first thing | `[ ]` |
 | 7 | Auth (`/auth/*`) | Fine, but the sign-in form is the last place a person should meet jargon | `[ ]` |
@@ -54,6 +54,40 @@ questions in the order they ask them.**
 | 9 | Staff + finance | Same: correct, unranked | `[ ]` |
 | 10 | Mobile shell (`apps/mobile`) | Mirrors the same problem: the home screen is a list of links, one of them labelled *المرحلة* | `[ ]` |
 | 11 | Empty / error / loading states | The states a demo never shows and a launch always hits | `[ ]` |
+
+## 3–4. Trips list and trip detail — what changed
+
+**The list**
+
+- **Applied filters are visible and removable one at a time.** On a phone the filter panel is collapsed, so the only
+  evidence a filter was on was a number on the summary, and the only way to undo one of five was *clear* and start
+  again. Each filter is now a chip with its own link, built by one `hrefWith()` that knows how to drop a key, drop
+  one value of a repeatable key, or set the sort.
+- **Sort moved out of the panel.** It is not a filter — it does not narrow the list — and burying it made the
+  cheapest trip three taps away. It is a row of links above the results (`aria-current` on the active one), with a
+  hidden input keeping the choice when the panel is submitted.
+- **Two empty answers, told apart.** `items: []` means "nothing matches" *or* "there is no database", and the page
+  printed the preview banner for both — a live marketplace telling visitors its data was illustrative. `loadPublicTrips`
+  now returns `configured`, and the banner only appears when it is false.
+- **The empty state says what to do**: widen the dates or remove a filter, rather than repeating the page subtitle.
+- **The card's route is the link.** A card whose only target was a small button at the bottom asked a thumb to aim.
+  Sold-out trips say so before the price, and their button stops claiming a booking is possible.
+
+**The detail page**
+
+- **The fare has its own panel**, first on a phone and sticky beside the facts from 940px: the price, what it is per
+  (seat or whole vehicle), the breakdown, seats left, one primary *reserve*, and the sentence that the server
+  recomputes it. It used to be the last row of a twelve-row table, under luggage and payment policy.
+- **The twelve-row table is now what it always was**: vehicle, booking mode, gender policy, payment policy, luggage,
+  arrival estimate — facts, not the pitch.
+- The preview banner on this page was unconditional too; it now asks whether a backend is configured.
+
+**Deliberately not done here**
+
+- `[~]` **Map on the trip page.** There is no tile server and no browser in the sandbox to judge one; a broken map is
+  worse than a stop list that renders everywhere.
+- `[~]` **Filter counts that update without a page load.** They are correct, just server-rendered; making them live
+  is a client island with a cache to invalidate, and the page works before JavaScript today.
 
 ## 1. Home — what changed
 
