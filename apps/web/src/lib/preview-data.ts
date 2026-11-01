@@ -231,6 +231,38 @@ export const previewUsers: readonly {
 const g = (id: string, code: string, nameAr: string, nameEn: string, lat: number, lng: number) =>
   ({ id, code, nameAr, nameEn, centerLat: lat, centerLng: lng }) as const;
 
+/**
+ * Two deletion requests for the admin console's queue, in the shape `loadDeletionRequests()` returns.
+ *
+ * The second row has no reason and no email on purpose: real requests arrive that way, and a preview that
+ * only shows complete rows hides the fallbacks the screen has to render.
+ */
+export const previewDeletionRequests: readonly {
+  id: string;
+  name: string | null;
+  phone: string | null;
+  email: string | null;
+  reason: string | null;
+  requestedAt: string;
+}[] = [
+  {
+    id: '22222222-2222-4222-8222-222222222222',
+    name: 'سالم بن عوض',
+    phone: '+967711223344',
+    email: 'salem@example.test',
+    reason: 'لم أعد أستخدم المنصة ولا أحتاج الحساب.',
+    requestedAt: '2026-10-28T09:12:00Z',
+  },
+  {
+    id: '33333333-3333-4333-8333-333333333333',
+    name: 'منى عبدالله',
+    phone: '+967733445566',
+    email: null,
+    reason: null,
+    requestedAt: '2026-10-30T16:40:00Z',
+  },
+];
+
 export const previewGovernorates: readonly GeoGovernorate[] = [
   g('10000000-0000-4000-8000-000000000001', 'YE-AD', 'عدن', 'Aden', 12.7855, 45.0187),
   g('10000000-0000-4000-8000-000000000002', 'YE-SA', 'صنعاء', "Sana'a", 15.3694, 44.191),

@@ -228,6 +228,14 @@ It refuses, with the reason in the message, while the answer would be a lie: liv
 included), a vehicle registered to the account, an organization they own, or a non-zero available balance. Each
 of those is something you can fix *for* the user rather than around them.
 
+**Finding the requests.** `/admin/users` carries a *Deletion requests* queue: everyone with a
+`deletion_requested_at` and no `deleted_at`, with the name, the contact the account still had, the reason they
+typed, and the date. It is a read through `profiles_select_staff`, so a passenger who reaches the page sees
+nothing, and the write behind it is the same `account.delete` action — there is no second code path to keep in
+step. Executing asks for a reason, which is required: an irreversible action with a blank explanation is a
+support ticket nobody can answer six months later. The row disappears when it succeeds, so a list that still
+shows a deleted account cannot invite a second attempt.
+
 Three things to do around it:
 
 1. **Delete the Storage objects** it hands back in `documentsToErase` (verification and passenger ID photographs).

@@ -4,9 +4,11 @@ import { SiteHeader } from '@/components/SiteHeader';
 import { PreviewBanner } from '@/components/PreviewBanner';
 import { ConsoleShell } from '@/components/ConsoleShell';
 import { EmptyState } from '@/components/ui/Feedback';
+import { DeletionRequests } from '@/components/admin/DeletionRequests';
 import { RoleConsole } from '@/components/admin/RoleConsole';
 import { loadAccountContext } from '@/lib/account';
-import { previewAccount, previewUsers } from '@/lib/preview-data';
+import { loadDeletionRequests } from '@/lib/admin';
+import { previewAccount, previewDeletionRequests, previewUsers } from '@/lib/preview-data';
 
 export default async function AdminUsersPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale: raw } = await params;
@@ -34,6 +36,12 @@ export default async function AdminUsersPage({ params }: { params: Promise<{ loc
       </>
     );
   }
+
+  // The queue `cmd_delete_account` was always able to act on, and nobody could find: a read through RLS
+  // (`profiles_select_staff`), so a passenger who reaches this page reads nothing.
+  const deletion = preview
+    ? { configured: false, requests: previewDeletionRequests }
+    : await loadDeletionRequests();
 
   const users = preview
     ? previewUsers.map((user) => ({ ...user, roles: [...user.roles] }))
@@ -64,6 +72,14 @@ export default async function AdminUsersPage({ params }: { params: Promise<{ loc
       >
         {preview ? <PreviewBanner locale={locale} /> : null}
         <RoleConsole locale={locale} users={users} configured={!preview} />
+        <section>
+          <h2>{t('admin.deletionTitle')}</h2>
+          <DeletionRequests
+            locale={locale}
+            requests={deletion.requests}
+            configured={deletion.configured}
+          />
+        </section>
       </ConsoleShell>
     </>
   );

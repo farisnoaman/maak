@@ -268,6 +268,14 @@ erasure across nine tables, the booking that keeps its 10,000 YER and loses its 
 personal data in it, the storage paths handed back, and a second run that is idempotent instead of destructive.
 `docs/admin-guide.md` §6a is the operator's half: what to delete in Storage, and how to read `authScrubbed`.
 
+The command had one gap left after it shipped, and the honest word for it is *findable*: `account.delete` could
+act on a user id, and nothing in the product produced one. A request lands in `profiles.deletion_requested_at`,
+which meant an operator who read §6a knew the procedure and not the person to run it on. `/admin/users` now
+carries the queue — a read through `profiles_select_staff` (so a passenger who reaches the page reads nothing),
+the requester's own words beside the reason the operator must type, and the row removed on success rather than
+greyed out. Verified against the dev stack in both directions: as `platform_admin` the pending request appears in
+`/ar/admin/users` and `/en/admin/users`; as a passenger the same query returns `[]`.
+
 ---
 
 ### 1.10 The restore that is now a measurement
