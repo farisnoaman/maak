@@ -31,6 +31,13 @@ Two facts worth internalising:
 Granting a role: `/admin/users` → *grant*. Revoking: the same screen. The last platform admin cannot revoke
 themselves (`SELF_LOCKOUT`) — an admin console with no admin is a support ticket nobody can answer.
 
+The directory lists the **50 most recent accounts** — name, the contact the account has (email, else phone),
+a verification badge, and a *Deletion requested* badge on anyone waiting to be erased — read through
+`profiles_select_staff` and `user_roles_select_staff` with your own session, so a passenger who types the URL
+gets an empty list rather than somebody else's data. The 50 is a cap and the screen says so; to grant a role to
+someone who is not in the list, paste their user id into the *User ID* field, which the command accepts on its
+own.
+
 ---
 
 ## 1. Staff console — verification
@@ -144,7 +151,7 @@ refunds, expenses, payouts and what is payable to operators. There is no materia
 
 | Screen | What you decide |
 | --- | --- |
-| `/admin/users` | Who has which platform role (§0). The only place a role is granted |
+| `/admin/users` | Who has which platform role (§0). The only place a role is granted; lists the 50 most recent accounts, plus the deletion-request queue |
 | `/admin/regions` | Regions for geo supervisors — a region can hold whole governorates and hand-picked districts from others |
 | `/admin/places` | The gazetteer: places, their governorate, their Arabic and English names |
 | `/admin/plans` | Plan prices and limits. Changing a limit changes what every operator can do, immediately |

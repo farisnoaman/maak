@@ -328,6 +328,12 @@ export const ar = {
   'admin.deletionFailed': 'تعذّر تنفيذ الحذف:',
   'admin.deletionNotConfigured': 'هذه الشاشة تحتاج قاعدة بيانات متصلة.',
   'admin.deletionUnnamed': 'مستخدم بلا اسم',
+  'admin.usersRecent': 'أحدث 50 حسابًا على المنصة.',
+  'admin.usersCap':
+    'يُعرض أحدث 50 حسابًا. لمنح دور لمستخدم غير موجود في القائمة، أدخل معرّفه أدناه.',
+  'admin.noUsers': 'لا توجد حسابات.',
+  'admin.verification': 'التحقق',
+  'admin.deletionPending': 'طلب حذف',
 
   'preview.banner': 'وضع المعاينة: لا توجد قاعدة بيانات متصلة، والبيانات أدناه توضيحية فقط.',
 
@@ -2195,6 +2201,12 @@ export const en: Record<TranslationKey, string> = {
   'admin.deletionFailed': 'The deletion was refused:',
   'admin.deletionNotConfigured': 'This screen needs a connected database.',
   'admin.deletionUnnamed': 'Unnamed user',
+  'admin.usersRecent': 'The 50 most recent accounts.',
+  'admin.usersCap':
+    'Showing the 50 most recent accounts. To grant a role to someone who is not listed, enter their user id below.',
+  'admin.noUsers': 'No accounts.',
+  'admin.verification': 'Verification',
+  'admin.deletionPending': 'Deletion requested',
 
   'preview.banner': 'Preview mode: no database is connected, the data below is illustrative only.',
 
