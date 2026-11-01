@@ -120,6 +120,120 @@ while ((track = gridTrack.exec(css)) !== null) {
 }
 
 // ---------------------------------------------------------------------------
+// 3b. Nothing may be wider than the screen
+// ---------------------------------------------------------------------------
+//
+// The console shipped with a horizontal scrollbar on a phone, and the cause was not a wide element — it was a
+// track that refused to shrink. `.console-layout` is a grid with no `grid-template-columns`, so the implicit
+// column was `auto`, which sizes to the *max-content* of its contents: a row of `nowrap` nav chips. The track
+// became ~600px wide on a 390px screen, and the panel beside it was laid out at that width.
+//
+// Four rules catch that family, all static:
+//
+//   · a bare `<n>fr` track is `minmax(auto, <n>fr)` — it cannot be narrower than its content. Guarded tracks
+//     (`minmax(0, …)`, or the `min(100%, …)` minmax used for card grids) are fine;
+//   · the layout containers that hold a sidebar and a chip row must declare an explicit shrinking track, because
+//     an implicit `auto` column is exactly the bug above;
+//   · an element sized `calc(100% + …)` is wider than its parent by construction, which is a document wider than
+//     the screen;
+//   · anything that scrolls horizontally must cap itself at `max-inline-size: 100%`, so the scroll happens inside
+//     it and never on the page.
+
+/** The stylesheet with comments blanked out (same length, so line numbers still line up). */
+const cssCode = css.replace(/\/\*[\s\S]*?\*\//g, (comment) => comment.replace(/[^\n]/g, ' '));
+
+const STRIP_MINMAX = (value) => {
+  // Remove `minmax(…)` and `min(…)` groups, parenthesis-matched, so their `1fr` max is not mistaken for a bare one.
+  let out = '';
+  let depth = 0;
+  for (const char of value) {
+    if (char === '(') depth += 1;
+    if (depth === 0) out += char;
+    if (char === ')') depth = Math.max(0, depth - 1);
+  }
+  return out;
+};
+
+for (const match of cssCode.matchAll(/grid-template-columns:\s*([^;}]+);/g)) {
+  const value = match[1];
+  if (/repeat\(/.test(value)) continue; // its inner tracks are min()/minmax()-guarded and checked above
+  const naked = STRIP_MINMAX(value);
+  if (/(^|[\s,])\d*\.?\d+fr($|[\s,;])/.test(naked)) {
+    fail(
+      'apps/web/src/app/globals.css',
+      lineOf(css, match.index),
+      `"grid-template-columns: ${value.trim()}" uses a bare fr track — write minmax(0, 1fr), or the track cannot shrink below its content and the page scrolls sideways`,
+    );
+  }
+}
+
+const SHRINKING_LAYOUTS = ['.console-layout'];
+for (const selector of SHRINKING_LAYOUTS) {
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const rule = new RegExp(`(^|\\n)${escaped}\\s*\\{([^{}]*)\\}`, 'm').exec(css);
+  if (!rule) {
+    fail(
+      'apps/web/src/app/globals.css',
+      1,
+      `"${selector}" has no rule — the shrink check cannot run`,
+    );
+  } else if (!/grid-template-columns:\s*minmax\(0,/.test(rule[2])) {
+    fail(
+      'apps/web/src/app/globals.css',
+      lineOf(css, rule.index),
+      `"${selector}" is a grid with no shrinking track — an implicit auto column sizes to its widest content, which is how the console grew past a phone's screen`,
+    );
+  }
+}
+
+for (const match of cssCode.matchAll(/inline-size:\s*calc\(\s*100%\s*\+/g)) {
+  fail(
+    'apps/web/src/app/globals.css',
+    lineOf(css, match.index),
+    '`inline-size: calc(100% + …)` makes an element wider than its parent by construction — a page that scrolls sideways on a phone',
+  );
+}
+
+// `100vw` is the viewport *including* a classic scrollbar, so a box of that width is wider than the page the moment
+// one is visible. `100%` against the same containing block is the width that fits.
+for (const match of cssCode.matchAll(
+  /(inline-size|max-inline-size|min-inline-size):\s*([^;}]*100vw[^;}]*);/g,
+)) {
+  fail(
+    'apps/web/src/app/globals.css',
+    lineOf(css, match.index),
+    `"${match[1]}: ${match[2].trim()}" uses 100vw — it counts the scrollbar, so the box overflows the document`,
+  );
+}
+
+// A fixed width is fine on a desktop and is a sideways scroll on a 360px phone: anything wider than a phone must
+// say how it shrinks. `210mm` of manifest paper is the case this exists for.
+for (const match of cssCode.matchAll(/(^|\n)([^{}\n][^{}]*)\{([^{}]*)\}/g)) {
+  const [, , selector, declarations] = match;
+  if (/max-inline-size:\s*(100%|100vw)/.test(declarations)) continue;
+  const width = /inline-size:\s*(\d+)(px|mm)\s*;/.exec(declarations);
+  if (!width) continue;
+  const pixels = width[2] === 'mm' ? Number(width[1]) * (96 / 25.4) : Number(width[1]);
+  if (pixels <= 360) continue;
+  fail(
+    'apps/web/src/app/globals.css',
+    lineOf(css, match.index + match[1].length),
+    `"${selector.trim()}" is ${width[1]}${width[2]} wide with no max-inline-size — wider than a phone, so the page scrolls`,
+  );
+}
+
+for (const match of cssCode.matchAll(/(^|\n)([^{}\n][^{}]*)\{([^{}]*)\}/g)) {
+  const [, , selector, declarations] = match;
+  if (!/overflow-x:\s*(auto|scroll)/.test(declarations)) continue;
+  if (/max-inline-size:/.test(declarations)) continue;
+  fail(
+    'apps/web/src/app/globals.css',
+    lineOf(css, match.index + match[1].length),
+    `"${selector.trim()}" scrolls horizontally without max-inline-size: 100% — the scroll would land on the page instead of the row`,
+  );
+}
+
+// ---------------------------------------------------------------------------
 // 4. Anything that behaves like a button is at least --tap-target tall
 // ---------------------------------------------------------------------------
 
@@ -233,6 +347,6 @@ if (problems.length > 0) {
 const mediaCount = mediaBlocks(css).length;
 console.log(
   `✓ responsive check passed (viewport exported, ${mediaCount} media queries, ` +
-    `no hidden navigation, no unguarded grid tracks, ${TARGETS.length} tap targets, ` +
+    `no hidden navigation, no unguarded grid tracks, no track or fixed width wider than its container, ${TARGETS.length} tap targets, ` +
     `every wide table scrollable, stacked card tables labelled)`,
 );

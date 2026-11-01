@@ -169,8 +169,29 @@ backfilled from the snapshot every period invoice already carried, and a pgTAP a
 tags stripped, in Arabic and English, as `staff@maak.test`: exactly one `aria-current="page"` per page, no phase badge,
 no stuttered titles.
 
+**The horizontal scrollbar (found on a phone, same day)** — `/staff/scan` scrolled sideways on a 390px screen, and
+the cause was two lines of CSS, not a wide element:
+
+- `.console-layout` is a grid with no `grid-template-columns`. The implicit column is `auto`, whose *minimum* is the
+  content minimum — and its first child was a row of `white-space: nowrap` nav chips. The track became as wide as the
+  whole chip row, so the panel beside it was laid out at that width and ran off the screen. It is now
+  `grid-template-columns: minmax(0, 1fr)`, with `min-inline-size: 0` on the shell's grid children.
+- `.console-nav` was a horizontal scroller pushed to the screen edges with `margin-inline: -16px` — 32px wider than a
+  container that has no padding of its own — and it cut the last destination off with no hint that it scrolled. On a
+  phone the chips now **wrap**, so every destination is visible and nothing scrolls sideways.
+
+The same audit removed four more ways to make a document wider than the screen: 57 bare `<n>fr` tracks across the
+stylesheet (a bare `1fr` cannot shrink below its content), `inline-size: calc(100% + …)` on the fleet chip row, two
+`100vw` widths (which count a scrollbar the page does not have), and every horizontal scroller that did not cap itself
+with `max-inline-size: 100%`. `scripts/check-responsive.mjs` gained four rules so none of them can come back: no bare fr
+tracks, no shrinking-less layout container, no fixed width above 360px without a cap, no horizontal scroller without a
+cap, and no `100vw` in a width.
+
 **Deliberately not done here**
 
+- `[~]` **A `overflow-x: hidden` band-aid on `body`.** It hides the symptom and makes the next overflow a cut-off card
+  instead of a visible bug. The guard is the fix; if a page still scrolls sideways, it is a rule the guard does not
+  know yet, and it should be added there.
 - `[~]` **Live refresh of the dashboard figures.** They are correct at render time and the page says when that was;
   a polling island is a cache to invalidate and a decision about what "live" means for a supervisor.
 - `[~]` **Bulk verification for vehicle documents.** The trip queue has it; the vehicle queue is one decision at a time

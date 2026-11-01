@@ -52,6 +52,13 @@ on `main`; the tag is the last step, not the first.
 
 ### Fixed
 
+- **The staff console scrolled sideways on a phone.** `/staff/scan` was wider than a 390px screen because
+  `.console-layout` had no `grid-template-columns`: the implicit `auto` column sized itself to the *content minimum* of
+  a row of `nowrap` nav chips, and the panel beside it was laid out at that width. The track is now
+  `minmax(0, 1fr)`; the console nav wraps its chips on a phone instead of scrolling in a row that was pushed 32px
+  past its container; and the audit that followed removed 57 bare `<n>fr` tracks, two `100vw` widths, a
+  `calc(100% + …)` row and four uncapped horizontal scrollers across the stylesheet. `npm run check:responsive` gained
+  five rules so a page cannot be made wider than the screen again.
 - **A renewal could bill nothing at all.** `invoice_subscription_period_uq` was a unique index on
   `(subscription_id, due_on)`; because `due_on` is derived from the period start, a renewal on the day a subscription
   started produced the same key, and `app.issue_subscription_invoice` returned the invoice for the previous,
