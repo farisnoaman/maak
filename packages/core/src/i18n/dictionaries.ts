@@ -10,7 +10,6 @@ export const ar = {
     'هذه الصفحة من نسخة أقدم مما يعمل الآن على الخادم — أعِد التحميل عند انتهائك.',
   'common.reload': 'إعادة التحميل',
   'common.brandMark': 'م',
-  'common.footerStack': 'المرحلة 2 · Next.js · Expo · Supabase',
   'common.tagline': 'منصة إدارة الرحلات في اليمن',
   'common.language': 'اللغة',
   'common.arabic': 'العربية',
@@ -24,30 +23,64 @@ export const ar = {
   'common.comingSoon': 'قريبًا',
   'common.phase': 'المرحلة',
 
-  'home.heroTitle': 'سافر بثقة، وأدر رحلاتك من مكان واحد',
+  'home.eyebrow': 'حجز مقاعد بين المحافظات',
+  'home.heroTitle': 'احجز مقعدك، وتابع رحلتك محطة بمحطة',
   'home.heroSubtitle':
-    'حسابات أفراد وشركات، مركبات وسائقون موثّقون، رحلات عامة بفلاتر ذكية، حجز آمن، تتبّع مباشر، ودفع ومحاسبة شفافة.',
+    'رحلات يومية من مشغّلين ومركبات موثّقة، تعرف السعر قبل الحجز، وتتبّع الرحلة من الانطلاق حتى الوصول.',
   'home.ctaExplore': 'استكشف الرحلات',
   'home.ctaOperator': 'ابدأ كمنظّم',
   'home.verified': 'موثّق',
-  'home.sectionConsoles': 'المنصات',
-  'home.sectionFoundations': 'الأساس التقني',
-  'home.eyebrow': 'المرحلة 2 — الجغرافيا والأماكن',
-  'home.sectionIdentity': 'الهوية والتوثيق',
-  'home.statGovernorates': 'محافظة يمنية في المرجع',
-  'home.foundationSecurity': 'بوابة كتابة واحدة',
-  'home.foundationSecurityDesc':
-    'كل تعديل يمرّ عبر Edge Function تتحقق من الصلاحيات، ثم عملية SQL واحدة ذرّية. لا يوجد مسار كتابة آخر.',
-  'home.foundationLogic': 'منطق واحد لكل الجهات',
-  'home.foundationLogicDesc':
-    'التسعير والدفتر المالي والسياسات مكتوبة مرة واحدة في TypeScript، ومختبرة بـ Vitest بدون قاعدة بيانات.',
-  'home.foundationI18n': 'عربي وإنجليزي بجدارة',
-  'home.foundationI18nDesc':
-    'تخطيط RTL/LTR كامل، وكل نص موجود في اللغتين، والبناء يفشل إذا نقص أي مفتاح.',
-  // Landing-page figures. `home.statTests` mirrors `npm test`; keep it honest when the suite grows.
-  'home.statTests': 'اختبار وحدة ناجح',
-  'home.statLocales': 'لغات (RTL + LTR)',
-  'home.statWritePath': 'بوابة كتابة واحدة',
+
+  // Trust lines under the search: the three things a first-time passenger actually worries about, in their order.
+  'home.trustVerified': 'مشغّلون ومركبات موثّقة',
+  'home.trustPrice': 'السعر النهائي قبل الدفع',
+  'home.trustTrack': 'تتبّع مباشر للرحلة',
+
+  // The hero aside: real departures, not a promise.
+  'home.nextDepartures': 'أقرب الانطلاقات',
+  'home.soldOut': 'مكتملة',
+
+  'home.sectionFeatured': 'رحلات يمكنك حجزها الآن',
+  'home.sectionFeaturedBody': 'مقاعد متاحة من مشغّلين موثّقين، تتحدّث مع كل حجز.',
+  'home.allTrips': 'كل الرحلات',
+  'home.noTrips': 'لا توجد رحلات منشورة في هذه اللحظة.',
+  'home.noTripsBody': 'جرّب محافظة أخرى، أو عُد بعد قليل — الرحلات تُنشر يوميًا.',
+
+  'home.sectionDestinations': 'وجهات مطلوبة',
+  'home.sectionDestinationsBody': 'المحافظات التي تتّجه إليها الرحلات أكثر من غيرها.',
+  'home.tripsToDestination': '{count} رحلة',
+
+  'home.sectionHow': 'كيف تحجز',
+  'home.howSearchTitle': 'ابحث',
+  'home.howSearchBody':
+    'اختر من أين وإلى أين والتاريخ. النتيجة رابط يمكنك مشاركته أو فتحه على جهاز آخر.',
+  'home.howBookTitle': 'احجز وادفع',
+  'home.howBookBody':
+    'اختر مقعدك، وادفع نقدًا عند الوصول أو بأحد طرق الدفع المتاحة، ولكل دفعة إيصال.',
+  'home.howTravelTitle': 'سافر وتابع',
+  'home.howTravelBody': 'تذكرة رقمية تُمسح عند الباب، وتتبّع مباشر حتى تصل إلى محطتك.',
+
+  'home.sectionPrice': 'اعرف السعر قبل ما تحجز',
+  'home.sectionPriceBody': 'هذه نفس معادلة التسعير التي يحسبها الخادم — لا مفاجآت عند الدفع.',
+
+  'home.operatorTitle': 'عندك مركبة أو شركة نقل؟',
+  'home.operatorBody':
+    'أضف مركباتك وسائقيك، وانشر رحلاتك، واستلم حجوزاتك من لوحة واحدة — مع محاسبة وتسويات واضحة.',
+  'home.operatorCta': 'ابدأ كمنظّم',
+
+  'home.teamsTitle': 'للطواقم',
+  'home.teamsBody': 'مداخل لوحات المشغّلين والموظفين والمالية والإدارة.',
+
+  // Footer. Three link groups, and one line of rights.
+  'footer.tagline': 'حجز مقاعد بين المحافظات اليمنية',
+  'footer.travel': 'السفر',
+  'footer.platform': 'المنصة',
+  'footer.information': 'المعلومات',
+  'footer.myBookings': 'حجوزاتي',
+  'footer.forOperators': 'للمشغّلين',
+  'footer.forTeams': 'للطواقم',
+  'footer.rights': 'معك — جميع الحقوق محفوظة.',
+  'footer.madeIn': 'صُنع في اليمن',
 
   'calc.title': 'جرّب حساب السعر',
   'calc.subtitle': 'نفس الدالة التي تعمل على الخادم، تعمل الآن في متصفحك.',
@@ -60,6 +93,7 @@ export const ar = {
   'calc.note': 'هذه معاينة فقط؛ السعر النهائي يُحتسب ويُتحقق منه على الخادم.',
 
   'nav.home': 'الرئيسية',
+  'nav.primary': 'التنقل الرئيسي',
   'nav.menu': 'القائمة',
   'nav.tabConsole': 'لوحتي',
   'nav.tabbar': 'التنقل السريع',
@@ -1894,7 +1928,6 @@ export const en: Record<TranslationKey, string> = {
     'This page is from an older build than the server is running — reload when you are ready.',
   'common.reload': 'Reload',
   'common.brandMark': 'M',
-  'common.footerStack': 'Phase 2 · Next.js · Expo · Supabase',
   'common.tagline': 'Trip management for Yemen',
   'common.language': 'Language',
   'common.arabic': 'العربية',
@@ -1908,29 +1941,64 @@ export const en: Record<TranslationKey, string> = {
   'common.comingSoon': 'Coming soon',
   'common.phase': 'Phase',
 
-  'home.heroTitle': 'Travel with confidence. Run everything from one place.',
+  'home.eyebrow': 'Intercity seat booking',
+  'home.heroTitle': 'Book your seat. Follow the trip, stop by stop.',
   'home.heroSubtitle':
-    'Verified individuals and companies, vehicles and drivers, a public trip marketplace with smart filters, safe bookings, live tracking, and transparent payments and accounting.',
+    'Daily departures from verified operators and vehicles. You see the price before you book, and the trip is tracked from departure to arrival.',
   'home.ctaExplore': 'Explore trips',
   'home.ctaOperator': 'Start operating',
   'home.verified': 'Verified',
-  'home.sectionConsoles': 'Surfaces',
-  'home.sectionFoundations': 'Technical foundations',
-  'home.eyebrow': 'Phase 2 — geography and places',
-  'home.sectionIdentity': 'Identity & verification',
-  'home.statGovernorates': 'Yemeni governorates in the reference',
-  'home.foundationSecurity': 'One write path',
-  'home.foundationSecurityDesc':
-    'Every change goes through an Edge Function that checks permissions, then a single atomic SQL command. There is no other way to write.',
-  'home.foundationLogic': 'One brain, every client',
-  'home.foundationLogicDesc':
-    'Pricing, the ledger and policies are written once in TypeScript and tested with Vitest — no database required.',
-  'home.foundationI18n': 'Arabic and English, properly',
-  'home.foundationI18nDesc':
-    'Full RTL and LTR layouts, every string in both languages, and the build fails when a key is missing.',
-  'home.statTests': 'unit tests passing',
-  'home.statLocales': 'locales (RTL + LTR)',
-  'home.statWritePath': 'one write path',
+
+  'home.trustVerified': 'Verified operators and vehicles',
+  'home.trustPrice': 'The final price before you pay',
+  'home.trustTrack': 'Live trip tracking',
+
+  'home.nextDepartures': 'Next departures',
+  'home.soldOut': 'Sold out',
+
+  'home.sectionFeatured': 'Trips you can book now',
+  'home.sectionFeaturedBody':
+    'Seats available from verified operators, updated as they are booked.',
+  'home.allTrips': 'All trips',
+  'home.noTrips': 'No trips are published right now.',
+  'home.noTripsBody': 'Try another governorate, or come back shortly — trips are published daily.',
+
+  'home.sectionDestinations': 'Popular destinations',
+  'home.sectionDestinationsBody': 'The governorates trips are heading to most.',
+  'home.tripsToDestination': '{count} trips',
+
+  'home.sectionHow': 'How booking works',
+  'home.howSearchTitle': 'Search',
+  'home.howSearchBody':
+    'Choose where from, where to and when. The result is a link you can share or open elsewhere.',
+  'home.howBookTitle': 'Book and pay',
+  'home.howBookBody':
+    'Pick your seat and pay in cash on arrival or with any supported method — every payment gets a receipt.',
+  'home.howTravelTitle': 'Travel and follow',
+  'home.howTravelBody':
+    'A digital ticket scanned at the door, and live tracking until you reach your stop.',
+
+  'home.sectionPrice': 'Know the price before you book',
+  'home.sectionPriceBody':
+    'This is the exact pricing formula the server runs — no surprises at payment.',
+
+  'home.operatorTitle': 'Own a vehicle or a transport company?',
+  'home.operatorBody':
+    'Add your vehicles and drivers, publish trips and receive bookings from one console — with clear finance and settlements.',
+  'home.operatorCta': 'Start operating',
+
+  'home.teamsTitle': 'For teams',
+  'home.teamsBody': 'Entry to the operator, staff, finance and admin consoles.',
+
+  'footer.tagline': 'Seat booking between Yemeni governorates',
+  'footer.travel': 'Travel',
+  'footer.platform': 'Platform',
+  'footer.information': 'Information',
+  'footer.myBookings': 'My bookings',
+  'footer.forOperators': 'For operators',
+  'footer.forTeams': 'For teams',
+  'footer.rights': 'Maak — all rights reserved.',
+  'footer.madeIn': 'Made in Yemen',
 
   'calc.title': 'Try the fare calculation',
   'calc.subtitle':
@@ -1944,6 +2012,7 @@ export const en: Record<TranslationKey, string> = {
   'calc.note': 'Preview only — the final price is recomputed and verified on the server.',
 
   'nav.home': 'Home',
+  'nav.primary': 'Main navigation',
   'nav.menu': 'Menu',
   'nav.tabConsole': 'Console',
   'nav.tabbar': 'Quick navigation',

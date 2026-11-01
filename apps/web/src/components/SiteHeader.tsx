@@ -24,18 +24,21 @@ export function SiteHeader({
   const t = (key: TranslationKey) => translate(locale, key);
   const withQuery = (path: string) => `/${locale}${path}${search ? `?${search}` : ''}`;
 
+  /**
+   * Four links, and the language switch.
+   *
+   * It used to be eight: the vehicles console and the component styleguide were in here, next to the two legal
+   * documents. A primary navigation is a list of places a *visitor* goes — a developer tool and one screen of an
+   * operator's console are not, and neither is a privacy policy, which belongs in the footer where people look for
+   * it. Nothing was deleted: `SiteFooter` links all of them, on every public page.
+   */
   const links: { key: TranslationKey; href: string }[] = [
     { key: 'nav.home', href: `/${locale}` },
     // The marketplace is the product's front door for a visitor with no account; it must be reachable
     // from every page, not only by typing the URL.
     { key: 'nav.trips', href: withQuery('/trips') },
-    { key: 'console.navVehicles', href: withQuery('/operator/vehicles') },
-    { key: 'nav.styleguide', href: withQuery('/styleguide') },
-    // The two documents a store listing and an app review both ask for, reachable without an account.
-    { key: 'nav.privacy', href: withQuery('/privacy') },
-    { key: 'nav.terms', href: withQuery('/terms') },
-    { key: 'nav.signIn', href: withQuery('/auth/sign-in') },
     { key: 'nav.account', href: withQuery('/account') },
+    { key: 'nav.signIn', href: withQuery('/auth/sign-in') },
   ];
 
   return (
@@ -53,7 +56,7 @@ export function SiteHeader({
 
         <span className="header__spacer" />
 
-        <nav className="site-nav" aria-label={t('home.sectionConsoles')}>
+        <nav className="site-nav" aria-label={t('nav.primary')}>
           {/*
             `suppressHydrationWarning` because `open` belongs to whoever opened the menu: the browser restores
             it on reload and on back/forward navigation, before hydration runs, so the DOM legitimately differs
