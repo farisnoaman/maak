@@ -15,6 +15,10 @@ Bilingual by design: **Arabic (RTL) and English (LTR) are both first-class**, no
 | [`specs.md`](./specs.md) | Product & technical specification: roles, domain model, permissions, business rules, payments/finance/subscriptions, architecture, security, NFRs, risks |
 | [`IMPLEMENTATION_PLAN.md`](./IMPLEMENTATION_PLAN.md) | 13 phases with deliverables, tasks, acceptance criteria, dependencies and progress tracker |
 | [`docs/dev-database.md`](./docs/dev-database.md) | Running against a real PostgreSQL + RLS locally, demo accounts, what the dev stack does and does not emulate |
+| [`docs/runbook.md`](./docs/runbook.md) | On-call: the six platform alerts and how to clear them, the scheduler, the restore drill, symptom → first command |
+| [`docs/security-review.md`](./docs/security-review.md) | The RLS matrix, the definer-function review, what the build enforces on every run, what is still open |
+| [`docs/phase-11-report.md`](./docs/phase-11-report.md) | Notifications, preferences and search alerts — including the honest list of what is not done |
+| [`docs/phase-12-report.md`](./docs/phase-12-report.md) | Hardening: platform alerts, the security gate, the scheduler, what launch still needs |
 
 ## Architecture in one line
 
@@ -37,8 +41,10 @@ npm test                    # 214 unit tests, ~2s, no database required
 npm run lint                # ESLint + 5 custom architecture rules
 npm run check:guards        # boundaries, RTL, secrets, migration naming
 npm run test:coverage       # coverage thresholds (98% statements, 99% functions)
-npm run sql:check           # embedded PostgreSQL: migrations + pgTAP + type drift (no Docker)
+npm run sql:check           # embedded PostgreSQL: migrations + pgTAP + type drift + security posture (no Docker)
 npm run build:functions     # bundle edge functions for deploy
+npm run notify:check        # is the notification worker configured? (token, providers, job list)
+npm run notify              # one pass: drain the delivery queue, then run every scheduled job
 
 # Run the app against a real database (no Docker, no Supabase CLI):
 npm run dev:setup           # writes apps/web/.env.local (once)
@@ -56,20 +62,31 @@ supabase test db            # the same pgTAP suites on the real stack (auth, sto
 
 ## Status
 
-**Phase 2 complete** — geography, places and supervisor scoping, on top of identity and the
-verification queue. Shared domain, **268 passing tests**, hardened database migrations (11),
-edge gateway (auth, validation, rate limits, single-write guard, audit), ESLint + Prettier with five
-custom architecture rules, UI primitives, auth shell and error boundaries.
+**Phases 0–11 complete; Phase 12 (hardening and launch) in progress.** 35 migrations, 130 commands, 11 edge
+functions, **649 unit tests**, **893 pgTAP assertions across 17 suites**, 107 a11y routes, and a bilingual web
+app plus the Expo client.
 
-- [`docs/phase-2-report.md`](./docs/phase-2-report.md) — 22 governorates, regions, places, scope, what was proven
-- [`docs/phase-1-report.md`](./docs/phase-1-report.md) — accounts, verification, what was proven
-- [`docs/phase-0-audit.md`](./docs/phase-0-audit.md) — every Phase 0 task and acceptance criterion, verified
-- [`docs/phase-0-report.md`](./docs/phase-0-report.md) — narrative walkthrough and decisions
+| Gate | What it proves |
+|---|---|
+| `npm test` / `npm run test:coverage` | 649 tests, coverage 95.8 / 87.1 / 96.5 / 96.7 |
+| `npm run sql:check` | migrations apply to a real PostgreSQL, every pgTAP suite passes, types do not drift, RLS + definer posture holds |
+| `npm run check:a11y` | 107 routes in both directions: one `<h1>`, landmarks, skip link, labelled controls, no physical margins |
+| `npm run check:guards` | boundaries, one write path, no secrets, dictionary keys present in both locales |
+| `npm run notify` | the delivery queue and all ten scheduled jobs, idempotent by dedupe key |
+
+- [`docs/phase-12-report.md`](./docs/phase-12-report.md) — **where the project stands today**: platform alerts, the security gate, the scheduler, what launch still needs
+- [`docs/runbook.md`](./docs/runbook.md) — what to do when something is wrong
+- [`docs/phase-11-report.md`](./docs/phase-11-report.md) — notifications, preferences, search alerts
+- [`docs/phase-10-report.md`](./docs/phase-10-report.md) — the ledger, invoices, plans and subscriptions
 - [`docs/adr/0001-backend-architecture.md`](./docs/adr/0001-backend-architecture.md) — why the write path looks like this
 
 | Phase | Status |
 |---|---|
 | 0 Foundations & bilingual shell | ✅ complete (audited) |
 | 1 Identity & Trust | ✅ complete |
-| 2 Geography & Places | ✅ complete (starter district/place data — see the report) |
-| 3–12 | see [`IMPLEMENTATION_PLAN.md`](./IMPLEMENTATION_PLAN.md) |
+| 2 Geography & Places | ✅ complete |
+| 3–8 Vehicles, drivers, trips, bookings, tracking, operations | ✅ complete |
+| 9 Payments, agents and the money flow | ✅ complete |
+| 10 Finance, ledger, invoices, plans and subscriptions | ✅ complete |
+| 11 Notifications, preferences and search alerts | ✅ complete |
+| 12 Hardening, security and launch | 🚧 in progress — see the report for what is verified and what is open |

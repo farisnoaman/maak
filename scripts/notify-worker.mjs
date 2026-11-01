@@ -30,6 +30,15 @@ const root = resolve(here, '..');
 
 const args = new Set(process.argv.slice(2));
 const once = args.has('--once') || args.has('--check');
+/**
+ * Exit non-zero when a pass had a failure or a job errored.
+ *
+ * The loop's default is to keep going — a provider hiccup is not a reason to stop delivering — but a *scheduled*
+ * run has to be able to fail, because that is the only notification channel a cron job has: GitHub (or systemd,
+ * or whatever runs it) mails the owner when the job exits non-zero. Without this flag a dead worker and a quiet
+ * night look identical in the scheduler's history.
+ */
+const failOnError = args.has('--fail-on-error');
 const dryRun = args.has('--dry-run') || args.has('--check');
 
 const API_URL = (process.env.MAAK_API_URL ?? 'http://127.0.0.1:54321/functions/v1').replace(
@@ -269,6 +278,19 @@ async function main() {
     const drained = await drain(core);
     const jobs = await runJobs(core);
     console.log(JSON.stringify({ at: new Date().toISOString(), drained, jobs }));
+
+    if (failOnError) {
+      const errored = Object.entries(jobs).filter(([, value]) => value && value.error);
+      const broke = drained.failed > 0 || errored.length > 0;
+      if (broke && once) {
+        console.error(
+          `✗ pass had ${drained.failed} failed delivery(ies) and ${errored.length} job error(s): ` +
+            `${errored.map(([name]) => name).join(', ') || '—'}`,
+        );
+        process.exitCode = 1;
+      }
+    }
+
     if (once) break;
     await new Promise((resolve) => setTimeout(resolve, INTERVAL_MS));
   }

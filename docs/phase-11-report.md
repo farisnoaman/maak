@@ -5,7 +5,7 @@
 was actually run, and what is still open — §6 is the honest list.
 
 Phase 6 shipped a `notifications` table and a bell that nobody rang: `app.notify()` inserted a row and stopped
-there. This phase turns that row into a **delivery**: a catalogue of 34 events with a default channel set per
+there. This phase turns that row into a **delivery**: a catalogue of 35 events with a default channel set per
 event, a per-person override matrix, quiet hours in Aden time, device tokens, four channels with a real retry
 ladder, saved searches that alert once per new matching trip (or once a day in digest mode), and eight scheduled
 jobs. The design rule is that **a notification is a fact plus its deliveries** — the in-app record is written
@@ -20,7 +20,7 @@ explain is a bug report you cannot close.
 
 | Object | Purpose |
 | --- | --- |
-| `notification_events` | The catalogue: one row per `notification_kind` (34 after this phase), with the default channel set, default title key and priority. Settings screens and `app.enqueue_notification` read the same row, so a new kind cannot be deliverable but unconfigurable. |
+| `notification_events` | The catalogue: one row per `notification_kind` (35 by the end of Phase 11/12), with the default channel set, default title key and priority. Settings screens and `app.enqueue_notification` read the same row, so a new kind cannot be deliverable but unconfigurable. |
 | `notification_settings` | Per-person quiet hours (enabled, start, end) and the zone they are expressed in. Absent row = the documented default (22:00–06:00), not "no preferences". |
 | `notification_preferences` | The override matrix `(user, kind, channel) → enabled`. A row exists only when somebody disagreed with the default, which is why the settings screen can label rows "customised". |
 | `device_tokens` | Expo push tokens, with `revoked_at` rather than a delete — the audit trail of "why did push stop" is the row. |
@@ -58,7 +58,7 @@ New enums: `notification_channel` (`in_app`, `push`, `email`, `whatsapp`), `noti
 | `notifications.device.register` / `device.revoke` | `cmd_register_device_token` / `cmd_revoke_device_token` | Token + platform; revoking is a flag. |
 | `notifications.health` | `cmd_get_notification_health` | Finance and platform staff: counts per channel and status for seven days, plus the dead letters. |
 | `notifications.dispatch` / `delivery.record` | `cmd_claim_notifications` / `cmd_record_notification_delivery` | Staff/service only, 720/h. |
-| `notifications.job.run` | `cmd_match_saved_searches`, `cmd_digest_saved_searches`, `cmd_send_trip_reminders`, `cmd_notify_no_shows`, `cmd_notify_quota_thresholds`, `cmd_notify_subscription_expiring`, `cmd_notify_pending_verifications`, `cmd_retry_notifications` | Eight jobs, each returning a one-line summary. `trip-reminders` takes the three bands (tomorrow / two hours / departure). |
+| `notifications.job.run` | `cmd_match_saved_searches`, `cmd_digest_saved_searches`, `cmd_send_trip_reminders`, `cmd_notify_no_shows`, `cmd_notify_quota_thresholds`, `cmd_notify_subscription_expiring`, `cmd_notify_pending_verifications`, `cmd_run_maintenance_scan`, `cmd_retry_notifications` (+ `cmd_run_ops_alerts` from Phase 12) | Ten jobs, each returning a one-line summary. `trip-reminders` takes the three bands (tomorrow / two hours / departure). |
 | `search.save` / `list` / `update` / `delete` | `cmd_save_search`, `cmd_list_saved_searches`, `cmd_update_saved_search`, `cmd_delete_saved_search` | Filters are validated, labelled, fingerprinted; `update` carries the digest switch. |
 | `notifications.catalogue` | `cmd_get_notification_catalogue` | Staff: every event with its channels, priority and the AR/EN sentence rendered from the same function the sender uses. Behind the admin preview screen. |
 
@@ -179,10 +179,10 @@ New enums: `notification_channel` (`in_app`, `push`, `email`, `whatsapp`), `noti
 
 | Gate | Result |
 | --- | --- |
-| `npm run sql:check` | 32 migrations applied · **16 pgTAP suites, 868 assertions** (94 new in `0016_notifications.test.sql`) · `database.types.ts` in sync · write lockdown intact |
-| `npm test` | **648 tests**, 26 files (105 in `packages/core/tests/notifications-api.test.ts`, 21 in `deep-link.test.ts`) |
+| `npm run sql:check` | 35 migrations applied · **17 pgTAP suites, 893 assertions** (`0016_notifications.test.sql` 94, `0017_ops_alerts.test.sql` 25) · `database.types.ts` in sync · write lockdown intact · **security posture green** |
+| `npm test` | **649 tests**, 26 files (106 in `packages/core/tests/notifications-api.test.ts`, 21 in `deep-link.test.ts`) |
 | `npm run test:coverage` | thresholds met: 95.76% statements / 87.08% branches / 96.46% functions / 96.72% lines |
-| `npm run check:guards` | **31** core files · 176 style files · 32 migrations · 128 commands · notification keys present · gateway and edge capability maps identical |
+| `npm run check:guards` | 31 core files · 176 style files · **35 migrations** · **130 commands** · notification keys present · gateway and edge capability maps identical |
 | `npm run check:responsive` | 55 media queries, no hidden navigation, no unguarded grid tracks, 7 tap targets, every wide table scrollable, stacked card tables labelled |
 | `npm run check:a11y` | **107 routes** in both directions, including the four account screens and `/admin/notifications` |
 | `npm run lint` · `format:check` · `typecheck` | clean (web, core, mobile) |
@@ -210,7 +210,8 @@ End-to-end against the running dev backend (fresh `dev:api:reset`, then the real
    re-saving the same filters returns the same row, not a second one.
 3. `notifications.list` shows the seeded notification with `channels: {in_app: sent, push: pending, email: pending}`
    — the in-app record exists before any transport has run, which is the point.
-4. `npm run notify` drains the queue and runs all eight jobs in one pass:
+4. `npm run notify` drains the queue and runs all ten jobs in one pass (maintenance included, and it sent 2 on
+   a fresh database — the first time that sweep has ever run):
    `{claimed: 4, sent: 0, skipped: 4}` (no Expo or Resend key, so each transport records `skipped` with its
    reason rather than failing the run) and
    `{saved-searches: …, search-digest: …, trip-reminders: {bands: [tomorrow, soon, departure]}, no-shows: …,
@@ -227,6 +228,36 @@ End-to-end against the running dev backend (fresh `dev:api:reset`, then the real
    `/en/account/notifications` renders "Notification centre".
 9. `/ar/trips` has **no** save-search control (there is no predicate to save) and `/ar/trips?priceMax=5000` has
    exactly one — a control that offers to save `{}` would be a button that alerts on everything.
+
+---
+
+## 4a. Closing the phase: what the audit found
+
+A task-by-task audit against `IMPLEMENTATION_PLAN.md` §Phase 11 — *before* moving to Phase 12 — found two
+deliverables that were written and never wired, and one that was wired to the wrong thing. All three are fixed
+here rather than listed as open, because each is small and each matters:
+
+1. **The maintenance sweep had no caller.** `app.job_maintenance_scan()` (Phase 8) is a careful function — it
+   notifies on the *transition* into due/overdue, so an overdue van produces one message, not twenty-one — and
+   nothing in the platform called it: no `cmd_*`, no API action, no worker job. The fleet screen showed a red
+   badge and the owner was never told. `00033_maintenance_job.sql` wraps it as `cmd_run_maintenance_scan(uuid,
+   integer)` with the same shape as every other job (staff-only, audited, `service_role`-only), the API maps it to
+   the `maintenance` job, and the worker runs it. On the seeded dev database it sends **2** on its first run —
+   the first time that code has ever fired.
+2. **There was no scheduler.** The plan's word is "cron"; what existed was a script and a paragraph saying a
+   scheduler would come later. `docs/ci/notify.yml` is that scheduler (a five-minute GitHub Actions workflow, to
+   be activated with `npm run ci:install`, which now copies both workflows), and `scripts/notify-worker.mjs`
+   gained `--fail-on-error` so a run with a failed delivery or a throwing job exits non-zero — the only alerting
+   channel a cron job has is its own failure. `docs/runbook.md` §2 covers cadence, and what breaks when it stops.
+3. **The job list was hand-kept.** `runJobs()` listed six names while the API accepted eight; `search-digest` and
+   `no-shows` would never have run under any cron. The worker now iterates `NOTIFICATION_JOB_FN`, which is typed
+   `satisfies Record<NotificationJob, string>` — a job added to the API but not here is a compile error — and a
+   unit test asserts the map covers exactly the schema's options.
+
+The audit also re-ran every gate and one end-to-end pass (§4), and produced the numbers below. Nothing else in
+the phase's task list was missing: the tables, the writer, the channels, the preferences matrix, quiet hours with
+a critical override, saved searches with digest and filter-preserving deep links, the notification centre on both
+clients, and the four required tests all exist and are exercised.
 
 ---
 
@@ -274,8 +305,10 @@ retry → saved searches → digest → jobs → catalogue → RLS.
 
 ## 6. What is still open
 
-1. **No scheduler.** `scripts/notify-worker.mjs` must be driven (cron, Edge schedule, or a container). Phase 12
-   owns the schedule **and** the alert when it stops running — a job nobody watches is a silent failure mode.
+1. **The scheduler is a workflow, and it is not switched on.** `docs/ci/notify.yml` runs the worker every five
+   minutes and fails loudly; it needs `npm run ci:install` on a machine with the `workflows` permission, plus
+   `MAAK_API_URL` / `MAAK_WORKER_TOKEN` as repository secrets. Until then the only scheduler is a human running
+   `npm run notify`. `docs/runbook.md` §2 documents both.
 2. **Email and push credentials are not provisioned.** `RESEND_API_KEY`, `EXPO_ACCESS_TOKEN` and `MAAK_MAIL_FROM`
    are read from the environment; with none set the worker records `skipped` with a reason, which is visible in
    the health view. No domain, DKIM or sender verification exists yet.

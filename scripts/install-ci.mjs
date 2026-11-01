@@ -14,10 +14,16 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const source = join(root, 'docs', 'ci', 'ci.yml');
-const target = join(root, '.github', 'workflows', 'ci.yml');
+const workflows = ['ci.yml', 'notify.yml'];
 
-await mkdir(dirname(target), { recursive: true });
-await copyFile(source, target);
-console.log(`✓ ${target.replace(`${root}/`, '')}`);
-console.log('  next: git add .github/workflows/ci.yml && git commit -m "ci: activate workflow"');
+await mkdir(join(root, '.github', 'workflows'), { recursive: true });
+for (const file of workflows) {
+  const target = join(root, '.github', 'workflows', file);
+  await copyFile(join(root, 'docs', 'ci', file), target);
+  console.log(`✓ ${target.replace(`${root}/`, '')}`);
+}
+
+console.log('  next: git add .github/workflows && git commit -m "ci: activate workflows"');
+console.log(
+  '  then: set MAAK_API_URL and MAAK_WORKER_TOKEN as repository secrets for the notify workflow,',
+);

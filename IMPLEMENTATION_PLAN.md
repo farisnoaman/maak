@@ -695,7 +695,7 @@ reminder dedupe, and the trip gate's `MAINTENANCE_OVERDUE` refusal.
 
 **Status: complete (2026-11-01).** Evidence: [`docs/phase-11-report.md`](./docs/phase-11-report.md).
 32 migrations · 128 commands · 11 edge functions · 16 pgTAP suites (868 assertions) · 623 unit tests ·
-107 a11y routes · 34 notification events · 8 scheduled jobs.
+107 a11y routes · 35 notification events · 9 scheduled jobs.
 
 ### Deliverables
 - Full event matrix (specs §6.10) — including payment, refund, payout, invoice, subscription, quota events.
@@ -718,8 +718,10 @@ reminder dedupe, and the trip gate's `MAINTENANCE_OVERDUE` refusal.
       1/5/15/60-minute backoff, and a ten-minute stuck sweep so a crashed worker cannot hold a row.
 - [x] Cron: `match_saved_searches`, `digest_saved_searches`, `send_trip_reminders` (tomorrow / two hours /
       departure), `notify_no_shows`, `notify_pending_verifications`, `notify_quota_thresholds`,
-      `notify_subscription_expiring` (7/3/1 days) and `retry` — eight jobs, all callable through
-      `notifications.job.run`, each idempotent by dedupe key and each reporting only what it actually created.
+      `notify_subscription_expiring` (7/3/1 days), `run_maintenance_scan` and `retry` — nine jobs, all callable
+      through `notifications.job.run`, each idempotent by dedupe key and each reporting only what it created.
+      Scheduled by `docs/ci/notify.yml` (five-minute workflow, `--fail-on-error`, activated with `npm run
+      ci:install`), because a job nobody runs is a rumour.
 - [x] Template registry (per event, AR/EN, zod-validated variables) + preview screen for admins.
       Registry: `notification_kind` enum + `notification_events` + `notifications.*` keys + `notificationText()`
       in core (typed variables, AR/EN parity asserted). Preview: `/admin/notifications` renders all 34 events

@@ -1056,8 +1056,8 @@ select ok(
 select is(
   (select jsonb_array_length(public.cmd_get_notification_catalogue(
             '10700003-0000-4000-8000-000000000003') -> 'items')),
-  34,
-  'the catalogue lists all 34 events, including the three this pass adds'
+  35,
+  'the catalogue lists every event: 31 from the first pass, the three §6.10 additions, and the ops alert 00034 adds'
 );
 
 select throws_ok(

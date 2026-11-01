@@ -67,6 +67,9 @@ export const notificationKindSchema = z.enum([
   'subscription_plan_changed',
   'agent_cash_in_settled',
   'no_show_alert',
+  // Phase 12: one kind for the platform's own health, so an alert about a stuck trip is delivered, deduped and
+  // auditable by the same machinery a passenger's message is.
+  'ops_alert',
 ]);
 
 export type NotificationKind = z.infer<typeof notificationKindSchema>;
@@ -228,6 +231,8 @@ export const notificationJobSchema = z.object({
     'quota',
     'expiring',
     'verification-sla',
+    'maintenance',
+    'ops-alerts',
     'retry',
   ]),
   limit: z.number().int().min(1).max(1000).default(200),
@@ -433,6 +438,12 @@ function jobArgs(
         fn: 'cmd_notify_pending_verifications',
         args: { p_actor: actorId, p_sla: '48 hours' },
       };
+    case 'maintenance':
+      // Phase 8 wrote the sweep; nothing called it until now. The dedupe rule (notify on the *transition*
+      // into due/overdue) lives in `app.job_maintenance_scan`, so a daily run cannot nag.
+      return { fn: 'cmd_run_maintenance_scan', args: { p_actor: actorId, p_limit: input.limit } };
+    case 'ops-alerts':
+      return { fn: 'cmd_run_ops_alerts', args: { p_actor: actorId, p_now: null } };
     case 'retry':
       return { fn: 'cmd_retry_notifications', args: { p_actor: actorId, p_max_age: '7 days' } };
   }
@@ -656,6 +667,7 @@ export const SAMPLE_PARAMS: Record<NotificationKind, Readonly<Record<string, str
   verification_sla: { subjectType: 'organization', ageHours: 52 },
   subscription_plan_changed: { from: 'pro', to: 'business', effective: '2026-11-01' },
   agent_cash_in_settled: { amount: '120,000', balance: '35,000' },
+  ops_alert: { count: 2, check: 'stale_trips' },
   no_show_alert: { tripCode: 'AD-SA-2988', count: 3, minutes: 45 },
 };
 
@@ -898,5 +910,7 @@ export const NOTIFICATION_JOB_FN = {
   quota: 'cmd_notify_quota_thresholds',
   expiring: 'cmd_notify_subscription_expiring',
   'verification-sla': 'cmd_notify_pending_verifications',
+  maintenance: 'cmd_run_maintenance_scan',
+  'ops-alerts': 'cmd_run_ops_alerts',
   retry: 'cmd_retry_notifications',
 } as const satisfies Record<NotificationJob, string>;

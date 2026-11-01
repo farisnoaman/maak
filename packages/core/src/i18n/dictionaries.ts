@@ -384,6 +384,19 @@ export const ar = {
     'سُوّي توريدك النقدي بمبلغ {amount} ر.ي، ورصيدك الآن {balance} ر.ي.',
   'notifications.noShowAlert':
     'الرحلة {tripCode}: {count} من الحجوزات ما زالت «مقبول» بعد {minutes} دقيقة من الإقلاع. حدّد من حضر ومن لم يحضر.',
+  // Phase 12's platform sweep. One kind (`ops_alert`), one sentence per check: "something is wrong" in the
+  // abstract is a message nobody can act on, so each check says what it counted and where to look.
+  'notifications.opsStaleTrips':
+    'رحلات ما زالت «جارية» بعد 18 ساعة من الإقلاع: {count}. أغلقها أو صحّح حالتها.',
+  'notifications.opsDeadDeliveries':
+    'تنبيهات استنفدت كل محاولات الإرسال خلال آخر 7 أيام: {count}. راجع صحة التسليم.',
+  'notifications.opsUnbalancedJournals':
+    'قيود محاسبية غير متوازنة: {count}. أوقف المدفوعات حتى تُراجع.',
+  'notifications.opsVerificationBacklog':
+    'طلبات توثيق تنتظر أكثر من 48 ساعة: {count}. الطابور لا يتحرّك.',
+  'notifications.opsPaymentSla':
+    'إيصالات دفع تنتظر القرار أكثر من 6 ساعات: {count}. الراكب دفع ولم يسمع جوابًا.',
+  'notifications.opsErrorRate': 'أوامر مرفوضة أو فاشلة خلال الساعة الأخيرة: {count}.',
   'notifications.tripReminderTomorrow':
     'رحلتك {tripCode} غدًا: {origin} ← {destination}، الإقلاع {departureAt}.',
   'notifications.tripReminderSoon':
@@ -530,6 +543,7 @@ export const ar = {
   'notifications.event.subscription_plan_changed': 'تغيّر الخطة',
   'notifications.event.agent_cash_in_settled': 'تسوية توريد الوكيل',
   'notifications.event.no_show_alert': 'حجوزات لم تُحسم بعد الإقلاع',
+  'notifications.event.ops_alert': 'تنبيه تشغيلي',
 
   // Phase 9 — payments. Amounts always carry their currency in the sentence, because a bare number in a
   // money screen is a number somebody will misread.
@@ -2230,6 +2244,17 @@ export const en: Record<TranslationKey, string> = {
     'Your cash-in of {amount} YER was settled; your balance is now {balance} YER.',
   'notifications.noShowAlert':
     'Trip {tripCode}: {count} of the bookings are still "accepted" {minutes} minutes after departure. Mark who boarded and who did not.',
+  'notifications.opsStaleTrips':
+    'Trips still marked in progress 18 hours after departure: {count}. Close them or fix the state.',
+  'notifications.opsDeadDeliveries':
+    'Notifications that exhausted every delivery attempt in the last 7 days: {count}. Check delivery health.',
+  'notifications.opsUnbalancedJournals':
+    'Ledger journals that do not balance: {count}. Hold payouts until they are reviewed.',
+  'notifications.opsVerificationBacklog':
+    'Verification requests waiting more than 48 hours: {count}. The queue is not moving.',
+  'notifications.opsPaymentSla':
+    'Payment receipts waiting for a decision for more than 6 hours: {count}. The passenger paid and heard nothing.',
+  'notifications.opsErrorRate': 'Commands denied or failed in the last hour: {count}.',
   'notifications.tripReminderTomorrow':
     'Your trip {tripCode} is tomorrow: {origin} to {destination}, departing {departureAt}.',
   'notifications.tripReminderSoon':
@@ -2375,6 +2400,7 @@ export const en: Record<TranslationKey, string> = {
   'notifications.event.subscription_plan_changed': 'Plan changed',
   'notifications.event.agent_cash_in_settled': 'Agent cash-in settled',
   'notifications.event.no_show_alert': 'Bookings unresolved after departure',
+  'notifications.event.ops_alert': 'Platform alert',
 
   // Phase 9 — payments. Amounts always carry their currency in the sentence, because a bare number in a
   // money screen is a number somebody will misread.
