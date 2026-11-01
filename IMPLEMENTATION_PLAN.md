@@ -430,8 +430,12 @@ not build the acceptance-criterion region and reference data that could never be
       waits for the booking-state slice that gives `accepted` a `boarded` successor.)
 - [x] Realtime: the private `trip:<id>` publication is added when the deployment has it (00023), and the live
       screen polls every 30 s — the transport that exists in *both* environments is the one that ships.
-- [~] Mobile: the web driver console covers start / position / stop / end. `expo-task-manager` background
-      location, the offline queue and the iOS/Android permission UX are not built.
+- [~] Mobile: **start / share position / stop reached / end now run on the phone** —
+      `apps/mobile/src/app/driver/trips/[code].tsx` calls the same four commands as the web console, with
+      `expo-location` (foreground, on a tap) and `driver/trips/index.tsx` for the day's trips. Still not built:
+      `expo-task-manager` background cadence, the offline queue, and the permission UX around them —
+      `docs/apps.md` §"What is deliberately not built" says why, and the always-location permission was removed
+      from `app.json` rather than left unused.
 - [x] Web passenger live page `/trips/[code]/live`, stale states, route strip.
 - [x] pgTAP: 30 assertions in `0009_trip_execution.test.sql` (start, ODO, stops, end) and 39 in
       `0010_trip_tracking.test.sql` (pings, out-of-order timestamps, progress, staleness, visibility, grants).

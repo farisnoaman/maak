@@ -66,6 +66,16 @@ supabase test db            # the same pgTAP suites on the real stack (auth, sto
 > `npm run dev:api` is the way around that — a real PostgreSQL cluster, the real migrations and real
 > RLS, sign in with `admin@maak.test` / `Maak!2026`. Details: [`docs/dev-database.md`](./docs/dev-database.md).
 
+## Where the apps are
+
+- **Mobile — `apps/mobile`** (Expo SDK 52 / RN 0.76.5): one app, two roles. The driver gets *My trips today*,
+  start / share position / stop reached / end, licence upload and fuel logging; the passenger gets search, booking,
+  payment with a receipt, bookings, notifications and preferences; staff get ticket scanning.
+- **Web — `apps/web`** (Next.js 16): the full console per role — passenger, driver, operator, staff, finance, admin.
+
+`docs/apps.md` maps every screen to its file and its commands, and lists what is deliberately not built (background
+location, the offline queue). Start with it when you cannot find a screen.
+
 ## Status
 
 **Phases 0–11 complete; Phase 12 (hardening and launch) in progress.** 44 migrations, 135 commands, 11 edge
