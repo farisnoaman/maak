@@ -237,3 +237,12 @@ retry → saved searches → jobs → RLS.
    renders the first page only.
 8. **Nothing is deleted.** Delivery rows and attempts grow without a retention policy; a monthly archive table is
    Phase 12 work (and needs a decision on how long a support case must be answerable).
+9. **Four of the plan's reminder jobs collapsed into one.** "Trip in 2 h", "departure" and "tomorrow" are the same
+   job with a different lead time — `cmd_send_trip_reminders(hours)` takes it as a parameter. The **no-show
+   window** is not shipped: defining no-show needs the attendance scan from Phase 9 to mark a booking, and a
+   reminder about a passenger who was never marked absent would be a false alarm. Maintenance reminders already
+   exist in Phase 8's vehicle job and were not duplicated here.
+10. **No ICU plurals.** Strings are phrased so they do not inflect — «{count} غير مقروء», and seats are spelled
+    out in the event text. A sentence that must agree with 1 / 2 / 3–10 in Arabic needs a `plural()` helper in
+    `@maak/core`, and `<bdi>` isolation for mixed AR/Latin runs (trip codes inside Arabic sentences) is not
+    applied yet either; both are i18n work that belongs with the Phase 12 content pass.
