@@ -17,6 +17,7 @@ Bilingual by design: **Arabic (RTL) and English (LTR) are both first-class**, no
 | [`docs/dev-database.md`](./docs/dev-database.md) | Running against a real PostgreSQL + RLS locally, demo accounts, what the dev stack does and does not emulate |
 | [`docs/runbook.md`](./docs/runbook.md) | On-call: the six platform alerts and how to clear them, the scheduler, the restore drill, symptom → first command |
 | [`docs/security-review.md`](./docs/security-review.md) | The RLS matrix, the definer-function review, what the build enforces on every run, what is still open |
+| [`docs/perf/README.md`](./docs/perf/README.md) | Performance: the three harnesses, the p95 targets, what 50,000 trips actually costs, and the capacity limit that remains |
 | [`docs/phase-11-report.md`](./docs/phase-11-report.md) | Notifications, preferences and search alerts — including the honest list of what is not done |
 | [`docs/phase-12-report.md`](./docs/phase-12-report.md) | Hardening: platform alerts, the security gate, the scheduler, what launch still needs |
 
@@ -37,7 +38,7 @@ supabase/     Migrations, RLS, RPCs, cron, seed geography/plans, pgTAP tests
 
 ```bash
 npm install                 # web, mobile and core workspaces
-npm test                    # 214 unit tests, ~2s, no database required
+npm test                    # 649 unit tests, ~2s, no database required
 npm run lint                # ESLint + 5 custom architecture rules
 npm run check:guards        # boundaries, RTL, secrets, migration naming
 npm run test:coverage       # coverage thresholds (98% statements, 99% functions)
@@ -45,6 +46,8 @@ npm run sql:check           # embedded PostgreSQL: migrations + pgTAP + type dri
 npm run build:functions     # bundle edge functions for deploy
 npm run notify:check        # is the notification worker configured? (token, providers, job list)
 npm run notify              # one pass: drain the delivery queue, then run every scheduled job
+npm run perf:seed -- --trips 50000   # clone a published trip 50,000 times (8 s); --reset undoes it
+npm run perf:smoke          # p95 for search, a write and the finance dashboard
 
 # Run the app against a real database (no Docker, no Supabase CLI):
 npm run dev:setup           # writes apps/web/.env.local (once)
@@ -62,8 +65,8 @@ supabase test db            # the same pgTAP suites on the real stack (auth, sto
 
 ## Status
 
-**Phases 0–11 complete; Phase 12 (hardening and launch) in progress.** 35 migrations, 130 commands, 11 edge
-functions, **649 unit tests**, **893 pgTAP assertions across 17 suites**, 107 a11y routes, and a bilingual web
+**Phases 0–11 complete; Phase 12 (hardening and launch) in progress.** 36 migrations, 130 commands, 11 edge
+functions, **649 unit tests**, **899 pgTAP assertions across 17 suites**, 107 a11y routes, and a bilingual web
 app plus the Expo client.
 
 | Gate | What it proves |
@@ -73,6 +76,7 @@ app plus the Expo client.
 | `npm run check:a11y` | 107 routes in both directions: one `<h1>`, landmarks, skip link, labelled controls, no physical margins |
 | `npm run check:guards` | boundaries, one write path, no secrets, dictionary keys present in both locales |
 | `npm run notify` | the delivery queue and all ten scheduled jobs, idempotent by dedupe key |
+| `npm run perf:smoke` | search, a write and the finance dashboard against the running dev stack — p95 against the launch targets |
 
 - [`docs/phase-12-report.md`](./docs/phase-12-report.md) — **where the project stands today**: platform alerts, the security gate, the scheduler, what launch still needs
 - [`docs/runbook.md`](./docs/runbook.md) — what to do when something is wrong

@@ -313,7 +313,10 @@ not build the acceptance-criterion region and reference data that could never be
 - [x] Commands (edge fn + atomic `cmd_*` SQL): `create_trip`, `update_trip`, `set_trip_stops`, `publish_trip`, `submit_trip_verification`,
       `decide_trip_verification`, `cancel_trip`, `search_public_trips(locale, filters, sort, cursor)`,
       `get_trip_public`, `staff_search_trips`.
-- [~] Facets (`{ items, facets, total }`) + 30 s cache done; **k6 benchmark not written or run** (no k6, no 50k-trip seed).
+- [x] Facets (`{ items, facets, total }`) + 30 s cache; **measured at last** — `npm run perf:seed` clones a
+      published trip 50,000 times in 8 s and `npm run perf:smoke` reports p95 112 ms cold / 3 ms cached, after
+      `00036` rewrote the function (it was 15.7 s). k6 suites written in `docs/perf/`, not yet run against a
+      production-sized environment — there is none.
 - [x] Pricing engine in `@maak/core/pricing.ts` mirroring DB math + Vitest parity tests against RPC fixtures.
 - [x] Web `/operator/trips/*`, `/trips`, `/trips/[code]`, `/staff/trips`; localized forms with `Asia/Aden` timezone.
 - [x] Mobile search/filter/results/detail — implemented and typechecked, **not run on a device**.
@@ -324,7 +327,9 @@ not build the acceptance-criterion region and reference data that could never be
 - Cascading filters behave: choosing «عدن» narrows origin options with counts; «بدون توقف» removes stop-only trips.
 - Editing 1h59m before departure returns `EDIT_WINDOW_CLOSED` from the RPC, not just a disabled button.
 - Completed/cancelled trips disappear from `/trips` instantly and remain in `/staff/trips`.
-- Search p95 < 300 ms at 50k seeded trips (k6 report attached).
+- Search p95 < 300 ms at 50k seeded trips. **Met at 50,000 trips: 112 ms p95 (`docs/perf/smoke-50k.json`)**;
+  the capacity caveat — ~7 cold searches/second/core, because cascading facets are O(public trips) — is written
+  up in `docs/perf/README.md` rather than left implicit.
 - Shared URL reproduces exact filter state, in both locales (including Arabic query strings).
 - Detail page LCP < 2.5 s on throttled mobile, both directions; JSON-LD validates.
 - Basic-plan owner blocked at the 6th trip in a month; Pro sees a warning at 80% before blocking at 100% (soft limit).
@@ -760,8 +765,13 @@ reminder dedupe, and the trip gate's `MAINTENANCE_OVERDUE` refusal.
 - UAT with 3 pilots (1 company, 2 individuals) and burn-down of findings.
 
 ### Tasks
-- [ ] k6 suites (search, booking race, ping ingest, payment confirmation volume) + results in `docs/perf/`.
-- [ ] `EXPLAIN ANALYZE` review of the top 10 queries; missing indexes; autovacuum tuning for pings table.
+- [~] Performance harness: `npm run perf:seed` (50,000 trips in 8 s), `npm run perf:smoke` (gated, runs in the
+      sandbox), `npm run perf:db` (concurrency at the database), k6 suites in `docs/perf/` for search, the booking
+      race, ping ingest and the finance dashboard. Measured results in `docs/perf/`. **Not run:** k6 (no k6 in the
+      sandbox) and payment-confirmation volume (needs a payment provider fixture).
+- [~] `EXPLAIN ANALYZE` review started where it mattered: search was 15,690 ms at 50k and is now 112 ms
+      (`00036`), diagnosed with EXPLAIN (one plpgsql call per row per facet; a non-inlineable sort key). Missing
+      indexes and autovacuum tuning for the pings table remain.
 - [ ] Security checklist execution + fixes; `supabase db lint`, `plpgsql_check`, `npm audit` clean.
 - [ ] Backup restore into a scratch project with documented timings.
 - [ ] Alerts: error rate, stale live trips, failed notifications, imbalanced journals, verification backlog,
@@ -772,6 +782,9 @@ reminder dedupe, and the trip gate's `MAINTENANCE_OVERDUE` refusal.
 
 ### Acceptance criteria
 - Search p95 < 300 ms, write RPC p95 < 250 ms, finance dashboard p95 < 500 ms under stated load.
+  **At 50,000 trips on a 2-core sandbox:** search 112 ms cold / 3 ms cached, write 5 ms, dashboard 79 ms —
+  all inside their targets one request at a time; 4 concurrent cold searches reach p95 316 ms, which is the
+  facet design's capacity limit and is documented in `docs/perf/README.md`.
 - Zero critical/high findings; every table's RLS covered by a passing test; ledger grants verified by test.
 - Restore drill completes within documented RTO (< 1 h) with integrity checks passing.
 - iOS + Android builds install and complete the driver journey on real devices, in Arabic (RTL) and English.

@@ -21,7 +21,7 @@ begin;
 
 create extension if not exists pgtap;
 
-select plan(97);
+select plan(103);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -807,6 +807,103 @@ select is(
   ),
   '6000',
   'sorting by price advertises the cheapest stop, not the flat fare'
+);
+
+-- ---------------------------------------------------------------------------
+-- 7b. The fast path agrees with the function it replaced
+-- ---------------------------------------------------------------------------
+-- 00036 rewrote `search_public_trips` for volume: filters are evaluated once per row in a materialised
+-- projection instead of once per row per facet. `app.trip_matches()` stays as the readable definition of what
+-- a filter means, and these assertions are the contract between the two — the rewrite may be faster, and must
+-- be identical. Without them a facet would be free to drift, and the drift would only show as a wrong number
+-- in a dropdown.
+
+select is(
+  (public.search_public_trips('ar', '{"priceMax": 7000}'::jsonb, 'soonest', null, 50) ->> 'total')::int,
+  (
+    select count(*)::int from public.trips_search s
+    where s.is_public and s.departure_at > now()
+      and app.trip_matches(s, '{"priceMax": 7000}'::jsonb, null)
+  ),
+  'the total under a price cap matches the reference filter'
+);
+
+select is(
+  (public.search_public_trips('ar', '{"q": "تعز"}'::jsonb, 'soonest', null, 50) ->> 'total')::int,
+  (
+    select count(*)::int from public.trips_search s
+    where s.is_public and s.departure_at > now() and app.trip_matches(s, '{"q": "تعز"}'::jsonb, null)
+  ),
+  'the total under a text query matches the reference filter'
+);
+
+select is(
+  (public.search_public_trips('ar', '{"direct": true}'::jsonb, 'soonest', null, 50) ->> 'total')::int,
+  (
+    select count(*)::int from public.trips_search s
+    where s.is_public and s.departure_at > now() and app.trip_matches(s, '{"direct": true}'::jsonb, null)
+  ),
+  'the total under a direct-only filter matches the reference filter'
+);
+
+-- The origin facet applies every filter *except* the origin: that is what makes it cascade, and it is the
+-- dimension most likely to be quietly wrong after a rewrite because the page still looks correct.
+select is(
+  (
+    select count(*)::int
+    from jsonb_array_elements(
+      public.search_public_trips(
+        'ar', '{"priceMax": 7000, "origin": ["11111111-1111-4111-8111-111111111111"]}'::jsonb,
+        'soonest', null, 50
+      ) -> 'facets' -> 'origins'
+    ) facet
+  ),
+  (
+    select count(*)::int
+    from (
+      select s.origin_governorate_id
+      from public.trips_search s
+      where s.is_public and s.departure_at > now()
+        and app.trip_matches(s, '{"priceMax": 7000}'::jsonb, 'origin')
+      group by s.origin_governorate_id
+    ) grouped
+  ),
+  'the origin facet groups by every filter except the origin'
+);
+
+-- The scalar overload inlines; the composite one cannot. They must still produce the same key, or a page
+-- fetched before 00036 and its cursor after it would disagree about where to continue.
+select is(
+  (
+    select count(*)::int from public.trips_search s
+    where app.trip_rank(s.price_from_yer, s.departure_at, s.is_featured, 'cheapest')
+            is distinct from app.trip_rank(s, 'cheapest')
+       or app.trip_rank(s.price_from_yer, s.departure_at, s.is_featured, 'featured')
+            is distinct from app.trip_rank(s, 'featured')
+       or app.trip_rank(s.price_from_yer, s.departure_at, s.is_featured, 'soonest')
+            is distinct from app.trip_rank(s, 'soonest')
+  ),
+  0,
+  'the inlineable sort key is identical to the row-shaped one'
+);
+
+select is(
+  (public.search_public_trips('ar', '{"booking": ["whole_trip"]}'::jsonb, 'soonest', null, 50) -> 'facets' -> 'direct'),
+  (
+    select jsonb_build_object(
+      'direct', (
+        select count(*)::int from public.trips_search s
+        where s.is_public and s.departure_at > now() and s.stop_count = 0
+          and app.trip_matches(s, '{"booking": ["whole_trip"]}'::jsonb, 'direct')
+      ),
+      'withStops', (
+        select count(*)::int from public.trips_search s
+        where s.is_public and s.departure_at > now() and s.stop_count > 0
+          and app.trip_matches(s, '{"booking": ["whole_trip"]}'::jsonb, 'direct')
+      )
+    )
+  ),
+  'the direct and with-stops counts match the reference filter'
 );
 
 -- ---------------------------------------------------------------------------

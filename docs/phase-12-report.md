@@ -62,7 +62,7 @@ Two rows for one condition: platform staff and the admin both need it, and one d
 
 ### 1.2 The security review is a gate, not a document
 
-`npm run sql:check` now ends with `▶ security posture`, which applies all 35 migrations to a real PostgreSQL and
+`npm run sql:check` now ends with `▶ security posture`, which applies all 36 migrations to a real PostgreSQL and
 then asks the catalogue four questions:
 
 - does every table in `public` have row-level security enabled?
@@ -98,12 +98,39 @@ the scheduler and its cadence, the backup/restore drill with the integrity check
 is pointed at a restored database, a symptom → first-command table, and who to call. Written to be read at 02:00
 by somebody who did not build the platform.
 
+### 1.5 Search was fifty times too slow, and nobody could have known
+
+The plan's Phase 9 line read: *"Facets + 30 s cache done; **k6 benchmark not written or run** (no k6, no 50k-trip
+seed)."* That is a gap with a shape — the acceptance criterion was attached to a test that did not exist, so it
+could only ever be assumed. Building the seed made it measurable in eight seconds:
+
+**p95 15,690 ms at 50,000 trips.** Against a 300 ms target. On the three-trip demo database the same function
+takes 4 ms, which is why two phases passed without anybody noticing.
+
+The cause was structural rather than a missing index: `search_public_trips` called `app.trip_matches()` once per
+row *per facet* — five passes over `trips_search`, each rebuilding four text arrays out of the filter JSON for
+every row — and its sort key was a function taking a whole composite row, which PostgreSQL cannot inline, so
+50,000 rows meant 50,000 function calls costing 226 ms on their own.
+
+`00036_search_performance.sql` evaluates each dimension once per row into a materialised projection and answers
+the page, the total and all five facet groupings from it; the sort key gained a scalar overload that inlines.
+**112 ms p95 cold, 3 ms on a cache hit.** 0007 gains six assertions that the fast path and `app.trip_matches()`
+return the same totals and facets, because the rewrite is allowed to be faster and nothing else.
+
+What is still true, and written down rather than implied: cold search is O(public trips) at ~100–145 ms, so the
+capacity is ~7 cold searches/second/core and four concurrent cold searches on this two-core sandbox reach
+p95 316 ms. The 30 s cache is doing real work. `docs/perf/README.md` lists the three changes that would remove
+the limit — a maintained facet aggregate, cache warming, per-dimension partial indexes — in order of value.
+
 ---
 
 ## 2. In flight
 
-1. **Performance (`k6`) suites and a query-plan review.** Deliverable in the plan; the harness needs a seeded
-   database at volume (100k trips, 200 live), which is the next piece of work. Nothing under `docs/perf/` yet.
+1. **The `k6` run.** The suites exist (`docs/perf/k6-search.js`, `k6-booking-race.js`, `k6-ping-ingest.js`,
+   `k6-finance-dashboard.js`) with thresholds that fail the run, and the sandbox-runnable harnesses behind them
+   (`perf:seed`, `perf:smoke`, `perf:db`) have already found and fixed a 15.7 s search. What has not happened is
+   running k6 against a production-sized environment with a real PostgREST and a connection pooler. Payment
+   confirmation volume is also unmeasured — it needs a provider fixture.
 2. **The remaining guides.** `docs/admin-guide.md`, `docs/operator-guide.md` and the Arabic passenger guide are
    open. The runbook covers emergencies; these cover the day-to-day journeys.
 3. **`plpgsql_check`.** The extension is not in the embedded PostgreSQL build, so it is a CI-on-Supabase item.
@@ -117,19 +144,22 @@ by somebody who did not build the platform.
 | Gate | Result |
 | --- | --- |
 | `npm run check:all` | green |
-| `npm run sql:check` | 35 migrations · 17 pgTAP suites · **893 assertions** · types in sync · **security posture green** |
+| `npm run sql:check` | 36 migrations · 17 pgTAP suites · **899 assertions** · types in sync · **security posture green** |
 | `npm test` | **649 tests**, 26 files |
 | `npm run test:coverage` | 95.77 % statements · 87.09 % branches · 96.46 % functions · 96.72 % lines |
-| `npm run check:guards` | 31 core files · 176 style files · 35 migrations · 130 commands |
+| `npm run check:guards` | 31 core files · 176 style files · 36 migrations · 130 commands |
 | `npm run check:a11y` | 107 routes, both directions |
 | worker against a fresh dev database | 10 jobs, `maintenance: {sent: 2}`, `ops-alerts: {counts: all zero}`, exit 0 |
+| `npm run perf:smoke` at 50,000 trips | search 112 ms p95 cold / 3 ms cached · write 5 ms · dashboard 79 ms |
 
 ---
 
 ## 6. What is still open
 
-1. **No load test has been run.** The p95 targets (search < 300 ms, writes < 250 ms, finance dashboard < 500 ms)
-   are unverified until the `k6` suites exist and a database at production volume exists to run them against.
+1. **No load test at production volume has been run.** The p95 targets (search < 300 ms, writes < 250 ms, finance
+   dashboard < 500 ms) are verified *at 50,000 trips, one request at a time* — 112 ms, 5 ms, 79 ms — and the
+   concurrency limit that remains is documented in `docs/perf/README.md`. A k6 run on hardware with the stated
+   load has not happened, because there is no such environment yet.
 2. **Dependency debt in the mobile toolchain.** `npm audit --omit=dev` reports 19 advisories (18 moderate, 1 high,
    0 critical), all inside Expo/React Native build tooling (`metro`, `@expo/cli`, `image-size`, `@react-native/*`)
    — code that runs on a developer machine and in EAS, not in the web bundle or on a phone at runtime. `npm audit
