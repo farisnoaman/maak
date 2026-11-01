@@ -73,7 +73,7 @@ New enums: `notification_channel` (`in_app`, `push`, `email`, `whatsapp`), `noti
 | The worker: claim → transport → record → eight jobs, `--once`, `--dry-run`, `--check` | `scripts/notify-worker.mjs` |
 | Server reads | `apps/web/src/lib/notifications.ts` |
 | Inbox + preferences + saved-search control | `apps/web/src/components/account/{NotificationInbox,NotificationPreferences}.tsx`, `components/trips/SaveSearchControl.tsx` |
-| Routes | `/account/notifications`, `/account/notifications/preferences` (linked from `AccountNav`), `/admin/notifications` (staff preview), and the control on `/trips` |
+| Routes | `/account/notifications`, `/account/notifications/preferences` (both linked from `AccountNav`), `/admin/notifications` (staff preview, in every admin nav list and on the `/admin` hub), and the save-search control on `/trips` |
 | Loading / error / skeleton | `loading.tsx` on all three routes, `error.tsx` on the inbox, `components/ui/Skeleton.tsx` + `@keyframes skeleton-shimmer` with a reduced-motion guard |
 | Native | `apps/mobile/src/app/notifications.tsx`, `notification-preferences.tsx`, `src/lib/push.ts` |
 | Demo data: one device token + one enqueued notification with its deliveries | `scripts/dev-backend/db.mjs` |

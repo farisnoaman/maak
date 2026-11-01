@@ -57,6 +57,7 @@ export default async function AdminUsersPage({ params }: { params: Promise<{ loc
         phase="1"
         items={[
           { key: 'console.navOverview', href: `/${locale}/admin` },
+          { key: 'catalogue.title', href: `/${locale}/admin/notifications` },
           { key: 'nav.roles', href: `/${locale}/admin/users` },
           { key: 'nav.account', href: `/${locale}/account` },
         ]}

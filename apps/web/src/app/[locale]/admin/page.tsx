@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { isLocale, translate, type Locale, type TranslationKey } from '@maak/core';
 import { SiteHeader } from '@/components/SiteHeader';
@@ -20,13 +21,24 @@ export default async function ConsolePage({ params }: { params: Promise<{ locale
         phase="10"
         items={[
           { key: 'console.navOverview', href: `/${locale}/admin` },
+          { key: 'catalogue.title', href: `/${locale}/admin/notifications` },
           { key: 'nav.regions', href: `/${locale}/admin/regions` },
           { key: 'nav.places', href: `/${locale}/admin/places` },
           { key: 'nav.roles', href: `/${locale}/admin/users` },
         ]}
       >
+        {/* A hub whose only tile says "placeholder" is a hub nobody opens twice: it now leads to the two admin
+            screens this phase and the last one actually shipped, and keeps the placeholder for the rest. */}
         <div className="console-tile">
-          <h2>{t('console.navOverview')}</h2>
+          <h2>
+            <Link href={`/${locale}/admin/notifications`}>{t('catalogue.title')}</Link>
+          </h2>
+          <p>{t('catalogue.subtitle')}</p>
+        </div>
+        <div className="console-tile">
+          <h2>
+            <Link href={`/${locale}/admin/plans`}>{t('financeNav.plans')}</Link>
+          </h2>
           <p>{t('console.placeholder')}</p>
         </div>
       </ConsoleShell>

@@ -39,6 +39,7 @@ export function adminMoneyNav(locale: string) {
   return [
     { key: 'financeNav.plans' as TranslationKey, href: `/${locale}/admin/plans` },
     { key: 'financeNav.subscriptions' as TranslationKey, href: `/${locale}/admin/subscriptions` },
+    { key: 'catalogue.title' as TranslationKey, href: `/${locale}/admin/notifications` },
     { key: 'financeNav.invoices' as TranslationKey, href: `/${locale}/finance/invoices` },
     { key: 'console.navFinancePayouts' as TranslationKey, href: `/${locale}/finance/payouts` },
   ];
