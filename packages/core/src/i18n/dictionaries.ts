@@ -171,6 +171,17 @@ export const ar = {
   'console.subtitle.staff': 'التحقق من الحسابات والمركبات والرحلات، ومسح رموز QR.',
   'console.subtitle.admin': 'الجغرافيا والمناطق والمشرفون والخطط والإعدادات.',
   'console.placeholder': 'هذه الشاشة قيد الإنشاء. ستراها تعمل في المرحلة المذكورة أعلاه.',
+  'console.groupWorkspace': 'المنصة',
+  'console.groupGeography': 'الجغرافيا',
+  'console.groupPeople': 'الأشخاص',
+  'console.groupMoney': 'المال',
+  'console.groupPlatform': 'التشغيل',
+  'console.navTemplates': 'قوالب التنبيهات',
+  'console.navUsers': 'المستخدمون والأدوار',
+  'admin.hubTitle': 'مركز إدارة المنصة',
+  'admin.hubSubtitle':
+    'كل ما يحكم المنصة: التغطية الجغرافية، الحسابات والصلاحيات، الأسعار، والقوالب التي يراها الناس.',
+  'admin.openSection': 'فتح',
   'console.groupWork': 'العمل',
   'console.groupReview': 'قوائم المراجعة',
   'console.groupReference': 'مراجع',
@@ -771,6 +782,7 @@ export const ar = {
   'nav.places': 'الأماكن',
 
   'geo.title': 'الأقاليم والتغطية',
+  'geo.treeHeading': 'الأقاليم القائمة',
   'geo.subtitle':
     'أنشئ أقاليم وأقاليم فرعية من محافظات كاملة أو مديريات مختارة، وحدّد من يشرف عليها.',
   'geo.newRegion': 'إقليم جديد',
@@ -1894,11 +1906,13 @@ export const ar = {
   'cat.other': 'أخرى',
 
   'plans.title': 'الخطط والحدود',
+  'plans.priceList': 'الخطط والأسعار',
   'plans.subtitle': 'الأسعار والحدود بيانات يحرّرها المسؤول، والتطبيق يقرؤها في كل طلب.',
   'plans.price': 'السعر الشهري',
   'plans.trialDays': 'أيام التجربة',
   'plans.softLimit': 'تحذير بدل الحجب',
   'plans.save': 'حفظ',
+  'plans.edit': 'تعديل',
   'plans.saved': 'تم حفظ {plan}.',
   'plans.metric': 'المقياس',
   'plans.unlimited': 'بلا حد',
@@ -1915,6 +1929,7 @@ export const ar = {
   'plans.ruleSaved': 'تم حفظ القاعدة.',
   'plans.noRules': 'لا قواعد خاصة: الجميع على نسبة المنصة.',
 
+  'subs.liveHeading': 'الاشتراكات القائمة',
   'subs.title': 'الاشتراكات',
   'subs.subtitle': 'من يدفع، ومن تأخّر، ومن عاد إلى الأساسية.',
   'subs.owner': 'المشغّل',
@@ -2130,6 +2145,17 @@ export const en: Record<TranslationKey, string> = {
   'console.subtitle.staff': 'Verify accounts, vehicles and trips; scan QR codes.',
   'console.subtitle.admin': 'Geography, regions, supervisors, plans and settings.',
   'console.placeholder': 'This screen is under construction. It ships in the phase shown above.',
+  'console.groupWorkspace': 'Platform',
+  'console.groupGeography': 'Geography',
+  'console.groupPeople': 'People',
+  'console.groupMoney': 'Money',
+  'console.groupPlatform': 'Operations',
+  'console.navTemplates': 'Alert templates',
+  'console.navUsers': 'Users & roles',
+  'admin.hubTitle': 'Platform administration',
+  'admin.hubSubtitle':
+    'Everything that governs the platform: coverage, accounts and roles, prices, and the templates people see.',
+  'admin.openSection': 'Open',
   'console.groupWork': 'Work',
   'console.groupReview': 'Review queues',
   'console.groupReference': 'Reference',
@@ -2739,6 +2765,7 @@ export const en: Record<TranslationKey, string> = {
   'nav.regions': 'Regions',
   'nav.places': 'Places',
 
+  'geo.treeHeading': 'The region tree',
   'geo.title': 'Regions and coverage',
   'geo.subtitle':
     'Build regions and sub-regions from whole governorates or hand-picked districts, and decide who supervises them.',
@@ -3893,6 +3920,7 @@ export const en: Record<TranslationKey, string> = {
   'cat.fine': 'Fines',
   'cat.other': 'Other',
 
+  'plans.priceList': 'Plans and prices',
   'plans.title': 'Plans and limits',
   'plans.subtitle':
     'Prices and limits are data an admin edits; the app reads them on every request.',
@@ -3900,6 +3928,7 @@ export const en: Record<TranslationKey, string> = {
   'plans.trialDays': 'Trial days',
   'plans.softLimit': 'Warn instead of blocking',
   'plans.save': 'Save',
+  'plans.edit': 'Edit',
   'plans.saved': '{plan} saved.',
   'plans.metric': 'Metric',
   'plans.unlimited': 'Unlimited',
@@ -3916,6 +3945,7 @@ export const en: Record<TranslationKey, string> = {
   'plans.ruleSaved': 'Rule saved.',
   'plans.noRules': 'No negotiated rates: everybody is on the platform rate.',
 
+  'subs.liveHeading': 'Live subscriptions',
   'subs.title': 'Subscriptions',
   'subs.subtitle': 'Who pays, who is late, and who fell back to Basic.',
   'subs.owner': 'Operator',

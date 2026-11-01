@@ -102,7 +102,7 @@ export function BulkVerifyPanel({
 
   if (trips.length === 0) {
     return (
-      <section className="card ops-bulk">
+      <section className="console-section ops-bulk">
         <h2>{t('ops.bulkTitle')}</h2>
         {/* "No requests in this list" told a supervisor nothing: not which list, not whether that is good news,
             not what would put a trip in it. */}
@@ -120,7 +120,7 @@ export function BulkVerifyPanel({
   }
 
   return (
-    <section className="card ops-bulk">
+    <section className="console-section ops-bulk">
       <h2>{t('ops.bulkTitle')}</h2>
       <p className="form-hint">{t('ops.bulkHint')}</p>
 

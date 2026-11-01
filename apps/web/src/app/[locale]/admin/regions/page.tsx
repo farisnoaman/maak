@@ -3,6 +3,7 @@ import { isLocale, translate, type Locale, type TranslationKey } from '@maak/cor
 import { SiteHeader } from '@/components/SiteHeader';
 import { PreviewBanner } from '@/components/PreviewBanner';
 import { ConsoleShell } from '@/components/ConsoleShell';
+import { adminNav } from '@/components/admin/AdminNav';
 import { EmptyState } from '@/components/ui/Feedback';
 import { RegionConsole } from '@/components/geo/RegionConsole';
 import { SupervisorPanel } from '@/components/geo/SupervisorPanel';
@@ -49,14 +50,7 @@ export default async function AdminRegionsPage({
         locale={locale}
         title="geo.title"
         subtitle="geo.subtitle"
-        items={[
-          { key: 'console.navOverview', href: `/${locale}/admin` },
-          { key: 'catalogue.title', href: `/${locale}/admin/notifications` },
-          { key: 'nav.regions', href: `/${locale}/admin/regions` },
-          { key: 'nav.places', href: `/${locale}/admin/places` },
-          { key: 'nav.roles', href: `/${locale}/admin/users` },
-          { key: 'nav.account', href: `/${locale}/account` },
-        ]}
+        groups={adminNav(locale)}
       >
         {directory.configured ? null : <PreviewBanner locale={locale} />}
         <RegionConsole locale={locale} directory={directory} />

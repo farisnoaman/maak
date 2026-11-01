@@ -13,23 +13,17 @@ export interface ConsoleNavGroup {
 }
 
 /**
- * *-console layout shared by operator, staff and admin.
+ * The console shell — one layout for operator, staff, finance and admin.
  *
- * One component means one place to change navigation, one place to add a permission gate, and no drift between
- * consoles. Items are filtered by the caller (server-side), never hidden in the client as a security measure.
+ * **It is a page, not a card.** The panel used to be `card console-panel`, a bordered, shadowed box, and every
+ * screen put its own cards inside it: a card in a card, two frames around the same content, one of them costing
+ * 24px of padding on each edge and a shadow that drew the eye to the frame instead of the data. The frame is gone.
+ * What is left is a page: a header band (title, subtitle, the page's primary action) sitting on the page surface,
+ * a hairline under it, and the content below on that same surface, divided by rules rather than boxed into tiles.
  *
- * Four things changed in the polish pass, all of them visible defects:
- *
- *  - **The phase badge is gone.** Every screen carried `<Phase N>` next to its title, and the four staff screens
- *    disagreed about N (7, 4, 3, 1) — build bookkeeping shown to the person doing the work. Progress belongs in
- *    `IMPLEMENTATION_PLAN.md`, and an unfinished screen says so in its own words.
- *  - **The console name and the page title are separate.** Both came from `title`, so `/staff/verifications`
- *    printed "Verification review" as the sidebar heading, as the `<h1>`, and again on the link that got you
- *    there. `consoleTitle` names the console; `title` names the page.
- *  - **The active item is marked.** The stylesheet has styled `[aria-current='page']` since the first console,
- *    and nothing ever set the attribute — so the sidebar never showed where you were.
- *  - **Grouping and actions.** `groups` lets a console say *today / review / reference* instead of nine flat
- *    links, and `actions` puts a page's primary verb next to its title rather than buried in the content.
+ * The sections inside keep their own `h2`s so the page still has an outline — a screen reader lands on "Awaiting
+ * review" instead of one undifferentiated block — but the boxes those headings used to sit in are flat
+ * (`.console-body > .card`), so there is exactly one frame on the screen: the browser window.
  */
 export function ConsoleShell({
   locale,
@@ -48,15 +42,15 @@ export function ConsoleShell({
   readonly subtitle: TranslationKey;
   /** The console this page belongs to — the sidebar heading. Defaults to the page title for single-page consoles. */
   readonly consoleTitle?: TranslationKey;
-  /** Locale-less path of the current page, e.g. `/staff/dashboard`. Used only to mark the active nav item. */
+  /** Locale-less path of the current page, e.g. `/admin/places`. Used only to mark the active nav item. */
   readonly pathname?: string;
   readonly items?: readonly ConsoleNavItem[];
   readonly groups?: readonly ConsoleNavGroup[];
+  /** The page's primary verb — beside the title, where a console puts its action, not buried in the content. */
   readonly actions?: ReactNode;
   /**
-   * `content` is one full-width column — the right shape for a table, a form or a list. `tiles` is the
-   * auto-filling card grid the overview screens use. The old default was the tile grid, which silently
-   * rendered every content page inside a 220px track.
+   * `content` is one full-width column: the right shape for a table, a form or a list. `tiles` is the auto-filling
+   * grid the overview screens use.
    */
   readonly layout?: 'content' | 'tiles';
   readonly children: ReactNode;
@@ -70,7 +64,7 @@ export function ConsoleShell({
   return (
     <main id="main" className="shell console-layout">
       <aside className="console-side">
-        {/* Not an <h1>: the page has exactly one, inside the panel. */}
+        {/* Not an <h1>: the page has exactly one, in the header band. */}
         <p className="console-side__brand">{t(brand)}</p>
         <nav className="console-nav" aria-label={t(brand)}>
           {sections.map((section) => (
@@ -89,16 +83,18 @@ export function ConsoleShell({
         </nav>
       </aside>
 
-      <section className="card console-panel">
-        <header className="console-panel__head">
-          <h1>{t(title)}</h1>
-          {actions ? <div className="console-panel__actions">{actions}</div> : null}
+      <div className="console-main">
+        <header className="console-head">
+          <div className="console-head__text">
+            <h1>{t(title)}</h1>
+            <p className="console-head__sub">{t(subtitle)}</p>
+          </div>
+          {actions ? <div className="console-head__actions">{actions}</div> : null}
         </header>
-        <p className="console-panel__subtitle">{t(subtitle)}</p>
-        <div className={layout === 'tiles' ? 'console-grid console-grid--tiles' : 'console-grid'}>
+        <div className={layout === 'tiles' ? 'console-body console-body--tiles' : 'console-body'}>
           {children}
         </div>
-      </section>
+      </div>
     </main>
   );
 }

@@ -113,7 +113,7 @@ export default async function StaffDashboardPage({
         pathname="/staff/dashboard"
         groups={staffNav(locale)}
         actions={
-          <span className="console-panel__stamp">
+          <span className="console-head__stamp">
             {t('ops.asOf', { time: formatDateTime(new Date().toISOString(), { locale }) })}
           </span>
         }

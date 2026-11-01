@@ -1010,8 +1010,9 @@ a {
 }
 /* A grid child defaults to `min-width: auto` — a second way of refusing to shrink below its content. */
 .console-side,
-.console-panel,
-.console-grid {
+.console-main,
+.console-body,
+.console-panel {
   min-inline-size: 0;
 }
 @media (min-width: 900px) {
@@ -1058,6 +1059,10 @@ a {
 .console-nav a:hover {
   background: var(--surface-muted);
 }
+/*
+ * `.console-panel` stays for the account screens, where it is a real card on a page of cards. The console shell no
+ * longer uses it: see `.console-head` / `.console-body` below.
+ */
 .console-panel {
   padding: var(--space-4);
 }
@@ -1076,21 +1081,230 @@ a {
   color: var(--ink-600);
   font-size: 0.9rem;
 }
-/*
- * One column by default, and that default is the fix for a real defect: `auto-fill` with a single child
- * puts that child in the first 220px track, so every console *content* page (fleet, vehicles, health…)
- * rendered as a narrow strip beside a row of empty tracks. Only the three overview screens are tile
- * grids, and they say so (`layout="tiles"`).
- */
-.console-grid {
+
+/* ---------- the console page: a header band and a flat content column ---------- */
+
+.console-main {
   display: grid;
-  gap: var(--space-4);
-  margin-block-start: var(--space-6);
+  align-content: start;
+  gap: var(--space-5);
+  min-inline-size: 0;
+}
+
+/*
+ * The header band. The title, the sentence that says what the screen is for, and the page's own action, on the
+ * page surface — not inside a card that repeats the same padding the content already has.
+ */
+.console-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-5);
+  align-items: end;
+  justify-content: space-between;
+  padding-block-end: var(--space-4);
+  border-block-end: 1px solid var(--surface-sunken);
+}
+.console-head__text {
+  min-inline-size: 0;
+}
+.console-head h1 {
+  font-size: clamp(1.35rem, 1.1rem + 0.9vw, 1.75rem);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+}
+.console-head__sub {
+  margin-block-start: var(--space-1);
+  max-inline-size: 68ch;
+  color: var(--ink-500);
+  font-size: 0.875rem;
+}
+.console-head__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+.console-head__stamp {
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-500);
+}
+
+/*
+ * The content column.
+ *
+ * One frame per screen: this one. A `.card` sitting directly in it is a *section*, not a box — its chrome is
+ * stripped and it is separated from the section above by a hairline, which is the difference between a console
+ * and a stack of nested rectangles. Only things that are genuinely itemised (a request, a row of a queue) keep a
+ * border, and they live inside a section.
+ */
+.console-body {
+  display: grid;
+  align-content: start;
+  gap: var(--space-6);
+  min-inline-size: 0;
   grid-template-columns: minmax(0, 1fr);
 }
 
-.console-grid--tiles {
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+.console-body--tiles {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+  gap: var(--space-3);
+}
+
+.console-body > .card {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.console-body > .card + .card,
+.console-body > section + section,
+.console-body > .card + section,
+.console-body > section + .card {
+  padding-block-start: var(--space-6);
+  border-block-start: 1px solid var(--surface-sunken);
+}
+
+/* A section's own heading line: what it is, and the way into the full list. */
+.console-body > section > h2,
+.console-body > .card > h2 {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+}
+
+/*
+ * A section of a console page: a heading, a sentence, a table or a list. Flat by construction — no border, no
+ * background — and separated from the section above by a hairline, so the page reads as a document rather than a
+ * stack of boxes. This is what page-level `<section class="card">` became.
+ */
+.console-section {
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+  min-inline-size: 0;
+}
+.console-section:not(:first-child),
+.console-body > section:not(:first-child) {
+  padding-block-start: var(--space-6);
+  border-block-start: 1px solid var(--surface-sunken);
+}
+.console-section h2,
+.console-body > section h2 {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+}
+.console-section > .panel-head,
+.console-body > section > .panel-head {
+  margin-block-end: 0;
+}
+.console-section p.form-hint,
+.console-body > section p.form-hint {
+  margin-block-start: 0;
+}
+
+/*
+ * The admin index: a destination per row, grouped by subject.
+ *
+ * Rows, not tiles: a title, the sentence that says what is behind it, an arrow, and a hairline between them. A card
+ * grid made the reader scan five boxes to find four links and cost a quarter of the screen in padding.
+ */
+.admin-index {
+  display: grid;
+  gap: var(--space-6);
+  align-content: start;
+}
+.admin-index__group h2 {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-500);
+  margin-block-end: var(--space-1);
+}
+.admin-index__group ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-block-start: 1px solid var(--surface-sunken);
+}
+.admin-index__group li + li a {
+  border-block-start: 1px solid var(--surface-sunken);
+}
+.admin-index__group a {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-1) var(--space-4);
+  padding-block: var(--space-3);
+  padding-inline: var(--space-2);
+  min-block-size: var(--tap-target);
+  border-radius: var(--radius-sm);
+  color: inherit;
+  text-decoration: none;
+}
+.admin-index__group a:hover,
+.admin-index__group a:focus-visible {
+  background: var(--surface-muted);
+}
+.admin-index__name {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+.admin-index__note {
+  grid-column: 1;
+  color: var(--ink-500);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+.admin-index__go {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  color: var(--ink-400);
+}
+@media (min-width: 900px) {
+  .admin-index {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+    gap: var(--space-8);
+  }
+}
+
+/*
+ * The small typographic units a console row is made of. They exist as classes because they were inline styles —
+ * `style={{ fontWeight: 700, margin: 0 }}` repeated in five components, which is a design system that lives in
+ * JSX and cannot be themed, overridden or found.
+ */
+.unit-title {
+  font-weight: 700;
+  margin: 0;
+}
+.unit-meta {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--ink-500);
+}
+.console-subhead {
+  font-size: 0.92rem;
+  font-weight: 700;
+  margin: 0;
+}
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+.block {
+  display: block;
+}
+.id-short {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.82rem;
+  color: var(--ink-500);
 }
 .console-tile {
   padding: var(--space-5);
@@ -1162,13 +1376,11 @@ a {
   gap: var(--space-2);
   align-items: center;
 }
-.console-panel__stamp {
+.console-panel__stamp,
+.console-head__stamp {
   font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
   color: var(--ink-500);
-}
-.console-panel p.console-panel__subtitle {
-  margin-block-start: var(--space-2);
-  max-inline-size: 62ch;
 }
 
 /* The whole tile is the link. A button at the bottom of a card is a smaller target than the card. */
@@ -1200,7 +1412,7 @@ a {
 }
 
 /* A queue that is clear is good news, and it is said out loud rather than implied by a zero. */
-.console-panel .ops-clear,
+.console-body .ops-clear,
 .ops-clear {
   display: flex;
   gap: var(--space-2);
@@ -1277,22 +1489,22 @@ a {
 .stat--danger {
   border-inline-start: 3px solid var(--state-danger);
 }
-.console-panel .stat__label {
+.console-body .stat__label {
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--ink-500);
   margin: 0;
 }
-.console-panel .stat__value {
+.console-body .stat__value {
   font-size: 1.9rem;
   font-weight: 800;
   line-height: 1.1;
   color: var(--ink-900);
 }
-.console-panel .stat__value--text {
+.console-body .stat__value--text {
   font-size: 1rem;
 }
-.console-panel .stat__note {
+.console-body .stat__note {
   font-size: 0.75rem;
   color: var(--ink-500);
 }
@@ -1654,14 +1866,35 @@ a {
 .data-table td {
   padding: var(--space-3);
   text-align: start;
-  border-block-end: 1px solid var(--line-200, #eee);
+  border-block-end: 1px solid var(--surface-sunken);
 }
 
-.data-table th {
+/*
+ * Only the *column* headings are chrome: small, uppercase, muted. The rule used to say `.data-table th`, which is
+ * every `th` — including `<th scope="row">`, the cell that holds the record's own name. So a subscription's owner and
+ * a queue's title were rendered at 0.74rem in muted grey, and in a Latin table, uppercased.
+ */
+.data-table thead th {
   font-size: 0.74rem;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--ink-500);
+  background: var(--surface-muted);
+  border-block-end: 1px solid var(--surface-sunken);
+}
+
+.data-table tbody th {
+  font-weight: 700;
+  color: var(--ink-900);
+}
+
+.data-table tbody tr:hover {
+  background: color-mix(in srgb, var(--surface-muted) 70%, transparent);
+}
+
+.data-table tbody tr:last-child > * {
+  border-block-end: 0;
 }
 
 .invite-box,
@@ -1923,7 +2156,7 @@ fieldset {
 
 .fleet-fields > *,
 .form-grid > *,
-.console-grid > *,
+.console-body > *,
 .fleet-grid > *,
 .fleet-grid > * > * {
   min-inline-size: 0;

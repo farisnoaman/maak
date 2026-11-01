@@ -2,8 +2,8 @@ import { notFound, redirect } from 'next/navigation';
 import { isLocale, translate, type Locale, type TranslationKey } from '@maak/core';
 import { SiteHeader } from '@/components/SiteHeader';
 import { ConsoleShell } from '@/components/ConsoleShell';
+import { adminNav } from '@/components/admin/AdminNav';
 import { PlansEditor } from '@/components/finance/PlansEditor';
-import { adminMoneyNav } from '@/components/payments/financeNav';
 import { loadAccountContext } from '@/lib/account';
 import { loadCommissionRules, loadPlans } from '@/lib/finance';
 
@@ -38,7 +38,7 @@ export default async function AdminPlansPage({ params }: { params: Promise<{ loc
         locale={locale}
         title="plans.title"
         subtitle="plans.subtitle"
-        items={adminMoneyNav(locale)}
+        groups={adminNav(locale)}
       >
         {allowed ? (
           <PlansEditor locale={locale} plans={plans} rules={rules} />

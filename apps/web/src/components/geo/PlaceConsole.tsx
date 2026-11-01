@@ -181,7 +181,7 @@ export function PlaceConsole({
   return (
     <div className="geo-console">
       {canDecide ? (
-        <section className="card" aria-labelledby="places-queue">
+        <section className="console-section" aria-labelledby="places-queue">
           <div className="panel-head">
             <h2 id="places-queue">{t('places.queueTitle')}</h2>
             <Badge tone="warning">{queue.length}</Badge>
@@ -194,14 +194,22 @@ export function PlaceConsole({
               {queue.map((place) => (
                 <li key={place.id} className="queue-card">
                   <div>
-                    <p style={{ fontWeight: 700, margin: 0 }}>{place.nameAr}</p>
-                    <p className="form-hint" style={{ margin: 0 }}>
+                    <p className="unit-title">{place.nameAr}</p>
+                    <p className="unit-meta">
                       {[place.districtName, place.governorateName].filter(Boolean).join(' · ')}
-                      {place.submittedBy
-                        ? ` · ${t('places.submittedBy')}: ${place.submittedBy}`
-                        : ''}
+                      {place.submittedBy ? (
+                        <>
+                          {' · '}
+                          {t('places.submittedBy')}:{' '}
+                          {place.submittedByName ?? (
+                            <bdi dir="ltr" className="id-short">
+                              {place.submittedBy.slice(0, 8)}
+                            </bdi>
+                          )}
+                        </>
+                      ) : null}
                     </p>
-                    <p className="form-hint" style={{ margin: 0 }}>
+                    <p className="unit-meta">
                       {t(PLACE_KIND_KEY[place.kind as PlaceKind] as TranslationKey)}
                       {place.lat != null && place.lng != null ? (
                         <>
@@ -246,7 +254,7 @@ export function PlaceConsole({
         </section>
       ) : null}
 
-      <section className="card" aria-labelledby="places-create">
+      <section className="console-section" aria-labelledby="places-create">
         <div className="panel-head">
           <h2 id="places-create">{t('places.addPlace')}</h2>
           <Badge tone="info">{t('places.pending')}</Badge>
@@ -341,7 +349,7 @@ export function PlaceConsole({
         ) : null}
       </section>
 
-      <section className="card" aria-labelledby="places-picker">
+      <section className="console-section" aria-labelledby="places-picker">
         <div className="panel-head">
           <h2 id="places-picker">{t('picker.title')}</h2>
           <Badge tone="info">{t('places.search')}</Badge>

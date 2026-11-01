@@ -101,7 +101,7 @@ export function DeletionRequests({
             <li key={row.id} className="queue-card">
               <div className="panel-head">
                 <div>
-                  <p style={{ fontWeight: 700 }}>{row.name ?? t('admin.deletionUnnamed')}</p>
+                  <p className="unit-title">{row.name ?? t('admin.deletionUnnamed')}</p>
                   <p className="form-hint">
                     <bdi>{row.phone ?? row.email ?? row.id}</bdi>
                     {' · '}

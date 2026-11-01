@@ -23,6 +23,14 @@ on `main`; the tag is the last step, not the first.
 
 ### Changed
 
+- **A console page is a page, not a card.** The console shell used to render `card console-panel` and every screen put
+  its own cards inside it — two borders, two paddings and two shadows around one piece of content. It is now a header
+  band (title, one sentence, the page's action), a hairline, and one flat content column with sections divided by rules.
+  `/admin` was rebuilt on it as an index of destinations instead of two tiles, one of which apologised for a phase that
+  no longer exists; its six screens share one grouped navigation (`components/admin/AdminNav.ts`) instead of five
+  different lists, two of which pointed into the finance console. Table styling applies the small-caps header to
+  `thead` only — `<th scope="row">` was being shrunk and greyed — and subscriptions and the places queue show names
+  instead of raw UUIDs. `docs/polish-plan.md` §9c has the accounting.
 - **The staff console is one console, not five.** All six staff screens share one navigation
   (`components/staff/StaffNav.ts`), grouped *Work / Review queues / Reference*; the shell marks the current page with
   `aria-current="page"` (styled since the first console, never set until now); the sidebar names the console and the
@@ -52,6 +60,10 @@ on `main`; the tag is the last step, not the first.
 
 ### Fixed
 
+- **The admin screens were cards inside a card, with UUIDs where names belong.** `/admin/subscriptions` printed
+  `owner_org_id` in the operator column and the places queue printed `created_by` beside each place; both now resolve
+  the company or person, and fall back to an 8-character id. A button that opened the plan editor said *Save*, and
+  three section headings repeated their page title. `.data-table thead th` no longer styles row headers.
 - **The staff console scrolled sideways on a phone.** `/staff/scan` was wider than a 390px screen because
   `.console-layout` had no `grid-template-columns`: the implicit `auto` column sized itself to the *content minimum* of
   a row of `nowrap` nav chips, and the panel beside it was laid out at that width. The track is now

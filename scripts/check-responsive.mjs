@@ -234,6 +234,25 @@ for (const match of cssCode.matchAll(/(^|\n)([^{}\n][^{}]*)\{([^{}]*)\}/g)) {
 }
 
 // ---------------------------------------------------------------------------
+// 3c. A console page is not a card in a card
+// ---------------------------------------------------------------------------
+//
+// The shell used to render `<section class="card console-panel">` and every screen put its own cards inside it: two
+// frames, two paddings and two shadows around one piece of content. The panel is gone; this keeps it gone.
+
+const shellPath = resolve(root, 'apps/web/src/components/ConsoleShell.tsx');
+const shellSource = readFileSync(shellPath, 'utf8');
+// Comments may name the thing being banned; only the code counts.
+const shell = shellSource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+if (/className="[^"]*\bcard\b/.test(shell) || /\bconsole-panel\b/.test(shell)) {
+  fail(
+    'apps/web/src/components/ConsoleShell.tsx',
+    1,
+    'the console shell renders a card again — a console page is a page header and a flat content column, not a card with cards inside it',
+  );
+}
+
+// ---------------------------------------------------------------------------
 // 4. Anything that behaves like a button is at least --tap-target tall
 // ---------------------------------------------------------------------------
 
@@ -347,6 +366,6 @@ if (problems.length > 0) {
 const mediaCount = mediaBlocks(css).length;
 console.log(
   `✓ responsive check passed (viewport exported, ${mediaCount} media queries, ` +
-    `no hidden navigation, no unguarded grid tracks, no track or fixed width wider than its container, ${TARGETS.length} tap targets, ` +
+    `no hidden navigation, no unguarded grid tracks, no track or fixed width wider than its container, no card-in-card console shell, ${TARGETS.length} tap targets, ` +
     `every wide table scrollable, stacked card tables labelled)`,
 );

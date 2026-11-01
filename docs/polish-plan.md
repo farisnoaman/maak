@@ -53,6 +53,7 @@ questions in the order they ask them.**
 | 8 | Operator console | Dense tables are right for the job; the **overview** answers nothing at a glance | `[ ]` |
 | 9a | **Staff console** (`/staff`, dashboard, scan, verifications, vehicles, trips) | The same five screens under five different sidebars; a phase number above every title; four zeroes and two empty boxes as the dashboard | `[x]` |
 | 9b | Finance console | Same: correct, unranked | `[ ]` |
+| 9c | **Admin console** (`/admin` + 6 screens) | Two frames around every screen (a card inside a card), five different sidebars, a hub whose second tile apologised for a phase that no longer exists, and UUIDs printed where names belong | `[x]` |
 | 10 | Mobile shell (`apps/mobile`) | Mirrors the same problem: the home screen is a list of links, one of them labelled *المرحلة* | `[ ]` |
 | 11 | Empty / error / loading states | The states a demo never shows and a launch always hits | `[ ]` |
 
@@ -196,3 +197,54 @@ cap, and no `100vw` in a width.
   a polling island is a cache to invalidate and a decision about what "live" means for a supervisor.
 - `[~]` **Bulk verification for vehicle documents.** The trip queue has it; the vehicle queue is one decision at a time
   because each record needs its documents opened. A bulk approve there would be a button that means "I did not look".
+
+## 9c. The admin console — what changed
+
+Asked for by the owner, in their words: *"I do not want nested cards, it takes a lot of space with no meaning."*
+
+| What it did | Why it is wrong |
+| --- | --- |
+| `<section class="card console-panel">` wrapped every console page, and each screen put its own cards inside | Two borders, two paddings and two shadows around one piece of content; 24px of chrome on each edge for nothing. On `/admin/regions` that was three cards inside a fourth |
+| Five screens, five hand-written nav lists, none the same — and plans/subscriptions swapped in a list pointing at `/finance/invoices` and `/finance/payouts` | Which destinations you could see depended on where you already were; two of them left the console |
+| The hub was two tiles, one of them *"this screen is under construction — you will see it working in the phase mentioned above"* | A phase badge that no longer exists, and an apology where a link should be. Plans had shipped two phases earlier |
+| `.data-table th` styled **every** `th`, including `<th scope="row">` | The cell holding a record's own name was rendered at 0.74rem in muted grey, uppercased in Latin tables — a header rule applied to the data |
+| `/admin/subscriptions` printed `owner_org_id` | `aaaaaaaa-0000-4000-8000-000000000001` in the "Operator" column names nobody and is not a thing a person can search |
+| The same, in the places queue: `submittedBy` | A 36-character UUID beside a place name |
+| A button that opened the plan editor was labelled **Save** | The label described the wrong verb, so the row read as an action already taken |
+| Section headings repeated the page title (`Plans and limits` twice, `Subscriptions` twice) | The heading of a section should say what the section *is*, not what the page is |
+
+**What changed**
+
+- **The console shell is a page, not a card.** A header band (title, one sentence, the page's action), a hairline, then
+  the content in one column divided by rules. `.console-panel` remains for the account screens, where it is a card on a
+  page of cards; the shell no longer uses it. `npm run check:responsive` now fails if a `card`/`console-panel` class
+  reappears in the shell — reverse-verified by putting it back.
+- **Sections, not boxes.** A new `.console-section` primitive: heading, hint, table or list, no border, a hairline
+  between siblings. `PlaceConsole`, `RegionConsole`, `SupervisorPanel` and the staff bulk panel moved from
+  `class="card"` to it, so the page has one frame — the window.
+- **One navigation for the admin console** (`components/admin/AdminNav.ts`), grouped *Platform / Geography / People /
+  Money / Operations*, used by all seven screens; `adminMoneyNav` is deleted.
+- **The hub is an index**: every destination as a row — name, what is behind it, an arrow — grouped by subject, two
+  columns on a wide screen. No cards, no placeholder, no phase.
+- **Tables**: only `thead` gets the small-caps header treatment; row headers keep the record's own type; the header row
+  has the muted band; rows have a hairline and a hover. `.data-table` is shared, so every console table inherits it.
+- **Names where names belong**: subscriptions resolve `organizations.name` / `profiles.full_name`, the places queue
+  resolves the submitter, and the fallback is an 8-character monospace id (`#aaaaaaaa`), not a UUID.
+- **Copy and hierarchy**: plan rows say *Edit*; section headings are their own words (`The region tree`, `Plans and
+  prices`, `Live subscriptions`); `/admin/users` is titled what the nav calls it; the notifications screen is
+  *Alert templates* in both places instead of a 30-character sentence in the sidebar.
+- Inline `style={{ … }}` in these components became four classes (`.unit-title`, `.unit-meta`, `.console-subhead`,
+  `.row-actions`) — the design system was living in JSX where it could not be themed or found.
+
+**Verification** — `npm run check:all` (676 tests ×2, 45 migrations, 987 pgTAP assertions), `npm run check:responsive`
+(65 media queries, the new card-in-card rule), `check:guards`, and the a11y sweep over every route in both directions.
+All seven admin screens were read back from the live server with the tags stripped, in Arabic and English: zero
+`.console-panel`, zero `card` in a console body, one `h1` per page, no repeated headings. No browser in this sandbox,
+so this is HTML-and-CSS-level verification, not a screenshot.
+
+**Deliberately not done here**
+
+- `[~]` **Sticky console sidebar.** It is the right answer for a long table, and it needs a scroll container and an
+  offset measured against the sticky site header — a layout change to make with a browser open.
+- `[~]` **Dark-mode audit of the new surfaces.** The tokens flip, but the new hairlines and the muted table header were
+  chosen against the light theme.

@@ -9,8 +9,8 @@ import {
 } from '@maak/core';
 import { SiteHeader } from '@/components/SiteHeader';
 import { ConsoleShell } from '@/components/ConsoleShell';
+import { adminNav } from '@/components/admin/AdminNav';
 import { Badge } from '@/components/ui/Feedback';
-import { adminMoneyNav } from '@/components/payments/financeNav';
 import { loadAccountContext } from '@/lib/account';
 import { loadQuotaOverrides, loadSubscriptions } from '@/lib/finance';
 
@@ -54,7 +54,7 @@ export default async function AdminSubscriptionsPage({
           locale={locale}
           title="subs.title"
           subtitle="subs.subtitle"
-          items={adminMoneyNav(locale)}
+          groups={adminNav(locale)}
         >
           <p className="form-hint">{t('errors.FORBIDDEN')}</p>
         </ConsoleShell>
@@ -71,13 +71,15 @@ export default async function AdminSubscriptionsPage({
     <>
       <SiteHeader locale={locale} pathname="/admin/subscriptions" />
       <ConsoleShell
+        pathname="/admin/subscriptions"
+        consoleTitle="console.admin"
         locale={locale}
         title="subs.title"
         subtitle="subs.subtitle"
-        items={adminMoneyNav(locale)}
+        groups={adminNav(locale)}
       >
         <section>
-          <h2>{t('subs.title')}</h2>
+          <h2>{t('subs.liveHeading')}</h2>
           {subscriptions.length === 0 ? (
             <p className="form-hint">{t('subs.empty')}</p>
           ) : (
@@ -97,9 +99,15 @@ export default async function AdminSubscriptionsPage({
                   {subscriptions.map((subscription) => (
                     <tr key={subscription.id}>
                       <th scope="row" data-label={t('subs.owner')}>
-                        <bdi dir="ltr">
-                          {subscription.ownerOrgId ?? subscription.ownerUserId ?? '—'}
-                        </bdi>
+                        {subscription.ownerName ?? (
+                          /* No name to show: a short id at least points somewhere, a 36-character UUID does not. */
+                          <bdi dir="ltr" className="id-short">
+                            {(subscription.ownerOrgId ?? subscription.ownerUserId ?? '—').slice(
+                              0,
+                              8,
+                            )}
+                          </bdi>
+                        )}
                       </th>
                       <td data-label={t('subs.plan')}>
                         {t(`plan.${subscription.planCode}` as TranslationKey)}

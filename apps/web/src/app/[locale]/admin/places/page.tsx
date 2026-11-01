@@ -3,6 +3,7 @@ import { isLocale, translate, type Locale, type TranslationKey } from '@maak/cor
 import { SiteHeader } from '@/components/SiteHeader';
 import { PreviewBanner } from '@/components/PreviewBanner';
 import { ConsoleShell } from '@/components/ConsoleShell';
+import { adminNav } from '@/components/admin/AdminNav';
 import { EmptyState } from '@/components/ui/Feedback';
 import { PlaceConsole } from '@/components/geo/PlaceConsole';
 import { loadAccountContext } from '@/lib/account';
@@ -51,13 +52,7 @@ export default async function AdminPlacesPage({ params }: { params: Promise<{ lo
         locale={locale}
         title="places.title"
         subtitle="places.subtitle"
-        items={[
-          { key: 'console.navOverview', href: `/${locale}/admin` },
-          { key: 'catalogue.title', href: `/${locale}/admin/notifications` },
-          { key: 'nav.regions', href: `/${locale}/admin/regions` },
-          { key: 'nav.places', href: `/${locale}/admin/places` },
-          { key: 'nav.account', href: `/${locale}/account` },
-        ]}
+        groups={adminNav(locale)}
       >
         {directory.configured ? null : <PreviewBanner locale={locale} />}
         <PlaceConsole locale={locale} directory={directory} canDecide={isStaff} />
