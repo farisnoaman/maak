@@ -66,6 +66,10 @@ export const QUOTA_METRIC_KEY: Record<string, TranslationKey> = {
   staff: 'fleet.metricStaff',
   active_trips: 'fleet.metricActiveTrips',
   featured_listings: 'fleet.metricFeaturedListings',
+  // Phase 10's two report metrics. Without these a limit reached on an export says "your plan allows null
+  // of undefined", which is worse than saying nothing.
+  fleet_reports: 'metric.fleet_reports',
+  finance_exports: 'metric.finance_exports',
 };
 
 export function quotaMetricKey(metric: string): TranslationKey {

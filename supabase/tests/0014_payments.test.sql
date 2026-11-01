@@ -778,8 +778,12 @@ set local request.jwt.claims = '{"sub":"9c9c0002-2222-4222-8222-9c9c9c9c9c9c","r
 
 select is(
   public.my_available_payout_yer('9c9caa00-0000-4000-8000-00000000000a'),
-  8_000,
-  'the payout screen''s number is the same formula as the cap: 13 000 confirmed, less 3 000 refunded and 2 000 withdrawn'
+  -- Phase 10 corrected this number: the cap is now commission-aware, because Phase 9 let an operator withdraw
+  -- money the platform had already kept. This org is on Pro, so the effective rate is 400 bp (500 global, less
+  -- the 100 bp plan discount): 13 000 − 520 commission − 3 000 refunded − 2 000 withdrawn = 7 480, which is
+  -- exactly what the ledger says is owed.
+  7_480,
+  'the payout screen''s number is the same formula as the cap: 13 000 confirmed, less commission, less 3 000 refunded and 2 000 withdrawn'
 );
 
 set local request.jwt.claims = '{"sub":"9c9c0005-5555-4555-8555-9c9c9c9c9c9c","role":"authenticated"}';

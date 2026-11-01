@@ -1,5 +1,5 @@
-// migrations-sha256: f65d815fbb7ce02f51bc20ce57297d9b38018ac80d2ebcfb0f6bb785913753a5
-/* Generated from 30 migrations. Run `npm run db:types` after changing the schema. */
+// migrations-sha256: bb8af55cec175e300c3a4c28755ee1b18d6a59fbfb25d1ea502411ecf0783f0d
+/* Generated from 31 migrations. Run `npm run db:types` after changing the schema. */
 
 /**
  * Schema types for RLS-filtered reads (Phase 0 subset).
@@ -236,10 +236,45 @@ export type NotificationKind =
   | 'booking_rejected'
   | 'booking_cancelled'
   | 'vehicle_maintenance_due'
-  | 'vehicle_maintenance_overdue';
+  | 'vehicle_maintenance_overdue'
+  | 'vehicle_fuel_anomaly'
+  | 'payment_submitted'
+  | 'payment_confirmed'
+  | 'payment_rejected'
+  | 'refund_decided'
+  | 'payout_decided'
+  | 'invoice_issued'
+  | 'subscription_activated'
+  | 'subscription_past_due'
+  | 'subscription_expired'
+  | 'finance_alert';
 
 export type PlatformRole =
   'platform_admin' | 'platform_staff' | 'finance_officer' | 'geo_supervisor';
+
+export type LedgerAccountKind = 'asset' | 'liability' | 'revenue' | 'expense' | 'equity';
+export type JournalSourceKind =
+  | 'payment'
+  | 'refund'
+  | 'payout'
+  | 'invoice'
+  | 'commission'
+  | 'subscription'
+  | 'expense'
+  | 'adjustment';
+export type InvoiceKind = 'booking' | 'subscription';
+export type InvoiceStatus = 'draft' | 'issued' | 'paid' | 'void' | 'overdue';
+export type SubscriptionStatus =
+  'trialing' | 'active' | 'past_due' | 'grace' | 'cancelled' | 'expired';
+export type SubscriptionEventKind =
+  | 'started'
+  | 'trial_ended'
+  | 'renewed'
+  | 'plan_changed'
+  | 'cancelled'
+  | 'expired'
+  | 'payment_failed';
+export type ReconciliationStatus = 'pending' | 'matched' | 'exception' | 'ignored';
 
 export interface Profile {
   id: string;
@@ -1046,6 +1081,191 @@ export interface BookingShareToken {
   created_at: string;
 }
 
+export interface LedgerAccount {
+  code: string;
+  kind: LedgerAccountKind;
+  name_ar: string;
+  name_en: string;
+  is_system: boolean;
+  created_at: string;
+}
+
+export interface JournalEntry {
+  id: string;
+  code: string;
+  posting_date: string;
+  description: string;
+  source_kind: JournalSourceKind;
+  source_table: string;
+  source_id: string;
+  currency: string;
+  owner_user_id: string | null;
+  owner_org_id: string | null;
+  reverses_id: string | null;
+  reason: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface LedgerEntry {
+  id: string;
+  journal_id: string;
+  seq: number;
+  account_code: string;
+  direction: 'debit' | 'credit';
+  amount_yer: number;
+}
+
+export interface CommissionRule {
+  id: string;
+  owner_user_id: string | null;
+  owner_org_id: string | null;
+  basis_points: number;
+  min_yer: number | null;
+  max_yer: number | null;
+  effective_from: string;
+  effective_to: string | null;
+  note: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface Invoice {
+  id: string;
+  code: string;
+  kind: InvoiceKind;
+  status: InvoiceStatus;
+  booking_id: string | null;
+  intent_id: string | null;
+  subscription_id: string | null;
+  journal_id: string | null;
+  owner_user_id: string | null;
+  owner_org_id: string | null;
+  currency: string;
+  subtotal_yer: number;
+  commission_yer: number;
+  total_yer: number;
+  snapshot: Json;
+  issued_at: string;
+  due_on: string | null;
+  paid_at: string | null;
+  voided_at: string | null;
+  voided_by: string | null;
+  void_reason: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface QuotaOverride {
+  id: string;
+  owner_user_id: string | null;
+  owner_org_id: string | null;
+  metric: string;
+  limit_value: number | null;
+  expires_at: string | null;
+  granted_by: string | null;
+  reason: string;
+  revoked_at: string | null;
+  revoked_by: string | null;
+  created_at: string;
+}
+
+export interface QuotaViolation {
+  id: string;
+  owner_user_id: string | null;
+  owner_org_id: string | null;
+  actor_id: string | null;
+  metric: string;
+  plan_code: PlanCode | null;
+  limit_value: number | null;
+  used: number | null;
+  action: string | null;
+  created_at: string;
+}
+
+export interface UsageCounter {
+  owner_user_id: string | null;
+  owner_org_id: string | null;
+  metric: string;
+  period_start: string;
+  used: number;
+  updated_at: string;
+}
+
+export interface Subscription {
+  id: string;
+  owner_user_id: string | null;
+  owner_org_id: string | null;
+  plan_code: PlanCode;
+  pending_plan_code: PlanCode | null;
+  status: SubscriptionStatus;
+  price_yer: number;
+  trial_ends_at: string | null;
+  current_period_start: string;
+  current_period_end: string;
+  grace_ends_at: string | null;
+  cancel_at_period_end: boolean;
+  cancelled_at: string | null;
+  cancel_reason: string | null;
+  ended_at: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SubscriptionEvent {
+  id: string;
+  subscription_id: string;
+  kind: SubscriptionEventKind;
+  from_plan: PlanCode | null;
+  to_plan: PlanCode | null;
+  amount_yer: number;
+  invoice_id: string | null;
+  journal_id: string | null;
+  note: string | null;
+  actor_id: string | null;
+  created_at: string;
+}
+
+export interface FinanceExport {
+  id: string;
+  owner_user_id: string | null;
+  owner_org_id: string | null;
+  kind: 'statement' | 'revenue' | 'payouts' | 'invoices';
+  period_from: string;
+  period_to: string;
+  row_count: number;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface ReconciliationImport {
+  id: string;
+  owner_user_id: string | null;
+  owner_org_id: string | null;
+  source: 'jaib' | 'kuraimi' | 'tadhamon' | 'cash_desk' | 'bank_transfer' | 'other';
+  period_from: string;
+  period_to: string;
+  imported_by: string | null;
+  lines_total: number;
+  lines_matched: number;
+  created_at: string;
+}
+
+export interface ReconciliationLine {
+  id: string;
+  import_id: string;
+  external_ref: string | null;
+  amount_yer: number;
+  occurred_on: string;
+  status: ReconciliationStatus;
+  intent_id: string | null;
+  payout_id: string | null;
+  note: string | null;
+  resolved_by: string | null;
+  resolved_at: string | null;
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -1278,6 +1498,113 @@ export interface Database {
           amount_yer: number;
         };
         Update: Partial<PaymentOutboxRow>;
+      };
+      ledger_accounts: {
+        Row: LedgerAccount;
+        Insert: Partial<LedgerAccount> & {
+          code: string;
+          kind: LedgerAccountKind;
+          name_ar: string;
+          name_en: string;
+        };
+        Update: Partial<LedgerAccount>;
+      };
+      journal_entries: {
+        Row: JournalEntry;
+        Insert: Partial<JournalEntry> & {
+          code: string;
+          posting_date: string;
+          description: string;
+          source_kind: JournalSourceKind;
+          source_table: string;
+          source_id: string;
+        };
+        Update: Partial<JournalEntry>;
+      };
+      ledger_entries: {
+        Row: LedgerEntry;
+        Insert: Partial<LedgerEntry> & {
+          journal_id: string;
+          seq: number;
+          account_code: string;
+          direction: 'debit' | 'credit';
+          amount_yer: number;
+        };
+        Update: Partial<LedgerEntry>;
+      };
+      commission_rules: {
+        Row: CommissionRule;
+        Insert: Partial<CommissionRule> & { basis_points: number };
+        Update: Partial<CommissionRule>;
+      };
+      invoices: {
+        Row: Invoice;
+        Insert: Partial<Invoice> & {
+          code: string;
+          kind: InvoiceKind;
+          subtotal_yer: number;
+          total_yer: number;
+        };
+        Update: Partial<Invoice>;
+      };
+      quota_overrides: {
+        Row: QuotaOverride;
+        Insert: Partial<QuotaOverride> & { metric: string; reason: string };
+        Update: Partial<QuotaOverride>;
+      };
+      quota_violations: {
+        Row: QuotaViolation;
+        Insert: Partial<QuotaViolation> & { metric: string };
+        Update: Partial<QuotaViolation>;
+      };
+      usage_counters: {
+        Row: UsageCounter;
+        Insert: Partial<UsageCounter> & { metric: string; period_start: string };
+        Update: Partial<UsageCounter>;
+      };
+      subscriptions: {
+        Row: Subscription;
+        Insert: Partial<Subscription> & {
+          plan_code: PlanCode;
+          price_yer: number;
+          current_period_end: string;
+        };
+        Update: Partial<Subscription>;
+      };
+      subscription_events: {
+        Row: SubscriptionEvent;
+        Insert: Partial<SubscriptionEvent> & {
+          subscription_id: string;
+          kind: SubscriptionEventKind;
+        };
+        Update: Partial<SubscriptionEvent>;
+      };
+      finance_exports: {
+        Row: FinanceExport;
+        Insert: Partial<FinanceExport> & {
+          kind: 'statement' | 'revenue' | 'payouts' | 'invoices';
+          period_from: string;
+          period_to: string;
+        };
+        Update: Partial<FinanceExport>;
+      };
+      reconciliation_imports: {
+        Row: ReconciliationImport;
+        Insert: Partial<ReconciliationImport> & {
+          source: 'jaib' | 'kuraimi' | 'tadhamon' | 'cash_desk' | 'bank_transfer' | 'other';
+          period_from: string;
+          period_to: string;
+        };
+        Update: Partial<ReconciliationImport>;
+      };
+      reconciliation_lines: {
+        Row: ReconciliationLine;
+        Insert: Partial<ReconciliationLine> & {
+          import_id: string;
+          amount_yer: number;
+          occurred_on: string;
+        };
+        Update: Partial<ReconciliationLine>;
       };
       trips: {
         Row: Trip;
@@ -1530,6 +1857,13 @@ export interface Database {
       maintenance_state: MaintenanceState;
       expense_category: ExpenseCategory;
       expense_source: ExpenseSource;
+      ledger_account_kind: LedgerAccountKind;
+      journal_source_kind: JournalSourceKind;
+      invoice_kind: InvoiceKind;
+      invoice_status: InvoiceStatus;
+      subscription_status: SubscriptionStatus;
+      subscription_event_kind: SubscriptionEventKind;
+      reconciliation_status: ReconciliationStatus;
     };
   };
 }
