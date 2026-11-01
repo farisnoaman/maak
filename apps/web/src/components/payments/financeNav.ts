@@ -1,12 +1,11 @@
 import type { TranslationKey } from '@maak/core';
 
 /**
- * Navigation for the three consoles that touch money.
+ * Navigation for the two desks that touch money all day.
  *
- * One list per console, because the desks are different jobs: finance works the ledger all day, an operator
- * looks at their plan once a month, and an admin edits prices when the business changes its mind. A link
- * missing from one list is a page nobody finds, so the lists live beside each other where the omission is
- * visible.
+ * One list per desk, because the jobs are different: finance works the ledger, an operator looks at their own
+ * plan and payouts. The admin console's links are grouped in `components/admin/AdminNav.ts` — its old list here
+ * pointed at `/finance/invoices` and `/finance/payouts`, screens that belong to another console.
  */
 export function financeNav(locale: string) {
   return [
@@ -32,15 +31,5 @@ export function operatorMoneyNav(locale: string) {
     { key: 'financeNav.expenses' as TranslationKey, href: `/${locale}/operator/expenses` },
     { key: 'console.navPayments' as TranslationKey, href: `/${locale}/operator/payments` },
     { key: 'console.navPayouts' as TranslationKey, href: `/${locale}/operator/payouts` },
-  ];
-}
-
-export function adminMoneyNav(locale: string) {
-  return [
-    { key: 'financeNav.plans' as TranslationKey, href: `/${locale}/admin/plans` },
-    { key: 'financeNav.subscriptions' as TranslationKey, href: `/${locale}/admin/subscriptions` },
-    { key: 'catalogue.title' as TranslationKey, href: `/${locale}/admin/notifications` },
-    { key: 'financeNav.invoices' as TranslationKey, href: `/${locale}/finance/invoices` },
-    { key: 'console.navFinancePayouts' as TranslationKey, href: `/${locale}/finance/payouts` },
   ];
 }

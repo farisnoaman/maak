@@ -3,6 +3,7 @@ import { isLocale, translate, type Locale, type TranslationKey } from '@maak/cor
 import { SiteHeader } from '@/components/SiteHeader';
 import { PreviewBanner } from '@/components/PreviewBanner';
 import { ConsoleShell } from '@/components/ConsoleShell';
+import { adminNav } from '@/components/admin/AdminNav';
 import { EmptyState } from '@/components/ui/Feedback';
 import { DeletionRequests } from '@/components/admin/DeletionRequests';
 import { RoleConsole } from '@/components/admin/RoleConsole';
@@ -63,16 +64,12 @@ export default async function AdminUsersPage({ params }: { params: Promise<{ loc
     <>
       <SiteHeader locale={locale} pathname="/admin/users" />
       <ConsoleShell
+        consoleTitle="console.admin"
+        pathname="/admin/users"
         locale={locale}
-        title="admin.title"
+        title="console.navUsers"
         subtitle="admin.subtitle"
-        phase="1"
-        items={[
-          { key: 'console.navOverview', href: `/${locale}/admin` },
-          { key: 'catalogue.title', href: `/${locale}/admin/notifications` },
-          { key: 'nav.roles', href: `/${locale}/admin/users` },
-          { key: 'nav.account', href: `/${locale}/account` },
-        ]}
+        groups={adminNav(locale)}
       >
         {preview ? <PreviewBanner locale={locale} /> : null}
         <RoleConsole

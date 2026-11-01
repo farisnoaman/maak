@@ -36,6 +36,11 @@ export function PublicTripCard({
     <article className="card trip-card">
       <div className="trip-badges">
         {trip.isFeatured ? <Badge tone="info">{t('trips.badgeFeatured')}</Badge> : null}
+        {trip.seatsAvailable === 0 ? (
+          // A sold-out trip stays in the list — it is evidence the route runs — but it must say so before the
+          // price, or the card invites a tap that ends in a disabled button.
+          <Badge tone="neutral">{t('trips.badgeSoldOut')}</Badge>
+        ) : null}
         {trip.seatsAvailable > 0 && trip.seatsAvailable <= 2 ? (
           <Badge tone="warning">{t('trips.badgeLastSeats')}</Badge>
         ) : null}
@@ -45,16 +50,20 @@ export function PublicTripCard({
         {trip.stopCount === 0 ? <Badge tone="success">{t('trips.search.direct')}</Badge> : null}
       </div>
 
+      {/* The route is the link. A card whose only tappable thing is a small button at the bottom asks a thumb
+          to aim; the title is the largest target on it. The button stays for people who read to the end. */}
       <h3 className="trip-card__route">
-        <span className={highlighted.has(trip.origin.code) ? 'trip-match' : undefined}>
-          {trip.origin.name}
-        </span>
-        <span className="trip-card__arrow" aria-hidden="true">
-          →
-        </span>
-        <span className={highlighted.has(trip.destination.code) ? 'trip-match' : undefined}>
-          {trip.destination.name}
-        </span>
+        <Link className="trip-card__link" href={href}>
+          <span className={highlighted.has(trip.origin.code) ? 'trip-match' : undefined}>
+            {trip.origin.name}
+          </span>
+          <span className="trip-card__arrow" aria-hidden="true">
+            →
+          </span>
+          <span className={highlighted.has(trip.destination.code) ? 'trip-match' : undefined}>
+            {trip.destination.name}
+          </span>
+        </Link>
       </h3>
 
       <div className="trip-card__meta">
@@ -70,8 +79,11 @@ export function PublicTripCard({
           {trip.priceFromYer == null ? '—' : formatMinor(trip.priceFromYer, 'YER', { locale })}{' '}
           <small>{t('trips.pricePerSeat')}</small>
         </p>
-        <Link className="btn btn--primary" href={href}>
-          {t('trips.view')}
+        <Link
+          className={trip.seatsAvailable === 0 ? 'btn btn--ghost' : 'btn btn--primary'}
+          href={href}
+        >
+          {trip.seatsAvailable === 0 ? t('trips.badgeSoldOut') : t('trips.view')}
         </Link>
       </div>
     </article>

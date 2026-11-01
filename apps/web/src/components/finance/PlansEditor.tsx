@@ -83,7 +83,7 @@ export function PlansEditor({
       ) : null}
 
       <section>
-        <h2>{t('plans.title')}</h2>
+        <h2>{t('plans.priceList')}</h2>
         <div className="table-scroll">
           <table className="data-table table-cards">
             <caption className="visually-hidden">{t('plans.title')}</caption>
@@ -120,7 +120,7 @@ export function PlansEditor({
                   </td>
                   <td data-label={t('common.actions')}>
                     <Button size="sm" variant="subtle" onClick={() => startEdit(plan)}>
-                      {t('plans.save')}
+                      {t('plans.edit')}
                     </Button>
                   </td>
                 </tr>

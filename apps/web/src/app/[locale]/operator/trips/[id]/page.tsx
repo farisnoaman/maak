@@ -39,10 +39,11 @@ export default async function OperatorTripPage({
       <>
         <SiteHeader locale={locale} pathname="/operator/trips" />
         <ConsoleShell
+          consoleTitle="console.operator"
+          pathname="/operator/trips"
           locale={locale}
           title="trips.title"
           subtitle="trips.subtitle"
-          phase="4"
           items={nav}
         >
           <EmptyState title={t('errors.NOT_FOUND')} />
@@ -54,13 +55,7 @@ export default async function OperatorTripPage({
   return (
     <>
       <SiteHeader locale={locale} pathname="/operator/trips" />
-      <ConsoleShell
-        locale={locale}
-        title="trips.title"
-        subtitle="trips.subtitle"
-        phase="4"
-        items={nav}
-      >
+      <ConsoleShell locale={locale} title="trips.title" subtitle="trips.subtitle" items={nav}>
         {!loaded.configured ? <PreviewBanner locale={locale} /> : null}
         <a className="trip-back" href={`/${locale}/operator/trips`}>
           ← {t('common.back')}

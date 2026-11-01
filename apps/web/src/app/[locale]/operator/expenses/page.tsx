@@ -43,10 +43,11 @@ export default async function OperatorExpensesPage({
     <>
       <SiteHeader locale={locale} pathname="/operator/expenses" />
       <ConsoleShell
+        consoleTitle="console.operator"
+        pathname="/operator/expenses"
         locale={locale}
         title="expenses.title"
         subtitle="expenses.subtitle"
-        phase="10"
         items={operatorMoneyNav(locale)}
       >
         <ExpensesPanel

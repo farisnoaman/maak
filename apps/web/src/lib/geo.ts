@@ -130,7 +130,25 @@ export async function loadGeoDirectory(context: AccountContext): Promise<GeoDire
     isPublic: row.is_public === true,
   }));
 
-  const pendingPlaces: GeoPendingPlace[] = rows(pendingResult.data).map((row) => ({
+  const pendingRows = rows(pendingResult.data);
+  /*
+   * Who submitted what. The queue printed `created_by` — a 36-character UUID next to a place name, which is a
+   * database column rendered into a screen. The names come from one extra read of `profiles`, already readable by
+   * staff; when it is unavailable the row shows a short id instead.
+   */
+  const submitterIds = [...new Set(pendingRows.map((row) => text(row.created_by)).filter(Boolean))];
+  const submitterNames = new Map<string, string>();
+  if (submitterIds.length > 0) {
+    const { data: profiles } = await client
+      .from('profiles')
+      .select('id, full_name')
+      .in('id', submitterIds as string[]);
+    for (const profile of (profiles ?? []) as { id: string; full_name: string | null }[]) {
+      if (profile.id && profile.full_name) submitterNames.set(profile.id, profile.full_name);
+    }
+  }
+
+  const pendingPlaces: GeoPendingPlace[] = pendingRows.map((row) => ({
     id: String(row.id),
     kind: String(row.kind),
     nameAr: String(row.name_ar),
@@ -138,6 +156,7 @@ export async function loadGeoDirectory(context: AccountContext): Promise<GeoDire
     governorateName: text(related(row.governorates, (item) => item.name_ar)[0]),
     districtName: text(related(row.districts, (item) => item.name_ar)[0]),
     submittedBy: text(row.created_by),
+    submittedByName: submitterNames.get(text(row.created_by) ?? '') ?? null,
     createdAt: String(row.created_at),
     lat: num(row.lat),
     lng: num(row.lng),

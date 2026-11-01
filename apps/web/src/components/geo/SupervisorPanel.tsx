@@ -130,7 +130,7 @@ export function SupervisorPanel({
   const current = supervisors.find((row) => row.userId === userId);
 
   return (
-    <section className="card" aria-labelledby="geo-supervisors">
+    <section className="console-section" aria-labelledby="geo-supervisors">
       <div className="panel-head">
         <h2 id="geo-supervisors">{t('supervisors.title')}</h2>
         <Badge tone="info">{t('supervisors.scope')}</Badge>
@@ -144,8 +144,8 @@ export function SupervisorPanel({
           {supervisors.map((row) => (
             <li key={row.userId} className="queue-card">
               <div>
-                <p style={{ fontWeight: 700, margin: 0 }}>{row.name ?? row.userId}</p>
-                <p className="form-hint" style={{ margin: 0 }}>
+                <p className="unit-title">{row.name ?? row.userId}</p>
+                <p className="unit-meta">
                   {row.regionIds
                     .map((id) => {
                       const region = directory.regions.find((candidate) => candidate.id === id);

@@ -10,6 +10,7 @@ import {
 } from '@maak/core';
 import { SiteHeader } from '@/components/SiteHeader';
 import { ConsoleShell } from '@/components/ConsoleShell';
+import { adminNav } from '@/components/admin/AdminNav';
 import { Badge } from '@/components/ui/Feedback';
 import { loadAccountContext } from '@/lib/account';
 import { loadNotificationCatalogue } from '@/lib/notifications';
@@ -63,15 +64,12 @@ export default async function NotificationCataloguePage({
     <>
       <SiteHeader locale={locale} pathname="/admin/notifications" />
       <ConsoleShell
+        consoleTitle="console.admin"
+        pathname="/admin/notifications"
         locale={locale}
-        title="catalogue.title"
+        title="console.navTemplates"
         subtitle="catalogue.subtitle"
-        phase="11"
-        items={[
-          { key: 'console.navOverview', href: `/${locale}/admin` },
-          { key: 'catalogue.title', href: `/${locale}/admin/notifications` },
-          { key: 'notifications.pageTitle', href: `/${locale}/account/notifications` },
-        ]}
+        groups={adminNav(locale)}
       >
         {!configured ? (
           <p className="form-error" role="alert">

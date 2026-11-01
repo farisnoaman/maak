@@ -45,11 +45,12 @@ export default async function ConsolePage({ params }: { params: Promise<{ locale
     <>
       <SiteHeader locale={locale} pathname="/operator" />
       <ConsoleShell
+        consoleTitle="console.operator"
+        pathname="/operator"
         locale={locale}
         title="console.operator"
         subtitle="console.subtitle.operator"
         layout="tiles"
-        phase="3"
         items={[
           { key: 'console.navOverview', href: `/${locale}/operator` },
           { key: 'console.navVehicles', href: `/${locale}/operator/vehicles` },

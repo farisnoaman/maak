@@ -38,10 +38,11 @@ export default async function NewTripPage({
     <>
       <SiteHeader locale={locale} pathname="/operator/trips" />
       <ConsoleShell
+        consoleTitle="console.operator"
+        pathname="/operator/trips"
         locale={locale}
         title="trips.new"
         subtitle="trips.subtitle"
-        phase="4"
         items={[
           { key: 'console.navOverview', href: `/${locale}/operator` },
           { key: 'console.navTrips', href: `/${locale}/operator/trips` },

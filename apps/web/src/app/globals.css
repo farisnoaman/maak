@@ -201,7 +201,7 @@ a {
 
 @media (min-width: 940px) {
   .hero__grid {
-    grid-template-columns: 1.1fr 0.9fr;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
   }
 }
 
@@ -305,6 +305,12 @@ a {
   border: 1px solid var(--surface-sunken);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
+  /*
+   * A long unbreakable run — a trip code, a token, a URL in an invoice snapshot — sets the *minimum* width of every
+   * box above it unless it is allowed to break. `anywhere` also lets the intrinsic minimum collapse, which is what
+   * keeps a card from pushing the page wider than the phone.
+   */
+  overflow-wrap: anywhere;
 }
 
 .calc {
@@ -528,7 +534,7 @@ a {
 .site-footer__grid {
   display: grid;
   gap: var(--space-8);
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
 }
 
 @media (min-width: 720px) {
@@ -717,7 +723,8 @@ a {
 }
 
 .ui-dialog {
-  inline-size: min(560px, calc(100vw - 2 * var(--space-5)));
+  /* `100%` here is the viewport minus any scrollbar; `100vw` includes it and pushes the box off the page. */
+  inline-size: min(560px, calc(100% - 2 * var(--space-5)));
   padding: 0;
   border: 1px solid var(--surface-sunken);
   border-radius: var(--radius-lg);
@@ -768,7 +775,7 @@ a {
   display: grid;
   gap: var(--space-3);
   z-index: 60;
-  max-inline-size: min(380px, calc(100vw - 2 * var(--space-5)));
+  max-inline-size: min(380px, calc(100% - 2 * var(--space-5)));
 }
 .ui-toast {
   display: flex;
@@ -990,36 +997,48 @@ a {
 /* ---------- app shell (consoles) ---------- */
 .console-layout {
   display: grid;
+  /*
+   * `minmax(0, 1fr)` on the implicit column, never the default `auto`. An `auto` track is sized to the *max-content*
+   * of what is in it, and on a phone the aside holds a row of `nowrap` chips — so the track grew to the width of the
+   * whole chip row, and the panel beside it was laid out at that width, past the right edge of the screen. That is
+   * the horizontal scrollbar on `/staff/scan`: one unguarded track, one page wider than the phone.
+   */
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-5);
   padding-block: var(--space-6);
+  min-inline-size: 0;
+}
+/* A grid child defaults to `min-width: auto` — a second way of refusing to shrink below its content. */
+.console-side,
+.console-main,
+.console-body,
+.console-panel {
+  min-inline-size: 0;
 }
 @media (min-width: 900px) {
   .console-layout {
-    grid-template-columns: 240px 1fr;
+    grid-template-columns: 240px minmax(0, 1fr);
     gap: var(--space-8);
     padding-block: var(--space-10);
   }
 }
 .console-nav {
-  /* A phone gets a scrollable row of chips instead of a stack that pushes the content down. */
+  /*
+   * A phone gets wrapped chips, not a horizontal scroller. The scroller was the other half of the bug: it was
+   * widened to the screen edges with `margin-inline: -16px`, so its box stuck out of a container that has no
+   * padding of its own, and it cut the last destination off at the edge with no hint that it scrolled. Wrapping
+   * shows every destination, needs no gesture to discover, and cannot scroll the page sideways.
+   */
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
-  overflow-x: auto;
-  scrollbar-width: none;
-  margin-inline: calc(var(--space-4) * -1);
-  padding-inline: var(--space-4);
-}
-.console-nav::-webkit-scrollbar {
-  display: none;
+  max-inline-size: 100%;
 }
 @media (min-width: 900px) {
   .console-nav {
     display: grid;
     align-content: start;
     gap: var(--space-1);
-    overflow: visible;
-    margin-inline: 0;
-    padding-inline: 0;
   }
 }
 .console-nav a {
@@ -1040,6 +1059,10 @@ a {
 .console-nav a:hover {
   background: var(--surface-muted);
 }
+/*
+ * `.console-panel` stays for the account screens, where it is a real card on a page of cards. The console shell no
+ * longer uses it: see `.console-head` / `.console-body` below.
+ */
 .console-panel {
   padding: var(--space-4);
 }
@@ -1058,21 +1081,230 @@ a {
   color: var(--ink-600);
   font-size: 0.9rem;
 }
-/*
- * One column by default, and that default is the fix for a real defect: `auto-fill` with a single child
- * puts that child in the first 220px track, so every console *content* page (fleet, vehicles, health…)
- * rendered as a narrow strip beside a row of empty tracks. Only the three overview screens are tile
- * grids, and they say so (`layout="tiles"`).
- */
-.console-grid {
+
+/* ---------- the console page: a header band and a flat content column ---------- */
+
+.console-main {
   display: grid;
-  gap: var(--space-4);
-  margin-block-start: var(--space-6);
+  align-content: start;
+  gap: var(--space-5);
+  min-inline-size: 0;
+}
+
+/*
+ * The header band. The title, the sentence that says what the screen is for, and the page's own action, on the
+ * page surface — not inside a card that repeats the same padding the content already has.
+ */
+.console-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-5);
+  align-items: end;
+  justify-content: space-between;
+  padding-block-end: var(--space-4);
+  border-block-end: 1px solid var(--surface-sunken);
+}
+.console-head__text {
+  min-inline-size: 0;
+}
+.console-head h1 {
+  font-size: clamp(1.35rem, 1.1rem + 0.9vw, 1.75rem);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+}
+.console-head__sub {
+  margin-block-start: var(--space-1);
+  max-inline-size: 68ch;
+  color: var(--ink-500);
+  font-size: 0.875rem;
+}
+.console-head__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+.console-head__stamp {
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-500);
+}
+
+/*
+ * The content column.
+ *
+ * One frame per screen: this one. A `.card` sitting directly in it is a *section*, not a box — its chrome is
+ * stripped and it is separated from the section above by a hairline, which is the difference between a console
+ * and a stack of nested rectangles. Only things that are genuinely itemised (a request, a row of a queue) keep a
+ * border, and they live inside a section.
+ */
+.console-body {
+  display: grid;
+  align-content: start;
+  gap: var(--space-6);
+  min-inline-size: 0;
   grid-template-columns: minmax(0, 1fr);
 }
 
-.console-grid--tiles {
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+.console-body--tiles {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+  gap: var(--space-3);
+}
+
+.console-body > .card {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.console-body > .card + .card,
+.console-body > section + section,
+.console-body > .card + section,
+.console-body > section + .card {
+  padding-block-start: var(--space-6);
+  border-block-start: 1px solid var(--surface-sunken);
+}
+
+/* A section's own heading line: what it is, and the way into the full list. */
+.console-body > section > h2,
+.console-body > .card > h2 {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+}
+
+/*
+ * A section of a console page: a heading, a sentence, a table or a list. Flat by construction — no border, no
+ * background — and separated from the section above by a hairline, so the page reads as a document rather than a
+ * stack of boxes. This is what page-level `<section class="card">` became.
+ */
+.console-section {
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+  min-inline-size: 0;
+}
+.console-section:not(:first-child),
+.console-body > section:not(:first-child) {
+  padding-block-start: var(--space-6);
+  border-block-start: 1px solid var(--surface-sunken);
+}
+.console-section h2,
+.console-body > section h2 {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+}
+.console-section > .panel-head,
+.console-body > section > .panel-head {
+  margin-block-end: 0;
+}
+.console-section p.form-hint,
+.console-body > section p.form-hint {
+  margin-block-start: 0;
+}
+
+/*
+ * The admin index: a destination per row, grouped by subject.
+ *
+ * Rows, not tiles: a title, the sentence that says what is behind it, an arrow, and a hairline between them. A card
+ * grid made the reader scan five boxes to find four links and cost a quarter of the screen in padding.
+ */
+.admin-index {
+  display: grid;
+  gap: var(--space-6);
+  align-content: start;
+}
+.admin-index__group h2 {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-500);
+  margin-block-end: var(--space-1);
+}
+.admin-index__group ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-block-start: 1px solid var(--surface-sunken);
+}
+.admin-index__group li + li a {
+  border-block-start: 1px solid var(--surface-sunken);
+}
+.admin-index__group a {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-1) var(--space-4);
+  padding-block: var(--space-3);
+  padding-inline: var(--space-2);
+  min-block-size: var(--tap-target);
+  border-radius: var(--radius-sm);
+  color: inherit;
+  text-decoration: none;
+}
+.admin-index__group a:hover,
+.admin-index__group a:focus-visible {
+  background: var(--surface-muted);
+}
+.admin-index__name {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+.admin-index__note {
+  grid-column: 1;
+  color: var(--ink-500);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+.admin-index__go {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  color: var(--ink-400);
+}
+@media (min-width: 900px) {
+  .admin-index {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+    gap: var(--space-8);
+  }
+}
+
+/*
+ * The small typographic units a console row is made of. They exist as classes because they were inline styles —
+ * `style={{ fontWeight: 700, margin: 0 }}` repeated in five components, which is a design system that lives in
+ * JSX and cannot be themed, overridden or found.
+ */
+.unit-title {
+  font-weight: 700;
+  margin: 0;
+}
+.unit-meta {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--ink-500);
+}
+.console-subhead {
+  font-size: 0.92rem;
+  font-weight: 700;
+  margin: 0;
+}
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+.block {
+  display: block;
+}
+.id-short {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.82rem;
+  color: var(--ink-500);
 }
 .console-tile {
   padding: var(--space-5);
@@ -1087,6 +1319,215 @@ a {
   font-size: 0.78rem;
   color: var(--ink-500);
   margin-block-start: var(--space-1);
+}
+
+/*
+ * The console sidebar's own name, and the grouped nav under it.
+ *
+ * The heading used to be the *page* title, so "Verification review" sat above a nav that also listed
+ * "Verification review" — the sidebar looked like a breadcrumb of itself. Groups give nine links three
+ * headings to sit under, which is what makes a shift's worth of destinations scannable.
+ */
+.console-side__brand {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-500);
+  margin-block-end: var(--space-3);
+}
+.console-nav__group {
+  display: contents;
+}
+@media (min-width: 900px) {
+  .console-nav__group {
+    display: grid;
+    gap: var(--space-1);
+  }
+  .console-nav__group + .console-nav__group {
+    margin-block-start: var(--space-4);
+  }
+}
+.console-nav__label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--ink-400);
+  padding-inline: var(--space-4);
+  padding-block-end: var(--space-1);
+}
+@media (max-width: 899px) {
+  /* The captions group a sidebar; on a phone they would each cost a line above a row of chips that already reads
+     fine in order, and every destination stays visible either way. */
+  .console-nav__label {
+    display: none;
+  }
+}
+
+/* Title row: the page's verb sits beside its title, not buried under three paragraphs. */
+.console-panel__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: baseline;
+  justify-content: space-between;
+}
+.console-panel__actions {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+.console-panel__stamp,
+.console-head__stamp {
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-500);
+}
+
+/* The whole tile is the link. A button at the bottom of a card is a smaller target than the card. */
+.console-tile--link {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: var(--space-1);
+  color: inherit;
+  text-decoration: none;
+  transition:
+    border-color 120ms ease,
+    background 120ms ease;
+}
+.console-tile--link:hover,
+.console-tile--link:focus-visible {
+  border-color: var(--ink-400);
+  background: var(--surface-muted);
+}
+.console-tile--primary {
+  border-color: color-mix(in srgb, var(--sand-500) 45%, var(--surface-sunken));
+  background: color-mix(in srgb, var(--sand-100) 40%, var(--surface-base));
+}
+.console-tile__go {
+  justify-self: end;
+  margin-block-start: var(--space-2);
+  color: var(--ink-400);
+  font-size: 1.1rem;
+}
+
+/* A queue that is clear is good news, and it is said out loud rather than implied by a zero. */
+.console-body .ops-clear,
+.ops-clear {
+  display: flex;
+  gap: var(--space-2);
+  align-items: start;
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--state-success) 35%, var(--surface-sunken));
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--state-success) 7%, var(--surface-base));
+  color: var(--ink-800);
+  font-size: 0.9rem;
+}
+.ops-clear__tick {
+  color: var(--state-success);
+  font-weight: 800;
+}
+
+.ops-clear-block {
+  display: grid;
+  gap: var(--space-3);
+}
+.ops-clear-block .ops-clear {
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+
+/* A titled band inside a console page: heading on one line, the way into the full list on the other. */
+.ops-section {
+  display: grid;
+  gap: var(--space-3);
+}
+.ops-section__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  align-items: baseline;
+  justify-content: space-between;
+  border-block-end: 1px solid var(--surface-sunken);
+  padding-block-end: var(--space-2);
+}
+.ops-section__head h2 {
+  font-size: 1rem;
+  font-weight: 700;
+}
+.link-more {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--ink-700);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Figures you can open. Each one is a door to the queue that produced it. */
+.stat-grid--links {
+  margin-block: var(--space-4) var(--space-6);
+}
+.stat--link {
+  position: relative;
+  color: inherit;
+  text-decoration: none;
+  transition:
+    border-color 120ms ease,
+    background 120ms ease;
+}
+.stat--link:hover,
+.stat--link:focus-visible {
+  border-color: var(--ink-400);
+  background: var(--surface-muted);
+}
+.stat--warning {
+  border-inline-start: 3px solid var(--state-warning);
+}
+.stat--danger {
+  border-inline-start: 3px solid var(--state-danger);
+}
+.console-body .stat__label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ink-500);
+  margin: 0;
+}
+.console-body .stat__value {
+  font-size: 1.9rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--ink-900);
+}
+.console-body .stat__value--text {
+  font-size: 1rem;
+}
+.console-body .stat__note {
+  font-size: 0.75rem;
+  color: var(--ink-500);
+}
+.stat__go {
+  position: absolute;
+  inset-block-start: var(--space-3);
+  inset-inline-end: var(--space-3);
+  color: var(--ink-400);
+}
+
+/* The search form is a tool, so it gets a boundary and a name instead of floating in the panel. */
+.ops-filters {
+  display: grid;
+  gap: var(--space-2);
+}
+.ops-filters h2 {
+  font-size: 1rem;
+  font-weight: 700;
+}
+.ops-filters .trip-filters {
+  border-block-start: 1px solid var(--surface-sunken);
+  padding-block-start: var(--space-4);
+  margin-block-start: var(--space-2);
 }
 
 .nav-link {
@@ -1226,6 +1667,7 @@ a {
    Logical properties only (enforced by ESLint): the same rules serve ar and en.
    ───────────────────────────────────────────────────────────────────────────── */
 
+.sr-only,
 .visually-hidden {
   position: absolute;
   inline-size: 1px;
@@ -1424,14 +1866,35 @@ a {
 .data-table td {
   padding: var(--space-3);
   text-align: start;
-  border-block-end: 1px solid var(--line-200, #eee);
+  border-block-end: 1px solid var(--surface-sunken);
 }
 
-.data-table th {
+/*
+ * Only the *column* headings are chrome: small, uppercase, muted. The rule used to say `.data-table th`, which is
+ * every `th` — including `<th scope="row">`, the cell that holds the record's own name. So a subscription's owner and
+ * a queue's title were rendered at 0.74rem in muted grey, and in a Latin table, uppercased.
+ */
+.data-table thead th {
   font-size: 0.74rem;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--ink-500);
+  background: var(--surface-muted);
+  border-block-end: 1px solid var(--surface-sunken);
+}
+
+.data-table tbody th {
+  font-weight: 700;
+  color: var(--ink-900);
+}
+
+.data-table tbody tr:hover {
+  background: color-mix(in srgb, var(--surface-muted) 70%, transparent);
+}
+
+.data-table tbody tr:last-child > * {
+  border-block-end: 0;
 }
 
 .invite-box,
@@ -1537,6 +2000,7 @@ a {
   margin-block: var(--space-4) var(--space-5);
   padding-block-end: var(--space-2);
   scrollbar-width: thin;
+  max-inline-size: 100%;
 }
 
 /* With room the whole set fits, so it wraps into rows rather than scrolling under a hidden edge. */
@@ -1601,7 +2065,7 @@ a {
 /* The doorways out of the account: tiles, because they are all the same size and all lead somewhere. */
 .account-links {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-2);
 }
 
@@ -1692,7 +2156,7 @@ fieldset {
 
 .fleet-fields > *,
 .form-grid > *,
-.console-grid > *,
+.console-body > *,
 .fleet-grid > *,
 .fleet-grid > * > * {
   min-inline-size: 0;
@@ -1926,13 +2390,13 @@ input[type='file']::file-selector-button {
 
 .fleet-form-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-3);
 }
 
 @media (min-width: 560px) {
   .fleet-form-grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
 }
 
@@ -2015,14 +2479,14 @@ input[type='file']::file-selector-button {
 .fleet-summary {
   grid-column: 1 / -1;
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-1);
   margin: 0;
 }
 
 @media (min-width: 480px) {
   .fleet-summary {
-    grid-template-columns: max-content 1fr;
+    grid-template-columns: max-content minmax(0, 1fr);
     gap: var(--space-1) var(--space-4);
   }
 }
@@ -2130,14 +2594,14 @@ input[type='file']::file-selector-button {
 .fleet-table__row {
   display: grid;
   /* One column on a phone: a label and a value side by side at 320px leaves 12 characters each. */
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0;
   padding: var(--space-2) var(--space-3);
 }
 
 @media (min-width: 560px) {
   .fleet-table__row {
-    grid-template-columns: minmax(min(100%, 120px), 1fr) 2fr;
+    grid-template-columns: minmax(min(100%, 120px), 1fr) minmax(0, 2fr);
     gap: var(--space-3);
   }
 }
@@ -2264,7 +2728,7 @@ input[type='file']::file-selector-button {
 
 .trips-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);
   margin-block-start: var(--space-5);
 }
@@ -2362,13 +2826,13 @@ input[type='file']::file-selector-button {
 
 .trip-form__row {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-3);
 }
 
 @media (min-width: 560px) {
   .trip-form__row--2 {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
 }
 
@@ -2379,6 +2843,7 @@ input[type='file']::file-selector-button {
   padding-block-end: var(--space-2);
   margin-block-end: var(--space-4);
   scrollbar-width: thin;
+  max-inline-size: 100%;
 }
 
 .trip-steps button {
@@ -2403,7 +2868,7 @@ input[type='file']::file-selector-button {
 
 .trip-stop {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-2);
   padding: var(--space-3);
   border: 1px solid var(--surface-sunken);
@@ -2759,6 +3224,7 @@ input[type='file']::file-selector-button {
   padding-block-end: var(--space-2);
   margin-block: var(--space-3);
   scrollbar-width: thin;
+  max-inline-size: 100%;
 }
 
 .trip-tabs a {
@@ -2897,7 +3363,7 @@ input[type='file']::file-selector-button {
 
 @media (min-width: 900px) {
   .trips-layout {
-    grid-template-columns: minmax(min(100%, 16rem), 18rem) 1fr;
+    grid-template-columns: minmax(min(100%, 16rem), 18rem) minmax(0, 1fr);
     align-items: start;
     gap: var(--space-5);
   }
@@ -3081,7 +3547,7 @@ input[type='file']::file-selector-button {
 
   .table-cards td {
     display: grid;
-    grid-template-columns: 7rem 1fr;
+    grid-template-columns: 7rem minmax(0, 1fr);
     gap: var(--space-2);
     padding-block: var(--space-1);
     border: 0;
@@ -3912,9 +4378,12 @@ a.booking-card__code:hover {
     flex-wrap: nowrap;
     overflow-x: auto;
     scrollbar-width: none;
-    margin-inline: calc(var(--space-4) * -1);
-    padding-inline: var(--space-4);
-    inline-size: calc(100% + var(--space-4) * 2);
+    /*
+     * Stays inside the card. It used to be widened to the screen edges with a negative inline margin plus
+     * `inline-size: calc(100% + …)`: the box was 32px wider than its container, and on a narrow phone that is a
+     * document wider than the screen. A scrolling row only needs `max-inline-size: 100%` to be safe.
+     */
+    max-inline-size: 100%;
   }
 
   .fleet-page-head .fleet-context::-webkit-scrollbar {
@@ -5182,7 +5651,7 @@ a.booking-card__code:hover {
 
 @media (min-width: 940px) {
   .price-grid {
-    grid-template-columns: 0.9fr 1.1fr;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
     align-items: center;
   }
 }
@@ -5200,7 +5669,7 @@ a.booking-card__code:hover {
 
 @media (min-width: 860px) {
   .operator-band {
-    grid-template-columns: 1fr auto;
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 }
 
@@ -5235,7 +5704,7 @@ a.booking-card__code:hover {
 
 @media (min-width: 860px) {
   .teams__inner {
-    grid-template-columns: 1fr auto;
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 }
 
@@ -5275,4 +5744,210 @@ a.booking-card__code:hover {
 .teams__link:hover {
   background: var(--surface-muted);
   border-color: var(--brand-300);
+}
+
+/* ---------- marketplace: toolbar, sort, applied filters ----------
+ *
+ * Three things a filtered list needs and this page did not have: a way to see the order, a way to see what is
+ * filtering it, and a way to take one filter off without starting over. All three are links, so all three work
+ * before JavaScript and all three survive being shared.
+ */
+
+.trips-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: baseline;
+  justify-content: space-between;
+  margin-block-end: var(--space-4);
+}
+
+.trips-sort {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  padding: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-sunken);
+}
+
+.trips-sort__link {
+  display: inline-grid;
+  place-items: center;
+  min-block-size: 34px;
+  padding-inline: var(--space-3);
+  border-radius: var(--radius-pill);
+  color: var(--ink-600);
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.trips-sort__link:hover {
+  color: var(--ink-900);
+}
+
+.trips-sort__link[aria-current='true'] {
+  background: var(--surface-base);
+  color: var(--ink-900);
+  box-shadow: var(--shadow-sm);
+}
+
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0 0 var(--space-5);
+  padding: 0;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: 32px;
+  padding-inline: var(--space-3);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--brand-300);
+  background: var(--brand-50);
+  color: var(--brand-900);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.filter-chip:hover {
+  background: var(--brand-100);
+}
+
+.filter-chip__x {
+  font-size: 0.7rem;
+  opacity: 0.7;
+}
+
+.filter-chip--clear {
+  border-color: transparent;
+  background: transparent;
+  color: var(--ink-500);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.filter-chip--clear:hover {
+  background: transparent;
+  color: var(--ink-800);
+}
+/* The route doubles as the card's link: the biggest target on the card, and the one a thumb aims at naturally. */
+.trip-card__link {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  color: inherit;
+  text-decoration: none;
+}
+
+.trip-card__link:hover {
+  color: var(--brand-700);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ---------- trip detail: fare beside the facts ----------
+ *
+ * The fare was the last row of a twelve-row table, below luggage and payment policy. A passenger comes for one
+ * number, so the number gets a panel of its own next to the details — sticky on a wide screen, first on a phone.
+ */
+
+.trip-detail__body {
+  display: grid;
+  gap: var(--space-8);
+  align-items: start;
+}
+
+@media (min-width: 940px) {
+  .trip-detail__body {
+    grid-template-columns: minmax(0, 1fr) 320px;
+  }
+}
+
+.trip-book {
+  /* First on a phone — the fare is why the page was opened — and beside the facts on a desktop, where
+   * `order` below puts it back in the second column. */
+  order: -1;
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--surface-sunken);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-md);
+}
+
+@media (min-width: 940px) {
+  .trip-book {
+    position: sticky;
+    inset-block-start: var(--space-6);
+    order: 2;
+  }
+}
+
+.trip-book h2 {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ink-500);
+}
+
+.trip-book__price {
+  font-size: 1.9rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--ink-900);
+}
+
+.trip-book__per {
+  font-size: 0.85rem;
+  color: var(--ink-500);
+}
+
+.trip-book__breakdown {
+  margin: var(--space-2) 0 0;
+  display: grid;
+  gap: var(--space-1);
+  font-size: 0.82rem;
+  color: var(--ink-600);
+}
+
+.trip-book__breakdown > div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.trip-book__breakdown dd {
+  margin: 0;
+}
+
+.trip-book__seats {
+  margin-block-start: var(--space-2);
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--surface-sunken);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--brand-700);
+}
+
+.trip-book__cta {
+  margin-block-start: var(--space-1);
+  inline-size: 100%;
+}
+
+.trip-book__trust {
+  font-size: 0.75rem;
+  color: var(--ink-500);
+  line-height: 1.5;
 }

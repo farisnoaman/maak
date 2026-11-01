@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { isLocale, translate, type Locale, type TranslationKey } from '@maak/core';
 import { SiteHeader } from '@/components/SiteHeader';
@@ -8,6 +9,7 @@ import { StaffReview } from '@/components/fleet/StaffReview';
 import { loadAccountContext } from '@/lib/account';
 import { signedObjectUrl } from '@/lib/storage';
 import { loadFleet } from '@/lib/fleet';
+import { staffNav } from '@/components/staff/StaffNav';
 
 /** Staff-only: the vehicle and driver queues, with the documents inline. */
 export default async function StaffVehiclesPage({
@@ -37,9 +39,10 @@ export default async function StaffVehiclesPage({
         <ConsoleShell
           locale={locale}
           title="fleet.staffQueue"
-          subtitle="console.subtitle.staff"
-          phase="3"
-          items={[{ key: 'fleet.staffQueue', href: `/${locale}/staff/vehicles` }]}
+          consoleTitle="console.staff"
+          subtitle="console.subtitle.vehicles"
+          pathname="/staff/vehicles"
+          groups={staffNav(locale)}
         >
           <EmptyState title={t('errors.FORBIDDEN')} />
         </ConsoleShell>
@@ -66,16 +69,22 @@ export default async function StaffVehiclesPage({
       <ConsoleShell
         locale={locale}
         title="fleet.staffQueue"
-        subtitle="console.subtitle.staff"
-        phase="3"
-        items={[
-          { key: 'staff.queue', href: `/${locale}/staff/verifications` },
-          { key: 'fleet.staffQueue', href: `/${locale}/staff/vehicles` },
-        ]}
+        consoleTitle="console.staff"
+        subtitle="console.subtitle.vehicles"
+        pathname="/staff/vehicles"
+        groups={staffNav(locale)}
       >
         {!loaded.configured ? <PreviewBanner locale={locale} /> : null}
         {fleet.pendingVehicles.length === 0 && fleet.pendingDrivers.length === 0 ? (
-          <EmptyState title={t('fleet.staffQueueEmpty')} />
+          <EmptyState
+            title={t('console.emptyVehicles')}
+            description={t('console.emptyVehiclesBody')}
+            action={
+              <Link className="btn btn--ghost" href={`/${locale}/staff/dashboard`}>
+                {t('ops.dashboardTitle')}
+              </Link>
+            }
+          />
         ) : (
           <StaffReview
             locale={locale}
