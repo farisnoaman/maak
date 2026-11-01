@@ -108,8 +108,25 @@ export default function HomeScreen() {
         <Text style={styles.linkText}>{t('bookings.myTitle')}</Text>
       </Pressable>
 
+      {/* Phase 11: push is an interruption, so the list it interrupts you about is one tap away. */}
+      <Pressable
+        accessibilityRole="link"
+        onPress={() => router.push('/notifications')}
+        style={styles.link}
+      >
+        <Text style={styles.linkText}>{t('notifications.pageTitle')}</Text>
+      </Pressable>
+
+      <Pressable
+        accessibilityRole="link"
+        onPress={() => router.push('/notification-preferences')}
+        style={styles.link}
+      >
+        <Text style={styles.linkText}>{t('notifications.preferencesTitle')}</Text>
+      </Pressable>
+
       <Text style={styles.note}>
-        {LOCALE_LABEL[locale]} · {t('common.phase')} 5
+        {LOCALE_LABEL[locale]} · {t('common.phase')} 11
       </Text>
     </ScrollView>
   );

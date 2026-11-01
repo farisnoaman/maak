@@ -20,6 +20,7 @@ export * from './domain/booking';
 export * from './domain/tracking';
 export * from './domain/manifest';
 export * from './domain/fleet-ops';
+export * from './domain/deep-link';
 
 export * from './api/errors';
 export * from './api/gateway';
@@ -28,6 +29,7 @@ export * from './api/fleet';
 export * from './api/trips';
 export * from './api/bookings';
 export * from './api/finance';
+export * from './api/notifications';
 export * from './api/payments';
 export * from './api/quota';
 export * from './api/geography';

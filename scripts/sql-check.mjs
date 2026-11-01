@@ -145,6 +145,16 @@ async function main() {
       for (const item of drift) fail(item);
     }
 
+    console.log('\n▶ security posture');
+    const security = await checkSecurity(client);
+    if (security.length === 0) {
+      pass(
+        'RLS everywhere, definer functions pinned to a search_path, no client-executable command',
+      );
+    } else {
+      for (const item of security) fail(item);
+    }
+
     console.log('\n▶ write lockdown spot-check');
     const leaks = await client.query(`
       select table_name, grantee, privilege
@@ -170,6 +180,89 @@ async function main() {
   } else {
     console.log('✓ sql-check passed: migrations applied, pgTAP suites green, types in sync');
   }
+}
+
+/**
+ * The security review, as a query.
+ *
+ * Phase 12 asks for an "RLS matrix re-audit" and a "definer-function review". Both are answerable from the
+ * catalogue, so they are answered on every run rather than in a document that ages: a new table without
+ * `enable row level security`, a `security definer` function without `set search_path`, or a `cmd_*` that a
+ * browser can execute is a build failure here.
+ */
+async function checkSecurity(client) {
+  const problems = [];
+
+  // 1. RLS on every table. A table without it is readable by anybody holding the anon key, which is in the
+  //    browser bundle by definition.
+  const noRls = await client.query(`
+    select k.relname
+      from pg_class k
+      join pg_namespace n on n.oid = k.relnamespace
+     where n.nspname = 'public'
+       and k.relkind = 'r'
+       and not k.relrowsecurity
+     order by k.relname
+  `);
+  for (const row of noRls.rows)
+    problems.push(`table without row level security: public.${row.relname}`);
+
+  // 2. A read grant on a table with no policy is a screen that silently shows nothing someone expected to see.
+  //    It is not a leak, but it is always a mistake, so it fails the same way.
+  const silent = await client.query(`
+    select k.relname
+      from pg_class k
+      join pg_namespace n on n.oid = k.relnamespace
+     where n.nspname = 'public'
+       and k.relkind = 'r'
+       and k.relrowsecurity
+       and not exists (select 1 from pg_policy p where p.polrelid = k.oid)
+       and exists (
+         select 1 from information_schema.role_table_grants g
+          where g.table_schema = 'public' and g.table_name = k.relname
+            and g.grantee in ('anon', 'authenticated')
+            and g.privilege_type = 'SELECT'
+       )
+     order by k.relname
+  `);
+  for (const row of silent.rows)
+    problems.push(
+      `SELECT granted with no policy (a screen would read nothing): public.${row.relname}`,
+    );
+
+  // 3. Every SECURITY DEFINER function must pin its search_path. Without it, a caller who can create objects in
+  //    a schema earlier on the path chooses which `public.foo` the body runs.
+  const unpinned = await client.query(`
+    select n.nspname, p.proname
+      from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname in ('public', 'app')
+       and p.prosecdef
+       and not exists (
+         select 1 from unnest(coalesce(p.proconfig, '{}'::text[])) c
+          where c like 'search_path=%'
+       )
+     order by n.nspname, p.proname
+  `);
+  for (const row of unpinned.rows)
+    problems.push(`security definer without search_path: ${row.nspname}.${row.proname}`);
+
+  // 4. No command may be executable by a browser role. The gateway is the only caller, with the service role.
+  const clientCallable = await client.query(`
+    select p.proname
+      from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public'
+       and p.proname like 'cmd\\_%'
+       and (has_function_privilege('anon', p.oid, 'execute')
+            or has_function_privilege('authenticated', p.oid, 'execute')
+            or has_function_privilege('public', p.oid, 'execute'))
+     order by p.proname
+  `);
+  for (const row of clientCallable.rows)
+    problems.push(`command executable by a client role: public.${row.proname}`);
+
+  return problems;
 }
 
 /**

@@ -42,6 +42,21 @@ export default tseslint.config(
   },
 
   {
+    // k6 scripts are not modules in a browser or in Node: the k6 runtime injects `__ENV` and `__VU`, and the
+    // `k6/*` imports only resolve when k6 runs them. Linting them as page code would be checking a language
+    // they are not written in — but leaving them unlinted would let a real mistake (a typo in a threshold
+    // name, an unused import) through, so only the environment is relaxed.
+    files: ['docs/perf/*.js'],
+    languageOptions: {
+      globals: {
+        __ENV: 'readonly',
+        __VU: 'readonly',
+        __ITER: 'readonly',
+      },
+    },
+  },
+
+  {
     // The service worker is not a module in a page: it has no `window` and does have `self`. Browsers run
     // it in a worker scope, so the rules that guess a browser environment are wrong here.
     files: ['apps/web/public/**/*.js'],

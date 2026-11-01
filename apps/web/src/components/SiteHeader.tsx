@@ -51,7 +51,13 @@ export function SiteHeader({
         <span className="header__spacer" />
 
         <nav className="site-nav" aria-label={t('home.sectionConsoles')}>
-          <details className="site-menu">
+          {/*
+            `suppressHydrationWarning` because `open` belongs to whoever opened the menu: the browser restores
+            it on reload and on back/forward navigation, before hydration runs, so the DOM legitimately differs
+            from the server HTML. The same reasoning is written out at length in
+            `components/trips/FilterDisclosure.tsx`; here nothing sets the attribute in JavaScript at all.
+          */}
+          <details className="site-menu" suppressHydrationWarning>
             <summary className="site-menu__toggle" aria-label={t('nav.menu')}>
               <span aria-hidden="true">☰</span>
               <span className="site-menu__label">{t('nav.menu')}</span>

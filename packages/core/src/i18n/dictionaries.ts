@@ -316,6 +316,18 @@ export const ar = {
   'admin.revoked': 'تم سحب الدور.',
   'admin.userId': 'معرّف المستخدم',
   'admin.noRoles': 'لا توجد أدوار.',
+  'admin.deletionTitle': 'طلبات حذف الحساب',
+  'admin.deletionEmpty': 'لا توجد طلبات حذف قيد الانتظار.',
+  'admin.deletionReview': 'مراجعة',
+  'admin.deletionTheirReason': 'سبب الطلب',
+  'admin.deletionReason': 'سبب التنفيذ',
+  'admin.deletionHint': 'يُسجَّل في سجل التدقيق، ولا يمكن التراجع عن الحذف بعده.',
+  'admin.deletionReasonRequired': 'اكتب سببًا قبل التنفيذ.',
+  'admin.deletionExecute': 'تنفيذ الحذف',
+  'admin.deletionDone': 'تم حذف الحساب وإخفاء هويته.',
+  'admin.deletionFailed': 'تعذّر تنفيذ الحذف:',
+  'admin.deletionNotConfigured': 'هذه الشاشة تحتاج قاعدة بيانات متصلة.',
+  'admin.deletionUnnamed': 'مستخدم بلا اسم',
 
   'preview.banner': 'وضع المعاينة: لا توجد قاعدة بيانات متصلة، والبيانات أدناه توضيحية فقط.',
 
@@ -364,6 +376,186 @@ export const ar = {
   'notifications.refundPaid': 'أُعيد إليك {amount} ريال عن الحجز {code}.',
   'notifications.payoutApproved': 'تمت الموافقة على طلب الصرف {code} بمبلغ {amount} ريال.',
   'notifications.payoutPaid': 'تم تحويل {amount} ريال عن طلب الصرف {code}.',
+  // Phase 11 — the events the jobs raise. Each sentence stands alone: a push notification has no context
+  // around it, so "accepted" is not a message and "your booking BK-7F3A9C was accepted" is.
+  'notifications.generic': 'لديك تحديث جديد في حسابك.',
+  'notifications.quotaWarning':
+    'استهلكت {percent}% من حد «{metric}» ({used} من {limit}) هذا الشهر.',
+  'notifications.quotaReached':
+    'بلغت حد «{metric}» لهذا الشهر ({used} من {limit})، ولن تُقبل إضافات حتى تتغيّر الخطة.',
+  'notifications.subscriptionExpiring7': 'ينتهي اشتراكك الحالي بعد سبعة أيام، في {endsAt}.',
+  'notifications.subscriptionExpiring3': 'ينتهي اشتراكك الحالي بعد ثلاثة أيام، في {endsAt}.',
+  'notifications.subscriptionExpiring1': 'ينتهي اشتراكك الحالي غدًا، في {endsAt}.',
+  'notifications.savedSearchMatch':
+    'رحلة جديدة تطابق بحثك المحفوظ: {origin} ← {destination}، {departureAt}، {price} ر.ي، {seats} مقعد متاح — {tripCode}.',
+  'notifications.tripReminder':
+    'رحلتك {tripCode} ({origin} ← {destination}) تنطلق خلال {hours} ساعة. رقم حجزك {bookingCode}.',
+  'notifications.verificationSla': 'طلب توثيق ({subjectType}) ينتظر المراجعة منذ {ageHours} ساعة.',
+  'notifications.planChanged': 'انتقل اشتراكك من «{from}» إلى «{to}»، ساريًا من {effective}.',
+  'notifications.agentCashInSettled':
+    'سُوّي توريدك النقدي بمبلغ {amount} ر.ي، ورصيدك الآن {balance} ر.ي.',
+  'notifications.noShowAlert':
+    'الرحلة {tripCode}: {count} من الحجوزات ما زالت «مقبول» بعد {minutes} دقيقة من الإقلاع. حدّد من حضر ومن لم يحضر.',
+  // Phase 12's platform sweep. One kind (`ops_alert`), one sentence per check: "something is wrong" in the
+  // abstract is a message nobody can act on, so each check says what it counted and where to look.
+  'notifications.opsStaleTrips':
+    'رحلات ما زالت «جارية» بعد 18 ساعة من الإقلاع: {count}. أغلقها أو صحّح حالتها.',
+  'notifications.opsDeadDeliveries':
+    'تنبيهات استنفدت كل محاولات الإرسال خلال آخر 7 أيام: {count}. راجع صحة التسليم.',
+  'notifications.opsUnbalancedJournals':
+    'قيود محاسبية غير متوازنة: {count}. أوقف المدفوعات حتى تُراجع.',
+  'notifications.opsVerificationBacklog':
+    'طلبات توثيق تنتظر أكثر من 48 ساعة: {count}. الطابور لا يتحرّك.',
+  'notifications.opsPaymentSla':
+    'إيصالات دفع تنتظر القرار أكثر من 6 ساعات: {count}. الراكب دفع ولم يسمع جوابًا.',
+  'notifications.opsErrorRate': 'أوامر مرفوضة أو فاشلة خلال الساعة الأخيرة: {count}.',
+  'notifications.tripReminderTomorrow':
+    'رحلتك {tripCode} غدًا: {origin} ← {destination}، الإقلاع {departureAt}.',
+  'notifications.tripReminderSoon':
+    'رحلتك {tripCode} بعد ساعتين: {origin} ← {destination}، الإقلاع {departureAt}.',
+  'notifications.tripReminderDeparting':
+    'الرحلة {tripCode} تقلع الآن من {origin} إلى {destination}.',
+
+  // Count-bearing sentences get their Arabic agreement right instead of reading like a translation: zero, one,
+  // two, 3–10, 11–99 and 100+ are six different sentences, and `translateCount` is what chooses between them.
+  // The base key is what the job passes; `translate`/`notificationText` pick a numbered form from it. It exists
+  // so the dictionary is complete for the key the SQL names, and so a locale with no forms still says something.
+  'notifications.savedSearchDigest': 'رحلات جديدة تطابق بحثك المحفوظ.',
+  'notifications.savedSearchDigest.zero': 'لا رحلات جديدة تطابق بحثك المحفوظ اليوم.',
+  'notifications.savedSearchDigest.one': 'رحلة جديدة واحدة تطابق بحثك المحفوظ.',
+  'notifications.savedSearchDigest.two': 'رحلتان جديدتان تطابقان بحثك المحفوظ.',
+  'notifications.savedSearchDigest.few': '{count} رحلات جديدة تطابق بحثك المحفوظ.',
+  'notifications.savedSearchDigest.many': '{count} رحلة جديدة تطابق بحثك المحفوظ.',
+  'notifications.savedSearchDigest.other': '{count} رحلة جديدة تطابق بحثك المحفوظ.',
+  'notifications.unread.zero': 'لا شيء غير مقروء',
+  'notifications.unread.one': 'تنبيه واحد غير مقروء',
+  'notifications.unread.two': 'تنبيهان غير مقروءين',
+  'notifications.unread.few': '{count} تنبيهات غير مقروءة',
+  'notifications.unread.many': '{count} تنبيهًا غير مقروءًا',
+  'notifications.unread.other': '{count} تنبيه غير مقروء',
+  'search.matchCount.zero': 'لا رحلات مطابقة بعد',
+  'search.matchCount.one': 'رحلة واحدة طابقت حتى الآن',
+  'search.matchCount.two': 'رحلتان طابقتا حتى الآن',
+  'search.matchCount.few': '{count} رحلات طابقت حتى الآن',
+  'search.matchCount.many': '{count} رحلة طابقت حتى الآن',
+  'search.matchCount.other': '{count} رحلة طابقت حتى الآن',
+
+  // The admin preview: the contract between a template, its channels and the sentence a person reads.
+  'catalogue.title': 'معاينة قوالب التنبيهات',
+  'catalogue.subtitle':
+    'كل حدث، وقنواته الافتراضية، والجملة التي يراها الناس بالعربية والإنجليزية. النصّ يُصاغ بالدالة نفسها التي ترسل الرسائل، فلا يوجد نصّان لرسالة واحدة.',
+  'catalogue.caption': 'كل صف عقد: تغيير مفتاح هنا يغيّر ما يصل على الهاتف.',
+  'catalogue.priority': 'الأولوية',
+  'catalogue.count': '{count} حدثًا في الكتالوج',
+  'catalogue.timezone': 'ساعات الهدوء بتوقيت {timezone}',
+  'catalogue.staffOnly': 'هذه الصفحة لفريق المنصة فقط.',
+  'notifications.loading': 'جارٍ تحميل سجل التنبيهات…',
+  'notifications.loadFailed': 'تعذّر تحميل التنبيهات الآن. حاول مرة أخرى بعد لحظات.',
+  'notifications.priority.critical': 'حرج، يتخطّى ساعات الهدوء',
+  'notifications.priority.normal': 'عادي',
+  'notifications.priority.low': 'منخفض',
+
+  // Phase 11 — saved searches, described in words rather than in JSON.
+  'search.upTo': 'حتى {amount} ر.ي',
+  'search.directOnly': 'بدون توقف',
+  'search.from': 'من',
+  'search.anyTrip': 'أي رحلة',
+  'search.savedTitle': 'عمليات البحث المحفوظة',
+  'search.savedEmpty':
+    'لا يوجد بحث محفوظ بعد. اضبط الفلاتر في السوق ثم احفظها لتصلك رحلة جديدة تطابقها.',
+  'search.alertsOn': 'تنبيهات مفعّلة',
+  'search.alertsOff': 'تنبيهات متوقفة',
+  'search.saveCurrent': 'احفظ هذا البحث',
+  'search.digestOption': 'رسالة واحدة يوميًا بدل رسالة لكل رحلة',
+  'search.digestBadge': 'ملخص يومي',
+  'search.saved': 'حُفظ البحث، وسيصلك تنبيه عند كل رحلة جديدة تطابقه.',
+  'search.remove': 'احذف البحث',
+  'search.matches': '{count} رحلة طابقت حتى الآن',
+
+  // Phase 11 — the inbox and the preferences screen. Event labels are short on purpose: they are rows in a
+  // matrix, not sentences, and the sentence a person reads is the one the notification itself carries.
+  'notifications.pageTitle': 'مركز التنبيهات',
+  'notifications.inboxTitle': 'سجل التنبيهات',
+  'notifications.unreadCount': '{count} غير مقروء',
+  'notifications.channelsLabel': 'قنوات هذا التنبيه',
+  'notifications.quietEnabled': 'تفعيل ساعات الهدوء',
+  'notifications.quietActiveNow':
+    'لا شيء يُحجب الآن: ساعات الهدوء {start}–{end} ({minutes} دقيقة في اليوم).',
+  'notifications.matrixTitle': 'ما يصلك وأين',
+  'notifications.eventColumn': 'الحدث',
+  'notifications.criticalBadge': 'حرج',
+  'notifications.alwaysOn': 'دائمًا',
+  'notifications.pageSubtitle':
+    'كل ما أخبرتك به المنصة، والقناة التي وصل منه. الحجب والانتظار مسجّلان أيضًا، لأن الصمت بلا سبب لا يمكن تتبّعه.',
+  'notifications.preferencesTitle': 'تفضيلات التنبيهات',
+  'notifications.preferencesSubtitle':
+    'اختر ما يصلك وأين. التنبيهات داخل التطبيق لا تُطفأ أبدًا — هي السجل الذي تراجعه لاحقًا.',
+  'notifications.quietHours': 'ساعات الهدوء',
+  'notifications.quietHoursHint':
+    'التنبيهات العادية التي تصلك في هذه الفترة تُؤجَّل إلى نهايتها. الإلغاءات والفشل المالي لا تنتظر.',
+  'notifications.quietStart': 'من',
+  'notifications.quietEnd': 'إلى',
+  'notifications.quietTimezone': 'بتوقيت عدن',
+  'notifications.quietHeldNote': 'تنبيه صادر الآن سيصل في {time} بدلًا من الآن.',
+  'notifications.quietOffNote': 'ساعات الهدوء متوقفة: كل تنبيه يصلك فور صدوره.',
+  'notifications.saveprefs': 'حفظ التفضيلات',
+  'notifications.savedPrefs': 'حُفظت التفضيلات.',
+  'notifications.devices': 'الأجهزة',
+  'notifications.devicesEmpty': 'لا يوجد جهاز مسجّل بعد. افتح التطبيق على هاتفك لتصل الإشعارات.',
+  'notifications.deviceRevoke': 'افصل هذا الجهاز',
+  'notifications.deviceRegister': 'اربط هذا الهاتف',
+  'notifications.pushRegistered': 'تم ربط هذا الهاتف: ستصلك إشعارات الهاتف الآن.',
+  'notifications.pushDenied': 'لم يُسمح بالإشعارات. فعّلها من إعدادات الهاتف ثم أعد المحاولة.',
+  'notifications.pushUnavailable':
+    'لا يمكن ربط هذا الجهاز الآن (محاكي أو نسخة تجريبية). التنبيهات داخل التطبيق والبريد تعمل.',
+  'notifications.platform.ios': 'آيفون',
+  'notifications.platform.android': 'أندرويد',
+  'notifications.platform.web': 'المتصفح',
+  'notifications.channel.in_app': 'داخل التطبيق',
+  'notifications.channel.push': 'إشعار هاتف',
+  'notifications.channel.email': 'بريد إلكتروني',
+  'notifications.channel.whatsapp': 'واتساب',
+  'notifications.status.sent': 'أُرسل',
+  'notifications.status.pending': 'بانتظار الإرسال',
+  'notifications.status.sending': 'جارٍ الإرسال',
+  'notifications.status.skipped': 'لم يُرسل (بحسب تفضيلاتك)',
+  'notifications.status.failed': 'تعذّر الإرسال، ستُعاد المحاولة',
+  'notifications.status.dead': 'تعذّر الإرسال نهائيًا',
+  'notifications.event.verification_submitted': 'طلب توثيق جديد',
+  'notifications.event.verification_approved': 'اعتماد التوثيق',
+  'notifications.event.verification_rejected': 'رفض التوثيق',
+  'notifications.event.verification_invalidated': 'إبطال التوثيق',
+  'notifications.event.member_invited': 'دعوة عضو',
+  'notifications.event.member_joined': 'انضمام عضو',
+  'notifications.event.member_removed': 'إزالة عضو',
+  'notifications.event.role_granted': 'منح دور',
+  'notifications.event.role_revoked': 'سحب دور',
+  'notifications.event.booking_requested': 'طلب حجز جديد',
+  'notifications.event.booking_accepted': 'قبول حجز',
+  'notifications.event.booking_rejected': 'رفض حجز',
+  'notifications.event.booking_cancelled': 'إلغاء حجز',
+  'notifications.event.vehicle_maintenance_due': 'صيانة مستحقة',
+  'notifications.event.vehicle_maintenance_overdue': 'صيانة متأخرة',
+  'notifications.event.vehicle_fuel_anomaly': 'شذوذ في الوقود',
+  'notifications.event.payment_submitted': 'إثبات دفع جديد',
+  'notifications.event.payment_confirmed': 'تأكيد دفع',
+  'notifications.event.payment_rejected': 'رفض إثبات دفع',
+  'notifications.event.refund_decided': 'قرار استرداد',
+  'notifications.event.payout_decided': 'قرار صرف',
+  'notifications.event.invoice_issued': 'فاتورة جديدة',
+  'notifications.event.subscription_activated': 'تفعيل الاشتراك',
+  'notifications.event.subscription_past_due': 'فاتورة اشتراك متأخرة',
+  'notifications.event.subscription_expired': 'انتهاء الاشتراك',
+  'notifications.event.finance_alert': 'تنبيه مالي',
+  'notifications.event.saved_search_match': 'رحلة تطابق بحثك',
+  'notifications.event.trip_reminder': 'تذكير برحلة',
+  'notifications.event.quota_threshold': 'حد الخطة',
+  'notifications.event.subscription_expiring': 'اشتراك يقترب من الانتهاء',
+  'notifications.event.verification_sla': 'توثيق متأخر',
+  'notifications.event.subscription_plan_changed': 'تغيّر الخطة',
+  'notifications.event.agent_cash_in_settled': 'تسوية توريد الوكيل',
+  'notifications.event.no_show_alert': 'حجوزات لم تُحسم بعد الإقلاع',
+  'notifications.event.ops_alert': 'تنبيه تشغيلي',
 
   // Phase 9 — payments. Amounts always carry their currency in the sentence, because a bare number in a
   // money screen is a number somebody will misread.
@@ -1991,6 +2183,18 @@ export const en: Record<TranslationKey, string> = {
   'admin.revoked': 'Role revoked.',
   'admin.userId': 'User ID',
   'admin.noRoles': 'No roles.',
+  'admin.deletionTitle': 'Deletion requests',
+  'admin.deletionEmpty': 'No deletion requests are waiting.',
+  'admin.deletionReview': 'Review',
+  'admin.deletionTheirReason': 'Reason given',
+  'admin.deletionReason': 'Reason for executing',
+  'admin.deletionHint': 'Recorded in the audit log. The deletion cannot be undone afterwards.',
+  'admin.deletionReasonRequired': 'Write a reason before executing.',
+  'admin.deletionExecute': 'Execute deletion',
+  'admin.deletionDone': 'The account was deleted and anonymised.',
+  'admin.deletionFailed': 'The deletion was refused:',
+  'admin.deletionNotConfigured': 'This screen needs a connected database.',
+  'admin.deletionUnnamed': 'Unnamed user',
 
   'preview.banner': 'Preview mode: no database is connected, the data below is illustrative only.',
 
@@ -2044,6 +2248,183 @@ export const en: Record<TranslationKey, string> = {
   'notifications.refundPaid': 'We returned {amount} YER to you for booking {code}.',
   'notifications.payoutApproved': 'Payout {code} for {amount} YER was approved.',
   'notifications.payoutPaid': '{amount} YER was transferred for payout {code}.',
+  // Phase 11 — the events the jobs raise.
+  'notifications.generic': 'You have a new update on your account.',
+  'notifications.quotaWarning':
+    'You have used {percent}% of your {metric} limit ({used} of {limit}) this month.',
+  'notifications.quotaReached':
+    'You have reached your {metric} limit for this month ({used} of {limit}); nothing more will be accepted until the plan changes.',
+  'notifications.subscriptionExpiring7': 'Your subscription ends in seven days, on {endsAt}.',
+  'notifications.subscriptionExpiring3': 'Your subscription ends in three days, on {endsAt}.',
+  'notifications.subscriptionExpiring1': 'Your subscription ends tomorrow, on {endsAt}.',
+  'notifications.savedSearchMatch':
+    'A new trip matches your saved search: {origin} → {destination}, {departureAt}, {price} YER, {seats} seats available — {tripCode}.',
+  'notifications.tripReminder':
+    'Your trip {tripCode} ({origin} → {destination}) departs in {hours} hours. Your booking is {bookingCode}.',
+  'notifications.verificationSla':
+    'A verification request ({subjectType}) has been waiting for {ageHours} hours.',
+  'notifications.planChanged': 'Your plan moved from {from} to {to}, effective {effective}.',
+  'notifications.agentCashInSettled':
+    'Your cash-in of {amount} YER was settled; your balance is now {balance} YER.',
+  'notifications.noShowAlert':
+    'Trip {tripCode}: {count} of the bookings are still "accepted" {minutes} minutes after departure. Mark who boarded and who did not.',
+  'notifications.opsStaleTrips':
+    'Trips still marked in progress 18 hours after departure: {count}. Close them or fix the state.',
+  'notifications.opsDeadDeliveries':
+    'Notifications that exhausted every delivery attempt in the last 7 days: {count}. Check delivery health.',
+  'notifications.opsUnbalancedJournals':
+    'Ledger journals that do not balance: {count}. Hold payouts until they are reviewed.',
+  'notifications.opsVerificationBacklog':
+    'Verification requests waiting more than 48 hours: {count}. The queue is not moving.',
+  'notifications.opsPaymentSla':
+    'Payment receipts waiting for a decision for more than 6 hours: {count}. The passenger paid and heard nothing.',
+  'notifications.opsErrorRate': 'Commands denied or failed in the last hour: {count}.',
+  'notifications.tripReminderTomorrow':
+    'Your trip {tripCode} is tomorrow: {origin} to {destination}, departing {departureAt}.',
+  'notifications.tripReminderSoon':
+    'Your trip {tripCode} leaves in two hours: {origin} to {destination}, departing {departureAt}.',
+  'notifications.tripReminderDeparting':
+    'Trip {tripCode} departs now from {origin} to {destination}.',
+
+  // English only inflects for one, but every category is written out so a missing form is a type error rather
+  // than a fallback that silently prints the wrong sentence.
+  'notifications.savedSearchDigest': 'New trips match your saved search.',
+  'notifications.savedSearchDigest.zero': 'No new trips match your saved search today.',
+  'notifications.savedSearchDigest.one': 'One new trip matches your saved search.',
+  'notifications.savedSearchDigest.two': '{count} new trips match your saved search.',
+  'notifications.savedSearchDigest.few': '{count} new trips match your saved search.',
+  'notifications.savedSearchDigest.many': '{count} new trips match your saved search.',
+  'notifications.savedSearchDigest.other': '{count} new trips match your saved search.',
+  'notifications.unread.zero': 'Nothing unread',
+  'notifications.unread.one': '1 unread',
+  'notifications.unread.two': '{count} unread',
+  'notifications.unread.few': '{count} unread',
+  'notifications.unread.many': '{count} unread',
+  'notifications.unread.other': '{count} unread',
+  'search.matchCount.zero': 'No matching trips yet',
+  'search.matchCount.one': '1 trip matched so far',
+  'search.matchCount.two': '{count} trips matched so far',
+  'search.matchCount.few': '{count} trips matched so far',
+  'search.matchCount.many': '{count} trips matched so far',
+  'search.matchCount.other': '{count} trips matched so far',
+
+  'catalogue.title': 'Notification template preview',
+  'catalogue.subtitle':
+    'Every event, its default channels and the sentence people read, in Arabic and English. The sentence is rendered by the same function that sends it, so there is never a second copy to drift.',
+  'catalogue.caption':
+    'Each row is a contract: changing a key here changes what arrives on the phone.',
+  'catalogue.priority': 'Priority',
+  'catalogue.count': '{count} events in the catalogue',
+  'catalogue.timezone': 'Quiet hours are in {timezone}',
+  'catalogue.staffOnly': 'This screen is for platform staff only.',
+  'notifications.loading': 'Loading the notification history…',
+  'notifications.loadFailed': 'The notifications could not be loaded. Try again in a moment.',
+  'notifications.priority.critical': 'Critical, bypasses quiet hours',
+  'notifications.priority.normal': 'Normal',
+  'notifications.priority.low': 'Low',
+
+  // Phase 11 — saved searches, described in words rather than in JSON.
+  'search.upTo': 'up to {amount} YER',
+  'search.directOnly': 'direct only',
+  'search.from': 'from',
+  'search.anyTrip': 'any trip',
+  'search.savedTitle': 'Saved searches',
+  'search.savedEmpty':
+    'No saved search yet. Set your filters in the marketplace and save them to hear about new matching trips.',
+  'search.alertsOn': 'Alerts on',
+  'search.alertsOff': 'Alerts paused',
+  'search.saveCurrent': 'Save this search',
+  'search.digestOption': 'One daily summary instead of a message per trip',
+  'search.digestBadge': 'Daily summary',
+  'search.saved': 'Search saved. You will be told about each new trip that matches it.',
+  'search.remove': 'Delete search',
+  'search.matches': '{count} matching trips so far',
+
+  // Phase 11 — the inbox and the preferences screen.
+  'notifications.pageTitle': 'Notification centre',
+  'notifications.inboxTitle': 'Notification history',
+  'notifications.unreadCount': '{count} unread',
+  'notifications.channelsLabel': 'Channels for this notification',
+  'notifications.quietEnabled': 'Enable quiet hours',
+  'notifications.quietActiveNow':
+    'Nothing is being held right now: quiet hours are {start}–{end} ({minutes} minutes a day).',
+  'notifications.matrixTitle': 'What reaches you, and where',
+  'notifications.eventColumn': 'Event',
+  'notifications.criticalBadge': 'Critical',
+  'notifications.alwaysOn': 'Always',
+  'notifications.pageSubtitle':
+    'Everything the platform told you, and the channel it used. Holds and skips are recorded too, because silence with no reason cannot be investigated.',
+  'notifications.preferencesTitle': 'Notification preferences',
+  'notifications.preferencesSubtitle':
+    'Choose what reaches you and where. In-app notifications cannot be turned off — they are the record you come back to.',
+  'notifications.quietHours': 'Quiet hours',
+  'notifications.quietHoursHint':
+    'Normal notifications raised during this window are held until it ends. Cancellations and money failures do not wait.',
+  'notifications.quietStart': 'From',
+  'notifications.quietEnd': 'To',
+  'notifications.quietTimezone': 'Aden time',
+  'notifications.quietHeldNote': 'A notification raised now would arrive at {time} instead.',
+  'notifications.quietOffNote': 'Quiet hours are off: every notification arrives as it happens.',
+  'notifications.saveprefs': 'Save preferences',
+  'notifications.savedPrefs': 'Preferences saved.',
+  'notifications.devices': 'Devices',
+  'notifications.devicesEmpty':
+    'No device registered yet. Open the app on your phone to receive push.',
+  'notifications.deviceRevoke': 'Disconnect this device',
+  'notifications.deviceRegister': 'Connect this phone',
+  'notifications.pushRegistered': 'This phone is connected: push notifications will arrive now.',
+  'notifications.pushDenied':
+    'Notifications were not allowed. Enable them in the phone settings and try again.',
+  'notifications.pushUnavailable':
+    'This device cannot be connected right now (simulator or Expo Go). In-app and email still work.',
+  'notifications.platform.ios': 'iPhone',
+  'notifications.platform.android': 'Android',
+  'notifications.platform.web': 'Browser',
+  'notifications.channel.in_app': 'In app',
+  'notifications.channel.push': 'Push',
+  'notifications.channel.email': 'Email',
+  'notifications.channel.whatsapp': 'WhatsApp',
+  'notifications.status.sent': 'Sent',
+  'notifications.status.pending': 'Waiting to send',
+  'notifications.status.sending': 'Sending',
+  'notifications.status.skipped': 'Not sent (your settings)',
+  'notifications.status.failed': 'Failed, will retry',
+  'notifications.status.dead': 'Failed permanently',
+  'notifications.event.verification_submitted': 'New verification request',
+  'notifications.event.verification_approved': 'Verification approved',
+  'notifications.event.verification_rejected': 'Verification rejected',
+  'notifications.event.verification_invalidated': 'Verification invalidated',
+  'notifications.event.member_invited': 'Member invited',
+  'notifications.event.member_joined': 'Member joined',
+  'notifications.event.member_removed': 'Member removed',
+  'notifications.event.role_granted': 'Role granted',
+  'notifications.event.role_revoked': 'Role revoked',
+  'notifications.event.booking_requested': 'New booking request',
+  'notifications.event.booking_accepted': 'Booking accepted',
+  'notifications.event.booking_rejected': 'Booking rejected',
+  'notifications.event.booking_cancelled': 'Booking cancelled',
+  'notifications.event.vehicle_maintenance_due': 'Maintenance due',
+  'notifications.event.vehicle_maintenance_overdue': 'Maintenance overdue',
+  'notifications.event.vehicle_fuel_anomaly': 'Fuel anomaly',
+  'notifications.event.payment_submitted': 'Payment proof received',
+  'notifications.event.payment_confirmed': 'Payment confirmed',
+  'notifications.event.payment_rejected': 'Payment proof rejected',
+  'notifications.event.refund_decided': 'Refund decision',
+  'notifications.event.payout_decided': 'Payout decision',
+  'notifications.event.invoice_issued': 'Invoice issued',
+  'notifications.event.subscription_activated': 'Subscription activated',
+  'notifications.event.subscription_past_due': 'Subscription invoice overdue',
+  'notifications.event.subscription_expired': 'Subscription expired',
+  'notifications.event.finance_alert': 'Finance alert',
+  'notifications.event.saved_search_match': 'Trip matches your search',
+  'notifications.event.trip_reminder': 'Trip reminder',
+  'notifications.event.quota_threshold': 'Plan limit',
+  'notifications.event.subscription_expiring': 'Subscription ending',
+  'notifications.event.verification_sla': 'Verification waiting',
+  'notifications.event.subscription_plan_changed': 'Plan changed',
+  'notifications.event.agent_cash_in_settled': 'Agent cash-in settled',
+  'notifications.event.no_show_alert': 'Bookings unresolved after departure',
+  'notifications.event.ops_alert': 'Platform alert',
 
   // Phase 9 — payments. Amounts always carry their currency in the sentence, because a bare number in a
   // money screen is a number somebody will misread.

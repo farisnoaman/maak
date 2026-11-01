@@ -16,6 +16,7 @@ import { translate, type Locale, type TranslationKey } from '@maak/core';
 const SECTIONS: readonly { readonly key: TranslationKey; readonly path: string }[] = [
   { key: 'account.overview', path: '/account' },
   { key: 'bookings.myTitle', path: '/account/bookings' },
+  { key: 'account.notifications', path: '/account/notifications' },
   { key: 'account.invitations', path: '/account/invitations' },
   { key: 'fleet.accountLicence', path: '/account/licence' },
   { key: 'nav.verification', path: '/account/verification' },

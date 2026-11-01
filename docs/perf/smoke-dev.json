@@ -1,0 +1,35 @@
+{
+  "at": "2026-11-01T17:31:03.549Z",
+  "base": "http://127.0.0.1:54321",
+  "note": "demo database (3 trips) on the dev stack",
+  "runs": {
+    "search": 30,
+    "write": 3,
+    "dashboard": 3
+  },
+  "concurrency": 1,
+  "gatewayQueueConcurrency": 0,
+  "targets": {
+    "search": 300,
+    "write": 250,
+    "dashboard": 500
+  },
+  "p50": {
+    "search": 4.11047,
+    "write": 3.161912,
+    "dashboard": 9.918064
+  },
+  "p95": {
+    "search": 6.066918,
+    "searchCached": 2.319393,
+    "gatewayQueue": null,
+    "write": 3.636907,
+    "dashboard": 10.542134
+  },
+  "max": {
+    "search": 11.748765,
+    "write": 3.636907,
+    "dashboard": 10.542134
+  },
+  "failures": []
+}

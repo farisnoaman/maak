@@ -1,5 +1,5 @@
-// migrations-sha256: bb8af55cec175e300c3a4c28755ee1b18d6a59fbfb25d1ea502411ecf0783f0d
-/* Generated from 31 migrations. Run `npm run db:types` after changing the schema. */
+// migrations-sha256: 31c90b2c39e848d53f5cbbe16360cf3192830a9f3fd2b6958bea6e01febea239
+/* Generated from 40 migrations. Run `npm run db:types` after changing the schema. */
 
 /**
  * Schema types for RLS-filtered reads (Phase 0 subset).
@@ -247,7 +247,20 @@ export type NotificationKind =
   | 'subscription_activated'
   | 'subscription_past_due'
   | 'subscription_expired'
-  | 'finance_alert';
+  | 'finance_alert'
+  | 'saved_search_match'
+  | 'trip_reminder'
+  | 'quota_threshold'
+  | 'subscription_expiring'
+  | 'verification_sla';
+
+/** Phase 11. `critical` is the only value that bypasses quiet hours. */
+export type NotificationPriority = 'critical' | 'normal' | 'low';
+
+export type NotificationChannel = 'in_app' | 'push' | 'email' | 'whatsapp';
+
+export type NotificationDeliveryStatus =
+  'pending' | 'sending' | 'sent' | 'skipped' | 'failed' | 'dead';
 
 export type PlatformRole =
   'platform_admin' | 'platform_staff' | 'finance_officer' | 'geo_supervisor';
@@ -293,6 +306,9 @@ export interface Profile {
   verification_note: string | null;
   deletion_requested_at: string | null;
   deletion_reason: string | null;
+  /** Set by cmd_delete_account (00039): every identifying column is null by then. */
+  deleted_at: string | null;
+  deleted_by: string | null;
   onboarded_at: string | null;
   last_seen_at: string | null;
   created_at: string;
@@ -367,6 +383,9 @@ export interface Notification {
   params: Json;
   link: string | null;
   read_at: string | null;
+  priority: NotificationPriority;
+  /** Idempotency for a scheduled event. Null on a one-off. */
+  dedupe_key: string | null;
   created_at: string;
 }
 
@@ -996,12 +1015,34 @@ export interface TripSearchRow {
   is_featured: boolean;
   search_text: string;
   updated_at: string;
+  /** Generated. The keyset sort key per sort — see 00038. Read-only. */
+  rank_soonest: number;
+  rank_cheapest: number;
+  rank_featured: number;
 }
 
 export interface SearchCacheRow {
   key: string;
   payload: Json;
   expires_at: string;
+}
+
+/** 00038. The unfiltered facet counts, maintained rather than recomputed per request. */
+export interface SearchCountRow {
+  dimension: 'origin' | 'destination' | 'gender' | 'booking' | 'direct';
+  value: string;
+  count: number;
+  refreshed_at: string;
+}
+
+export interface SearchBucketRow {
+  origin_governorate_id: string;
+  destination_governorate_id: string;
+  gender_policy: string;
+  booking_mode: string;
+  direct: boolean;
+  trips: number;
+  refreshed_at: string;
 }
 
 export interface Booking {
@@ -1264,6 +1305,97 @@ export interface ReconciliationLine {
   note: string | null;
   resolved_by: string | null;
   resolved_at: string | null;
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * Phase 11 — notifications
+ *
+ * Hand-maintained to mirror `supabase/migrations/00032_notifications.sql`, for the same reason as the
+ * Phase 9 and 10 blocks: no Supabase CLI here, and the drift check in `npm run sql:check` is the guard.
+ * ------------------------------------------------------------------------------------------- */
+
+export interface NotificationEvent {
+  kind: NotificationKind;
+  title_key: string;
+  priority: NotificationPriority;
+  default_channels: NotificationChannel[];
+  is_active: boolean;
+  updated_at: string;
+}
+
+export interface NotificationSettings {
+  user_id: string;
+  quiet_hours_enabled: boolean;
+  quiet_start: string;
+  quiet_end: string;
+  timezone: string;
+  updated_at: string;
+}
+
+export interface NotificationPreference {
+  user_id: string;
+  kind: NotificationKind;
+  channel: NotificationChannel;
+  enabled: boolean;
+  updated_at: string;
+}
+
+export interface DeviceToken {
+  id: string;
+  user_id: string;
+  platform: 'ios' | 'android' | 'web';
+  token: string;
+  created_at: string;
+  last_seen_at: string;
+  revoked_at: string | null;
+}
+
+export interface NotificationDelivery {
+  id: string;
+  notification_id: string;
+  user_id: string;
+  channel: NotificationChannel;
+  status: NotificationDeliveryStatus;
+  attempts: number;
+  next_attempt_at: string;
+  claimed_at: string | null;
+  last_error: string | null;
+  provider_ref: string | null;
+  sent_at: string | null;
+  created_at: string;
+}
+
+export interface NotificationDeliveryAttempt {
+  id: string;
+  delivery_id: string;
+  attempt: number;
+  outcome: 'sent' | 'failed';
+  error: string | null;
+  provider_ref: string | null;
+  created_at: string;
+}
+
+export interface SavedSearch {
+  id: string;
+  user_id: string;
+  label: string | null;
+  filters: Json;
+  notify: boolean;
+  /** One summary a day instead of a message per matching trip. */
+  digest: boolean;
+  fingerprint: string;
+  last_matched_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SavedSearchMatch {
+  id: string;
+  saved_search_id: string;
+  trip_id: string;
+  notified_at: string;
+  /** Set when a daily digest has counted this match. */
+  digested_at: string | null;
 }
 
 export interface Database {
@@ -1717,6 +1849,23 @@ export interface Database {
         Insert: Partial<SearchCacheRow> & { key: string; payload: Json };
         Update: Partial<SearchCacheRow>;
       };
+      search_buckets: {
+        Row: SearchBucketRow;
+        Insert: Partial<SearchBucketRow> & {
+          origin_governorate_id: string;
+          destination_governorate_id: string;
+          gender_policy: string;
+          booking_mode: string;
+          direct: boolean;
+          trips: number;
+        };
+        Update: Partial<SearchBucketRow>;
+      };
+      search_counts: {
+        Row: SearchCountRow;
+        Insert: Partial<SearchCountRow> & { dimension: SearchCountRow['dimension']; value: string };
+        Update: Partial<SearchCountRow>;
+      };
       region_governorates: {
         Row: RegionGovernorate;
         Insert: RegionGovernorate;
@@ -1740,6 +1889,63 @@ export interface Database {
           title_key: string;
         };
         Update: Partial<Notification>;
+      };
+      notification_events: {
+        Row: NotificationEvent;
+        Insert: Partial<NotificationEvent> & { kind: NotificationKind; title_key: string };
+        Update: Partial<NotificationEvent>;
+      };
+      notification_settings: {
+        Row: NotificationSettings;
+        Insert: Partial<NotificationSettings> & { user_id: string };
+        Update: Partial<NotificationSettings>;
+      };
+      notification_preferences: {
+        Row: NotificationPreference;
+        Insert: Partial<NotificationPreference> & {
+          user_id: string;
+          kind: NotificationKind;
+          channel: NotificationChannel;
+          enabled: boolean;
+        };
+        Update: Partial<NotificationPreference>;
+      };
+      device_tokens: {
+        Row: DeviceToken;
+        Insert: Partial<DeviceToken> & {
+          user_id: string;
+          platform: DeviceToken['platform'];
+          token: string;
+        };
+        Update: Partial<DeviceToken>;
+      };
+      notification_deliveries: {
+        Row: NotificationDelivery;
+        Insert: Partial<NotificationDelivery> & {
+          notification_id: string;
+          user_id: string;
+          channel: NotificationChannel;
+        };
+        Update: Partial<NotificationDelivery>;
+      };
+      notification_delivery_attempts: {
+        Row: NotificationDeliveryAttempt;
+        Insert: Partial<NotificationDeliveryAttempt> & {
+          delivery_id: string;
+          attempt: number;
+          outcome: NotificationDeliveryAttempt['outcome'];
+        };
+        Update: Partial<NotificationDeliveryAttempt>;
+      };
+      saved_searches: {
+        Row: SavedSearch;
+        Insert: Partial<SavedSearch> & { user_id: string; filters: Json; fingerprint: string };
+        Update: Partial<SavedSearch>;
+      };
+      saved_search_matches: {
+        Row: SavedSearchMatch;
+        Insert: Partial<SavedSearchMatch> & { saved_search_id: string; trip_id: string };
+        Update: Partial<SavedSearchMatch>;
       };
     };
     Views: Record<string, never>;

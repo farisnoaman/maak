@@ -4531,11 +4531,11 @@ a.booking-card__code:hover {
 }
 
 .finance-summary dd[data-tone='good'] {
-  color: var(--state-success-ink);
+  color: var(--state-success);
 }
 
 .finance-summary dd[data-tone='bad'] {
-  color: var(--state-danger-ink);
+  color: var(--state-danger);
 }
 
 .finance-desk,
@@ -4579,5 +4579,274 @@ a.booking-card__code:hover {
 
   .finance-form {
     max-inline-size: 52rem;
+  }
+}
+
+/* -------------------------------------------------------------------------------------------
+ * Phase 11 — the notification centre and its preferences
+ *
+ * The inbox is a list of decisions, so each row carries its own meta line: event label, date, and the badge
+ * per channel. Nothing here colours a *skipped* delivery red — the user asked for it, and a warning tone on
+ * a choice teaches people to distrust the colour.
+ * ----------------------------------------------------------------------------------------- */
+
+.notification-centre .panel-head {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.notification__main {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+  min-width: 0;
+  flex: 1 1 22rem;
+}
+
+.notification__meta {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.notification__channels {
+  display: flex;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.preferences {
+  display: grid;
+  gap: var(--space-6);
+  margin-block-start: var(--space-5);
+}
+
+.preferences__block {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--line-200, #eaeaea);
+  border-radius: var(--radius-md);
+  background: #fff;
+}
+
+.preferences__block h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.preferences__quiet {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  align-items: end;
+}
+
+.preferences__actions {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+
+.preferences__table th[scope='row'] {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  font-weight: 500;
+  text-align: start;
+}
+
+.preferences__table td {
+  text-align: center;
+  vertical-align: middle;
+}
+
+/* A switch that is a switch: 44px of tappable row, not a 13px checkbox. */
+.toggle {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+  min-block-size: var(--tap-target, 44px);
+  padding-inline: var(--space-1);
+  cursor: pointer;
+}
+
+.toggle input {
+  inline-size: 1.15rem;
+  block-size: 1.15rem;
+  accent-color: var(--brand-600, #0f766e);
+}
+
+.saved-searches {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.saved-search {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  padding: var(--space-3);
+  border: 1px solid var(--line-200, #eaeaea);
+  border-radius: var(--radius-md);
+  background: #fff;
+}
+
+.saved-search p {
+  margin: 0;
+}
+
+.save-search {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  flex-wrap: wrap;
+  margin-block-start: var(--space-3);
+}
+
+/* A phone gets one column of meta, under the sentence, because two columns of badges in 360px is a wedge. */
+@media (max-width: 640px) {
+  .notification {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+
+  .notification__meta {
+    justify-content: flex-start;
+  }
+
+  .preferences__table th[scope='row'] {
+    min-inline-size: 9rem;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Phase 11, second pass: the template preview, the digest option, the badges.
+
+   The preview table is the one place a template is read in both directions at once, so its two sentence
+   columns are given their own `dir` and a readable measure instead of stretching to the panel width.
+   --------------------------------------------------------------------------- */
+
+.catalogue__channels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+  color: var(--ink-600);
+}
+
+.catalogue__sentence {
+  min-inline-size: 22ch;
+  max-inline-size: 34ch;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.save-search__digest {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: var(--tap-target);
+  font-size: 0.9rem;
+  color: var(--ink-700);
+}
+
+.save-search__digest input {
+  inline-size: 1.15rem;
+  block-size: 1.15rem;
+  accent-color: var(--brand-600);
+}
+
+.saved-search__badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+
+@media (max-width: 640px) {
+  .catalogue__sentence {
+    min-inline-size: 16ch;
+  }
+
+  .save-search__digest {
+    inline-size: 100%;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Phase 11: the loading skeleton.
+
+   A grey bar is not decoration — it is the difference between "the server is thinking" and "there is nothing
+   here", which is the single most common confusion on a screen that renders a list.
+   --------------------------------------------------------------------------- */
+
+.skeleton {
+  display: grid;
+  gap: var(--space-4);
+  padding-block-start: var(--space-4);
+}
+
+.skeleton__row {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+}
+
+.skeleton__bar {
+  display: block;
+  block-size: 0.9rem;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(
+    90deg,
+    var(--surface-sunken),
+    var(--surface-muted),
+    var(--surface-sunken)
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+.skeleton__bar--wide {
+  inline-size: 72%;
+}
+
+.skeleton__bar--narrow {
+  inline-size: 38%;
+  block-size: 0.7rem;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton__bar {
+    animation: none;
   }
 }

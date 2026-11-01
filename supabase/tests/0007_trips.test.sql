@@ -21,7 +21,7 @@ begin;
 
 create extension if not exists pgtap;
 
-select plan(97);
+select plan(117);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -670,6 +670,11 @@ select is(
 -- 7. The marketplace: what is visible, what is filterable, how it pages
 -- ---------------------------------------------------------------------------
 
+-- The unfiltered facet counts are the *maintained* ones (`search_counts`, refreshed at most every thirty
+-- seconds by whoever notices they are stale). A test that has just built a marketplace has to say when that
+-- happened, so every assertion below is about the counts and not about the clock.
+select app.refresh_search_counts();
+
 select is(
   (public.search_public_trips('ar', '{}'::jsonb, 'soonest', null, 20) ->> 'total')::int,
   2,
@@ -807,6 +812,302 @@ select is(
   ),
   '6000',
   'sorting by price advertises the cheapest stop, not the flat fare'
+);
+
+-- ---------------------------------------------------------------------------
+-- 7b. The fast path agrees with the function it replaced
+-- ---------------------------------------------------------------------------
+-- 00036 rewrote `search_public_trips` for volume: filters are evaluated once per row in a materialised
+-- projection instead of once per row per facet. `app.trip_matches()` stays as the readable definition of what
+-- a filter means, and these assertions are the contract between the two — the rewrite may be faster, and must
+-- be identical. Without them a facet would be free to drift, and the drift would only show as a wrong number
+-- in a dropdown.
+
+select is(
+  (public.search_public_trips('ar', '{"priceMax": 7000}'::jsonb, 'soonest', null, 50) ->> 'total')::int,
+  (
+    select count(*)::int from public.trips_search s
+    where s.is_public and s.departure_at > now()
+      and app.trip_matches(s, '{"priceMax": 7000}'::jsonb, null)
+  ),
+  'the total under a price cap matches the reference filter'
+);
+
+select is(
+  (public.search_public_trips('ar', '{"q": "تعز"}'::jsonb, 'soonest', null, 50) ->> 'total')::int,
+  (
+    select count(*)::int from public.trips_search s
+    where s.is_public and s.departure_at > now() and app.trip_matches(s, '{"q": "تعز"}'::jsonb, null)
+  ),
+  'the total under a text query matches the reference filter'
+);
+
+select is(
+  (public.search_public_trips('ar', '{"direct": true}'::jsonb, 'soonest', null, 50) ->> 'total')::int,
+  (
+    select count(*)::int from public.trips_search s
+    where s.is_public and s.departure_at > now() and app.trip_matches(s, '{"direct": true}'::jsonb, null)
+  ),
+  'the total under a direct-only filter matches the reference filter'
+);
+
+-- The origin facet applies every filter *except* the origin: that is what makes it cascade, and it is the
+-- dimension most likely to be quietly wrong after a rewrite because the page still looks correct.
+select is(
+  (
+    select count(*)::int
+    from jsonb_array_elements(
+      public.search_public_trips(
+        'ar', '{"priceMax": 7000, "origin": ["11111111-1111-4111-8111-111111111111"]}'::jsonb,
+        'soonest', null, 50
+      ) -> 'facets' -> 'origins'
+    ) facet
+  ),
+  (
+    select count(*)::int
+    from (
+      select s.origin_governorate_id
+      from public.trips_search s
+      where s.is_public and s.departure_at > now()
+        and app.trip_matches(s, '{"priceMax": 7000}'::jsonb, 'origin')
+      group by s.origin_governorate_id
+    ) grouped
+  ),
+  'the origin facet groups by every filter except the origin'
+);
+
+-- The scalar overload inlines; the composite one cannot. They must still produce the same key, or a page
+-- fetched before 00036 and its cursor after it would disagree about where to continue.
+select is(
+  (
+    select count(*)::int from public.trips_search s
+    where app.trip_rank(s.price_from_yer, s.departure_at, s.is_featured, 'cheapest')
+            is distinct from app.trip_rank(s, 'cheapest')
+       or app.trip_rank(s.price_from_yer, s.departure_at, s.is_featured, 'featured')
+            is distinct from app.trip_rank(s, 'featured')
+       or app.trip_rank(s.price_from_yer, s.departure_at, s.is_featured, 'soonest')
+            is distinct from app.trip_rank(s, 'soonest')
+  ),
+  0,
+  'the inlineable sort key is identical to the row-shaped one'
+);
+
+select is(
+  (public.search_public_trips('ar', '{"booking": ["whole_trip"]}'::jsonb, 'soonest', null, 50) -> 'facets' -> 'direct'),
+  (
+    select jsonb_build_object(
+      'direct', (
+        select count(*)::int from public.trips_search s
+        where s.is_public and s.departure_at > now() and s.stop_count = 0
+          and app.trip_matches(s, '{"booking": ["whole_trip"]}'::jsonb, 'direct')
+      ),
+      'withStops', (
+        select count(*)::int from public.trips_search s
+        where s.is_public and s.departure_at > now() and s.stop_count > 0
+          and app.trip_matches(s, '{"booking": ["whole_trip"]}'::jsonb, 'direct')
+      )
+    )
+  ),
+  'the direct and with-stops counts match the reference filter'
+);
+
+-- ---------------------------------------------------------------------------
+-- 7c. The counts are counted once, and the page comes from an index
+-- ---------------------------------------------------------------------------
+-- 00038 stopped recounting the marketplace per request: the facets are one grouping pass per filter set, the
+-- unfiltered ones are stored in `search_counts`, and the page is an index scan over a generated rank column.
+-- Faster is only allowed to mean faster — these are the contracts with the definitions it replaced.
+
+select is(
+  (
+    select count(*)::int from public.trips_search s
+    where s.rank_soonest is distinct from app.trip_rank(s.price_from_yer, s.departure_at, s.is_featured, 'soonest')
+       or s.rank_cheapest is distinct from app.trip_rank(s.price_from_yer, s.departure_at, s.is_featured, 'cheapest')
+       or s.rank_featured is distinct from app.trip_rank(s.price_from_yer, s.departure_at, s.is_featured, 'featured')
+  ),
+  0,
+  'the generated rank columns are the sort keys, to the digit — a cursor is a rank'
+);
+
+-- The bucketed counts must equal the reference definition, with a filter on, so the cascading skip is
+-- exercised rather than the unfiltered identity.
+select is(
+  (
+    select jsonb_object_agg(c.value, c.n)
+    from app.search_facet_counts(p_direct => true) c
+    where c.dimension = 'origin'
+  ),
+  (
+    select jsonb_object_agg(g.id::text, g.n)
+    from (
+      select s.origin_governorate_id as id, count(*)::int as n
+      from public.trips_search s
+      where s.is_public and s.departure_at > now()
+        and app.trip_matches(s, '{"direct": true}'::jsonb, 'origin')
+      group by s.origin_governorate_id
+    ) g
+  ),
+  'the bucketed origin counts equal the reference filter, cascading included'
+);
+
+select is(
+  (select c.n from app.search_facet_counts(p_booking => array['whole_trip']) c where c.dimension = 'total'),
+  (
+    select count(*)::int from public.trips_search s
+    where s.is_public and s.departure_at > now()
+      and app.trip_matches(s, '{"booking": ["whole_trip"]}'::jsonb, null)
+  ),
+  'and its total is the reference total for the same filter'
+);
+
+select is(
+  (
+    select count(*)::int from (
+      select dimension, value, count from public.search_counts
+      except
+      select dimension, value, n from app.search_facet_counts() where dimension <> 'total'
+    ) drifted
+  ),
+  0,
+  'every stored facet count is what the counting function currently answers'
+);
+
+select is(
+  (select count(*)::int from public.search_counts),
+  (select count(*)::int from app.search_facet_counts() where dimension <> 'total'),
+  'and the stored table has a row per live dimension value — nothing stale, nothing missing'
+);
+
+select is(
+  app.ensure_search_counts(),
+  false,
+  'a counts refresh that is not due does not happen'
+);
+
+update public.search_counts set refreshed_at = now() - interval '1 day';
+
+select is(
+  app.ensure_search_counts(),
+  true,
+  'and a stale aggregate is refreshed by the first request that notices'
+);
+
+-- The page is read from the index, so the cursor has to be the rank the sorted scan would have produced.
+select is(
+  (
+    select array_agg(item ->> 'id' order by ordinality)
+    from jsonb_array_elements(
+      public.search_public_trips('ar', '{}'::jsonb, 'cheapest', null, 2) -> 'items'
+    ) with ordinality as t(item, ordinality)
+  ),
+  (
+    select array_agg(x.trip_id::text)
+    from (
+      select s.trip_id from public.trips_search s
+      where s.is_public and s.departure_at > now()
+      order by s.rank_cheapest, s.trip_id
+      limit 2
+    ) x
+  ),
+  'the cheapest page is the first two trips of the stored ordering, in order'
+);
+
+select is(
+  (
+    select item ->> 'id'
+    from jsonb_array_elements(
+      public.search_public_trips(
+        'ar', '{}'::jsonb, 'soonest',
+        public.search_public_trips('ar', '{}'::jsonb, 'soonest', null, 1) ->> 'nextCursor', 1
+      ) -> 'items'
+    ) item
+  ),
+  (
+    select s.trip_id::text from public.trips_search s
+    where s.is_public and s.departure_at > now()
+    order by s.rank_soonest, s.trip_id
+    offset 1 limit 1
+  ),
+  'and a cursor page is the row after the last one page 1 showed'
+);
+
+select public.search_public_trips('ar', '{"priceMax": 7000}'::jsonb, 'soonest', null, 5);
+
+select is(
+  (
+    public.search_public_trips('ar', '{"priceMax": 7000}'::jsonb, 'soonest', null, 5) ->> 'cached'
+  )::boolean,
+  true,
+  'a repeated search is served from the cache — the page and the counts are cached separately'
+);
+
+-- ---------------------------------------------------------------------------
+-- 7d. A dimension-only filter is arithmetic over the buckets, not a scan
+-- ---------------------------------------------------------------------------
+-- 00040 materialises the buckets the counts are projections of, so "what is left if I also choose Aden" is a
+-- sum over ~30 rows instead of a pass over every public trip. These assertions are the contract that keeps the
+-- faster answer the same answer: bucket arithmetic must equal row arithmetic for every combination of the
+-- dimensions, and the stored homepage chips must be their projections.
+
+select app.refresh_search_counts();
+
+select is(
+  (select coalesce(sum(b.trips), 0)::int from public.search_buckets b),
+  (select count(*)::int from public.trips_search s where s.is_public and s.departure_at > now()),
+  'the buckets sum to the public future trips — nothing missing, nothing counted twice'
+);
+
+select is(
+  (
+    select count(*)::int from (
+      select dimension, value, n from app.search_facet_counts_from_buckets(
+        null, null, array['any'], null, null
+      )
+      except
+      select dimension, value, n from app.search_facet_counts(
+        null, null, array['any'], null, null, null, null, null, null
+      )
+    ) drifted
+  ),
+  0,
+  'counting the buckets answers exactly what counting the trips answers, for a gender filter'
+);
+
+select is(
+  (
+    select count(*)::int from (
+      select dimension, value, n from app.search_facet_counts_from_buckets(
+        (select array_agg(id) from public.governorates), null, null, array['per_seat'], true
+      )
+      except
+      select dimension, value, n from app.search_facet_counts(
+        (select array_agg(id) from public.governorates), null, null, array['per_seat'], true,
+        null, null, null, null
+      )
+    ) drifted
+  ),
+  0,
+  'three dimensions at once, including the direct flag, still agree with the row-by-row count'
+);
+
+select is(
+  (
+    select count(*)::int
+    from jsonb_array_elements(
+      public.search_public_trips('ar', '{"direct": true}'::jsonb, 'soonest', null, 50) -> 'facets' -> 'origins'
+    ) facet
+  ),
+  (
+    select count(*)::int
+    from (
+      select s.origin_governorate_id
+      from public.trips_search s
+      where s.is_public and s.departure_at > now()
+        and app.trip_matches(s, '{"direct": true}'::jsonb, 'origin')
+      group by s.origin_governorate_id
+    ) grouped
+  ),
+  'and a dimension-filtered search cascades the origin facet over the reference filter'
 );
 
 -- ---------------------------------------------------------------------------

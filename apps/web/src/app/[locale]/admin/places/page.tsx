@@ -52,6 +52,7 @@ export default async function AdminPlacesPage({ params }: { params: Promise<{ lo
         phase="2"
         items={[
           { key: 'console.navOverview', href: `/${locale}/admin` },
+          { key: 'catalogue.title', href: `/${locale}/admin/notifications` },
           { key: 'nav.regions', href: `/${locale}/admin/regions` },
           { key: 'nav.places', href: `/${locale}/admin/places` },
           { key: 'nav.account', href: `/${locale}/account` },

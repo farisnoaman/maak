@@ -4,6 +4,7 @@ import {
   activeFilterCount,
   isLocale,
   readTripFilters,
+  type SavedSearchFilters,
   searchSuffix,
   translate,
   type Locale,
@@ -14,6 +15,7 @@ import { PreviewBanner } from '@/components/PreviewBanner';
 import { EmptyState } from '@/components/ui/Feedback';
 import { FilterDisclosure } from '@/components/trips/FilterDisclosure';
 import { PublicTripCard } from '@/components/trips/PublicTripCard';
+import { SaveSearchControl } from '@/components/trips/SaveSearchControl';
 import { loadPublicTrips } from '@/lib/trips';
 import { tripsMetadata } from '@/lib/seo';
 
@@ -102,6 +104,22 @@ export default async function TripsPage({
         <header className="trips-hero">
           <h1>{t('trips.search.title')}</h1>
           <p>{t('trips.search.subtitle')}</p>
+          {/* Phase 11: the search on screen can become an alert, with the same predicate — not a
+              re-typed approximation of it. */}
+          <SaveSearchControl
+            locale={locale}
+            filters={{
+              q: state.q,
+              origin: state.origin,
+              destination: state.destination,
+              gender: state.gender as SavedSearchFilters['gender'],
+              booking: state.booking as SavedSearchFilters['booking'],
+              direct: state.direct,
+              priceMax: state.priceMax,
+              dateFrom: state.dateFrom,
+              dateTo: state.dateTo,
+            }}
+          />
         </header>
 
         <div className="trips-layout">

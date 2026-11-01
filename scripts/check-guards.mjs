@@ -215,6 +215,7 @@ const GATEWAY_MAP = {
   fleet: 'FLEET_CAPABILITY',
   geography: 'GEO_CAPABILITY',
   payments: 'PAYMENTS_CAPABILITY',
+  dispatch: 'NOTIFICATION_CAPABILITY',
   trips: 'TRIPS_CAPABILITY',
 };
 const gatewaySource = await readFile(join(root, 'scripts', 'dev-backend', 'gateway.mjs'), 'utf8');
@@ -421,24 +422,104 @@ for (const file of pageFiles) {
   }
 }
 
-// --- 15. React may not own `<details open>` ------------------------------------------------------
+// --- 15. React may not own `<details open>`, and must not police it either ------------------------
 // `open` on a disclosure is mutable state the *user* holds: tapping the summary flips it with no React
 // involvement, and the browser restores it on back/forward. Rendering it from props or state makes React
 // the authority on an attribute anybody can change, so a tap that lands while hydration is still running
 // is a hydration mismatch — the panel open in the DOM, `open={false}` in props, and the error *"a tree
 // hydrated but some attributes of the server rendered HTML didn't match"*. It happened once, on the
 // marketplace filter panel, which had also been relying on that prop to make the panel reachable at all.
-// Drive the element through a ref in an effect (`element.open = true`) instead; this keeps the shortcut
-// from coming back now that the symptom is fixed.
+// Drive the element through a ref in an effect (`element.open = true`) instead.
+//
+// Keeping `open` out of props stops React *setting* the attribute; it does not stop React *comparing* it at
+// hydration, and by then the DOM can legitimately disagree with the server HTML — the browser restores
+// `<details open>` because the element carries form state, and a re-mount finds a panel an effect already
+// opened. That warning came back a second time, which is why every `<details>` here must also carry
+// `suppressHydrationWarning`: it says, at the element, that the attribute is not React's to reconcile.
+
+/**
+ * The source with every comment blanked out, same length, newlines kept.
+ *
+ * A guard that scans raw text finds `<details>` in the paragraph explaining why `<details>` must not do
+ * something — which is how this rule first reported five failures in a file that was already correct.
+ */
+function maskComments(source) {
+  const out = source.split('');
+  let index = 0;
+  let quote = null;
+
+  while (index < source.length) {
+    const char = source[index];
+
+    if (quote) {
+      if (char === '\\') index += 2;
+      else {
+        if (char === quote) quote = null;
+        index += 1;
+      }
+      continue;
+    }
+
+    if (char === '"' || char === "'" || char === '`') {
+      quote = char;
+      index += 1;
+      continue;
+    }
+
+    if (char === '/' && source[index + 1] === '/') {
+      while (index < source.length && source[index] !== '\n') out[index++] = ' ';
+      continue;
+    }
+
+    if (char === '/' && source[index + 1] === '*') {
+      out[index++] = ' ';
+      out[index++] = ' ';
+      while (index < source.length && !(source[index] === '*' && source[index + 1] === '/')) {
+        if (source[index] !== '\n') out[index] = ' ';
+        index += 1;
+      }
+      if (index < source.length) {
+        out[index++] = ' ';
+        out[index++] = ' ';
+      }
+      continue;
+    }
+
+    index += 1;
+  }
+
+  return out.join('');
+}
+
+/** Attributes of a JSX tag, ending at the first `>` that is not inside a `{…}` expression. */
+function jsxAttributes(source, start) {
+  let depth = 0;
+  for (let index = start; index < source.length; index += 1) {
+    const char = source[index];
+    if (char === '{') depth += 1;
+    else if (char === '}') depth -= 1;
+    else if (char === '>' && depth === 0) return source.slice(start, index);
+  }
+  return source.slice(start);
+}
+
 for (const file of await walk(join(root, 'apps', 'web', 'src'), (f) => f.endsWith('.tsx'))) {
-  const source = await readFile(file, 'utf8');
-  const pattern = /<\s*details\b[^>]*?\sopen\s*=/gs;
-  for (const match of source.matchAll(pattern)) {
+  const source = maskComments(await readFile(file, 'utf8'));
+  for (const match of source.matchAll(/<details\b/g)) {
+    const attributes = jsxAttributes(source, match.index + match[0].length);
     const line = source.slice(0, match.index).split('\n').length;
-    failures.push(
-      `${rel(file)}:${line}: renders \`open\` on <details> — that attribute belongs to the user, and a ` +
-        `controlled version is a hydration mismatch waiting for a fast tap; set element.open in an effect`,
-    );
+
+    if (/\sopen\s*=/.test(attributes)) {
+      failures.push(
+        `${rel(file)}:${line}: renders \`open\` on <details> — that attribute belongs to the user, and a ` +
+          `controlled version is a hydration mismatch waiting for a fast tap; set element.open in an effect`,
+      );
+    } else if (!/\bsuppressHydrationWarning\b/.test(attributes)) {
+      failures.push(
+        `${rel(file)}:${line}: <details> without suppressHydrationWarning — the browser restores \`open\` on ` +
+          `reload and on back/forward, so hydration compares an attribute React does not own; add it`,
+      );
+    }
   }
 }
 

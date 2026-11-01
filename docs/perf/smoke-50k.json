@@ -1,0 +1,35 @@
+{
+  "at": "2026-11-01T19:15:41.891Z",
+  "base": "http://127.0.0.1:54321",
+  "note": "demo volume",
+  "runs": {
+    "search": 40,
+    "write": 10,
+    "dashboard": 10
+  },
+  "concurrency": 1,
+  "gatewayQueueConcurrency": 0,
+  "targets": {
+    "search": 300,
+    "write": 250,
+    "dashboard": 500
+  },
+  "p50": {
+    "search": 4.568775,
+    "write": 4.121284,
+    "dashboard": 76.400952
+  },
+  "p95": {
+    "search": 5.966172,
+    "searchCached": 2.84802,
+    "gatewayQueue": null,
+    "write": 10.200652,
+    "dashboard": 88.254881
+  },
+  "max": {
+    "search": 6.478737,
+    "write": 10.200652,
+    "dashboard": 88.254881
+  },
+  "failures": []
+}

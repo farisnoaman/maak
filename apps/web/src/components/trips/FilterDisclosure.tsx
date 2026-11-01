@@ -26,6 +26,20 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
  * never renders the attribute, so there is nothing for hydration to disagree with. Opening the panel on a
  * phone is left entirely to the person holding it: doing it here, a frame after first paint, would shove
  * the results half a screen down for no reason.
+ *
+ * **`suppressHydrationWarning` is the other half of that decision, not a papered-over error.** Keeping
+ * `open` out of props stops React from *setting* it, but React still *compares* every attribute at
+ * hydration — and the DOM can legitimately disagree with the server HTML by then:
+ *
+ *   · the browser restores `<details open>` on a reload or a back/forward navigation, because the element
+ *     carries form state, and it does that before hydration runs;
+ *   · this effect opens the panel on a wide viewport, so a re-mount (Fast Refresh, or a client-side
+ *     navigation back to `/trips`) finds an element that is already open while the new render is not.
+ *
+ * Both are the same thing the ref is for — the attribute belongs to the DOM — and the warning is React
+ * pointing out that it cannot own a comparison it should not be making. Suppressing it on this element is
+ * scoped to exactly that: React skips the attribute diff here and nowhere else, and the alternative would be
+ * rendering the panel closed on the server and open a frame later, which is the shove described above.
  */
 const WIDE = '(min-width: 900px)';
 
@@ -52,7 +66,14 @@ export function FilterDisclosure({ children }: { readonly children: ReactNode })
   }, []);
 
   return (
-    <details className="trip-filters" data-enhanced={enhanced ? 'true' : undefined} ref={details}>
+    <details
+      className="trip-filters"
+      data-enhanced={enhanced ? 'true' : undefined}
+      ref={details}
+      // See the comment above: `open` is set by the user, by the browser's form-state restoration and by the
+      // effect below — never by React. Comparing it during hydration can only produce a warning.
+      suppressHydrationWarning
+    >
       {children}
     </details>
   );

@@ -313,7 +313,11 @@ not build the acceptance-criterion region and reference data that could never be
 - [x] Commands (edge fn + atomic `cmd_*` SQL): `create_trip`, `update_trip`, `set_trip_stops`, `publish_trip`, `submit_trip_verification`,
       `decide_trip_verification`, `cancel_trip`, `search_public_trips(locale, filters, sort, cursor)`,
       `get_trip_public`, `staff_search_trips`.
-- [~] Facets (`{ items, facets, total }`) + 30 s cache done; **k6 benchmark not written or run** (no k6, no 50k-trip seed).
+- [x] Facets (`{ items, facets, total }`) + 30 s cache; **measured at last** — `npm run perf:seed` clones a
+      published trip 50,000 times in 8 s and `npm run perf:smoke` reports p95 5.6 ms cold / 2.7 ms cached, after
+      `00036` rewrote the function (it was 15.7 s) and `00038` removed the O(public trips) page and the per-request
+      facet scan. k6 suites written in `docs/perf/`, not yet run against a production-sized environment — there is
+      none.
 - [x] Pricing engine in `@maak/core/pricing.ts` mirroring DB math + Vitest parity tests against RPC fixtures.
 - [x] Web `/operator/trips/*`, `/trips`, `/trips/[code]`, `/staff/trips`; localized forms with `Asia/Aden` timezone.
 - [x] Mobile search/filter/results/detail — implemented and typechecked, **not run on a device**.
@@ -324,7 +328,9 @@ not build the acceptance-criterion region and reference data that could never be
 - Cascading filters behave: choosing «عدن» narrows origin options with counts; «بدون توقف» removes stop-only trips.
 - Editing 1h59m before departure returns `EDIT_WINDOW_CLOSED` from the RPC, not just a disabled button.
 - Completed/cancelled trips disappear from `/trips` instantly and remain in `/staff/trips`.
-- Search p95 < 300 ms at 50k seeded trips (k6 report attached).
+- Search p95 < 300 ms at 50k seeded trips. **Met at 50,000 trips: 5.6 ms p95 (`docs/perf/smoke-50k.json`)**;
+  the remainder — an unselective *filter* still costs one 42 ms pass for its cascading counts, ~23 cold
+  searches/second/core — is written up in `docs/perf/README.md` rather than left implicit.
 - Shared URL reproduces exact filter state, in both locales (including Arabic query strings).
 - Detail page LCP < 2.5 s on throttled mobile, both directions; JSON-LD validates.
 - Basic-plan owner blocked at the 6th trip in a month; Pro sees a warning at 80% before blocking at 100% (soft limit).
@@ -693,6 +699,10 @@ reminder dedupe, and the trip gate's `MAINTENANCE_OVERDUE` refusal.
 
 **Goal:** the platform tells the right person the right thing, once, on the right channel, in their language.
 
+**Status: complete (2026-11-01).** Evidence: [`docs/phase-11-report.md`](./docs/phase-11-report.md).
+32 migrations · 128 commands · 11 edge functions · 16 pgTAP suites (868 assertions) · 623 unit tests ·
+107 a11y routes · 35 notification events · 9 scheduled jobs.
+
 ### Deliverables
 - Full event matrix (specs §6.10) — including payment, refund, payout, invoice, subscription, quota events.
 - Channels: in-app, push (Expo), email (Resend), WhatsApp deep links; localized templates with typed variables.
@@ -706,13 +716,25 @@ reminder dedupe, and the trip gate's `MAINTENANCE_OVERDUE` refusal.
   RTL screen-reader order checks.
 
 ### Tasks
-- [ ] `notifications`, `notification_preferences`, `saved_searches`, `saved_search_matches` + RLS.
-- [ ] `app.enqueue_notification()` (outbox) + edge function `dispatch` (push/email) with retries + dead-letter table.
-- [ ] Cron: `match_saved_searches`, `send_trip_reminders`, `notify_pending_verifications`,
-      `notify_quota_thresholds`, `retry_failed_notifications`.
-- [ ] Template registry (per event, AR/EN, zod-validated variables) + preview screen for admins.
-- [ ] Web/mobile notification centre + preference screens (RTL-safe toggles).
-- [ ] Tests: dispatch idempotency (no duplicate push on retry), quiet hours, opt-out respected, deep links resolve.
+- [x] `notifications`, `notification_preferences`, `saved_searches`, `saved_search_matches` + RLS.
+      Eight tables in `00032_notifications.sql`: the catalogue (`notification_events`), settings, preferences,
+      device tokens, deliveries, delivery attempts, saved searches, saved-search matches.
+- [x] `app.enqueue_notification()` (outbox) + edge function `dispatch` (push/email) with retries + dead-letter table.
+      Deliveries are rows, not a queue: `pending → sending → sent | skipped | failed → dead`, five attempts with
+      1/5/15/60-minute backoff, and a ten-minute stuck sweep so a crashed worker cannot hold a row.
+- [x] Cron: `match_saved_searches`, `digest_saved_searches`, `send_trip_reminders` (tomorrow / two hours /
+      departure), `notify_no_shows`, `notify_pending_verifications`, `notify_quota_thresholds`,
+      `notify_subscription_expiring` (7/3/1 days), `run_maintenance_scan` and `retry` — nine jobs, all callable
+      through `notifications.job.run`, each idempotent by dedupe key and each reporting only what it created.
+      Scheduled by `docs/ci/notify.yml` (five-minute workflow, `--fail-on-error`, activated with `npm run
+      ci:install`), because a job nobody runs is a rumour.
+- [x] Template registry (per event, AR/EN, zod-validated variables) + preview screen for admins.
+      Registry: `notification_kind` enum + `notification_events` + `notifications.*` keys + `notificationText()`
+      in core (typed variables, AR/EN parity asserted). Preview: `/admin/notifications` renders all 34 events
+      through that same function, one `lang`/`dir`-annotated AR and EN cell per row, behind
+      `notification.catalogue` (staff only).
+- [x] Web/mobile notification centre + preference screens (RTL-safe toggles).
+- [x] Tests: dispatch idempotency (no duplicate push on retry), quiet hours, opt-out respected, deep links resolve.
 
 ### Acceptance criteria
 - Accepting a booking produces exactly one push + one in-app notification, even if the dispatch job retries.
@@ -740,14 +762,30 @@ reminder dedupe, and the trip gate's `MAINTENANCE_OVERDUE` refusal.
   OTA pipeline, RTL screenshot verification on device.
 - Data: production geography seed, platform payment accounts, plan seeds, admin accounts, settings defaults.
 - Docs: `docs/runbook.md`, `docs/admin-guide.md`, `docs/operator-guide.md` and `docs/passenger-guide.md` (Arabic),
-  generated RPC/API reference.
+  generated RPC/API reference. **Written: the runbook and all three guides.** The generated RPC reference is still
+  open — the console below is the closest thing to it today.
 - UAT with 3 pilots (1 company, 2 individuals) and burn-down of findings.
 
 ### Tasks
-- [ ] k6 suites (search, booking race, ping ingest, payment confirmation volume) + results in `docs/perf/`.
-- [ ] `EXPLAIN ANALYZE` review of the top 10 queries; missing indexes; autovacuum tuning for pings table.
+- [~] Performance harness: `npm run perf:seed` (50,000 trips in 8 s), `npm run perf:smoke` (gated, runs in the
+      sandbox), `npm run perf:db` (concurrency at the database), k6 suites in `docs/perf/` for search, the booking
+      race, ping ingest and the finance dashboard. Measured results in `docs/perf/`. **Not run:** k6 (no k6 in the
+      sandbox) and payment-confirmation volume (needs a payment provider fixture).
+- [x] `EXPLAIN ANALYZE` review where it mattered: search was 15,690 ms at 50k, 112 ms after `00036` (one plpgsql
+      call per row per facet; a non-inlineable sort key), 5.6 ms after `00038` (the facet scan and the sort
+      removed) and 6.0 ms after `00040`, which answers a dimension-filtered search from the bucket table instead
+      of a 35 ms pass — `direct: true` 41.6 → 7.7 ms, the worst dimension case 8.6 ms (~115 cold searches/s per
+      core). The price/date/text filter still pays that pass (37 ms) and is documented in `docs/perf/README.md`.
+      Autovacuum tuning for the pings table remains.
+- [x] Account deletion executed rather than merely requested: `cmd_delete_account` (`00039`) anonymises the person
+      and keeps the books, with six refusals, `platform_admin` only and no self-service; 30 pgTAP assertions in
+      `0018` and `docs/admin-guide.md` §6a for the operator's half (Storage objects, `authScrubbed`).
 - [ ] Security checklist execution + fixes; `supabase db lint`, `plpgsql_check`, `npm audit` clean.
-- [ ] Backup restore into a scratch project with documented timings.
+- [x] Restore drill executed rather than described: `npm run drill:restore` takes a hot backup, restores it into a
+      second cluster and fails unless 24 checks match the source (counts, ledger, `cmd_run_integrity_check`, RLS and
+      definer posture, Storage, a `search_public_trips()` answer). **0.47 s end to end** at 49,998 trips, written to
+      `docs/perf/restore-drill.txt`; the hosted-project run, with its download and PITR replay, is what settles the
+      RTO for launch (`docs/runbook.md` §3).
 - [ ] Alerts: error rate, stale live trips, failed notifications, imbalanced journals, verification backlog,
       payment confirmation SLA breach.
 - [ ] EAS build/submit config, store listings, privacy policy + terms (AR/EN).
@@ -756,8 +794,14 @@ reminder dedupe, and the trip gate's `MAINTENANCE_OVERDUE` refusal.
 
 ### Acceptance criteria
 - Search p95 < 300 ms, write RPC p95 < 250 ms, finance dashboard p95 < 500 ms under stated load.
+  **At 50,000 trips on a 2-core sandbox:** search 6.0 ms cold / 2.8 ms cached, write 10.2 ms, dashboard 88.3 ms —
+  all inside their targets one request at a time; 8 concurrent cold searches reach p95 256 ms (price path) and
+  37 ms (dimension path). The one linear cost left is a price/date/text filter's cascading counts (37 ms),
+  documented in `docs/perf/README.md`.
 - Zero critical/high findings; every table's RLS covered by a passing test; ledger grants verified by test.
 - Restore drill completes within documented RTO (< 1 h) with integrity checks passing.
+  **At dev scale:** 0.47 s end to end, 24 checks green (`docs/perf/restore-drill.txt`); the hosted-project run
+  adds the download and the PITR replay and is the one that settles the launch number.
 - iOS + Android builds install and complete the driver journey on real devices, in Arabic (RTL) and English.
 - Three pilot operators complete a full cycle unaided: subscribe → publish → book → pay → verify → run → manifest → statement.
 - Daily financial integrity job green for 7 consecutive days of UAT activity.

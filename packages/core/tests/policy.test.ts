@@ -94,6 +94,15 @@ describe('staff and supervisors', () => {
     expect(can(supervisor, 'trip.viewPassengers', { inGeoScope: false })).toBe(false);
   });
 
+  it('only an admin can erase an account, and it is the same role that grants roles', () => {
+    expect(can(admin, 'account.delete')).toBe(true);
+    expect(can(staff, 'account.delete')).toBe(false);
+    expect(can(passenger, 'account.delete')).toBe(false);
+    // Self-service deletion is a *request* (`account.requestDeletion` has no capability: it is an own-row
+    // write). The irreversible half is deliberately not something an actor can be granted by scope.
+    expect(can(admin, 'account.delete', { isOwner: true })).toBe(true);
+  });
+
   it('only admins manage geography and plans', () => {
     expect(can(admin, 'geo.manage')).toBe(true);
     expect(can(admin, 'plan.manage')).toBe(true);

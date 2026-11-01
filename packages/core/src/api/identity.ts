@@ -124,6 +124,16 @@ export const cancelDeletionSchema = z.object({
   action: z.literal('account.cancelDeletion'),
 });
 
+/**
+ * The staff action the request always implied (00039). `userId` is the account being erased, never the actor:
+ * the SQL command refuses self-service, so this payload cannot be used as a delete-my-own-account shortcut.
+ */
+export const deleteAccountSchema = z.object({
+  action: z.literal('account.delete'),
+  userId: uuid,
+  reason: z.string().trim().min(1).max(500),
+});
+
 export const submitVerificationSchema = z.object({
   action: z.literal('verification.submit'),
   subjectType: z.enum(['individual', 'organization']),
@@ -171,6 +181,7 @@ export const identityActionSchema = z.discriminatedUnion('action', [
   leaveOrganizationSchema,
   requestDeletionSchema,
   cancelDeletionSchema,
+  deleteAccountSchema,
   submitVerificationSchema,
   decideVerificationSchema,
   grantRoleSchema,

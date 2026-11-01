@@ -209,6 +209,30 @@ const FINANCE_CAPABILITY = {
   'finance.job.run': 'finance.viewAll',
 };
 
+/**
+ * Phase 11. One map, one capability per action. The worker actions are staff-only: claiming the delivery
+ * queue reads other people's notifications, which is exactly why the cron is not a client.
+ */
+const NOTIFICATION_CAPABILITY = {
+  'notifications.list': 'notification.read',
+  'notifications.read': 'notification.read',
+  'notifications.settings': 'notification.preferences',
+  'notifications.preference.set': 'notification.preferences',
+  'notifications.preference.reset': 'notification.preferences',
+  'notifications.settings.update': 'notification.preferences',
+  'notifications.device.register': 'notification.preferences',
+  'notifications.device.revoke': 'notification.preferences',
+  'notifications.health': 'notification.health',
+  'notifications.catalogue': 'notification.catalogue',
+  'search.save': 'notification.savedSearch',
+  'search.list': 'notification.savedSearch',
+  'search.update': 'notification.savedSearch',
+  'search.delete': 'notification.savedSearch',
+  'notifications.dispatch': 'notification.dispatch',
+  'notifications.delivery.record': 'notification.dispatch',
+  'notifications.job.run': 'notification.dispatch',
+};
+
 /** Finance-desk work, whatever scope it is called with. Mirrors `PLATFORM_ONLY` in the edge function. */
 const FINANCE_PLATFORM_ONLY = new Set([
   'finance.journal.post',
@@ -494,6 +518,43 @@ export async function handleFunction({ name, body, userId, client, core, request
     }
   }
 
+  if (name === 'dispatch') {
+    const parsed = core.notificationActionSchema.safeParse(body);
+    if (!parsed.success) return mapZod(parsed.error);
+
+    const input = parsed.data;
+    const resolved = await resolveActor(client, userId);
+    const denial = core.policyDenial(
+      resolved.actor,
+      NOTIFICATION_CAPABILITY[input.action],
+      core.notificationScope(input),
+    );
+    if (denial) {
+      return {
+        status: denial === 'UNAUTHENTICATED' ? 401 : 403,
+        body: {
+          code: denial,
+          detail:
+            denial === 'NOT_VERIFIED'
+              ? 'Account is not verified'
+              : 'You do not have permission to perform this action',
+        },
+      };
+    }
+
+    const { fn, args } = core.notificationCommandArgs(input, userId, {
+      p_request_id: requestId,
+      p_ip: null,
+    });
+    try {
+      const result = await runCommand(client, fn, args);
+      return { status: 200, body: { ...result, requestId } };
+    } catch (error) {
+      const mapped = mapDbError(error, core);
+      return { ...mapped, body: { ...mapped.body, requestId } };
+    }
+  }
+
   if (name === 'identity') {
     const parsed = core.identityActionSchema.safeParse(body);
     if (!parsed.success) return mapZod(parsed.error);
@@ -633,6 +694,17 @@ export async function handleFunction({ name, body, userId, client, core, request
       case 'account.cancelDeletion':
         fn = 'cmd_cancel_account_deletion';
         args = { p_actor: actorId, ...audit };
+        break;
+
+      case 'account.delete':
+        requirePolicy('account.delete');
+        fn = 'cmd_delete_account';
+        args = {
+          p_actor: actorId,
+          p_user_id: input.userId,
+          p_reason: input.reason,
+          ...audit,
+        };
         break;
 
       case 'verification.submit': {

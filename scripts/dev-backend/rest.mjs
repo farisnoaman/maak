@@ -7,7 +7,7 @@
  * shows it — which is exactly what a preview mode with fixtures could never do.
  *
  * Supported (deliberately small, documented in docs/dev-database.md):
- *   select=col,embed(cols) · col=eq.value · col=neq.value · col=in.(a,b) · col=is.null
+ *   select=col,embed(cols) · col=eq.value · col=neq.value · col=in.(a,b) · col=is.null · col=not.is.null
  *   order=col.asc|desc · limit=n · Accept: application/vnd.pgrst.object+json (maybeSingle/single)
  */
 
@@ -170,29 +170,38 @@ function buildFilters(searchParams, tableAlias, columns, table, params) {
     if (reserved.has(key)) continue;
     if (!columns.get(table)?.has(key)) throw new Error(`column ${table}.${key} does not exist`);
     const dot = raw.indexOf('.');
-    const operator = dot === -1 ? 'eq' : raw.slice(0, dot);
-    const value = dot === -1 ? raw : raw.slice(dot + 1);
+    // `col=not.is.null` is PostgREST's spelling of `.not('col', 'is', null)`, and this subset has to accept it
+    // or the dev stack answers a filter the hosted one does honour: the divergence that sends you looking for a
+    // bug in the client (see the note at the top of gateway.mjs).
+    let operator = dot === -1 ? 'eq' : raw.slice(0, dot);
+    let value = dot === -1 ? raw : raw.slice(dot + 1);
+    const negated = operator === 'not';
+    if (negated) {
+      const next = value.indexOf('.');
+      operator = next === -1 ? value : value.slice(0, next);
+      value = next === -1 ? '' : value.slice(next + 1);
+    }
     const column = `${tableAlias}.${quote(key)}`;
-
-    if (operator === 'is') {
-      if (value === 'null') clauses.push(`${column} is null`);
-      else if (value === 'not.null') clauses.push(`${column} is not null`);
-      else clauses.push(`${column} is ${value === 'true'}`);
-      continue;
-    }
-    if (operator === 'in') {
-      const list = value
-        .replace(/^\(|\)$/g, '')
-        .split(',')
-        .filter(Boolean);
-      params.push(list);
-      clauses.push(`${column} = any($${params.length})`);
-      continue;
-    }
-    const sqlOperator = { eq: '=', neq: '<>', gt: '>', gte: '>=', lt: '<', lte: '<=' }[operator];
-    if (!sqlOperator) throw new Error(`unsupported operator "${operator}"`);
-    params.push(value);
-    clauses.push(`${column} ${sqlOperator} $${params.length}`);
+    const clause = (() => {
+      if (operator === 'is') {
+        if (value === 'null') return `${column} is null`;
+        if (value === 'not.null') return `${column} is not null`;
+        return `${column} is ${value === 'true'}`;
+      }
+      if (operator === 'in') {
+        const list = value
+          .replace(/^\(|\)$/g, '')
+          .split(',')
+          .filter(Boolean);
+        params.push(list);
+        return `${column} = any($${params.length})`;
+      }
+      const sqlOperator = { eq: '=', neq: '<>', gt: '>', gte: '>=', lt: '<', lte: '<=' }[operator];
+      if (!sqlOperator) throw new Error(`unsupported operator "${operator}"`);
+      params.push(value);
+      return `${column} ${sqlOperator} $${params.length}`;
+    })();
+    clauses.push(negated ? `not (${clause})` : clause);
   }
   return clauses;
 }

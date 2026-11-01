@@ -50,6 +50,7 @@ export default async function AdminRegionsPage({
         phase="2"
         items={[
           { key: 'console.navOverview', href: `/${locale}/admin` },
+          { key: 'catalogue.title', href: `/${locale}/admin/notifications` },
           { key: 'nav.regions', href: `/${locale}/admin/regions` },
           { key: 'nav.places', href: `/${locale}/admin/places` },
           { key: 'nav.roles', href: `/${locale}/admin/users` },

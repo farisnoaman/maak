@@ -1,0 +1,94 @@
+# Copy this file to `.github/workflows/notify.yml` alongside `ci.yml`.
+#
+# It lives in docs/ci/ for the same reason `ci.yml` does: the GitHub App the coding agent uses has no
+# `workflows` permission, so it cannot push into `.github/workflows/`. Activate both with:
+#   npm run ci:install && git add .github/workflows && git commit -m "ci: activate" && git push
+#
+# What it is: the scheduler Phase 11 deliberately left out. The worker is a script (`npm run notify`), and this
+# file is the thing that runs it — every five minutes at first, which is why every job in it is idempotent by
+# dedupe key. The `--fail-on-error` flag is the alerting half: a run with a failed delivery or a job that threw
+# exits non-zero, GitHub marks it red, and its failure notification is what reaches a human.
+#
+# The schedule is commented out on purpose. A workflow on a public repository bills minutes the moment it is
+# pushed, and this repository's owner has to decide the cadence — uncomment the block, set the secrets, done.
+#
+# Required repository secrets:
+#   MAAK_API_URL         https://<project-ref>.functions.supabase.co/functions/v1   (no trailing slash)
+#   MAAK_WORKER_TOKEN    a staff session token; the worker acts as a credential, not a person
+#   EXPO_ACCESS_TOKEN    optional — without it every push is recorded as skipped, with that reason
+#   RESEND_API_KEY       optional — without it every email is recorded as skipped, with that reason
+#   MAAK_MAIL_FROM       optional — defaults to notifications@maak.test
+
+name: Notifications
+
+on:
+  # schedule:
+  #   # Every five minutes. The reminder bands and the saved-search matcher are built for this cadence; the
+  #   # daily jobs (maintenance, digest, ops alerts) dedupe themselves to once a day regardless.
+  #   - cron: '*/5 * * * *'
+  workflow_dispatch:
+    inputs:
+      jobs_only:
+        description: 'Run the scheduled jobs but skip draining the delivery queue'
+        type: boolean
+        default: false
+
+concurrency:
+  group: notify
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    name: Drain deliveries and run the jobs
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # The worker imports `@maak/core` through esbuild, so the dependencies are needed even though no app is
+      # built here.
+      - run: npm ci
+
+      # Configuration, printed without secrets: the check says whether a token exists, never what it is.
+      - name: Configuration
+        env:
+          MAAK_API_URL: ${{ secrets.MAAK_API_URL }}
+          MAAK_WORKER_TOKEN: ${{ secrets.MAAK_WORKER_TOKEN }}
+          EXPO_ACCESS_TOKEN: ${{ secrets.EXPO_ACCESS_TOKEN }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+        run: node scripts/notify-worker.mjs --check
+
+      # A missing token is a hard stop: without it every call is anonymous and the run would silently do nothing.
+      - name: Require the worker token
+        env:
+          MAAK_WORKER_TOKEN: ${{ secrets.MAAK_WORKER_TOKEN }}
+        run: |
+          if [ -z "$MAAK_WORKER_TOKEN" ]; then
+            echo "::error::MAAK_WORKER_TOKEN is not set — the worker cannot authenticate."
+            exit 1
+          fi
+
+      - name: Run one pass
+        if: ${{ inputs.jobs_only != true }}
+        env:
+          MAAK_API_URL: ${{ secrets.MAAK_API_URL }}
+          MAAK_WORKER_TOKEN: ${{ secrets.MAAK_WORKER_TOKEN }}
+          EXPO_ACCESS_TOKEN: ${{ secrets.EXPO_ACCESS_TOKEN }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          MAAK_MAIL_FROM: ${{ secrets.MAAK_MAIL_FROM }}
+        run: node scripts/notify-worker.mjs --once --fail-on-error
+
+      - name: Run the jobs only
+        if: ${{ inputs.jobs_only == true }}
+        env:
+          MAAK_API_URL: ${{ secrets.MAAK_API_URL }}
+          MAAK_WORKER_TOKEN: ${{ secrets.MAAK_WORKER_TOKEN }}
+        run: node scripts/notify-worker.mjs --once --fail-on-error
