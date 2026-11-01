@@ -772,8 +772,11 @@ reminder dedupe, and the trip gate's `MAINTENANCE_OVERDUE` refusal.
       race, ping ingest and the finance dashboard. Measured results in `docs/perf/`. **Not run:** k6 (no k6 in the
       sandbox) and payment-confirmation volume (needs a payment provider fixture).
 - [x] `EXPLAIN ANALYZE` review where it mattered: search was 15,690 ms at 50k, 112 ms after `00036` (one plpgsql
-      call per row per facet; a non-inlineable sort key) and 5.6 ms after `00038` (the facet scan and the sort
-      removed). Autovacuum tuning for the pings table remains.
+      call per row per facet; a non-inlineable sort key), 5.6 ms after `00038` (the facet scan and the sort
+      removed) and 6.0 ms after `00040`, which answers a dimension-filtered search from the bucket table instead
+      of a 35 ms pass — `direct: true` 41.6 → 7.7 ms, the worst dimension case 8.6 ms (~115 cold searches/s per
+      core). The price/date/text filter still pays that pass (37 ms) and is documented in `docs/perf/README.md`.
+      Autovacuum tuning for the pings table remains.
 - [x] Account deletion executed rather than merely requested: `cmd_delete_account` (`00039`) anonymises the person
       and keeps the books, with six refusals, `platform_admin` only and no self-service; 30 pgTAP assertions in
       `0018` and `docs/admin-guide.md` §6a for the operator's half (Storage objects, `authScrubbed`).
@@ -791,9 +794,10 @@ reminder dedupe, and the trip gate's `MAINTENANCE_OVERDUE` refusal.
 
 ### Acceptance criteria
 - Search p95 < 300 ms, write RPC p95 < 250 ms, finance dashboard p95 < 500 ms under stated load.
-  **At 50,000 trips on a 2-core sandbox:** search 5.6 ms cold / 2.7 ms cached, write 4.2 ms, dashboard 83.5 ms —
-  all inside their targets one request at a time; 8 concurrent cold searches reach p95 195 ms. The one linear
-  cost left is an unselective filter's cascading counts (42 ms), documented in `docs/perf/README.md`.
+  **At 50,000 trips on a 2-core sandbox:** search 6.0 ms cold / 2.8 ms cached, write 10.2 ms, dashboard 88.3 ms —
+  all inside their targets one request at a time; 8 concurrent cold searches reach p95 256 ms (price path) and
+  37 ms (dimension path). The one linear cost left is a price/date/text filter's cascading counts (37 ms),
+  documented in `docs/perf/README.md`.
 - Zero critical/high findings; every table's RLS covered by a passing test; ledger grants verified by test.
 - Restore drill completes within documented RTO (< 1 h) with integrity checks passing.
   **At dev scale:** 0.47 s end to end, 24 checks green (`docs/perf/restore-drill.txt`); the hosted-project run

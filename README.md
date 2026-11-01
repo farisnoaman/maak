@@ -68,8 +68,8 @@ supabase test db            # the same pgTAP suites on the real stack (auth, sto
 
 ## Status
 
-**Phases 0–11 complete; Phase 12 (hardening and launch) in progress.** 39 migrations, 131 commands, 11 edge
-functions, **651 unit tests**, **944 pgTAP assertions across 18 suites**, 107 a11y routes, and a bilingual web
+**Phases 0–11 complete; Phase 12 (hardening and launch) in progress.** 40 migrations, 131 commands, 11 edge
+functions, **651 unit tests**, **948 pgTAP assertions across 18 suites**, 107 a11y routes, and a bilingual web
 app plus the Expo client.
 
 | Gate | What it proves |

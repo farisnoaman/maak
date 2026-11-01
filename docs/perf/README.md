@@ -49,12 +49,15 @@ and nothing else.
 
 Measured on this sandbox (2 cores, dev PostgreSQL, 49,998 published trips, `docs/perf/*.json`):
 
-| at 49,998 trips | before 00036 | after 00036 | after 00038 |
-| --- | --- | --- | --- |
-| search, cache miss (mixed filters, `perf:smoke`) | 15,690 ms p95 | 112 ms p95 | **5.6 ms p95** |
-| search, cache hit (30 s TTL) | — | 3 ms p95 | 2.7 ms p95 |
-| write (`search.save`) | 4 ms p95 | 5 ms p95 | 4.2 ms p95 |
-| finance dashboard | — | 79 ms p95 | 83.5 ms p95 |
+| at 49,998 trips | before 00036 | after 00036 | after 00038 | after 00040 |
+| --- | --- | --- | --- | --- |
+| search, cache miss (mixed filters, `perf:smoke`) | 15,690 ms p95 | 112 ms p95 | 5.6 ms p95 | **6.0 ms p95** |
+| search, cache hit (30 s TTL) | — | 3 ms p95 | 2.7 ms p95 | 2.8 ms p95 |
+| write (`search.save`) | 4 ms p95 | 5 ms p95 | 4.2 ms p95 | 10.2 ms p95 |
+| finance dashboard | — | 79 ms p95 | 83.5 ms p95 | 88.3 ms p95 |
+
+The last two rows moved and nothing in `00040` touches them: the write and the dashboard are the same code on a
+busier sandbox, and this file records what the harness printed rather than what the change intended.
 
 `00038_search_counts.sql` then removed the two costs that were *proportional* rather than making them cheaper.
 The facets are one grouping pass over `(origin, destination, gender, booking, direct)` buckets — ~30 rows at
@@ -62,52 +65,61 @@ this volume — with the six cascading summaries taken over the buckets instead 
 answer is stored in `search_counts` and refreshed by whichever request notices it is more than thirty seconds
 old. The page stopped being sorted at all: `trips_search` carries three generated rank columns, one per sort,
 each with a partial index ending in `trip_id`, so `ORDER BY … LIMIT 12` is an index scan that stops after
-twelve rows and the keyset cursor is an index condition. Both implementations are still in the repository's
-hands: 0007 asserts the generated keys equal `app.trip_rank()` to the digit, the bucketed counts equal
-`app.trip_matches()`, and the stored counts equal the counting function.
+twelve rows and the keyset cursor is an index condition.
 
-The whole function, one request at a time, cache cleared between calls — `00036` and `00038` measured back to
-back on the same database, with the facets compared for equality on every shape:
+`00040_search_bucket_counts.sql` finished the job the buckets started. The observation is that the *dimension*
+filters are the axes of the bucket tuple, so a count filtered on some of them is a sum over the buckets the rest
+admit: the buckets became a table (`search_buckets`), the stored homepage counts became their projections
+instead of a second scan, and a search filtered only on origin/destination/gender/booking/direct is now
+arithmetic over ~30 rows. The exact total is counted from a covering partial index
+(`trips_search_facets_idx`), and the enum dimensions are compared as enums — `gender_policy::text = any(…)`
+casts 50,000 times and costs 12 ms where `gender_policy = any(enum[])` costs 6.
 
-| cold search (`search_public_trips`, 12 rows) | 00036 | 00038 | facets identical |
-| --- | --- | --- | --- |
-| unfiltered — the homepage, most of the traffic | 161.6 ms | **12.9 ms** | yes |
-| a cap that matches almost nothing (`priceMax: 1234`) | 112.6 ms | **3.0 ms** | yes |
-| a cap that matches everything (`priceMax: 9000000`) | 159.7 ms | 42.0 ms | yes |
-| `direct: true` | 155.1 ms | 41.6 ms | yes |
+Measured one request at a time on the same 49,998-trip database, cache cleared between calls:
 
-The last two rows are the honest remainder, and they are the point of the design rather than a miss: a
-*filtered* search cannot be answered by an aggregate that was computed for every filter, so its counts are
-still one pass over the public trips (35 ms of that 42 ms). What changed is that the pass happens once per
-filter set per thirty seconds — the counts are cached apart from the page, keyed on the filters alone — and
-that the page costs nothing. Selective filters, which are the ones users actually combine, are answered by an
-index on `price_from_yer` and cost 3 ms.
+| cold search (`search_public_trips`, 12 rows) | 00038 | 00040 |
+| --- | --- | --- |
+| unfiltered — the homepage, most of the traffic | 12.9 ms | **6.1 ms** |
+| `direct: true` | 41.6 ms | **7.7 ms** |
+| a selective origin | ~35 ms + page | **2.7 ms** |
+| `destination` + `booking` | ~35 ms + page | **3.1 ms** |
+| `gender: ["any"]` — matches all but one trip, the pathological case | ~42 ms | **8.6 ms** |
+| `priceMax: 9000000` — a filter no aggregate can answer | 42.0 ms | **37 ms** |
+
+The `~35 ms` rows are the counts pass those shapes used to pay (`app.search_facet_counts()`, measured 33–35 ms
+on this database); the last row is that pass unchanged, and it is the honest remainder. Selective filters,
+which are the ones users actually combine, are answered by an index on `price_from_yer` and cost 3 ms.
 
 ## What is still true
 
-**Cold search is no longer uniformly expensive, and the difference matters for capacity.** The homepage and a
-selective filter are now 3–13 ms; an unselective filter is 42 ms, so the worst case is **~23 cold searches per
-second per core** instead of ~7, and `perf:db` measures 8 concurrent callers at p95 195 ms instead of 712 ms.
-The 30 s cache still does the heavy lifting under real traffic, and a hit costs 2.7 ms. The honest sentence is
-now "13 ms for the homepage, 42 ms for a filter the aggregate cannot answer, 2.7 ms cached".
+**The remaining linear cost is a price, date or text filter — and the exact total.** A dimension-filtered search
+is 3–9 ms (a selective subset 2.7 ms, `direct` 7.7 ms, the pathological "matches everything" 8.6 ms) and the
+homepage is 6.1 ms, so the working number is **~115 cold searches per second per core in the worst dimension
+case** and 160+ for the homepage; before 00040 the same shapes cost 42 ms and ~23/s. A price cap that matches
+everything still costs 37 ms because no aggregate computed for every filter can answer "under 5,000 riyals", and
+that pass is cached for thirty seconds per filter set. `perf:db` now measures both series: at 8 callers the cold
+price-cap search is p95 256 ms and the dimension series p95 37 ms.
 
-**The facet counts for an unfiltered search are up to thirty seconds old, on purpose.** The chips next to the
-filter panel read `search_counts`; the number of results does not — the total is an exact `count(*)` on an
-index-only scan (7 ms at 50,000), because a user paginates against it. A trip published in the last half-minute
-is therefore in the list and in the count but not yet in the chips. That is the deliberate trade for not
-scanning 17 MB to draw a dropdown, it is decided in one place (`app.ensure_search_counts()`), and 0007 pins it.
+**The facet counts for a dimension-filtered search are up to thirty seconds old, on purpose.** The chips read
+`search_buckets` (or `search_counts` for the homepage); the number of results does not — the total is an exact
+`count(*)` on an index-only scan (4–9 ms at 50,000), because a user paginates against it. A trip published in
+the last half-minute is therefore in the list and in the count but not yet in the chips. That is the deliberate
+trade for not scanning 17 MB to draw a dropdown, it is decided in one place (`app.ensure_search_counts()`), and
+0007 pins it: bucket arithmetic must equal row arithmetic for a matrix of dimension filters, the buckets must
+sum to the public trips, and a dimension-filtered search's facet must equal `app.trip_matches()`'s grouping.
 
 **`count(*)` is the last thing that is linear in public trips**, and it is the cheapest linear thing available:
-an index-only scan of a partial index. At a million trips it would be ~100 ms, which is the next ceiling and
-the next migration's problem; nothing else in the read path grows with the catalogue.
+an index-only scan of a partial index, 4 ms unfiltered and 6–12 ms with a dimension filter. At a million trips
+it would be ~80 ms, which is the next ceiling and the next migration's problem; nothing else in the read path
+grows with the catalogue.
 
 Anything further, in order of value:
 
-1. a longer counts cache or warming for the top filter combinations, which trades freshness for the 42 ms
-   unselective-filter case — note that a maintained cube cannot answer arbitrary filters, so this is a cache
-   question and not an aggregate one;
-2. partial indexes per dimension (origin, destination, gender, booking), so a filtered search reads thousands
-   of rows instead of all of them — `trips_search_price_idx` is what makes `priceMax` cost 3 ms already;
+1. a bucket table keyed on the *price bands* as well, which would let "under 5,000 riyals" be arithmetic too —
+   the bands have to be chosen against the real price distribution, and each band is another axis of the tuple;
+2. a longer counts cache or warming for the top filter combinations, which trades freshness for the 37 ms
+   row-path case — a maintained cube cannot answer arbitrary filters, so this is a cache question, not an
+   aggregate one;
 3. the same treatment for `total` if a million trips ever arrives.
 
 **The dev gateway serialises.** `scripts/dev-backend` runs every query through one PostgreSQL connection behind

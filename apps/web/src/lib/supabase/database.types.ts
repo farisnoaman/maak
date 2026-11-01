@@ -1,5 +1,5 @@
-// migrations-sha256: 0a1fe0acd3e0929886dab0fbcfc5eb787338d327e0ec4d650f902e4749998556
-/* Generated from 39 migrations. Run `npm run db:types` after changing the schema. */
+// migrations-sha256: 31c90b2c39e848d53f5cbbe16360cf3192830a9f3fd2b6958bea6e01febea239
+/* Generated from 40 migrations. Run `npm run db:types` after changing the schema. */
 
 /**
  * Schema types for RLS-filtered reads (Phase 0 subset).
@@ -1035,6 +1035,16 @@ export interface SearchCountRow {
   refreshed_at: string;
 }
 
+export interface SearchBucketRow {
+  origin_governorate_id: string;
+  destination_governorate_id: string;
+  gender_policy: string;
+  booking_mode: string;
+  direct: boolean;
+  trips: number;
+  refreshed_at: string;
+}
+
 export interface Booking {
   id: string;
   code: string;
@@ -1838,6 +1848,18 @@ export interface Database {
         Row: SearchCacheRow;
         Insert: Partial<SearchCacheRow> & { key: string; payload: Json };
         Update: Partial<SearchCacheRow>;
+      };
+      search_buckets: {
+        Row: SearchBucketRow;
+        Insert: Partial<SearchBucketRow> & {
+          origin_governorate_id: string;
+          destination_governorate_id: string;
+          gender_policy: string;
+          booking_mode: string;
+          direct: boolean;
+          trips: number;
+        };
+        Update: Partial<SearchBucketRow>;
       };
       search_counts: {
         Row: SearchCountRow;

@@ -227,6 +227,35 @@ remainder: a filter cannot be answered by an aggregate computed over every filte
 pass — cached for thirty seconds, shared by every sort and every page of that filter set, and never done twice
 for the same one.
 
+§1.8 left the remainder honest and the remainder was the *common* case: `direct: true` cost 41.6 ms because its
+counts were still a pass over 50,000 trips. `00040_search_bucket_counts.sql` removed it by noticing what the
+buckets already are. The dimension filters — origin, destination, gender, booking mode, direct — are the axes of
+the bucket tuple, so a count filtered on some of them is a sum over the buckets the rest admit: the buckets
+became a table, the stored homepage chips became their projections instead of a second scan, and a
+dimension-filtered search is arithmetic over ~30 rows. The exact total is counted from a new covering index
+(`trips_search_facets_idx`), and the enum dimensions are compared as enums, because `gender_policy::text =
+any(…)` casts 50,000 times (12.3 ms) where `gender_policy = any(enum[])` compares enums (5.5 ms).
+
+| cold search, cache cleared | 00038 | 00040 |
+| --- | --- | --- |
+| homepage | 12.9 ms | **6.1 ms** |
+| `direct: true` | 41.6 ms | **7.7 ms** |
+| a selective origin | ~41 ms | **2.7 ms** |
+| `destination` + `booking` | ~41 ms | **3.1 ms** |
+| `gender: ["any"]` (matches all but one trip) | ~42 ms | **8.6 ms** |
+| `priceMax` over every price — the row path | 42.0 ms | 37 ms |
+
+The last row is what remains, and it is the right thing to remain: no aggregate computed over every filter can
+answer "under 5,000 riyals", so that search still pays one grouping pass, cached for thirty seconds per filter
+set. The capacity sentence moves from ~23 to **~115 cold searches per second per core in the worst dimension
+case**, and 160+ for the homepage. `perf:db` grew a second series to keep it honest — measuring the facet path
+with the same filter values every call would have measured the cache and reported 0 ms, which this file's
+sibling has been fooled by once already.
+
+`0007` gained four assertions: the buckets sum to the public future trips, bucket arithmetic equals row
+arithmetic for a gender filter and for three dimensions at once, and a dimension-filtered search's origin facet
+equals `app.trip_matches()`'s grouping. 40 migrations, 948 assertions across 18 suites.
+
 The contracts that keep "faster" from meaning "different" are in 0007 rather than in this report: the generated
 keys equal `app.trip_rank()` to the digit for all three sorts, the bucketed counts equal `app.trip_matches()`
 dimension by dimension with a filter on, the stored counts equal the counting function, a cursor page is the row
@@ -344,7 +373,7 @@ download, the PITR replay and pointing the app at the result), it rehearses the 
 | `npm run check:guards` | 31 core files · 176 style files · 39 migrations · 131 commands |
 | `npm run check:a11y` | 107 routes, both directions |
 | worker against a fresh dev database | 10 jobs, `maintenance: {sent: 2}`, `ops-alerts: {counts: all zero}`, exit 0 |
-| `npm run perf:smoke` at 50,000 trips | search 5.6 ms p95 cold / 2.7 ms cached · write 4.2 ms · dashboard 83.5 ms |
+| `npm run perf:smoke` at 50,000 trips | search 6.0 ms p95 cold / 2.8 ms cached · write 10.2 ms · dashboard 88.3 ms |
 | `npm run drill:restore` at 49,998 trips | hot backup → second cluster → 24 checks against the source in 0.47 s |
 
 ---
@@ -352,10 +381,10 @@ download, the PITR replay and pointing the app at the result), it rehearses the 
 ## 6. What is still open
 
 1. **No load test at production volume has been run.** The p95 targets (search < 300 ms, writes < 250 ms, finance
-   dashboard < 500 ms) are verified *at 50,000 trips, one request at a time* — 5.6 ms, 4.2 ms, 83.5 ms — and
-   the one linear cost that remains (an unselective filter's facet counts, 42 ms) is documented in
-   `docs/perf/README.md`. A k6 run on hardware with the stated
-   load has not happened, because there is no such environment yet.
+   dashboard < 500 ms) are verified *at 50,000 trips, one request at a time* — 6.0 ms, 10.2 ms, 88.3 ms — and
+   the one linear cost that remains (a price/date/text filter's counts, 37 ms; dimension filters are 3–9 ms
+   since `00040`) is documented in `docs/perf/README.md`. A k6 run on hardware with the stated load has not
+   happened, because there is no such environment yet.
 2. **Dependency debt in the mobile toolchain.** `npm audit --omit=dev` reports 19 advisories (18 moderate, 1 high,
    0 critical), all inside Expo/React Native build tooling (`metro`, `@expo/cli`, `image-size`, `@react-native/*`)
    — code that runs on a developer machine and in EAS, not in the web bundle or on a phone at runtime. `npm audit

@@ -21,7 +21,7 @@ begin;
 
 create extension if not exists pgtap;
 
-select plan(113);
+select plan(117);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -1039,6 +1039,75 @@ select is(
   )::boolean,
   true,
   'a repeated search is served from the cache — the page and the counts are cached separately'
+);
+
+-- ---------------------------------------------------------------------------
+-- 7d. A dimension-only filter is arithmetic over the buckets, not a scan
+-- ---------------------------------------------------------------------------
+-- 00040 materialises the buckets the counts are projections of, so "what is left if I also choose Aden" is a
+-- sum over ~30 rows instead of a pass over every public trip. These assertions are the contract that keeps the
+-- faster answer the same answer: bucket arithmetic must equal row arithmetic for every combination of the
+-- dimensions, and the stored homepage chips must be their projections.
+
+select app.refresh_search_counts();
+
+select is(
+  (select coalesce(sum(b.trips), 0)::int from public.search_buckets b),
+  (select count(*)::int from public.trips_search s where s.is_public and s.departure_at > now()),
+  'the buckets sum to the public future trips — nothing missing, nothing counted twice'
+);
+
+select is(
+  (
+    select count(*)::int from (
+      select dimension, value, n from app.search_facet_counts_from_buckets(
+        null, null, array['any'], null, null
+      )
+      except
+      select dimension, value, n from app.search_facet_counts(
+        null, null, array['any'], null, null, null, null, null, null
+      )
+    ) drifted
+  ),
+  0,
+  'counting the buckets answers exactly what counting the trips answers, for a gender filter'
+);
+
+select is(
+  (
+    select count(*)::int from (
+      select dimension, value, n from app.search_facet_counts_from_buckets(
+        (select array_agg(id) from public.governorates), null, null, array['per_seat'], true
+      )
+      except
+      select dimension, value, n from app.search_facet_counts(
+        (select array_agg(id) from public.governorates), null, null, array['per_seat'], true,
+        null, null, null, null
+      )
+    ) drifted
+  ),
+  0,
+  'three dimensions at once, including the direct flag, still agree with the row-by-row count'
+);
+
+select is(
+  (
+    select count(*)::int
+    from jsonb_array_elements(
+      public.search_public_trips('ar', '{"direct": true}'::jsonb, 'soonest', null, 50) -> 'facets' -> 'origins'
+    ) facet
+  ),
+  (
+    select count(*)::int
+    from (
+      select s.origin_governorate_id
+      from public.trips_search s
+      where s.is_public and s.departure_at > now()
+        and app.trip_matches(s, '{"direct": true}'::jsonb, 'origin')
+      group by s.origin_governorate_id
+    ) grouped
+  ),
+  'and a dimension-filtered search cascades the origin facet over the reference filter'
 );
 
 -- ---------------------------------------------------------------------------

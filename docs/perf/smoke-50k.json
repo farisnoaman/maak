@@ -1,5 +1,5 @@
 {
-  "at": "2026-11-01T18:24:43.324Z",
+  "at": "2026-11-01T19:15:41.891Z",
   "base": "http://127.0.0.1:54321",
   "note": "demo volume",
   "runs": {
@@ -15,21 +15,21 @@
     "dashboard": 500
   },
   "p50": {
-    "search": 4.498924,
-    "write": 3.904057,
-    "dashboard": 80.039675
+    "search": 4.568775,
+    "write": 4.121284,
+    "dashboard": 76.400952
   },
   "p95": {
-    "search": 5.62382,
-    "searchCached": 2.685123,
+    "search": 5.966172,
+    "searchCached": 2.84802,
     "gatewayQueue": null,
-    "write": 4.180531,
-    "dashboard": 83.512366
+    "write": 10.200652,
+    "dashboard": 88.254881
   },
   "max": {
-    "search": 5.94768,
-    "write": 4.180531,
-    "dashboard": 83.512366
+    "search": 6.478737,
+    "write": 10.200652,
+    "dashboard": 88.254881
   },
   "failures": []
 }

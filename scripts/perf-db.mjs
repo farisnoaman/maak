@@ -33,6 +33,9 @@ const RUNS = Number(arg('runs', 60));
 const HOST = String(process.env.MAAK_PG_HOST ?? '127.0.0.1');
 const PORT = Number(process.env.MAAK_PG_PORT ?? 54322);
 
+/** Every governorate id, read once: the facet series draws its destination subsets from them. */
+const GOVERNORATES = [];
+
 const CONNECTION = {
   host: HOST,
   port: PORT,
@@ -59,6 +62,36 @@ async function search(client) {
   await client.query('select public.search_public_trips($1, $2::jsonb, $3, null, 12)', [
     'ar',
     JSON.stringify({ priceMax: Math.floor(Math.random() * 9_000_000) }),
+    'soonest',
+  ]);
+  return Number(process.hrtime.bigint() - started) / 1e6;
+}
+
+/**
+ * A cold search filtered only on the dimensions — the shape `00040` moved off the scan.
+ *
+ * Cold, and that is the hard part of this series: there are only ~30 dimension *values*, so drawing one of them
+ * per call would be answered by the thirty-second cache and would report a spectacular 0 ms (this file has been
+ * fooled by exactly that before). The destination is therefore a random *subset* of the governorates — a few
+ * thousand distinct filter sets — plus the two flags, so a run of a couple of hundred requests is cold almost
+ * every time. What it measures is the path a visitor takes when they tick a chip: arithmetic over
+ * `search_buckets`, plus an exact index-only count for the total.
+ */
+async function facetSearch(client) {
+  const pick = 1 + Math.floor(Math.random() * 3);
+  const destinations = [];
+  while (destinations.length < pick) {
+    const id = GOVERNORATES[Math.floor(Math.random() * GOVERNORATES.length)];
+    if (!destinations.includes(id)) destinations.push(id);
+  }
+  const filters = { destination: destinations, direct: Math.random() < 0.5 };
+  if (Math.random() < 0.4) filters.gender = ['any'];
+  if (Math.random() < 0.3) filters.booking = ['per_seat'];
+
+  const started = process.hrtime.bigint();
+  await client.query('select public.search_public_trips($1, $2::jsonb, $3, null, 12)', [
+    'ar',
+    JSON.stringify(filters),
     'soonest',
   ]);
   return Number(process.hrtime.bigint() - started) / 1e6;
@@ -137,20 +170,29 @@ async function main() {
       '  note: fewer than 10,000 trips — run `npm run perf:seed` for numbers worth citing',
     );
   }
+  for (const row of (await probe.query('select id from public.governorates')).rows) {
+    GOVERNORATES.push(row.id);
+  }
+
   console.log(`  ${RUNS} requests per caller per level\n`);
 
   const rows = [];
   for (const callers of LEVELS) {
     const searches = await level(callers, RUNS, (client) => search(client));
+    const facets = await level(callers, RUNS, (client) => facetSearch(client));
     const pages = await level(callers, Math.max(1, Math.round(RUNS / 4)), (client) =>
       tripPage(client),
     );
     const warm = await level(callers, RUNS, (client) => cachedSearch(client));
 
-    rows.push({ search: searches, tripPage: pages, cached: warm });
+    rows.push({ search: searches, facets, tripPage: pages, cached: warm });
     console.log(
       `  search  ${String(callers).padStart(2)} callers · ${searches.throughput.toFixed(1)} req/s · ` +
         `p50 ${searches.p50.toFixed(0)} ms · p95 ${searches.p95.toFixed(0)} ms  (cold)`,
+    );
+    console.log(
+      `  facets  ${String(callers).padStart(2)} callers · ${facets.throughput.toFixed(1)} req/s · ` +
+        `p50 ${facets.p50.toFixed(0)} ms · p95 ${facets.p95.toFixed(0)} ms  (cold, dimensions only)`,
     );
     console.log(
       `  search  ${String(callers).padStart(2)} callers · ${warm.throughput.toFixed(1)} req/s · ` +
@@ -163,6 +205,14 @@ async function main() {
   }
 
   await probe.end();
+
+  const singleFacet = rows[0]?.facets;
+  if (singleFacet) {
+    console.log(
+      `  one dimension-filtered search ≈ ${singleFacet.p50.toFixed(0)} ms of a core — ` +
+        `${(1000 / singleFacet.p50).toFixed(1)}/s per core`,
+    );
+  }
 
   const single = rows[0]?.search;
   if (single) {
