@@ -67,6 +67,7 @@ New enums: `notification_channel` (`in_app`, `push`, `email`, `whatsapp`), `noti
 | Piece | Where |
 | --- | --- |
 | Contract, 17-action union, dispatch table, quiet-hours maths, `notificationText`, `translateCount` / `pluralCategory`, `splitBidi`, `describeSavedSearch`, `expoPushMessages`, `emailMessage`, `whatsappDeepLink` | `packages/core/src/api/notifications.ts` |
+| `parseLinkQuery` / `normaliseLink` / `mobileRoute` / `hasMobileRoute` — the web href → native screen table, filter query intact | `packages/core/src/domain/deep-link.ts` |
 | Five capabilities (`notification.preferences`, `.savedSearch`, `.dispatch`, `.health`, `.catalogue`) | `packages/core/src/domain/policy.ts` |
 | 160 `notifications.*` keys per locale (labels, inbox, matrix, statuses, channels, devices, plurals, push outcomes) + 7 `catalogue.*` | `packages/core/src/i18n/dictionaries.ts` |
 | Edge function `dispatch` (capability map, rate limit, 404 for unknown actions) | `supabase/functions/dispatch/index.ts` |
@@ -75,7 +76,7 @@ New enums: `notification_channel` (`in_app`, `push`, `email`, `whatsapp`), `noti
 | Inbox + preferences + saved-search control | `apps/web/src/components/account/{NotificationInbox,NotificationPreferences}.tsx`, `components/trips/SaveSearchControl.tsx` |
 | Routes | `/account/notifications`, `/account/notifications/preferences` (both linked from `AccountNav`), `/admin/notifications` (staff preview, in every admin nav list and on the `/admin` hub), and the save-search control on `/trips` |
 | Loading / error / skeleton | `loading.tsx` on all three routes, `error.tsx` on the inbox, `components/ui/Skeleton.tsx` + `@keyframes skeleton-shimmer` with a reduced-motion guard |
-| Native | `apps/mobile/src/app/notifications.tsx`, `notification-preferences.tsx`, `src/lib/push.ts` |
+| Native | `apps/mobile/src/app/notifications.tsx` (rows are tappable and open their `link`), `trips/index.tsx` (seeds its filters from the query), `notification-preferences.tsx`, `src/lib/push.ts` (registration), `src/lib/push-routing.ts` (tap handling, cold start included) |
 | Demo data: one device token + one enqueued notification with its deliveries | `scripts/dev-backend/db.mjs` |
 
 ---
@@ -158,7 +159,16 @@ New enums: `notification_channel` (`in_app`, `push`, `email`, `whatsapp`), `noti
     None is in `packages/design-tokens/tokens.css`, and an undefined `var()` is silently dropped: the page looked
     like a browser default rather than an error. Everything now resolves against the token file, and a scan of
     `globals.css` against `tokens.css` reports no unknown property.
-13. **A job's "sent" counter counted dedupe hits.** The reminder job incremented per *row visited*, so a second run
+13. **The worker scheduled six jobs and the API offered eight.** `search-digest` and `no-shows` were written,
+    tested and dispatched by hand — and never run by a cron, because the worker kept its own list of names. It
+    now iterates `NOTIFICATION_JOB_FN`, which `satisfies Record<NotificationJob, string>`, so the two cannot
+    disagree without a type error; a unit test asserts the map covers exactly the jobs the schema accepts.
+14. **A tapped push opened nothing.** The worker has always put `data.link` on the message and the phone
+    ignored it: a saved-search alert landed on whatever screen the app was last on. `mobileRoute()` maps the web
+    href to a native screen *and keeps the query*, `useNotificationTapRouting()` handles both the warm tap and
+    the cold start (`getLastNotificationResponseAsync`), and the trip search seeds its filters from the route so
+    the alert reopens the search rather than an empty list.
+15. **A job's "sent" counter counted dedupe hits.** The reminder job incremented per *row visited*, so a second run
     in the same band reported `sent: 1` while writing nothing — a reconciliation number that lies. `app.notify()`
     now returns the id it found or created, the jobs count only rows they created, and the pgTAP suite asserts the
     second run reports zero.
@@ -170,9 +180,9 @@ New enums: `notification_channel` (`in_app`, `push`, `email`, `whatsapp`), `noti
 | Gate | Result |
 | --- | --- |
 | `npm run sql:check` | 32 migrations applied · **16 pgTAP suites, 868 assertions** (94 new in `0016_notifications.test.sql`) · `database.types.ts` in sync · write lockdown intact |
-| `npm test` | **623 tests**, 25 files (101 new in `packages/core/tests/notifications-api.test.ts`) |
-| `npm run test:coverage` | thresholds met: 95.6% statements / 86.6% branches / 96.4% functions / 96.6% lines |
-| `npm run check:guards` | 30 core files · **176** style files · 32 migrations · **128 commands** · notification keys present · gateway and edge capability maps identical |
+| `npm test` | **648 tests**, 26 files (105 in `packages/core/tests/notifications-api.test.ts`, 21 in `deep-link.test.ts`) |
+| `npm run test:coverage` | thresholds met: 95.76% statements / 87.08% branches / 96.46% functions / 96.72% lines |
+| `npm run check:guards` | **31** core files · 176 style files · 32 migrations · 128 commands · notification keys present · gateway and edge capability maps identical |
 | `npm run check:responsive` | 55 media queries, no hidden navigation, no unguarded grid tracks, 7 tap targets, every wide table scrollable, stacked card tables labelled |
 | `npm run check:a11y` | **107 routes** in both directions, including the four account screens and `/admin/notifications` |
 | `npm run lint` · `format:check` · `typecheck` | clean (web, core, mobile) |
@@ -297,7 +307,10 @@ retry → saved searches → digest → jobs → catalogue → RLS.
     hand-written `pluralCategory()` (Hermes has no reliable `Intl.PluralRules`) and the dictionary holds one key
     per form. That is enough for the counts this product shows (unread items, matching trips) and is not a
     general message-format system; complex sentences still avoid agreement instead of encoding it.
-12. **Mixed-direction strings are split, not merely wrapped.** `splitBidi()` returns the Latin runs separately
+12. **A staff notification's tap lands on the inbox.** Console links (`/operator/…`, `/staff/…`, `/admin/…`)
+    have no native screen, so `mobileRoute` falls back rather than inventing a route; building those screens is
+    mobile work, not notification work.
+13. **Mixed-direction strings are split, not merely wrapped.** `splitBidi()` returns the Latin runs separately
     (and keeps sentence punctuation with the Arabic side) so a component can wrap them in `<bdi>`; the inbox does
     that (a trip code inside an Arabic sentence is the common case), and the admin preview solves the same problem
     one level up — one `lang`-and-`dir`-annotated cell per language rather than a mixed sentence. A new screen has

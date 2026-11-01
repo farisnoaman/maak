@@ -11,12 +11,13 @@ import {
   View,
 } from 'react-native';
 import { getLocales } from 'expo-localization';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   departureLabel,
   formatMinor,
   isLocale,
   negotiateLocale,
+  readTripFilters,
   translate,
   type Locale,
   type TranslationKey,
@@ -49,12 +50,35 @@ export default function TripsScreen() {
     translate(locale, key, vars);
   const rtl = locale === 'ar';
 
-  const [q, setQ] = useState('');
-  const [direct, setDirect] = useState(false);
+  // A saved-search alert links to `/trips?<the same filters>`; `readTripFilters` is the parser the web page
+  // uses, so the app opens the search the person saved rather than an empty list. The signature is the
+  // dependency, not the params object: expo-router hands a fresh object on every render, and an effect keyed
+  // on it would reset the filters under the person's fingers.
+  const params = useLocalSearchParams();
+  const signature = JSON.stringify(params);
+  const seed = useMemo(
+    () => readTripFilters(JSON.parse(signature) as Record<string, string | string[] | undefined>),
+    [signature],
+  );
+
+  const [q, setQ] = useState(seed.q ?? '');
+  const [direct, setDirect] = useState(seed.direct ?? false);
   const [gender, setGender] = useState<'any' | 'women_only' | 'men_only' | null>(null);
-  const [origin, setOrigin] = useState<string | null>(null);
-  const [destination, setDestination] = useState<string | null>(null);
-  const [sort, setSort] = useState<'soonest' | 'cheapest' | 'featured'>('soonest');
+  const [origin, setOrigin] = useState<string | null>(seed.origin?.[0] ?? null);
+  const [destination, setDestination] = useState<string | null>(seed.destination?.[0] ?? null);
+  const [sort, setSort] = useState<'soonest' | 'cheapest' | 'featured'>(seed.sort ?? 'soonest');
+
+  // A second tap on a different alert while this screen is already open arrives as new params on a live
+  // screen, so the seed has to be applied, not just read once.
+  useEffect(() => {
+    setQ(seed.q ?? '');
+    setDirect(seed.direct ?? false);
+    setOrigin(seed.origin?.[0] ?? null);
+    setDestination(seed.destination?.[0] ?? null);
+    if (seed.sort) setSort(seed.sort);
+    const policy = seed.gender?.[0];
+    setGender(policy === 'women_only' || policy === 'men_only' ? policy : null);
+  }, [seed]);
 
   const [items, setItems] = useState<readonly MobileTripCard[]>([]);
   const [origins, setOrigins] = useState<readonly MobileFacet[]>([]);

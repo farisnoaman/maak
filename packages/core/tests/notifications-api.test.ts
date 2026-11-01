@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  NOTIFICATION_JOB_FN,
   SAMPLE_PARAMS,
   describeSavedSearch,
   emailMessage,
@@ -8,6 +9,7 @@ import {
   minutesOfDay,
   notificationActionSchema,
   notificationCommandArgs,
+  notificationJobSchema,
   notificationScope,
   notificationText,
   pluralCategory,
@@ -668,5 +670,48 @@ describe('the events and jobs the first pass left out', () => {
       fn: 'cmd_get_notification_catalogue',
       args: { p_actor: actor },
     });
+  });
+});
+
+describe('the job map the worker schedules from', () => {
+  const jobs = notificationJobSchema.shape.job.options;
+
+  it('names every job the API accepts, and nothing else', () => {
+    // The worker iterates this map instead of keeping its own list, so a job missing here is a job no cron
+    // ever runs — which is exactly how `search-digest` and `no-shows` were shipped and not scheduled.
+    expect(Object.keys(NOTIFICATION_JOB_FN).sort()).toEqual([...jobs].sort());
+  });
+
+  it('points each job at a command, and no two jobs at the same command', () => {
+    const fns = Object.values(NOTIFICATION_JOB_FN);
+    expect(fns.every((fn) => fn.startsWith('cmd_'))).toBe(true);
+    expect(new Set(fns).size).toBe(fns.length);
+  });
+
+  it('routes every job through the command builder with the actor it was given', () => {
+    for (const job of jobs) {
+      const parsed = notificationJobSchema.parse({ action: 'notifications.job.run', job });
+      const command = notificationCommandArgs(parsed, 'actor-1');
+      expect(command.fn).toBe(NOTIFICATION_JOB_FN[job]);
+      expect(command.args.p_actor).toBe('actor-1');
+    }
+  });
+
+  it('passes the three reminder bands through, and asks for all of them by default', () => {
+    const all = notificationCommandArgs(
+      notificationJobSchema.parse({ action: 'notifications.job.run', job: 'trip-reminders' }),
+      'actor-1',
+    );
+    expect(all.args.p_bands).toBeNull();
+
+    const one = notificationCommandArgs(
+      notificationJobSchema.parse({
+        action: 'notifications.job.run',
+        job: 'trip-reminders',
+        bands: ['soon'],
+      }),
+      'actor-1',
+    );
+    expect(one.args.p_bands).toEqual(['soon']);
   });
 });

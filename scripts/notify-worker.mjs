@@ -221,20 +221,20 @@ async function drain(core) {
   return { claimed: items.length, sent, skipped, failed };
 }
 
-/** One pass over the eight jobs. Every one is idempotent, so a slow or doubled cron is harmless. */
-async function runJobs() {
+/**
+ * One pass over every job the contract names.
+ *
+ * The list comes from `NOTIFICATION_JOB_FN` rather than a literal here: that map is `satisfies
+ * Record<NotificationJob, string>` in `@maak/core`, so adding a job to the API and forgetting to schedule it
+ * (or scheduling a job the API refuses) is a type error instead of a silent gap. Every job is idempotent, so a
+ * slow or doubled cron is harmless.
+ */
+async function runJobs(core) {
   const jobs = [
     // Per-trip alerts and the daily summary are two modes of the same subscription: a search with `digest`
-    // gets no per-trip message and is counted here instead.
-    'saved-searches',
-    'search-digest',
-    // Tomorrow, in two hours, and now: three bands of one job.
-    'trip-reminders',
-    'no-shows',
-    'quota',
-    'expiring',
-    'verification-sla',
-    'retry',
+    // gets no per-trip message and is counted here instead. Tomorrow / two hours / departure are three bands
+    // of one job. The order is the API's, so the log reads the same way twice.
+    ...Object.keys(core.NOTIFICATION_JOB_FN),
   ];
   const results = {};
   for (const job of jobs) {
@@ -260,7 +260,6 @@ async function main() {
     console.log(
       `· resend         ${RESEND_KEY ? 'set' : 'not set — emails will be recorded as skipped'}`,
     );
-    const core = await loadCore();
     console.log(`· contract       ${Object.keys(core.NOTIFICATION_JOB_FN).length} jobs wired`);
     console.log(`· batch          ${BATCH} deliveries per claim`);
     return;
@@ -268,7 +267,7 @@ async function main() {
 
   for (;;) {
     const drained = await drain(core);
-    const jobs = await runJobs();
+    const jobs = await runJobs(core);
     console.log(JSON.stringify({ at: new Date().toISOString(), drained, jobs }));
     if (once) break;
     await new Promise((resolve) => setTimeout(resolve, INTERVAL_MS));

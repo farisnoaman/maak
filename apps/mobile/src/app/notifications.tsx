@@ -4,7 +4,9 @@ import { useRouter } from 'expo-router';
 import { getLocales } from 'expo-localization';
 import {
   errorKey,
+  hasMobileRoute,
   isLocale,
+  mobileRoute,
   negotiateLocale,
   notificationCommandSpec,
   notificationText,
@@ -125,20 +127,49 @@ export default function NotificationsScreen() {
         <Text style={[styles.hint, align]}>{t('account.noNotifications')}</Text>
       ) : null}
 
-      {rows.map((row) => (
-        <View key={row.id} style={[styles.card, row.read_at ? null : styles.cardUnread]}>
-          <Text style={[styles.body, align]}>
-            {notificationText(locale, {
+      {rows.map((row) => {
+        // The link is written by whoever sent the event, in web terms. `mobileRoute` turns it into a screen the
+        // app has and keeps the query — a saved-search alert must reopen the search, not a generic list.
+        const route = hasMobileRoute(row.link) ? mobileRoute(row.link) : null;
+        const body = (
+          <>
+            <Text style={[styles.body, align]}>
+              {notificationText(locale, {
+                kind: row.kind,
+                titleKey: row.title_key,
+                params: row.params,
+              })}
+            </Text>
+            <Text style={[styles.meta, align]}>
+              {`${t(`notifications.event.${row.kind}` as TranslationKey)} · ${row.created_at.slice(0, 10)}`}
+            </Text>
+          </>
+        );
+
+        if (!route) {
+          return (
+            <View key={row.id} style={[styles.card, row.read_at ? null : styles.cardUnread]}>
+              {body}
+            </View>
+          );
+        }
+
+        return (
+          <Pressable
+            key={row.id}
+            onPress={() => router.push(route)}
+            style={[styles.card, row.read_at ? null : styles.cardUnread]}
+            accessibilityRole="link"
+            accessibilityLabel={notificationText(locale, {
               kind: row.kind,
               titleKey: row.title_key,
               params: row.params,
             })}
-          </Text>
-          <Text style={[styles.meta, align]}>
-            {`${t(`notifications.event.${row.kind}` as TranslationKey)} · ${row.created_at.slice(0, 10)}`}
-          </Text>
-        </View>
-      ))}
+          >
+            {body}
+          </Pressable>
+        );
+      })}
 
       <Pressable
         accessibilityRole="button"

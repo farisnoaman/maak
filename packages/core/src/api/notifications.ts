@@ -892,9 +892,11 @@ export const notificationCommandSpec = {
 /** The jobs a cron may run, named once so the worker script and the edge function agree. */
 export const NOTIFICATION_JOB_FN = {
   'saved-searches': 'cmd_match_saved_searches',
+  'search-digest': 'cmd_digest_saved_searches',
   'trip-reminders': 'cmd_send_trip_reminders',
+  'no-shows': 'cmd_notify_no_shows',
   quota: 'cmd_notify_quota_thresholds',
   expiring: 'cmd_notify_subscription_expiring',
   'verification-sla': 'cmd_notify_pending_verifications',
   retry: 'cmd_retry_notifications',
-} as const;
+} as const satisfies Record<NotificationJob, string>;
