@@ -162,27 +162,37 @@ select app.refresh_search_counts();   -- rewrites the chips; the result total is
 (verification documents, payment proofs, vehicle photos). Those two are the entire state; everything else —
 edge functions, web, migrations — is in git.
 
-**A restore is only real once it has been executed.** The drill, quarterly and before launch:
+**A restore is only real once it has been executed**, so it is a script rather than a page to read at 02:00:
 
 ```bash
-# 1. Take the current dump (production: from the hosted project, not from a laptop).
-pg_dump "$DATABASE_URL" --format=custom --file=maak-$(date +%F).dump
-
-# 2. Restore into a scratch database — never over the live one.
-createdb maak_restore_drill
-pg_restore --dbname=maak_restore_drill --no-owner --role=postgres maak-$(date +%F).dump
-
-# 3. Prove the restored database is the same database.
-psql maak_restore_drill -c "select count(*) from public.trips;"              # compare with live
-psql maak_restore_drill -c "select public.cmd_run_integrity_check(null, null, null);"
-psql maak_restore_drill -c "select count(*) from ledger_entries;"           # the ledger is the thing that matters
-
-# 4. Record the timings in docs/phase-12-report.md. The target is under an hour, end to end.
+npm run dev:api                  # the drill rehearses against a running database
+npm run drill:restore            # back up, restore, verify, report
+npm run drill:restore -- --keep  # leave the restored cluster on :54323 to inspect it
 ```
 
-**Integrity checks after a restore:** `cmd_run_integrity_check` must return `status: ok`. If it returns `alert`,
-do not point the app at the restored database — a restore that is not ledger-consistent is a restore that will
-pay somebody twice.
+It takes a hot backup (`pg_backup_start` → copy the data directory → `pg_backup_stop`), starts a second
+PostgreSQL from that copy — crash recovery over the copied WAL, which is the snapshot-restore path — and then
+refuses to call it a restore unless the checks agree with the source: row counts for the sixteen tables that
+matter, the ledger's two sides, `cmd_run_integrity_check`, the RLS / definer / command-grant posture, and a real
+`search_public_trips()` answer. Timings and the verdict go to `docs/perf/restore-drill.txt`, because a drill
+whose result lives in a scrollback is a drill nobody can point at during an incident.
+
+Last run: **0.47 s end to end** on 81 MB / 49,998 trips (backup 0.29, restore 0.14, verify 0.04), 24 checks
+green. That is *dev scale* and it is a floor, not the RTO: production adds the download, replay to a point in
+time, and pointing the app at the restored project.
+
+**On the hosted project**, where the tooling is not the embedded one:
+
+```bash
+pg_dump "$DATABASE_URL" --format=custom --file=maak-$(date +%F).dump
+createdb maak_restore_drill
+pg_restore --dbname=maak_restore_drill --no-owner --role=postgres maak-$(date +%F).dump
+# then the same verification block the script runs, against maak_restore_drill
+```
+
+**Integrity checks after a restore:** `cmd_run_integrity_check` must return `status: ok`. If it returns
+`alert`, do not point the app at the restored database — a restore that is not ledger-consistent is a restore
+that will pay somebody twice.
 
 ---
 

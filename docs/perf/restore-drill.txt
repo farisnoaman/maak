@@ -1,0 +1,55 @@
+# The restore drill, executed
+
+Run 2026-11-01T18:55:44.783Z by `npm run drill:restore` on PostgreSQL 17.10,
+81 MB of data, backup 272.2 MB taken hot
+(`pg_backup_start` at LSN 0/16000028).
+
+**Outcome:** passed.
+
+| Phase | What it did | Time |
+| --- | --- | --- |
+| Backup | copy of `/home/user/maak/.dev/pgdata` inside a hot-backup window | 0.25 s |
+| Restore | second cluster started from the copy, crash recovery over the copied WAL | 0.17 s |
+| Verify | 24 checks against the source | 0.04 s |
+| Teardown | stop and remove the restored cluster | 0.06 s |
+| **End to end** | | **0.46 s** |
+
+RTO target: under 60 minutes. Measured: **0.46 s** — inside the target.
+
+## Checks
+
+| Check | Result | Detail |
+| --- | --- | --- |
+| public.profiles | pass | 5 → 5 |
+| public.organizations | pass | 1 → 1 |
+| public.vehicles | pass | 3 → 3 |
+| public.trips | pass | 49998 → 49998 |
+| public.trips_search | pass | 49998 → 49998 |
+| public.bookings | pass | 1 → 1 |
+| public.ledger_entries | pass | 5 → 5 |
+| public.journal_entries | pass | 2 → 2 |
+| public.invoices | pass | 2 → 2 |
+| public.payouts | pass | 0 → 0 |
+| public.refunds | pass | 0 → 0 |
+| public.notifications | pass | 5 → 5 |
+| public.saved_searches | pass | 0 → 0 |
+| public.search_counts | pass | 0 → 0 |
+| audit.log | pass | 33 → 33 |
+| storage.objects | pass | 0 → 0 |
+| ledger debit = credit | pass | 10000 / 10000 |
+| ledger matches source | pass | 10000 → 10000 |
+| integrity check | pass | ok, 0 failed |
+| search answers the same total | pass | 49998 → 49998 |
+| RLS on every table | pass | 0 without |
+| definer search_path pinned | pass | 0 unpinned |
+| no client-executable command | pass | 0 callable |
+| storage objects copied file for file | pass | 0 → 0 |
+
+## What this does not prove
+
+- It is dev scale. Production adds the download, replay to a point in time and pointing the app at the
+  result; the target has to be re-measured there, and `docs/runbook.md` §3 says how.
+- It rehearses the file-copy restore, not `pg_dump`/`pg_restore`. The verification block above is the same
+  one to run after either, which is why it is a script and not a paragraph.
+- It copies Storage file for file and compares it with `storage.objects`; a bucket-level restore (versioning,
+  missing objects) still has to be shown on the hosted project.

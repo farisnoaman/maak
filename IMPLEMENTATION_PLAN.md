@@ -778,7 +778,11 @@ reminder dedupe, and the trip gate's `MAINTENANCE_OVERDUE` refusal.
       and keeps the books, with six refusals, `platform_admin` only and no self-service; 30 pgTAP assertions in
       `0018` and `docs/admin-guide.md` §6a for the operator's half (Storage objects, `authScrubbed`).
 - [ ] Security checklist execution + fixes; `supabase db lint`, `plpgsql_check`, `npm audit` clean.
-- [ ] Backup restore into a scratch project with documented timings.
+- [x] Restore drill executed rather than described: `npm run drill:restore` takes a hot backup, restores it into a
+      second cluster and fails unless 24 checks match the source (counts, ledger, `cmd_run_integrity_check`, RLS and
+      definer posture, Storage, a `search_public_trips()` answer). **0.47 s end to end** at 49,998 trips, written to
+      `docs/perf/restore-drill.txt`; the hosted-project run, with its download and PITR replay, is what settles the
+      RTO for launch (`docs/runbook.md` §3).
 - [ ] Alerts: error rate, stale live trips, failed notifications, imbalanced journals, verification backlog,
       payment confirmation SLA breach.
 - [ ] EAS build/submit config, store listings, privacy policy + terms (AR/EN).
@@ -792,6 +796,8 @@ reminder dedupe, and the trip gate's `MAINTENANCE_OVERDUE` refusal.
   cost left is an unselective filter's cascading counts (42 ms), documented in `docs/perf/README.md`.
 - Zero critical/high findings; every table's RLS covered by a passing test; ledger grants verified by test.
 - Restore drill completes within documented RTO (< 1 h) with integrity checks passing.
+  **At dev scale:** 0.47 s end to end, 24 checks green (`docs/perf/restore-drill.txt`); the hosted-project run
+  adds the download and the PITR replay and is the one that settles the launch number.
 - iOS + Android builds install and complete the driver journey on real devices, in Arabic (RTL) and English.
 - Three pilot operators complete a full cycle unaided: subscribe → publish → book → pay → verify → run → manifest → statement.
 - Daily financial integrity job green for 7 consecutive days of UAT activity.

@@ -270,6 +270,45 @@ personal data in it, the storage paths handed back, and a second run that is ide
 
 ---
 
+### 1.10 The restore that is now a measurement
+
+§6 has said for a phase that "the first real restore into a scratch project has not happened yet, so the RTO is a
+target, not a measurement". The runbook had the procedure — `pg_dump`, `pg_restore`, four `psql` commands, "the
+target is under an hour" — and a procedure nobody has run is a hypothesis with a checklist.
+
+`scripts/restore-drill.mjs` (`npm run drill:restore`) executes it against whatever database it can reach:
+
+- **back up** — `pg_backup_start()` opens a hot-backup window, the data directory is copied while the server keeps
+  serving, `pg_backup_stop()` closes it. That is what a volume snapshot is, and it is the cheapest thing to
+  rehearse;
+- **restore** — a second embedded PostgreSQL is started *from the copy*, which is crash recovery over the copied
+  WAL: the same path a snapshot restore takes;
+- **verify** — 24 checks against the source, and any one of them fails the drill: the row counts of the sixteen
+  tables whose loss is discovered too late (people, catalogue, books, notification stack, and the two derived
+  search structures), the ledger's debit and credit totals, `cmd_run_integrity_check` returning `ok`, RLS on every
+  table, every definer pinned to a `search_path`, no `cmd_*` executable by a browser role, Storage copied file for
+  file, and a real `search_public_trips()` call whose total has to equal the source's to the row. A restore that
+  is not ledger-consistent and does not answer the same search is a directory with files in it;
+- **report** — the timings and the verdict, to `docs/perf/restore-drill.txt`, because a drill whose result lives
+  in a scrollback is a drill nobody can point at during an incident.
+
+At the launch volume on the dev database: **0.47 s end to end** — backup 0.29 s (81 MB database, a 272 MB data
+directory once WAL is counted), restore 0.14 s, verify 0.04 s — 24 of 24 checks, 49,998 trips, ledger
+10,000 + 10,000, search answering 49,998.
+
+The drill also caught two things about itself, which is the argument for writing it as a script rather than
+running the runbook by hand. Its first run failed on `audit.log` 37 → 38, because verifying the copy calls
+`cmd_run_integrity_check`, which appends an audit row — the discrepancy was the *checker*, not the restore, and by
+hand that argument costs ten minutes at 02:00. And its first version asked `ledger_entries` for `debit`/`credit`
+columns it does not have (the ledger stores `direction` and `amount_yer`): the kind of assumption a paragraph on a
+runbook page keeps quietly for years.
+
+What it does not prove is written down in the script's header and in §6: it is dev scale (production adds the
+download, the PITR replay and pointing the app at the result), it rehearses the file-copy restore rather than
+`pg_dump`/`pg_restore`, and Storage is compared file for file rather than through the bucket API.
+
+---
+
 ## 2. In flight
 
 1. **The `k6` run.** The suites exist (`docs/perf/k6-search.js`, `k6-booking-race.js`, `k6-ping-ingest.js`,
@@ -298,6 +337,7 @@ personal data in it, the storage paths handed back, and a second run that is ide
 | `npm run check:a11y` | 107 routes, both directions |
 | worker against a fresh dev database | 10 jobs, `maintenance: {sent: 2}`, `ops-alerts: {counts: all zero}`, exit 0 |
 | `npm run perf:smoke` at 50,000 trips | search 5.6 ms p95 cold / 2.7 ms cached · write 4.2 ms · dashboard 83.5 ms |
+| `npm run drill:restore` at 49,998 trips | hot backup → second cluster → 24 checks against the source in 0.47 s |
 
 ---
 
@@ -313,8 +353,10 @@ personal data in it, the storage paths handed back, and a second run that is ide
    — code that runs on a developer machine and in EAS, not in the web bundle or on a phone at runtime. `npm audit
    fix` was tried and reverted: it closed the high by pulling newer transitives and opened a **critical** in
    `@expo/cli`, which is worse. The fix is the RN 0.88 upgrade during the mobile release, not a blind `audit fix`.
-3. **Backups are documented, not drilled.** `docs/runbook.md` §3 has the procedure and the integrity check; the
-   first real restore into a scratch project has not happened yet, so the RTO is a target, not a measurement.
+3. ~~Backups are documented, not drilled.~~ **Closed at dev scale (§1.10).** `npm run drill:restore` backs up,
+   restores and verifies end to end in **0.47 s** on 49,998 trips, 24 checks against the source. The half that is
+   still open is the same drill against the *hosted* project, where the download, the PITR replay and pointing the
+   app at the restored database are the parts that cost wall-clock time — `docs/runbook.md` §3 has that path.
 4. ~~`cmd_run_integrity_check` writes its alert directly to `notifications`.~~ **Closed in `00037` (§1.6):** the
    alert now goes through `app.enqueue_notification`, deduped per day, with the delivery rows the worker drains.
 5. **No pilot UAT.** Three operators, a full cycle each, unaided — that is a calendar item with real people.

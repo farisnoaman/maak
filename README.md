@@ -80,6 +80,7 @@ app plus the Expo client.
 | `npm run check:guards` | boundaries, one write path, no secrets, dictionary keys present in both locales |
 | `npm run notify` | the delivery queue and all ten scheduled jobs, idempotent by dedupe key |
 | `npm run perf:smoke` | search, a write and the finance dashboard against the running dev stack — p95 against the launch targets |
+| `npm run drill:restore` | a hot backup restored into a second cluster and compared with the source: row counts, the ledger, integrity, RLS posture and a search answer |
 
 - [`docs/phase-12-report.md`](./docs/phase-12-report.md) — **where the project stands today**: platform alerts, the security gate, the scheduler, what launch still needs
 - [`docs/runbook.md`](./docs/runbook.md) — what to do when something is wrong
