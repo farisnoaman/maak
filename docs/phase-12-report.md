@@ -151,6 +151,43 @@ now agree about the same broken ledger instead of only one of them noticing.
 0015 gains five assertions, including the one that names the old bug: *no `finance_alert` notification exists
 without a delivery behind it*. Put the old insert back and four of them fail.
 
+### 1.7 Three guides, and what they found
+
+A guide is a test. Writing down what a person does step by step is the cheapest audit there is, because prose
+that cannot be written is a flow that does not exist. Three documents:
+
+- **`docs/operator-guide.md`** — the business side: verification, vehicles, drivers, the five-step trip wizard,
+  bookings and seat holds, confirming receipts, payouts, plans and quota, the team roles.
+- **`docs/admin-guide.md`** — the platform side: the four roles and their separation of duties, the verification
+  queue, the staff and finance consoles, plans and geography, and a table of what the platform refuses to do.
+- **`docs/passenger-guide.md`** — in Arabic, for the person buying a seat: search, book, pay, cancel, the refund
+  ladder, tracking, and notifications.
+
+Each claim in them was checked against the migration that implements it, not against memory. That caught four
+things this round:
+
+1. **The refund ladder is not one ladder.** A passenger who cancels gets 100 / 75 / 50 / 0 % by hours remaining;
+   a passenger whose *operator* cancels gets 100 % regardless. Writing it as one table would have been wrong.
+2. **Quota is a wall for every plan.** The 00013 version of `app.assert_quota` exempted soft-limit plans; `00014`
+   replaced it, so Basic, Pro and Business all refuse at 100 % — what Pro and Business add is the 80 % warning.
+   An older reading of the code would have documented Pro as *unlimited*, which it is not.
+3. **Identity documents are purged 90 days after the booking closes**, not after the trip, and the share link is
+   a 72-hour, single-live-token document share — not a general "share my booking" link.
+4. **Quota warnings come from two places and disagree about `Basic`.** `app.quota_state()` only sets `warning`
+   when the plan is *soft* (Pro, Business), so the create-trip response warns at 80 % for those two and never for
+   Basic; the `quota` notification job does not read that flag and fires at 80 % and 100 % for every plan with a
+   limit, Basic included. Neither is wrong in isolation — the job's message is informational, the in-flow warning
+   is an instruction — but they should be one decision in one place. Documented rather than changed, because
+   changing it this late means deciding which behaviour the product wants, and that is not a documentation task.
+5. **Account deletion is a request with no executor.** `cmd_request_account_deletion` sets
+   `deletion_requested_at` and `/account` shows it, but the column's comment promises a staff action in Phase 7
+   and no such command exists. That is now open item 8 in §6: a support queue that can receive a request it has
+   no tool to answer is worse than not offering the button.
+
+The guides also cross-reference each other and the runbook rather than repeating it: emergencies live in
+`docs/runbook.md`, the day-to-day in the operator and admin guides, and the passenger view in Arabic only,
+because that is the language of the person it is written for.
+
 ---
 
 ## 2. In flight
@@ -160,8 +197,9 @@ without a delivery behind it*. Put the old insert back and four of them fail.
    (`perf:seed`, `perf:smoke`, `perf:db`) have already found and fixed a 15.7 s search. What has not happened is
    running k6 against a production-sized environment with a real PostgREST and a connection pooler. Payment
    confirmation volume is also unmeasured — it needs a provider fixture.
-2. **The remaining guides.** `docs/admin-guide.md`, `docs/operator-guide.md` and the Arabic passenger guide are
-   open. The runbook covers emergencies; these cover the day-to-day journeys.
+2. ~~The remaining guides.~~ **Written:** `docs/operator-guide.md`, `docs/admin-guide.md` and
+   `docs/passenger-guide.md` (Arabic). §1.7 records what writing them cost — two claims that were wrong in the
+   product, not in the prose.
 3. **`plpgsql_check`.** The extension is not in the embedded PostgreSQL build, so it is a CI-on-Supabase item.
 4. **Mobile release mechanics.** EAS config, store listings, the RTL screenshot set — and the React Native 0.88
    upgrade that closes the toolchain advisories in §6.
@@ -200,6 +238,17 @@ without a delivery behind it*. Put the old insert back and four of them fail.
    alert now goes through `app.enqueue_notification`, deduped per day, with the delivery rows the worker drains.
 5. **No pilot UAT.** Three operators, a full cycle each, unaided — that is a calendar item with real people.
 6. **Store releases and the tag.** `v1.0.0`, the changelog and the handover session come after the UAT burn-down.
-7. **Failure alerting for the worker itself.** The workflow fails loudly, which reaches GitHub's notification
+7. **Account deletion has a request and no executor.** `cmd_request_account_deletion` records the request and a
+   reason, `/account` shows it and allows a cancel; the column comment says the deletion is a staff action and no
+   such command was written. Financial and audit rows must be retained, so the fix is an anonymise-and-close
+   command (profile, contact details, device tokens, personal documents) rather than a `delete from auth.users`,
+   and it needs a decision on what a retained ledger line refers to afterwards.
+8. **Quota warnings come from two places and disagree about Basic.** `app.quota_state()` sets `warning` only for
+   soft plans (Pro, Business), so the create-trip response warns at 80 % for those two and never for Basic; the
+   `quota` notification job does not read that flag and fires at 80 % and 100 % for every plan with a limit,
+   Basic included. Neither is wrong alone — the job's message is informational, the in-flow warning is an
+   instruction — but it should be one decision in one place, and making it is a product call rather than a
+   documentation one.
+9. **Failure alerting for the worker itself.** The workflow fails loudly, which reaches GitHub's notification
    settings; there is no dedicated on-call rotation or pager, and for a launch with three pilots that is the
    right size.

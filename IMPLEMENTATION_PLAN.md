@@ -761,7 +761,8 @@ reminder dedupe, and the trip gate's `MAINTENANCE_OVERDUE` refusal.
   OTA pipeline, RTL screenshot verification on device.
 - Data: production geography seed, platform payment accounts, plan seeds, admin accounts, settings defaults.
 - Docs: `docs/runbook.md`, `docs/admin-guide.md`, `docs/operator-guide.md` and `docs/passenger-guide.md` (Arabic),
-  generated RPC/API reference.
+  generated RPC/API reference. **Written: the runbook and all three guides.** The generated RPC reference is still
+  open — the console below is the closest thing to it today.
 - UAT with 3 pilots (1 company, 2 individuals) and burn-down of findings.
 
 ### Tasks
