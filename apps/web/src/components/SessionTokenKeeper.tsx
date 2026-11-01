@@ -68,10 +68,16 @@ export function SessionTokenKeeper() {
 
     // A previous version of this component wrote `?st=` into every `href`. Tabs that survived that
     // build still carry those attributes, and React reports them as a hydration mismatch on every
-    // render. Repairing them once, after hydration, ends that permanently.
+    // render. Repairing them once, after hydration, ends that permanently — but parse the URL, do not
+    // regex it: a regex that eats `?st=…` leaves `&sort=cheapest` behind, a link with no `?` whose sort
+    // parameter has become part of the path. That is how a repair produced a fresh bug.
     for (const anchor of document.querySelectorAll<HTMLAnchorElement>('a[href*="st="]')) {
-      const cleaned = anchor.getAttribute('href')?.replace(/[?&]st=[^&]*/, '');
-      if (cleaned) anchor.setAttribute('href', cleaned.replace(/[?&]$/, ''));
+      const raw = anchor.getAttribute('href');
+      if (!raw) continue;
+      const url = new URL(raw, window.location.origin);
+      if (!url.searchParams.has('st')) continue;
+      url.searchParams.delete('st');
+      anchor.setAttribute('href', `${url.pathname}${url.search}${url.hash}`);
     }
 
     document.addEventListener('click', onClick, true);

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import {
   activeFilterCount,
+  filterHref,
   formatMinor,
   isLocale,
   readTripFilters,
@@ -83,29 +84,20 @@ export default async function TripsPage({
   /**
    * The URL with some filters removed and others kept.
    *
-   * Every control on this page is a link, which is what makes a filtered marketplace shareable — and it means
-   * "remove this one chip" has to be expressible as a URL. `drop` deletes a key entirely (all values of it),
-   * `dropValue` removes one value from a repeatable key, and `sort`/`cursor` are added deliberately.
+   * Delegates to `filterHref()` in `@maak/core`, which always drops `st` (the session token) and `cursor`
+   * (a position in *this* result set) — see the note there. Doing it here by hand is how every link on this
+   * page ended up carrying the token, and why the sort tabs reported a hydration mismatch.
    */
   const hrefWith = (options: {
     drop?: readonly string[];
     dropValue?: { key: string; value: string };
     sort?: string;
-  }): string => {
-    const search = new URLSearchParams();
-    for (const [key, value] of Object.entries(query)) {
-      if (key === 'cursor' || value == null) continue;
-      if (options.drop?.includes(key)) continue;
-      if (options.sort && key === 'sort') continue;
-      for (const item of Array.isArray(value) ? value : [value]) {
-        if (options.dropValue?.key === key && options.dropValue.value === item) continue;
-        search.append(key, item);
-      }
-    }
-    if (options.sort) search.set('sort', options.sort);
-    const queryString = search.toString();
-    return queryString ? `${base}?${queryString}` : base;
-  };
+  }): string =>
+    filterHref(base, query, {
+      drop: options.drop,
+      dropValue: options.dropValue,
+      set: options.sort ? { sort: options.sort } : undefined,
+    });
 
   /**
    * What is currently filtering this list, as chips a person can take off one at a time.
@@ -184,16 +176,8 @@ export default async function TripsPage({
   const currentSort = state.sort ?? 'soonest';
 
   // Keep every filter when paging: a "next" link that silently drops the search is a bug the user reads
-  // as "there are no more results".
-  const cursorHref = (() => {
-    const search = new URLSearchParams();
-    for (const [key, value] of Object.entries(query)) {
-      if (key === 'cursor' || value == null) continue;
-      for (const item of Array.isArray(value) ? value : [value]) search.append(key, item);
-    }
-    if (page.nextCursor) search.set('cursor', page.nextCursor);
-    return `${base}?${search.toString()}`;
-  })();
+  // as "there are no more results". `filterHref` also drops the token and sets the new cursor.
+  const cursorHref = filterHref(base, query, { set: { cursor: page.nextCursor } });
 
   // The selected governorates are ids; the cards only carry codes, so the match is resolved once.
   const chosen = new Set([...(state.origin ?? []), ...(state.destination ?? [])]);

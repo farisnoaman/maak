@@ -44,6 +44,16 @@ on `main`; the tag is the last step, not the first.
 
 ### Fixed
 
+- **The sort tabs in the marketplace broke hydration, and every link carried the session token.** The page built
+  its own URLs from `searchParams`, which included `?st=` — the cookie-less session token. So every chip and sort
+  tab rendered a link containing the visitor's session, and the preview's token keeper then "repaired" those hrefs
+  with a regex that turned `?st=…&sort=cheapest` into `&sort=cheapest`: a link with no `?`, whose sort parameter had
+  become part of the path. React reported the difference as a hydration mismatch. URL building now goes through
+  `filterHref()` in `@maak/core`, which always drops `st` and `cursor`; the repair parses the URL instead of
+  regexing it; and `npm run dev:check` fails if any rendered link carries a token or a malformed query.
+- **The header rendered `/en/trips??sort=soonest`.** `searchSuffix()` returns a string that already starts with `?`
+  and `SiteHeader` prefixed another one, so clicking *Trips* from a filtered list dropped the filters it meant to
+  keep. It also no longer pastes trip filters onto `/account` and `/auth/sign-in`.
 - **The preview banner appeared over real data.** `/trips` and `/trips/[code]` rendered "no database connected, the
   data below is illustrative" unconditionally — a live marketplace calling its own listings fictional.
   `loadPublicTrips` now reports `configured`, and the banner asks first.

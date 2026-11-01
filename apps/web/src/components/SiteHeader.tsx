@@ -22,7 +22,19 @@ export function SiteHeader({
   readonly search?: string;
 }) {
   const t = (key: TranslationKey) => translate(locale, key);
-  const withQuery = (path: string) => `/${locale}${path}${search ? `?${search}` : ''}`;
+  /**
+   * `search` may arrive either way: `searchSuffix()` in `@maak/core` returns a string that already starts
+   * with `?`, and a hand-built caller usually does not. Prefixing blindly produced `/en/trips??sort=soonest`
+   * — a link whose query key is literally `?sort`, so clicking "Trips" from a filtered marketplace silently
+   * dropped the filters it was meant to keep. `LocaleSwitch` already normalised this; now both do, the same way.
+   */
+  const suffix = search && !search.startsWith('?') ? `?${search}` : search;
+  /**
+   * Filters belong to the list they filter. Keeping them on every link meant `/account?sort=soonest&direct=1`
+   * — a sort order on a page with nothing to sort, and a sign-in link carrying a marketplace query a visitor
+   * would then see in their history. Only the link that stays on this list carries them.
+   */
+  const withQuery = (path: string) => `/${locale}${path}${path === pathname ? suffix : ''}`;
 
   /**
    * Four links, and the language switch.
@@ -75,7 +87,7 @@ export function SiteHeader({
                 </Link>
               ))}
               {/* Only renders inside an iframe: a first-party tab if the browser blocks the session here. */}
-              <OpenInTab locale={locale} path={withQuery('/auth/sign-in')} />
+              <OpenInTab locale={locale} path={`/${locale}/auth/sign-in`} />
             </div>
           </details>
         </nav>
