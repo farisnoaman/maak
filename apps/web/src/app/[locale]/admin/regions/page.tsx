@@ -44,10 +44,11 @@ export default async function AdminRegionsPage({
     <>
       <SiteHeader locale={locale} pathname="/admin/regions" />
       <ConsoleShell
+        consoleTitle="console.admin"
+        pathname="/admin/regions"
         locale={locale}
         title="geo.title"
         subtitle="geo.subtitle"
-        phase="2"
         items={[
           { key: 'console.navOverview', href: `/${locale}/admin` },
           { key: 'catalogue.title', href: `/${locale}/admin/notifications` },

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
@@ -103,7 +104,17 @@ export function BulkVerifyPanel({
     return (
       <section className="card ops-bulk">
         <h2>{t('ops.bulkTitle')}</h2>
-        <p className="form-hint">{t('staff.empty')}</p>
+        {/* "No requests in this list" told a supervisor nothing: not which list, not whether that is good news,
+            not what would put a trip in it. */}
+        <p className="ops-clear" role="status">
+          <span className="ops-clear__tick" aria-hidden="true">
+            ✓
+          </span>
+          {t('ops.bulkClear')}
+        </p>
+        <Link className="link-more" href={`/${locale}/staff/trips`}>
+          {t('ops.bulkClearAction')}
+        </Link>
       </section>
     );
   }

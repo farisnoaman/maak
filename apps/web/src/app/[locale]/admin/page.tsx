@@ -12,13 +12,14 @@ export default async function ConsolePage({ params }: { params: Promise<{ locale
 
   return (
     <>
-      <SiteHeader locale={locale} />
+      <SiteHeader locale={locale} pathname="/admin" />
       <ConsoleShell
         locale={locale}
-        title="console.admin"
+        consoleTitle="console.admin"
+        pathname="/admin"
+        title="console.navOverview"
         subtitle="console.subtitle.admin"
         layout="tiles"
-        phase="10"
         items={[
           { key: 'console.navOverview', href: `/${locale}/admin` },
           { key: 'catalogue.title', href: `/${locale}/admin/notifications` },

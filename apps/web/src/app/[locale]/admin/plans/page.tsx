@@ -33,10 +33,11 @@ export default async function AdminPlansPage({ params }: { params: Promise<{ loc
     <>
       <SiteHeader locale={locale} pathname="/admin/plans" />
       <ConsoleShell
+        consoleTitle="console.admin"
+        pathname="/admin/plans"
         locale={locale}
         title="plans.title"
         subtitle="plans.subtitle"
-        phase="10"
         items={adminMoneyNav(locale)}
       >
         {allowed ? (

@@ -49,10 +49,11 @@ export default async function AdminSubscriptionsPage({
       <>
         <SiteHeader locale={locale} pathname="/admin/subscriptions" />
         <ConsoleShell
+          consoleTitle="console.admin"
+          pathname="/admin/subscriptions"
           locale={locale}
           title="subs.title"
           subtitle="subs.subtitle"
-          phase="10"
           items={adminMoneyNav(locale)}
         >
           <p className="form-hint">{t('errors.FORBIDDEN')}</p>
@@ -73,7 +74,6 @@ export default async function AdminSubscriptionsPage({
         locale={locale}
         title="subs.title"
         subtitle="subs.subtitle"
-        phase="10"
         items={adminMoneyNav(locale)}
       >
         <section>

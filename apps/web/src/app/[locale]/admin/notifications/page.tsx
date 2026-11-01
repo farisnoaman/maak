@@ -63,10 +63,11 @@ export default async function NotificationCataloguePage({
     <>
       <SiteHeader locale={locale} pathname="/admin/notifications" />
       <ConsoleShell
+        consoleTitle="console.admin"
+        pathname="/admin/notifications"
         locale={locale}
         title="catalogue.title"
         subtitle="catalogue.subtitle"
-        phase="11"
         items={[
           { key: 'console.navOverview', href: `/${locale}/admin` },
           { key: 'catalogue.title', href: `/${locale}/admin/notifications` },

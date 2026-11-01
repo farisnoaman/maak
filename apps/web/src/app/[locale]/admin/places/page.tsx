@@ -46,10 +46,11 @@ export default async function AdminPlacesPage({ params }: { params: Promise<{ lo
     <>
       <SiteHeader locale={locale} pathname="/admin/places" />
       <ConsoleShell
+        consoleTitle="console.admin"
+        pathname="/admin/places"
         locale={locale}
         title="places.title"
         subtitle="places.subtitle"
-        phase="2"
         items={[
           { key: 'console.navOverview', href: `/${locale}/admin` },
           { key: 'catalogue.title', href: `/${locale}/admin/notifications` },

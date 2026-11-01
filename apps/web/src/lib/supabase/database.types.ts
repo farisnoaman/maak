@@ -1,5 +1,5 @@
-// migrations-sha256: 1c46fc11bea7eb7c1fd533131aa59c3f7e9bcc0d651cfc0fbe4711ada5c0ece3
-/* Generated from 44 migrations. Run `npm run db:types` after changing the schema. */
+// migrations-sha256: aab58d81251b78fd5323a4e58b8f6300b79079426453697179f029559004b434
+/* Generated from 45 migrations. Run `npm run db:types` after changing the schema. */
 
 /**
  * Schema types for RLS-filtered reads (Phase 0 subset).
@@ -1198,6 +1198,8 @@ export interface Invoice {
   snapshot: Json;
   issued_at: string;
   due_on: string | null;
+  /** The subscription period this invoice bills (`00045`); null for booking invoices. */
+  period_start: string | null;
   paid_at: string | null;
   voided_at: string | null;
   voided_by: string | null;

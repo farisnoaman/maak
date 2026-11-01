@@ -38,10 +38,11 @@ export default async function FinanceReconciliationPage({
     <>
       <SiteHeader locale={locale} pathname="/finance/reconciliation" />
       <ConsoleShell
+        consoleTitle="console.finance"
+        pathname="/finance/reconciliation"
         locale={locale}
         title="recon.title"
         subtitle="recon.subtitle"
-        phase="10"
         items={financeNav(locale)}
       >
         {allowed ? (

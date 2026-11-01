@@ -1089,6 +1089,226 @@ a {
   margin-block-start: var(--space-1);
 }
 
+/*
+ * The console sidebar's own name, and the grouped nav under it.
+ *
+ * The heading used to be the *page* title, so "Verification review" sat above a nav that also listed
+ * "Verification review" — the sidebar looked like a breadcrumb of itself. Groups give nine links three
+ * headings to sit under, which is what makes a shift's worth of destinations scannable.
+ */
+.console-side__brand {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-500);
+  margin-block-end: var(--space-3);
+}
+.console-nav__group {
+  display: contents;
+}
+@media (min-width: 900px) {
+  .console-nav__group {
+    display: grid;
+    gap: var(--space-1);
+  }
+  .console-nav__group + .console-nav__group {
+    margin-block-start: var(--space-4);
+  }
+}
+.console-nav__label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--ink-400);
+  padding-inline: var(--space-4);
+  padding-block-end: var(--space-1);
+}
+@media (max-width: 899px) {
+  /* In the phone's scrollable chip row a group heading becomes a chip of its own: still visible, still a
+     separator, and it never eats a tap target. (Hidden headings failed the responsive guard, rightly.) */
+  .console-nav__label {
+    flex: none;
+    display: flex;
+    align-items: center;
+    padding-inline: var(--space-2);
+    padding-block: 0;
+    white-space: nowrap;
+  }
+  .console-nav__label::after {
+    content: '·';
+    margin-inline-start: var(--space-2);
+  }
+}
+
+/* Title row: the page's verb sits beside its title, not buried under three paragraphs. */
+.console-panel__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: baseline;
+  justify-content: space-between;
+}
+.console-panel__actions {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+.console-panel__stamp {
+  font-size: 0.78rem;
+  color: var(--ink-500);
+}
+.console-panel p.console-panel__subtitle {
+  margin-block-start: var(--space-2);
+  max-inline-size: 62ch;
+}
+
+/* The whole tile is the link. A button at the bottom of a card is a smaller target than the card. */
+.console-tile--link {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: var(--space-1);
+  color: inherit;
+  text-decoration: none;
+  transition:
+    border-color 120ms ease,
+    background 120ms ease;
+}
+.console-tile--link:hover,
+.console-tile--link:focus-visible {
+  border-color: var(--ink-400);
+  background: var(--surface-muted);
+}
+.console-tile--primary {
+  border-color: color-mix(in srgb, var(--sand-500) 45%, var(--surface-sunken));
+  background: color-mix(in srgb, var(--sand-100) 40%, var(--surface-base));
+}
+.console-tile__go {
+  justify-self: end;
+  margin-block-start: var(--space-2);
+  color: var(--ink-400);
+  font-size: 1.1rem;
+}
+
+/* A queue that is clear is good news, and it is said out loud rather than implied by a zero. */
+.console-panel .ops-clear,
+.ops-clear {
+  display: flex;
+  gap: var(--space-2);
+  align-items: start;
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--state-success) 35%, var(--surface-sunken));
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--state-success) 7%, var(--surface-base));
+  color: var(--ink-800);
+  font-size: 0.9rem;
+}
+.ops-clear__tick {
+  color: var(--state-success);
+  font-weight: 800;
+}
+
+.ops-clear-block {
+  display: grid;
+  gap: var(--space-3);
+}
+.ops-clear-block .ops-clear {
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+
+/* A titled band inside a console page: heading on one line, the way into the full list on the other. */
+.ops-section {
+  display: grid;
+  gap: var(--space-3);
+}
+.ops-section__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  align-items: baseline;
+  justify-content: space-between;
+  border-block-end: 1px solid var(--surface-sunken);
+  padding-block-end: var(--space-2);
+}
+.ops-section__head h2 {
+  font-size: 1rem;
+  font-weight: 700;
+}
+.link-more {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--ink-700);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Figures you can open. Each one is a door to the queue that produced it. */
+.stat-grid--links {
+  margin-block: var(--space-4) var(--space-6);
+}
+.stat--link {
+  position: relative;
+  color: inherit;
+  text-decoration: none;
+  transition:
+    border-color 120ms ease,
+    background 120ms ease;
+}
+.stat--link:hover,
+.stat--link:focus-visible {
+  border-color: var(--ink-400);
+  background: var(--surface-muted);
+}
+.stat--warning {
+  border-inline-start: 3px solid var(--state-warning);
+}
+.stat--danger {
+  border-inline-start: 3px solid var(--state-danger);
+}
+.console-panel .stat__label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ink-500);
+  margin: 0;
+}
+.console-panel .stat__value {
+  font-size: 1.9rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--ink-900);
+}
+.console-panel .stat__value--text {
+  font-size: 1rem;
+}
+.console-panel .stat__note {
+  font-size: 0.75rem;
+  color: var(--ink-500);
+}
+.stat__go {
+  position: absolute;
+  inset-block-start: var(--space-3);
+  inset-inline-end: var(--space-3);
+  color: var(--ink-400);
+}
+
+/* The search form is a tool, so it gets a boundary and a name instead of floating in the panel. */
+.ops-filters {
+  display: grid;
+  gap: var(--space-2);
+}
+.ops-filters h2 {
+  font-size: 1rem;
+  font-weight: 700;
+}
+.ops-filters .trip-filters {
+  border-block-start: 1px solid var(--surface-sunken);
+  padding-block-start: var(--space-4);
+  margin-block-start: var(--space-2);
+}
+
 .nav-link {
   display: inline-flex;
   align-items: center;

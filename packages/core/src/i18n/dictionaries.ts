@@ -154,9 +154,27 @@ export const ar = {
   'auth.storageAccessEnable': 'السماح بالوصول داخل هذه النافذة',
 
   'console.subtitle.operator': 'إدارة المركبات والسائقين والرحلات والحجوزات.',
+  'console.subtitle.dashboard':
+    'ما يحتاجك الآن في نطاقك: الطوابير، الرحلات الجارية، وآخر عمليات المسح.',
+  'console.subtitle.verifications': 'طلبات توثيق الحسابات والشركات، بالترتيب الذي وصلت به.',
+  'console.subtitle.vehicles': 'المركبات والسائقون الذين ينتظرون قراراً قبل أن ينزلوا إلى السوق.',
+  'console.emptyVerifications': 'لا طلبات توثيق بانتظارك',
+  'console.emptyVerificationsBody':
+    'يظهر الطلب هنا فور رفعه للمراجعة. تسجيل الرحلة يوقفه حتى يُقرَّر فيه.',
+  'console.emptyVehicles': 'لا مركبات بانتظار المراجعة',
+  'console.emptyVehiclesBody':
+    'كل مركبة مرفوعة تمّ النظر فيها. المركبة الجديدة تظهر هنا لحظة تسجيلها.',
+  'console.emptyTrips': 'لا رحلات تطابق هذا التصفية',
+  'console.emptyTripsBody': 'جرّب حالة أخرى أو أزل التصفية. تظهر الرحلات المرفوعة هنا فور إرسالها.',
+  'ops.bulkClear': 'لا رحلة بانتظار موافقتك — الطابور فارغ.',
+  'ops.bulkClearAction': 'عرض كل الرحلات',
   'console.subtitle.staff': 'التحقق من الحسابات والمركبات والرحلات، ومسح رموز QR.',
   'console.subtitle.admin': 'الجغرافيا والمناطق والمشرفون والخطط والإعدادات.',
   'console.placeholder': 'هذه الشاشة قيد الإنشاء. ستراها تعمل في المرحلة المذكورة أعلاه.',
+  'console.groupWork': 'العمل',
+  'console.groupReview': 'قوائم المراجعة',
+  'console.groupReference': 'مراجع',
+  'console.tileDashboard': 'ما يحتاجك الآن: طوابير المراجعة، الرحلات الجارية، وآخر عمليات المسح.',
   'console.navOverview': 'نظرة عامة',
   'console.navVehicles': 'المركبات',
   'console.navDrivers': 'السائقون',
@@ -1403,6 +1421,7 @@ export const ar = {
   'trips.detail.operatorVerified': 'منظّم موثّق',
   'staff.trips.title': 'مراجعة الرحلات',
   'staff.trips.subtitle': 'الرحلات المرسلة للمراجعة، مع سبب القرار.',
+  'staff.trips.find': 'ابحث في الرحلات',
   'staff.trips.approve': 'اعتماد',
   'staff.trips.reject': 'رفض',
   'staff.trips.reason': 'سبب القرار',
@@ -1475,6 +1494,8 @@ export const ar = {
   // Phase 7 — staff operations: scan, bulk verify, manifest.
   'ops.scan': 'مسح رمز الرحلة',
   'ops.scanTitle': 'تحقق من رحلة',
+  'ops.scanSubtitle':
+    'تحقق من صلاحية رحلة قبل الصعود: صوّر رمزها بكاميرا الجهاز أو أدخل رمزها يدوياً.',
   'ops.scanHint': 'امسح رمز الرحلة أو أدخل رمزه المكوّن من 24 حرفاً.',
   'ops.scanToken': 'رمز الرحلة',
   'ops.scanSubmit': 'تحقق',
@@ -1499,6 +1520,11 @@ export const ar = {
   'ops.verification': 'التوثيق',
   'ops.manifest': 'كشف الركاب',
   'ops.csv': 'تنزيل CSV',
+  'ops.dashboardSubtitle': 'طوابير المراجعة ورحلات اليوم في نطاقك، مع آخر عمليات المسح.',
+  'ops.verificationPending': 'طلبات توثيق بانتظارك',
+  'ops.allClear': 'لا شيء بانتظارك الآن — الطوابير فارغة والرحلات في وقتها.',
+  'ops.asOf': 'محدّث {time}',
+  'ops.bulkReview': 'مراجعة جماعية',
   'ops.dashboard': 'لوحة المشرف',
   'ops.dashboardTitle': 'لوحة المشرف',
   'ops.scope': 'نطاقك',
@@ -1508,7 +1534,9 @@ export const ar = {
   'ops.live': 'رحلات جارية',
   'ops.stale': 'رحلات بلا موقع',
   'ops.recentScans': 'أحدث عمليات المسح',
-  'ops.noScans': 'لا عمليات مسح بعد.',
+  'ops.noSummaryBody':
+    'هذه اللوحة لموظفي المنصة ومشرفي المحافظات. سجّل الدخول بحساب موظف لعرض طوابير المراجعة.',
+  'ops.noScans': 'لا عمليات مسح بعد. سيظهر هنا كل رمز تمسحه، بالوقت والنتيجة.',
   'ops.bulkTitle': 'مراجعة جماعية',
   'ops.bulkHint': 'اختر الرحلات ثم وافق أو ارفض. تُعالج كل رحلة على حدة ويظهر سبب كل رفض.',
   'ops.bulkSelect': 'اختر',
@@ -2083,9 +2111,30 @@ export const en: Record<TranslationKey, string> = {
   'auth.storageAccessEnable': 'Allow access in this window',
 
   'console.subtitle.operator': 'Manage vehicles, drivers, trips and bookings.',
+  'console.subtitle.dashboard':
+    'What needs you now in your patch: the queues, the trips running, your latest scans.',
+  'console.subtitle.verifications': 'Account and company verification requests, oldest first.',
+  'console.subtitle.vehicles':
+    'The vehicles and drivers waiting on a decision before they reach the market.',
+  'console.emptyVerifications': 'No verification requests waiting',
+  'console.emptyVerificationsBody':
+    'A request appears here the moment it is filed. Trips stay paused until it is decided.',
+  'console.emptyVehicles': 'No vehicles waiting for review',
+  'console.emptyVehiclesBody':
+    'Everything submitted has been decided. A new vehicle appears here as it is registered.',
+  'console.emptyTrips': 'No trips match this filter',
+  'console.emptyTripsBody':
+    'Try another status, or clear the filter. Submitted trips appear here as soon as they are sent.',
+  'ops.bulkClear': 'No trip is waiting on your approval — the queue is clear.',
+  'ops.bulkClearAction': 'See all trips',
   'console.subtitle.staff': 'Verify accounts, vehicles and trips; scan QR codes.',
   'console.subtitle.admin': 'Geography, regions, supervisors, plans and settings.',
   'console.placeholder': 'This screen is under construction. It ships in the phase shown above.',
+  'console.groupWork': 'Work',
+  'console.groupReview': 'Review queues',
+  'console.groupReference': 'Reference',
+  'console.tileDashboard':
+    'What needs you now: the review queues, the trips running, your recent scans.',
   'console.navOverview': 'Overview',
   'console.navVehicles': 'Vehicles',
   'console.navDrivers': 'Drivers',
@@ -3358,6 +3407,7 @@ export const en: Record<TranslationKey, string> = {
   'trips.detail.operatorVerified': 'Verified operator',
   'staff.trips.title': 'Trip review',
   'staff.trips.subtitle': 'Trips submitted for review, with the reason for each decision.',
+  'staff.trips.find': 'Find a trip',
   'staff.trips.approve': 'Approve',
   'staff.trips.reject': 'Reject',
   'staff.trips.reason': 'Reason',
@@ -3434,6 +3484,8 @@ export const en: Record<TranslationKey, string> = {
   // Phase 7 — staff operations: scan, bulk verify, manifest.
   'ops.scan': 'Scan a trip',
   'ops.scanTitle': 'Check a trip',
+  'ops.scanSubtitle':
+    'Check a trip is valid before boarding: photograph its code, or type the code in by hand.',
   'ops.scanHint': 'Scan the trip code, or type its 24-character token.',
   'ops.scanToken': 'Trip token',
   'ops.scanSubmit': 'Check',
@@ -3460,6 +3512,12 @@ export const en: Record<TranslationKey, string> = {
   'ops.verification': 'Verification',
   'ops.manifest': 'Passenger manifest',
   'ops.csv': 'Download CSV',
+  'ops.dashboardSubtitle':
+    'The review queues and today’s trips in your patch, with your latest scans.',
+  'ops.verificationPending': 'Verification requests waiting',
+  'ops.allClear': 'Nothing is waiting on you — the queues are clear and the trips are on time.',
+  'ops.asOf': 'Updated {time}',
+  'ops.bulkReview': 'Bulk review',
   'ops.dashboard': 'Supervisor dashboard',
   'ops.dashboardTitle': 'Supervisor dashboard',
   'ops.scope': 'Your scope',
@@ -3469,7 +3527,9 @@ export const en: Record<TranslationKey, string> = {
   'ops.live': 'Trips running',
   'ops.stale': 'Trips with no position',
   'ops.recentScans': 'Recent scans',
-  'ops.noScans': 'No scans yet.',
+  'ops.noSummaryBody':
+    'This dashboard is for platform staff and governorate supervisors. Sign in with a staff account to see the review queues.',
+  'ops.noScans': 'No scans yet. Every code you scan appears here with its time and result.',
   'ops.bulkTitle': 'Bulk review',
   'ops.bulkHint':
     'Select trips, then approve or reject. Each trip is decided on its own and every refusal shows its reason.',

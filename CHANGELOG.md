@@ -23,6 +23,14 @@ on `main`; the tag is the last step, not the first.
 
 ### Changed
 
+- **The staff console is one console, not five.** All six staff screens share one navigation
+  (`components/staff/StaffNav.ts`), grouped *Work / Review queues / Reference*; the shell marks the current page with
+  `aria-current="page"` (styled since the first console, never set until now); the sidebar names the console and the
+  `<h1>` names the page instead of both printing the same string; and the `<phase N>` badge — `7` on the dashboard,
+  `4` on trip review, `3` on vehicles, `1` on verifications — is gone from all 41 console pages. The dashboard's four
+  zeroes are now four doors into the queues behind them, with a real verification count, the patch named rather than
+  counted, an "updated HH:MM" stamp and a clear-state line when nothing is waiting; every empty state names its queue
+  and offers the next step. `docs/polish-plan.md` §9a has the full accounting.
 - **The marketplace list shows what is filtering it.** Applied filters are chips you can remove one at a time;
   sort is a visible row above the results instead of a control buried in the collapsed panel; the card's route is
   the link; a sold-out trip says so before it shows a price.
@@ -44,6 +52,12 @@ on `main`; the tag is the last step, not the first.
 
 ### Fixed
 
+- **A renewal could bill nothing at all.** `invoice_subscription_period_uq` was a unique index on
+  `(subscription_id, due_on)`; because `due_on` is derived from the period start, a renewal on the day a subscription
+  started produced the same key, and `app.issue_subscription_invoice` returned the invoice for the previous,
+  already-paid period instead of issuing a new one — a live subscription with no charge and no error. The key is now
+  a real `period_start` column, backfilled from the invoice snapshot (`00045`), with a pgTAP assertion stating the
+  property. The 0015 suite had been failing only in runs that began just after midnight in Asia/Aden.
 - **The sort tabs in the marketplace broke hydration, and every link carried the session token.** The page built
   its own URLs from `searchParams`, which included `?st=` — the cookie-less session token. So every chip and sort
   tab rendered a link containing the visitor's session, and the preview's token keeper then "repaired" those hrefs

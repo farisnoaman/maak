@@ -3,39 +3,57 @@ import { notFound } from 'next/navigation';
 import { isLocale, translate, type Locale, type TranslationKey } from '@maak/core';
 import { SiteHeader } from '@/components/SiteHeader';
 import { ConsoleShell } from '@/components/ConsoleShell';
+import { staffNav } from '@/components/staff/StaffNav';
 
-export default async function ConsolePage({ params }: { params: Promise<{ locale: string }> }) {
+/**
+ * The staff console's front door.
+ *
+ * Was five identical tiles, each with its own "Open" button and a note that repeated the page's own subtitle — a
+ * menu with nothing to say. Now the tiles carry the question each screen answers, and the two queues the console
+ * exists for are the ones that come first.
+ */
+export default async function StaffConsolePage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
   const { locale: raw } = await params;
   if (!isLocale(raw)) notFound();
   const locale: Locale = raw;
   const t = (key: TranslationKey) => translate(locale, key);
 
-  // The staff fleet queue lives under the same shell as the account queue: one console, two doors.
-  const screens = [
+  const screens: {
+    key: TranslationKey;
+    note: TranslationKey;
+    href: string;
+    primary?: boolean;
+  }[] = [
     {
-      key: 'ops.dashboardTitle' as const,
-      note: 'console.subtitle.staff' as const,
+      key: 'ops.dashboardTitle',
+      note: 'console.tileDashboard',
       href: `/${locale}/staff/dashboard`,
+      primary: true,
     },
     {
-      key: 'ops.scanTitle' as const,
-      note: 'ops.scanHint' as const,
-      href: `/${locale}/staff/scan`,
+      key: 'console.navVerifications',
+      note: 'console.tileReviewAccounts',
+      href: `/${locale}/staff/verifications`,
+      primary: true,
     },
     {
-      key: 'staff.trips.title' as const,
-      note: 'staff.trips.subtitle' as const,
-      href: `/${locale}/staff/trips`,
-    },
-    {
-      key: 'console.navVehicles' as const,
-      note: 'console.tileReviewVehicles' as const,
+      key: 'fleet.staffQueue',
+      note: 'console.tileReviewVehicles',
       href: `/${locale}/staff/vehicles`,
     },
     {
-      key: 'console.navVerifications' as const,
-      note: 'console.tileReviewAccounts' as const,
-      href: `/${locale}/staff/verifications`,
+      key: 'staff.trips.title',
+      note: 'staff.trips.subtitle',
+      href: `/${locale}/staff/trips`,
+    },
+    {
+      key: 'ops.scanTitle',
+      note: 'ops.scanHint',
+      href: `/${locale}/staff/scan`,
     },
   ];
 
@@ -45,27 +63,26 @@ export default async function ConsolePage({ params }: { params: Promise<{ locale
       <ConsoleShell
         locale={locale}
         title="console.staff"
+        consoleTitle="console.staff"
         subtitle="console.subtitle.staff"
+        pathname="/staff"
+        groups={staffNav(locale)}
         layout="tiles"
-        phase="7"
-        items={[
-          { key: 'console.navOverview', href: `/${locale}/staff` },
-          { key: 'ops.dashboard', href: `/${locale}/staff/dashboard` },
-          { key: 'ops.scan', href: `/${locale}/staff/scan` },
-          { key: 'staff.trips.title', href: `/${locale}/staff/trips` },
-          { key: 'console.navVehicles', href: `/${locale}/staff/vehicles` },
-          { key: 'nav.verificationQueue', href: `/${locale}/staff/verifications` },
-          { key: 'nav.places', href: `/${locale}/admin/places` },
-        ]}
       >
         {screens.map((screen) => (
-          <div className="console-tile" key={screen.href}>
+          /* The whole tile is the link, not a button at the bottom of one: on a phone it is the only part that
+             should need aiming at. */
+          <Link
+            className={`console-tile console-tile--link${screen.primary ? ' console-tile--primary' : ''}`}
+            href={screen.href}
+            key={screen.href}
+          >
             <h2>{t(screen.key)}</h2>
             <p>{t(screen.note)}</p>
-            <Link className="btn btn--primary" href={screen.href}>
-              {t('console.open')}
-            </Link>
-          </div>
+            <span className="console-tile__go route-arrow" aria-hidden="true">
+              →
+            </span>
+          </Link>
         ))}
       </ConsoleShell>
     </>

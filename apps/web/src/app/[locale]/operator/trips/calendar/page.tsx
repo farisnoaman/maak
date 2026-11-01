@@ -125,10 +125,11 @@ export default async function OperatorTripsCalendarPage({
     <>
       <SiteHeader locale={locale} pathname="/operator/trips" />
       <ConsoleShell
+        consoleTitle="console.operator"
+        pathname="/operator/trips"
         locale={locale}
         title="trips.calendar"
         subtitle="trips.calendarHint"
-        phase="4"
         items={nav}
       >
         {!loaded.configured ? <PreviewBanner locale={locale} /> : null}

@@ -80,10 +80,18 @@ export function StaffTripReview({
   }
 
   if (trips.length === 0) {
+    /* A card, because this is the whole page's answer on a quiet day — the hint line it used to be read as a
+       footnote to results that were not there. */
     return (
-      <p className="trip-form__hint" role="status">
-        {t('staff.trips.empty')}
-      </p>
+      <div className="card ops-clear-block" role="status">
+        <p className="ops-clear">
+          <span className="ops-clear__tick" aria-hidden="true">
+            ✓
+          </span>
+          {t('ops.bulkClear')}
+        </p>
+        <p className="form-hint">{t('console.emptyTripsBody')}</p>
+      </div>
     );
   }
 

@@ -140,10 +140,11 @@ export default async function VehicleHealthPage({
     <>
       <SiteHeader locale={locale} pathname="/operator/fleet" />
       <ConsoleShell
+        consoleTitle="console.operator"
+        pathname="/operator/fleet"
         locale={locale}
         title="fleetOps.healthTitle"
         subtitle="fleetOps.healthSubtitle"
-        phase="8"
         items={nav}
       >
         {!loaded.configured ? <PreviewBanner locale={locale} /> : null}

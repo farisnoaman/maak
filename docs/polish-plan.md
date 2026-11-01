@@ -51,7 +51,8 @@ questions in the order they ask them.**
 | 6 | Account (`/account`) | Lists are correct, hierarchy is flat — "next departure" should be the first thing | `[ ]` |
 | 7 | Auth (`/auth/*`) | Fine, but the sign-in form is the last place a person should meet jargon | `[ ]` |
 | 8 | Operator console | Dense tables are right for the job; the **overview** answers nothing at a glance | `[ ]` |
-| 9 | Staff + finance | Same: correct, unranked | `[ ]` |
+| 9a | **Staff console** (`/staff`, dashboard, scan, verifications, vehicles, trips) | The same five screens under five different sidebars; a phase number above every title; four zeroes and two empty boxes as the dashboard | `[x]` |
+| 9b | Finance console | Same: correct, unranked | `[ ]` |
 | 10 | Mobile shell (`apps/mobile`) | Mirrors the same problem: the home screen is a list of links, one of them labelled *المرحلة* | `[ ]` |
 | 11 | Empty / error / loading states | The states a demo never shows and a launch always hits | `[ ]` |
 
@@ -118,3 +119,59 @@ questions in the order they ask them.**
 **Verification** — `npm run check:all` (guards, lint, format, types, 669 tests), `npm run check:a11y` over every route
 including both locales of the home page, and the rendered HTML read back with the tags stripped, because a home page's
 job is its text.
+
+## 9a. The staff console — what changed
+
+Six screens read as six apps. The defects, in the order they were found by reading the rendered HTML as a supervisor:
+
+| What it did | Why it is wrong |
+| --- | --- |
+| Every page hand-wrote its own `items` array: overview seven links, dashboard/scanner four, trip review three, verifications two — one of them *Account* | The sidebar changes shape as you move, so nothing is where you left it. From vehicle review you could not reach verification review without going back through the hub |
+| `<Badge>` `المرحلة 7` on the dashboard, `4` on trip review, `3` on vehicles, `1` on verifications | Build bookkeeping shown to the person doing the work — and it could not even agree with itself |
+| The sidebar heading, the `<h1>` and a nav link all came from the same string (`مراجعة التوثيق` three times on one screen) | A sidebar that repeats the page title reads as a breadcrumb of itself |
+| `aria-current` was styled in `globals.css` since the first console and never set | The one affordance a console has — *where am I* — was missing on every screen |
+| The vehicles page linked `staff.queue` ("Queue") to `/staff/verifications` | A link that names one thing and opens another |
+| Dashboard: `0 · 0 · 0 · 3`, a bulk panel saying "no requests in this list", and "no scans yet" | Four zeroes with no door to the queue behind each, no way to tell *nothing is waiting* from *nothing loaded*, and no idea how fresh it was — on the screen whose only job is "what needs me now" |
+| Every empty state repeated the page subtitle | The states a launch always hits, written as an afterthought |
+| `/staff/scan`'s `<h1>` said *Check a trip* while the nav called it *Scan*, and a `visually-hidden` `<h2>` repeated the `<h1>` | One screen with two names and its title announced twice |
+
+**What changed**
+
+- **One navigation, defined once** (`components/staff/StaffNav.ts`), grouped the way a shift thinks: *Work* (overview,
+  dashboard, scan), *Review queues* (trips, verifications, vehicles), *Reference* (places). Used by all six screens.
+- **`ConsoleShell` now knows where it is.** It takes a locale-less `pathname`, marks the matching link with
+  `aria-current="page"`, and names the console (`consoleTitle`) separately from the page (`title`). The phase badge is
+  gone from the shell and from all 41 console pages that used it.
+- **The dashboard is a dashboard.** A clear-state line when the queues are empty (a supervisor's best morning, said
+  out loud); four figures, each a door into the queue that produced it; the patch named (`لحج · عدن · حضرموت`) instead
+  of counted; an "updated 01:22" stamp; the bulk panel and recent scans as titled bands with a way into the full list.
+  The verification figure is a **real** count (`verification-queue` → `queue.list`, the same read the queue page uses)
+  and prints **—** rather than `0` when the count cannot be read.
+- **Every empty state names its queue and offers the next step** — verifications, vehicles, trip search, the bulk
+  panel — and the trip review's quiet-day answer is a card, not a footnote.
+- **Trip review**: the filter block became a titled card (*Find a trip*) with the "includes drafts and cancelled trips"
+  hint at its top instead of a bare grid floating under the panel edge; a zero count no longer prints a line that the
+  empty state then repeats.
+- **The scanner** takes the nav's name (*Scan a trip*) and keeps the sentence for its subtitle, which no longer repeats
+  the field hint word for word.
+- **`/staff`** is five tiles that answer a question each, whole-card links (a thumb should not have to find a button),
+  the two queues the console exists for first.
+
+**Found while running the gates, not part of the console** — `supabase/migrations/00045_subscription_invoice_period.sql`.
+`invoice_subscription_period_uq` was a unique index on `(subscription_id, due_on)`, and `due_on` is derived from the
+period start, so a renewal on the day a subscription started produced the same key: `app.issue_subscription_invoice`
+deduplicated on it and returned the invoice for the **previous, already-paid** period, billing nothing. The 0015 suite
+only caught it in runs that began just after midnight in Asia/Aden. The index now sits on a real `period_start` column,
+backfilled from the snapshot every period invoice already carried, and a pgTAP assertion states the property directly.
+
+**Verification** — `npm run check:all` (676 tests ×2, 45 migrations, 986 → 987 pgTAP assertions), `npm run check:a11y`
+111 routes, `npm run check:responsive`, `npm run dev:check`, and all six screens read back from the live server with the
+tags stripped, in Arabic and English, as `staff@maak.test`: exactly one `aria-current="page"` per page, no phase badge,
+no stuttered titles.
+
+**Deliberately not done here**
+
+- `[~]` **Live refresh of the dashboard figures.** They are correct at render time and the page says when that was;
+  a polling island is a cache to invalidate and a decision about what "live" means for a supervisor.
+- `[~]` **Bulk verification for vehicle documents.** The trip queue has it; the vehicle queue is one decision at a time
+  because each record needs its documents opened. A bulk approve there would be a button that means "I did not look".

@@ -50,10 +50,11 @@ export default async function OperatorDriversPage({
     <>
       <SiteHeader locale={locale} pathname="/operator/drivers" />
       <ConsoleShell
+        consoleTitle="console.operator"
+        pathname="/operator/drivers"
         locale={locale}
         title="fleet.drivers"
         subtitle="console.subtitle.operator"
-        phase="3"
         items={[
           { key: 'console.navOverview', href: `/${locale}/operator` },
           { key: 'console.navVehicles', href: `/${locale}/operator/vehicles` },
