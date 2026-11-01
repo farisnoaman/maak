@@ -312,6 +312,19 @@ with it, deliberately — doing that a frame after first paint shoves the result
 count beside "Filter" already says the filters are in force. `check:guards` rule 15 now fails any `<details>`
 that renders `open`, proved by putting the prop back and watching the build fail with the line number.
 
+**The warning came back once more, and the reason is worth keeping.** Keeping `open` out of props stops React
+from *setting* the attribute; it does not stop React from *comparing* it at hydration, and by then the DOM can
+legitimately disagree with the server HTML: the browser restores `<details open>` on a reload or a back/forward
+navigation because the element carries form state, and a re-mount (Fast Refresh, or a client-side navigation back
+to `/trips`) finds a panel the effect already opened. Both are the attribute doing its job — belonging to the DOM
+— and the warning is React reporting a comparison it should not be making. The element now carries
+`suppressHydrationWarning`, scoped to that one attribute on that one element; the alternative would be rendering
+the panel closed on the server and opening it a frame later, which is the shove described above. The same
+treatment is on the header's `<details class="site-menu">`, which sets nothing from JavaScript at all and can
+still be restored open by the browser. The server HTML still renders `open` nowhere: `curl /ar/trips` shows
+`<details class="trip-filters">`, so what was mismatched was never the markup, only the state of the page by the
+time the JavaScript arrived.
+
 | At 320–719px | At 720px and up |
 | --- | --- |
 | Filters behind one 44px row: *Filter* + a brand badge with the number in force; the panel opens into full-width fields | A 16–18rem sidebar, always open, summary gone |
