@@ -14,7 +14,7 @@ Two kinds of review, and the difference matters:
 
 ## 1. What the build enforces
 
-`npm run sql:check` now ends with `▶ security posture`, which boots a real PostgreSQL, applies all 36 migrations
+`npm run sql:check` now ends with `▶ security posture`, which boots a real PostgreSQL, applies all 37 migrations
 and then asserts four things. Each is a hard failure, not a warning.
 
 | Assertion | Query | Why it is the one that matters |

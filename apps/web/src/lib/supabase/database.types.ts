@@ -1,5 +1,5 @@
-// migrations-sha256: 44b7d5a13d655f1e33b639939128ae19fbb6c8278652594f667fc05bf14677d9
-/* Generated from 36 migrations. Run `npm run db:types` after changing the schema. */
+// migrations-sha256: 177bacd37c34fec4d7d2be3a5f2e98bf48373f967ed01a391d3e626eab10a01e
+/* Generated from 37 migrations. Run `npm run db:types` after changing the schema. */
 
 /**
  * Schema types for RLS-filtered reads (Phase 0 subset).

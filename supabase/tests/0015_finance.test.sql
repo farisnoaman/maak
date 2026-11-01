@@ -18,7 +18,7 @@ begin;
 
 create extension if not exists pgtap;
 
-select plan(99);
+select plan(104);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -842,6 +842,71 @@ select is(
   public.cmd_run_integrity_check(null, null, null) ->> 'status',
   'alert',
   'one riyal of tampering turns the alarm red'
+);
+
+-- The alarm has to *go* somewhere. Until 00037 this function wrote straight into `public.notifications`, which
+-- produces a row the worker never claims: no push, no email, no retry, no dedupe — a bell that only rings if
+-- somebody happens to open it. These assertions are what stops that regression coming back, because the first
+-- three are exactly the delivery rows the old code never created.
+select is(
+  (
+    select count(*)::int
+    from public.notification_deliveries d
+    join public.notifications n on n.id = d.notification_id
+    where n.kind = 'finance_alert'
+      and n.user_id = '10610003-0000-4000-8000-000000000003'
+      and d.channel = 'in_app'
+      and d.status = 'sent'
+  ),
+  1,
+  'the integrity alarm reaches the pipeline: an in-app delivery for the finance officer'
+);
+
+select is(
+  (
+    select count(*)::int
+    from public.notification_deliveries d
+    join public.notifications n on n.id = d.notification_id
+    where n.kind = 'finance_alert' and n.user_id = '10610003-0000-4000-8000-000000000003'
+      and d.channel in ('push', 'email')
+  ),
+  2,
+  'and a push and an email are queued behind it, because the event is critical'
+);
+
+select is(
+  (
+    select n.link
+    from public.notifications n
+    where n.kind = 'finance_alert' and n.user_id = '10610003-0000-4000-8000-000000000003'
+  ),
+  '/finance/dashboard',
+  'the deep link goes to the screen that answers the question'
+);
+
+-- Dedupe: the check runs every night on a ledger that may stay broken for a week. One message per day per
+-- person, with the current count inside it — not one per run.
+select public.cmd_run_integrity_check(null, null, null);
+
+select is(
+  (
+    select count(*)::int
+    from public.notifications n
+    where n.kind = 'finance_alert' and n.user_id = '10610003-0000-4000-8000-000000000003'
+  ),
+  1,
+  'a second run on the same day does not ring the same bell twice'
+);
+
+select is(
+  (
+    select count(*)::int
+    from public.notifications n
+    where n.kind = 'finance_alert'
+      and not exists (select 1 from public.notification_deliveries d where d.notification_id = n.id)
+  ),
+  0,
+  'no finance alert exists without a delivery behind it — the old bug in one assertion'
 );
 
 alter table public.ledger_entries disable trigger ledger_entries_immutable;

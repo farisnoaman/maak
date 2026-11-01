@@ -179,10 +179,10 @@ New enums: `notification_channel` (`in_app`, `push`, `email`, `whatsapp`), `noti
 
 | Gate | Result |
 | --- | --- |
-| `npm run sql:check` | 36 migrations applied · **17 pgTAP suites, 899 assertions** (`0007_trips.test.sql` 103, `0016_notifications.test.sql` 94, `0017_ops_alerts.test.sql` 25) · `database.types.ts` in sync · write lockdown intact · **security posture green** |
+| `npm run sql:check` | 37 migrations applied · **17 pgTAP suites, 904 assertions** (`0007_trips.test.sql` 103, `0015_finance.test.sql` 104, `0016_notifications.test.sql` 94, `0017_ops_alerts.test.sql` 25) · `database.types.ts` in sync · write lockdown intact · **security posture green** |
 | `npm test` | **649 tests**, 26 files (106 in `packages/core/tests/notifications-api.test.ts`, 21 in `deep-link.test.ts`) |
 | `npm run test:coverage` | thresholds met: 95.76% statements / 87.08% branches / 96.46% functions / 96.72% lines |
-| `npm run check:guards` | 31 core files · 176 style files · **36 migrations** · **130 commands** · notification keys present · gateway and edge capability maps identical |
+| `npm run check:guards` | 31 core files · 176 style files · **37 migrations** · **130 commands** · notification keys present · gateway and edge capability maps identical |
 | `npm run check:responsive` | 55 media queries, no hidden navigation, no unguarded grid tracks, 7 tap targets, every wide table scrollable, stacked card tables labelled |
 | `npm run check:a11y` | **107 routes** in both directions, including the four account screens and `/admin/notifications` |
 | `npm run lint` · `format:check` · `typecheck` | clean (web, core, mobile) |
