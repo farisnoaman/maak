@@ -525,12 +525,68 @@ a {
   }
 }
 
-.site-footer__inner {
+.site-footer__grid {
+  display: grid;
+  gap: var(--space-8);
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 720px) {
+  .site-footer__grid {
+    /* Brand wider than the link groups: it carries the mark and the tagline. */
+    grid-template-columns: 1.6fr repeat(3, minmax(0, 1fr));
+    align-items: start;
+  }
+}
+
+.site-footer__brand .brand {
+  text-decoration: none;
+}
+
+.site-footer__group h2 {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--ink-700);
+  text-transform: uppercase;
+}
+
+.site-footer__group ul {
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.site-footer__group a {
+  color: var(--ink-600);
+  text-decoration: none;
+  /* Comfortable target on a phone without turning the footer into rows of buttons. */
+  display: inline-block;
+  padding-block: 2px;
+}
+
+.site-footer__group a:hover {
+  color: var(--brand-700);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.site-footer__bottom {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-4);
+  gap: var(--space-3);
   justify-content: space-between;
   align-items: center;
+  margin-block-start: var(--space-8);
+  padding-block-start: var(--space-5);
+  border-block-start: 1px solid var(--surface-sunken);
+  font-size: 0.78rem;
+}
+
+.site-footer__flag {
+  letter-spacing: 0.02em;
 }
 
 .num {
@@ -4849,4 +4905,374 @@ a.booking-card__code:hover {
   .skeleton__bar {
     animation: none;
   }
+}
+
+/* ---------- home ----------
+ *
+ * The home page was rebuilt around the trip, not the build (docs/polish-plan.md §1). These are the blocks it
+ * needed and did not have. Everything is logical-property CSS: `margin-inline-start`, never `margin-left`, so
+ * the Arabic and English layouts are one set of rules.
+ */
+
+/* The hero's right column: real departures, in a panel that reads as a list of ways in rather than a card. */
+.hero__aside {
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--surface-sunken);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-md);
+}
+
+.hero__aside-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-block-end: var(--space-3);
+}
+
+.hero__aside-head h2 {
+  font-size: 0.98rem;
+  font-weight: 800;
+}
+
+.hero__aside-empty {
+  color: var(--ink-500);
+  font-size: 0.88rem;
+}
+
+.departure-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.departure {
+  display: grid;
+  gap: 2px;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  color: inherit;
+  text-decoration: none;
+  transition: background 0.15s ease;
+}
+
+.departure:hover {
+  background: var(--surface-muted);
+  border-color: var(--surface-sunken);
+}
+
+.departure__route {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.departure__meta {
+  color: var(--ink-500);
+  font-size: 0.82rem;
+}
+
+.departure__foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-block-start: var(--space-1);
+}
+
+.departure__price {
+  font-weight: 800;
+  color: var(--ink-900);
+}
+
+.departure__seats {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--brand-700);
+}
+
+.departure__seats.is-out {
+  color: var(--ink-400);
+  font-weight: 600;
+}
+
+/* Three lines of reassurance where three test statistics used to be. */
+.trust-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-5);
+  list-style: none;
+  margin: var(--space-6) 0 0;
+  padding: 0;
+  color: var(--ink-600);
+  font-size: 0.86rem;
+}
+
+.trust-row li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.trust-row__tick {
+  display: grid;
+  place-items: center;
+  inline-size: 18px;
+  block-size: 18px;
+  border-radius: var(--radius-pill);
+  background: var(--brand-100);
+  color: var(--brand-700);
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+/* A section head with its "all trips" link on the far end. */
+.section__head--row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: end;
+  justify-content: space-between;
+  max-inline-size: none;
+}
+
+.section__head--row > div {
+  max-inline-size: 60ch;
+}
+
+.link-more {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--brand-700);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.link-more:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* An empty section that explains itself instead of showing a ghost card. */
+.empty-panel {
+  margin-block-start: var(--space-6);
+  padding: var(--space-8) var(--space-6);
+  border: 1px dashed var(--surface-sunken);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  text-align: center;
+  display: grid;
+  gap: var(--space-2);
+  justify-items: center;
+}
+
+.empty-panel__title {
+  font-weight: 700;
+  color: var(--ink-800);
+}
+
+.empty-panel__body {
+  color: var(--ink-500);
+  font-size: 0.9rem;
+}
+
+.empty-panel .btn {
+  margin-block-start: var(--space-3);
+}
+
+/* Destination chips, built from the search function's own facet counts. */
+.destinations {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  list-style: none;
+  margin: var(--space-6) 0 0;
+  padding: 0;
+}
+
+.destination-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-block-size: var(--tap-target);
+  padding-inline: var(--space-4);
+  padding-block: var(--space-2);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--surface-sunken);
+  background: var(--surface-base);
+  color: var(--ink-800);
+  text-decoration: none;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.destination-chip:hover {
+  border-color: var(--brand-300);
+  background: var(--brand-50);
+}
+
+.destination-chip__name {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.destination-chip__count {
+  font-size: 0.78rem;
+  color: var(--ink-500);
+}
+
+/* Three steps, numbered by the list itself so the numbers are decoration, not content. */
+.steps {
+  display: grid;
+  gap: var(--space-5);
+  margin-block-start: var(--space-8);
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+
+@media (min-width: 720px) {
+  .steps {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.step {
+  position: relative;
+  padding: var(--space-6);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--surface-sunken);
+  background: var(--surface-base);
+}
+
+.step__num {
+  display: grid;
+  place-items: center;
+  inline-size: 30px;
+  block-size: 30px;
+  border-radius: var(--radius-pill);
+  background: var(--brand-600);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.step h3 {
+  margin-block-start: var(--space-3);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.step p {
+  margin-block-start: var(--space-2);
+  color: var(--ink-600);
+  font-size: 0.9rem;
+}
+
+/* Calculator beside its explanation, rather than floating in the hero. */
+.price-grid {
+  display: grid;
+  gap: var(--space-8);
+  align-items: start;
+}
+
+@media (min-width: 940px) {
+  .price-grid {
+    grid-template-columns: 0.9fr 1.1fr;
+    align-items: center;
+  }
+}
+
+/* The one place the page speaks to supply. */
+.operator-band {
+  display: grid;
+  gap: var(--space-5);
+  align-items: center;
+  padding: var(--space-8);
+  border-radius: var(--radius-xl);
+  background: linear-gradient(135deg, var(--brand-700), var(--brand-900));
+  color: #fff;
+}
+
+@media (min-width: 860px) {
+  .operator-band {
+    grid-template-columns: 1fr auto;
+  }
+}
+
+.operator-band h2 {
+  font-size: clamp(1.2rem, 2.4vw, 1.55rem);
+  font-weight: 800;
+}
+
+.operator-band p {
+  margin-block-start: var(--space-2);
+  color: rgba(255, 255, 255, 0.82);
+  max-inline-size: 60ch;
+  font-size: 0.94rem;
+}
+
+.operator-band .btn--primary {
+  background: #fff;
+  color: var(--brand-900);
+  box-shadow: none;
+}
+
+.operator-band .btn--primary:hover {
+  background: var(--brand-50);
+}
+
+/* Consoles, as one quiet row: reachable by the people who need them, invisible to everyone else. */
+.teams__inner {
+  display: grid;
+  gap: var(--space-4);
+  align-items: center;
+}
+
+@media (min-width: 860px) {
+  .teams__inner {
+    grid-template-columns: 1fr auto;
+  }
+}
+
+.teams h2 {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.teams p {
+  color: var(--ink-500);
+  font-size: 0.86rem;
+  margin-block-start: var(--space-1);
+}
+
+.teams__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.teams__link {
+  display: inline-grid;
+  place-items: center;
+  min-block-size: var(--tap-target);
+  padding-inline: var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--surface-sunken);
+  color: var(--ink-700);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.teams__link:hover {
+  background: var(--surface-muted);
+  border-color: var(--brand-300);
 }

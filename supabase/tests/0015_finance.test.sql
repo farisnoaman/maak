@@ -720,9 +720,15 @@ select is(
   'a period that ended paid is renewed'
 );
 
+-- The upgrade a few screens up left its own prorated invoice open, and it is not this assertion's business.
+-- Counting *every* issued subscription invoice really asserted "nothing else has been billed yet", which stopped
+-- being true the moment the proration case was added — and it only showed up in a run where the two invoices
+-- landed on different days. What a renewal must produce is one new invoice for a period, which the snapshot
+-- distinguishes from a proration.
 select is(
   (select count(*)::int from public.invoices
-    where kind = 'subscription' and status = 'issued'),
+    where kind = 'subscription' and status = 'issued'
+      and (snapshot ->> 'proration') is null),
   1,
   'with the next period billed in advance'
 );

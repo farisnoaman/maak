@@ -21,8 +21,26 @@ on `main`; the tag is the last step, not the first.
 - **The driver can run a trip from the phone** (`apps/mobile/src/app/driver/trips/`): start, share position, mark a
   stop, end — the same `trip.*` commands as the web console, with `expo-location`.
 
+### Changed
+
+- **The home page sells the trip instead of the build.** It showed a phase number, a unit-test count, three
+  architecture cards and seven console cards of which five said "coming soon" — while `/trips` served real
+  departures it never mentioned. Now: a search-first hero with the next three real departures beside it, trips you
+  can book now, popular destinations from the search function's own facets, three booking steps, the fare
+  calculator, an operator band, and the consoles as one quiet row. `docs/polish-plan.md` has the accounting and the
+  queue for the screens after it.
+- **Header and footer.** The primary nav went from eight links (including the vehicles console, the component
+  styleguide and two legal documents) to four; everything removed is in the new shared `SiteFooter`, which now
+  appears on public pages instead of only the home page. The footer's `Phase 2 · Next.js · Expo · Supabase` line is
+  gone.
+- **Page titles lead with the brand's own name** (`— معك` in Arabic, not `— Maak`), and the default title says what
+  the product does rather than who the software is for.
+
 ### Fixed
 
+- **A finance assertion that had been counting all subscription invoices** — `0015` test 68 failed on a clean
+  checkout, and it was the test that was wrong: an upgrade three screens earlier legitimately leaves a prorated
+  invoice open, so "issued subscription invoices = 1" was really asserting "nothing else has been billed yet".
 - **`eas.json` configured a variable nothing reads.** All three profiles set `EXPO_PUBLIC_API_URL`; the app reads
   `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_ANON_KEY`, so every build would have installed and then said
   "not configured". Profiles now name an EAS *environment* and the variables live there.

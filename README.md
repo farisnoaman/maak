@@ -21,6 +21,7 @@ Bilingual by design: **Arabic (RTL) and English (LTR) are both first-class**, no
 | [`docs/operator-guide.md`](./docs/operator-guide.md) | For the person running a transport business: verification, vehicles, drivers, trips, bookings, money, plans, team |
 | [`docs/admin-guide.md`](./docs/admin-guide.md) | For the platform side: the four roles, verification decisions, staff and finance consoles, plans and geography, what cannot be done |
 | [`docs/passenger-guide.md`](./docs/passenger-guide.md) | **بالعربية** — البحث والحجز والدفع والإلغاء والاسترداد والتتبّع والتنبيهات |
+| [`docs/polish-plan.md`](./docs/polish-plan.md) | The interface pass: what the home page said about the build, what it says about the trip now, and the queue for the screens after it |
 | [`docs/phase-11-report.md`](./docs/phase-11-report.md) | Notifications, preferences and search alerts — including the honest list of what is not done |
 | [`docs/phase-12-report.md`](./docs/phase-12-report.md) | Hardening: platform alerts, the security gate, the scheduler, what launch still needs |
 

@@ -45,7 +45,7 @@ export function localeAlternates(
 export function tripsMetadata(locale: Locale): Metadata {
   const t = (key: TranslationKey) => translate(locale, key);
   return {
-    title: `${t('trips.search.title')} — Maak`,
+    title: `${t('trips.search.title')} — ${t('common.appName')}`,
     description: t('trips.search.subtitle'),
     alternates: localeAlternates(locale, '/trips'),
     openGraph: {
@@ -59,8 +59,9 @@ export function tripsMetadata(locale: Locale): Metadata {
 }
 
 export function tripMetadata(locale: Locale, trip: PublicTripDetail | null): Metadata {
+  const t = (key: TranslationKey) => translate(locale, key);
   if (!trip) {
-    return { title: `Maak`, robots: { index: false, follow: false } };
+    return { title: t('common.appName'), robots: { index: false, follow: false } };
   }
 
   const route = `${trip.origin.name} → ${trip.destination.name}`;
@@ -70,7 +71,7 @@ export function tripMetadata(locale: Locale, trip: PublicTripDetail | null): Met
       : `${route} · ${trip.code} · ${trip.seatsAvailable} seats available · ${trip.vehicle?.label ?? ''}`.trim();
 
   return {
-    title: `${route} — Maak`,
+    title: `${route} — ${t('common.appName')}`,
     description,
     alternates: localeAlternates(locale, `/trips/${trip.code}`),
     robots: trip.hasDeparted ? { index: false, follow: true } : undefined,

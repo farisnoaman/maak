@@ -29,9 +29,12 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   // Canonical and hreflang URLs are absolute; without a base Next.js refuses to emit them.
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'),
-  title: 'Maak — إدارة الرحلات',
+  // The title is the browser tab and a search result: it should say what the product is, not who the software
+  // is built for. `إدارة الرحلات` described the console. Pages that know better set their own — the home page
+  // does, and so does every console screen.
+  title: 'معك — منصة الرحلات بين المحافظات',
   description:
-    'منصة إدارة الرحلات في اليمن: حسابات أفراد وشركات، مركبات وسائقون موثّقون، رحلات عامة، دفع ومحاسبة.',
+    'احجز مقعدك في رحلات يومية بين المحافظات اليمنية من مشغّلين ومركبات موثّقة، بسعر واضح قبل الحجز وتتبّع مباشر للرحلة.',
   // iOS ignores the manifest's icons and reads this one; `appleWebApp` is what makes "Add to Home
   // Screen" open without browser chrome.
   icons: { apple: '/icons/180' },
