@@ -10,6 +10,7 @@
  * whatever the last seed said.
  */
 
+import { callGateway } from './gateway';
 import { getServerClient } from './supabase/server';
 import type {
   NotificationChannel,
@@ -201,6 +202,7 @@ export interface SavedSearchView {
   readonly label: string | null;
   readonly filters: Record<string, unknown>;
   readonly notify: boolean;
+  readonly digest: boolean;
   readonly matches: number;
   readonly lastMatchedAt: string | null;
   readonly createdAt: string;
@@ -212,7 +214,7 @@ export async function loadSavedSearches(): Promise<readonly SavedSearchView[]> {
 
   const { data } = await client
     .from('saved_searches')
-    .select('id, label, filters, notify, last_matched_at, created_at')
+    .select('id, label, filters, notify, digest, last_matched_at, created_at')
     .order('created_at', { ascending: false });
 
   const searches = (data ?? []) as unknown as Record<string, unknown>[];
@@ -237,8 +239,44 @@ export async function loadSavedSearches(): Promise<readonly SavedSearchView[]> {
     label: typeof row.label === 'string' ? row.label : null,
     filters: (row.filters as Record<string, unknown>) ?? {},
     notify: Boolean(row.notify),
+    digest: Boolean(row.digest),
     matches: counts.get(String(row.id)) ?? 0,
     lastMatchedAt: typeof row.last_matched_at === 'string' ? row.last_matched_at : null,
     createdAt: String(row.created_at ?? ''),
   }));
+}
+
+export interface CatalogueEvent {
+  readonly kind: string;
+  readonly titleKey: string;
+  readonly priority: 'critical' | 'normal' | 'low';
+  readonly channels: readonly string[];
+  readonly critical: boolean;
+}
+
+/**
+ * The event catalogue for the admin preview.
+ *
+ * Read through the `dispatch` action rather than the table: the policy is enforced in one place, and the
+ * preview shows what the sender would see rather than what a client is allowed to guess. A non-staff session
+ * gets an empty list and the page renders its "staff only" state.
+ */
+export async function loadNotificationCatalogue(): Promise<{
+  readonly configured: boolean;
+  readonly timezone: string;
+  readonly events: readonly CatalogueEvent[];
+}> {
+  // Server-side, so the gateway proxy rather than the browser client: `getApiClient` is a `'use client'`
+  // module and calling it from a server component throws at render time (it did, on this page).
+  const result = await callGateway<{ timezone?: string; items?: CatalogueEvent[] }>('dispatch', {
+    action: 'notifications.catalogue',
+  });
+  if (!result.ok) return { configured: false, timezone: 'Asia/Aden', events: [] };
+  const data = result.data;
+
+  return {
+    configured: true,
+    timezone: data.timezone ?? 'Asia/Aden',
+    events: data.items ?? [],
+  };
 }

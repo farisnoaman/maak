@@ -48,6 +48,8 @@ const ROUTES = [
   { path: '/en/account/notifications', lang: 'en', dir: 'ltr', account: 'owner' },
   { path: '/ar/account/notifications/preferences', lang: 'ar', dir: 'rtl', account: 'owner' },
   { path: '/en/account/notifications/preferences', lang: 'en', dir: 'ltr', account: 'owner' },
+  { path: '/ar/admin/notifications', lang: 'ar', dir: 'rtl', account: 'staff' },
+  { path: '/en/admin/notifications', lang: 'en', dir: 'ltr', account: 'staff' },
   { path: '/ar/operator/settings', lang: 'ar', dir: 'rtl', account: 'owner' },
   { path: '/en/operator/team', lang: 'en', dir: 'ltr', account: 'owner' },
   { path: '/ar/staff/verifications', lang: 'ar', dir: 'rtl', account: 'staff' },

@@ -113,6 +113,7 @@ export type Capability =
   | 'notification.savedSearch'
   | 'notification.dispatch'
   | 'notification.health'
+  | 'notification.catalogue'
   // Phase 10 — money, plans and the books.
   | 'expense.record'
   | 'expense.void'
@@ -144,6 +145,12 @@ const AUTHENTICATED: readonly Role[] = [
   'platform_admin',
 ];
 const FINANCE: readonly Role[] = ['finance_officer', 'platform_admin'];
+/**
+ * The people who may look at delivery health: the same set `app.is_finance()` grants in SQL. Not `FINANCE`,
+ * because reading why a push failed is support work and needs no authority over money — and the rule has to
+ * match the function it guards, or one of the two is lying.
+ */
+const DELIVERY_SUPPORT: readonly Role[] = ['finance_officer', 'platform_staff', 'platform_admin'];
 const OPERATOR: readonly Role[] = ['individual', 'org_owner', 'org_manager'];
 
 const RULES: Record<Capability, Rule> = {
@@ -163,7 +170,9 @@ const RULES: Record<Capability, Rule> = {
   // The worker and the support view. `dispatch` is the cron's capability: it reads other people's
   // notifications because it is the thing that delivers them, which is why it is staff-only.
   'notification.dispatch': { roles: STAFF },
-  'notification.health': { roles: FINANCE },
+  'notification.health': { roles: DELIVERY_SUPPORT },
+  // Reading the event catalogue is staff work: it is the surface that shows an operator's own routing.
+  'notification.catalogue': { roles: STAFF },
 
   'trip.browse': {
     roles: [

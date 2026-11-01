@@ -1,4 +1,4 @@
-// migrations-sha256: eaf3486a59c2ec6fa1495293a50ac0af56ce89bc27b762d1b9badfba43a09ded
+// migrations-sha256: f685b98e90296de6e34e54d9566cc6eac78b934651967edb0551c8811f3c1e7e
 /* Generated from 32 migrations. Run `npm run db:types` after changing the schema. */
 
 /**
@@ -1356,6 +1356,8 @@ export interface SavedSearch {
   label: string | null;
   filters: Json;
   notify: boolean;
+  /** One summary a day instead of a message per matching trip. */
+  digest: boolean;
   fingerprint: string;
   last_matched_at: string | null;
   created_at: string;
@@ -1367,6 +1369,8 @@ export interface SavedSearchMatch {
   saved_search_id: string;
   trip_id: string;
   notified_at: string;
+  /** Set when a daily digest has counted this match. */
+  digested_at: string | null;
 }
 
 export interface Database {

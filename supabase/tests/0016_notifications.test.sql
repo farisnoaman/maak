@@ -16,7 +16,7 @@ begin;
 
 create extension if not exists pgtap;
 
-select plan(78);
+select plan(94);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -548,7 +548,7 @@ select public.cmd_save_search(
     'destination', jsonb_build_array((select id::text from public.governorates where code = 'YE-SA')),
     'priceMax', 5000
   ),
-  'عدن ← صنعاء', true, null, null
+  'عدن ← صنعاء', true, false, null, null
 );
 
 select is(
@@ -565,7 +565,7 @@ select public.cmd_save_search(
     'destination', jsonb_build_array((select id::text from public.governorates where code = 'YE-SA')),
     'priceMax', 5000
   ),
-  'عدن ← صنعاء', true, null, null
+  'عدن ← صنعاء', true, false, null, null
 );
 
 select is(
@@ -577,7 +577,7 @@ select is(
 
 select throws_ok(
   $$ select public.cmd_save_search(
-       '10700001-0000-4000-8000-000000000001', '{"price_max": 5000}'::jsonb, null, true, null, null) $$,
+       '10700001-0000-4000-8000-000000000001', '{"price_max": 5000}'::jsonb, null, true, false, null, null) $$,
   '22023',
   null,
   'a filter key the marketplace does not understand is refused, not ignored'
@@ -682,7 +682,7 @@ select ok(
 select public.cmd_update_saved_search(
   '10700001-0000-4000-8000-000000000001',
   (select id from public.saved_searches where user_id = '10700001-0000-4000-8000-000000000001'),
-  false, null, null, null
+  false, null, null, null, null
 );
 
 insert into public.trips (
@@ -717,12 +717,14 @@ select is(
 -- ---------------------------------------------------------------------------
 
 select ok(
-  (public.cmd_send_trip_reminders('10700003-0000-4000-8000-000000000003', 24, '1 hour') ->> 'sent')::int >= 1,
+  (public.cmd_send_trip_reminders('10700003-0000-4000-8000-000000000003',
+                                  array['tomorrow']::text[]) ->> 'sent')::int >= 1,
   'the reminder job finds the booking whose trip leaves in about a day'
 );
 
 select is(
-  (public.cmd_send_trip_reminders('10700003-0000-4000-8000-000000000003', 24, '1 hour') ->> 'sent')::int,
+  (public.cmd_send_trip_reminders('10700003-0000-4000-8000-000000000003',
+                                  array['tomorrow']::text[]) ->> 'sent')::int,
   0,
   'running it again sends nothing, even though the trip is still inside the band'
 );
@@ -895,6 +897,174 @@ select is(
   ),
   'object',
   'each item carries the delivery decision per channel'
+);
+
+-- ---------------------------------------------------------------------------
+-- 9. The events and jobs the first pass left out
+-- ---------------------------------------------------------------------------
+
+-- The 2-hour band. A trip that leaves in two hours is a different message from one that leaves tomorrow,
+-- and it is the same job: the band decides the window, the dedupe key decides the once.
+update public.trips
+   set departure_at = now() + interval '2 hours 5 minutes',
+       -- Cash, so the second booking in this suite is not gated on a confirmed deposit (Phase 9 tests that).
+       payment_policy = 'cash'
+ where id = '1070b005-0000-4000-8000-000000000005';
+
+select public.cmd_create_booking(
+  '10700001-0000-4000-8000-000000000001', '1070b005-0000-4000-8000-000000000005',
+  1, null, null, 'مسافر التنبيهات', '+967733949001', null, null, 'p11-soon', null
+);
+
+select public.cmd_accept_booking(
+  '10700002-0000-4000-8000-000000000002',
+  (select id from public.bookings where trip_id = '1070b005-0000-4000-8000-000000000005'
+     and passenger_id = '10700001-0000-4000-8000-000000000001'),
+  'p11-soon-accept', null
+);
+
+select is(
+  (public.cmd_send_trip_reminders('10700003-0000-4000-8000-000000000003',
+                                  array['soon']::text[]) ->> 'sent')::int,
+  1,
+  'the two-hour band sends its own reminder'
+);
+
+select is(
+  (select title_key from public.notifications
+    where dedupe_key like 'trip:%:soon'),
+  'notifications.tripReminderSoon',
+  'and it is the sentence for two hours, not the one for tomorrow'
+);
+
+select is(
+  (public.cmd_send_trip_reminders('10700003-0000-4000-8000-000000000003',
+                                  array['soon']::text[]) ->> 'sent')::int,
+  0,
+  'the same band twice in an hour sends nothing the second time'
+);
+
+-- §6.10's plan upgrade/downgrade: Phase 10 recorded the transition and told nobody.
+insert into public.subscription_events (subscription_id, kind, from_plan, to_plan)
+values ('1070d001-0000-4000-8000-000000000001', 'plan_changed', 'basic', 'pro');
+
+select is(
+  (select params ->> 'to' from public.notifications
+    where kind = 'subscription_plan_changed'
+      and user_id = '10700002-0000-4000-8000-000000000002'),
+  'pro',
+  'a plan change notifies the owner from the event row, so no command can forget to'
+);
+
+select is(
+  (select count(*)::int from public.notifications where kind = 'subscription_plan_changed'),
+  1,
+  'one message for one owner, not one per member plus one for the company'
+);
+
+-- §6.10's cash-in settled by agent: the float moved in Phase 9 and the agent was told nothing.
+insert into public.agents (id, user_id, float_balance_yer, credit_limit_yer)
+values ('1070e001-0000-4000-8000-000000000001', '10700004-0000-4000-8000-000000000004',
+        50_000, 200_000);
+
+insert into public.agent_transactions (agent_id, kind, amount_yer, balance_after_yer, actor_id)
+values ('1070e001-0000-4000-8000-000000000001', 'settlement', 30_000, 20_000,
+        '10700003-0000-4000-8000-000000000003');
+
+select is(
+  (select params ->> 'balance' from public.notifications
+    where kind = 'agent_cash_in_settled'
+      and user_id = '10700004-0000-4000-8000-000000000004'),
+  '20000',
+  'settling an agent cash-in tells the agent, with the balance after the settlement'
+);
+
+-- The no-show window: the trip left, and somebody is still "accepted".
+update public.trips
+   set departure_at = now() - interval '2 hours',
+       status = 'in_progress',
+       -- A trip in progress has a start time; the constraint says so, and pretending otherwise would make
+       -- the fixture illegal rather than the feature wrong.
+       started_at = now() - interval '2 hours'
+ where id = '1070b001-0000-4000-8000-000000000001';
+
+select is(
+  (public.cmd_notify_no_shows('10700003-0000-4000-8000-000000000003', '45 minutes') ->> 'sent')::int,
+  1,
+  'the no-show window finds a trip that left with an accepted booking still on it'
+);
+
+select is(
+  (select params ->> 'count' from public.notifications
+    where kind = 'no_show_alert' and user_id = '10700002-0000-4000-8000-000000000002'),
+  '1',
+  'and it counts the unresolved bookings instead of guessing who boarded'
+);
+
+select is(
+  (public.cmd_notify_no_shows('10700003-0000-4000-8000-000000000003', '45 minutes') ->> 'sent')::int,
+  0,
+  'the same trip is reported once a day, not once per scheduler tick'
+);
+
+-- The digest: two new trips, one message.
+insert into public.saved_searches (id, user_id, label, filters, notify, digest, fingerprint)
+values ('1070f001-0000-4000-8000-000000000001', '10700001-0000-4000-8000-000000000001',
+        'ملخص يومي', '{"priceMax": 12000}'::jsonb, true, true, 'digest-fixture');
+
+insert into public.saved_search_matches (saved_search_id, trip_id) values
+  ('1070f001-0000-4000-8000-000000000001', '1070b001-0000-4000-8000-000000000001'),
+  ('1070f001-0000-4000-8000-000000000001', '1070b005-0000-4000-8000-000000000005');
+
+select is(
+  (public.cmd_digest_saved_searches('10700003-0000-4000-8000-000000000003') ->> 'sent')::int,
+  1,
+  'a digest search gets one message for both new trips'
+);
+
+select is(
+  (select params ->> 'count' from public.notifications
+    where kind = 'saved_search_match'
+      and title_key = 'notifications.savedSearchDigest'
+      and user_id = '10700001-0000-4000-8000-000000000001'),
+  '2',
+  'and it counts the matches rather than naming one of them twice'
+);
+
+select is(
+  (public.cmd_digest_saved_searches('10700003-0000-4000-8000-000000000003') ->> 'sent')::int,
+  0,
+  'the second run reports nothing: the matches it sent are stamped'
+);
+
+select ok(
+  (select bool_and(m.digested_at is not null) from public.saved_search_matches m
+    where m.saved_search_id = '1070f001-0000-4000-8000-000000000001'),
+  'and the stamp is what makes that true without a second table'
+);
+
+-- The deep link keeps the filters: the alert is about a search, so it opens the search.
+select ok(
+  (select n.link like '/trips?%' and n.link like '%priceMax=5000%' and n.link like '%origin=%'
+     from public.notifications n
+    where n.kind = 'saved_search_match' and n.dedupe_key like 'search:%'
+    limit 1),
+  'a saved-search alert links back to the filtered search, not to a bare trip page'
+);
+
+-- The catalogue behind the admin preview: staff only, and every event in it.
+select is(
+  (select jsonb_array_length(public.cmd_get_notification_catalogue(
+            '10700003-0000-4000-8000-000000000003') -> 'items')),
+  34,
+  'the catalogue lists all 34 events, including the three this pass adds'
+);
+
+select throws_ok(
+  $$ select public.cmd_get_notification_catalogue('10700001-0000-4000-8000-000000000001') $$,
+  '42501',
+  null,
+  'and a passenger cannot read the platform''s routing table'
 );
 
 select * from finish();

@@ -221,11 +221,16 @@ async function drain(core) {
   return { claimed: items.length, sent, skipped, failed };
 }
 
-/** One pass over the six jobs. Every one is idempotent, so a slow or doubled cron is harmless. */
+/** One pass over the eight jobs. Every one is idempotent, so a slow or doubled cron is harmless. */
 async function runJobs() {
   const jobs = [
+    // Per-trip alerts and the daily summary are two modes of the same subscription: a search with `digest`
+    // gets no per-trip message and is counted here instead.
     'saved-searches',
+    'search-digest',
+    // Tomorrow, in two hours, and now: three bands of one job.
     'trip-reminders',
+    'no-shows',
     'quota',
     'expiring',
     'verification-sla',

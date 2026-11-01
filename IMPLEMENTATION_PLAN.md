@@ -693,6 +693,10 @@ reminder dedupe, and the trip gate's `MAINTENANCE_OVERDUE` refusal.
 
 **Goal:** the platform tells the right person the right thing, once, on the right channel, in their language.
 
+**Status: complete (2026-11-01).** Evidence: [`docs/phase-11-report.md`](./docs/phase-11-report.md).
+32 migrations · 128 commands · 11 edge functions · 16 pgTAP suites (868 assertions) · 623 unit tests ·
+107 a11y routes · 34 notification events · 8 scheduled jobs.
+
 ### Deliverables
 - Full event matrix (specs §6.10) — including payment, refund, payout, invoice, subscription, quota events.
 - Channels: in-app, push (Expo), email (Resend), WhatsApp deep links; localized templates with typed variables.
@@ -712,13 +716,15 @@ reminder dedupe, and the trip gate's `MAINTENANCE_OVERDUE` refusal.
 - [x] `app.enqueue_notification()` (outbox) + edge function `dispatch` (push/email) with retries + dead-letter table.
       Deliveries are rows, not a queue: `pending → sending → sent | skipped | failed → dead`, five attempts with
       1/5/15/60-minute backoff, and a ten-minute stuck sweep so a crashed worker cannot hold a row.
-- [x] Cron: `match_saved_searches`, `send_trip_reminders`, `notify_pending_verifications`,
-      `notify_quota_thresholds`, `retry_failed_notifications`. Plus `notify_subscription_expiring` (7/3/1 days)
-      and `retry` — six jobs, all callable through `notifications.job.run`.
+- [x] Cron: `match_saved_searches`, `digest_saved_searches`, `send_trip_reminders` (tomorrow / two hours /
+      departure), `notify_no_shows`, `notify_pending_verifications`, `notify_quota_thresholds`,
+      `notify_subscription_expiring` (7/3/1 days) and `retry` — eight jobs, all callable through
+      `notifications.job.run`, each idempotent by dedupe key and each reporting only what it actually created.
 - [x] Template registry (per event, AR/EN, zod-validated variables) + preview screen for admins.
-      Registry: `notification_kind` enum + `notifications.*` keys + `notificationText()` in core (typed variables,
-      AR/EN parity asserted). Preview: the notification centre renders every row with its channel states; a
-      separate admin preview screen was not built (§6 of the report).
+      Registry: `notification_kind` enum + `notification_events` + `notifications.*` keys + `notificationText()`
+      in core (typed variables, AR/EN parity asserted). Preview: `/admin/notifications` renders all 34 events
+      through that same function, one `lang`/`dir`-annotated AR and EN cell per row, behind
+      `notification.catalogue` (staff only).
 - [x] Web/mobile notification centre + preference screens (RTL-safe toggles).
 - [x] Tests: dispatch idempotency (no duplicate push on retry), quiet hours, opt-out respected, deep links resolve.
 

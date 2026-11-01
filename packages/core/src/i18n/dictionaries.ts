@@ -379,6 +379,56 @@ export const ar = {
   'notifications.tripReminder':
     'رحلتك {tripCode} ({origin} ← {destination}) تنطلق خلال {hours} ساعة. رقم حجزك {bookingCode}.',
   'notifications.verificationSla': 'طلب توثيق ({subjectType}) ينتظر المراجعة منذ {ageHours} ساعة.',
+  'notifications.planChanged': 'انتقل اشتراكك من «{from}» إلى «{to}»، ساريًا من {effective}.',
+  'notifications.agentCashInSettled':
+    'سُوّي توريدك النقدي بمبلغ {amount} ر.ي، ورصيدك الآن {balance} ر.ي.',
+  'notifications.noShowAlert':
+    'الرحلة {tripCode}: {count} من الحجوزات ما زالت «مقبول» بعد {minutes} دقيقة من الإقلاع. حدّد من حضر ومن لم يحضر.',
+  'notifications.tripReminderTomorrow':
+    'رحلتك {tripCode} غدًا: {origin} ← {destination}، الإقلاع {departureAt}.',
+  'notifications.tripReminderSoon':
+    'رحلتك {tripCode} بعد ساعتين: {origin} ← {destination}، الإقلاع {departureAt}.',
+  'notifications.tripReminderDeparting':
+    'الرحلة {tripCode} تقلع الآن من {origin} إلى {destination}.',
+
+  // Count-bearing sentences get their Arabic agreement right instead of reading like a translation: zero, one,
+  // two, 3–10, 11–99 and 100+ are six different sentences, and `translateCount` is what chooses between them.
+  // The base key is what the job passes; `translate`/`notificationText` pick a numbered form from it. It exists
+  // so the dictionary is complete for the key the SQL names, and so a locale with no forms still says something.
+  'notifications.savedSearchDigest': 'رحلات جديدة تطابق بحثك المحفوظ.',
+  'notifications.savedSearchDigest.zero': 'لا رحلات جديدة تطابق بحثك المحفوظ اليوم.',
+  'notifications.savedSearchDigest.one': 'رحلة جديدة واحدة تطابق بحثك المحفوظ.',
+  'notifications.savedSearchDigest.two': 'رحلتان جديدتان تطابقان بحثك المحفوظ.',
+  'notifications.savedSearchDigest.few': '{count} رحلات جديدة تطابق بحثك المحفوظ.',
+  'notifications.savedSearchDigest.many': '{count} رحلة جديدة تطابق بحثك المحفوظ.',
+  'notifications.savedSearchDigest.other': '{count} رحلة جديدة تطابق بحثك المحفوظ.',
+  'notifications.unread.zero': 'لا شيء غير مقروء',
+  'notifications.unread.one': 'تنبيه واحد غير مقروء',
+  'notifications.unread.two': 'تنبيهان غير مقروءين',
+  'notifications.unread.few': '{count} تنبيهات غير مقروءة',
+  'notifications.unread.many': '{count} تنبيهًا غير مقروءًا',
+  'notifications.unread.other': '{count} تنبيه غير مقروء',
+  'search.matchCount.zero': 'لا رحلات مطابقة بعد',
+  'search.matchCount.one': 'رحلة واحدة طابقت حتى الآن',
+  'search.matchCount.two': 'رحلتان طابقتا حتى الآن',
+  'search.matchCount.few': '{count} رحلات طابقت حتى الآن',
+  'search.matchCount.many': '{count} رحلة طابقت حتى الآن',
+  'search.matchCount.other': '{count} رحلة طابقت حتى الآن',
+
+  // The admin preview: the contract between a template, its channels and the sentence a person reads.
+  'catalogue.title': 'معاينة قوالب التنبيهات',
+  'catalogue.subtitle':
+    'كل حدث، وقنواته الافتراضية، والجملة التي يراها الناس بالعربية والإنجليزية. النصّ يُصاغ بالدالة نفسها التي ترسل الرسائل، فلا يوجد نصّان لرسالة واحدة.',
+  'catalogue.caption': 'كل صف عقد: تغيير مفتاح هنا يغيّر ما يصل على الهاتف.',
+  'catalogue.priority': 'الأولوية',
+  'catalogue.count': '{count} حدثًا في الكتالوج',
+  'catalogue.timezone': 'ساعات الهدوء بتوقيت {timezone}',
+  'catalogue.staffOnly': 'هذه الصفحة لفريق المنصة فقط.',
+  'notifications.loading': 'جارٍ تحميل سجل التنبيهات…',
+  'notifications.loadFailed': 'تعذّر تحميل التنبيهات الآن. حاول مرة أخرى بعد لحظات.',
+  'notifications.priority.critical': 'حرج، يتخطّى ساعات الهدوء',
+  'notifications.priority.normal': 'عادي',
+  'notifications.priority.low': 'منخفض',
 
   // Phase 11 — saved searches, described in words rather than in JSON.
   'search.upTo': 'حتى {amount} ر.ي',
@@ -391,6 +441,8 @@ export const ar = {
   'search.alertsOn': 'تنبيهات مفعّلة',
   'search.alertsOff': 'تنبيهات متوقفة',
   'search.saveCurrent': 'احفظ هذا البحث',
+  'search.digestOption': 'رسالة واحدة يوميًا بدل رسالة لكل رحلة',
+  'search.digestBadge': 'ملخص يومي',
   'search.saved': 'حُفظ البحث، وسيصلك تنبيه عند كل رحلة جديدة تطابقه.',
   'search.remove': 'احذف البحث',
   'search.matches': '{count} رحلة طابقت حتى الآن',
@@ -475,6 +527,9 @@ export const ar = {
   'notifications.event.quota_threshold': 'حد الخطة',
   'notifications.event.subscription_expiring': 'اشتراك يقترب من الانتهاء',
   'notifications.event.verification_sla': 'توثيق متأخر',
+  'notifications.event.subscription_plan_changed': 'تغيّر الخطة',
+  'notifications.event.agent_cash_in_settled': 'تسوية توريد الوكيل',
+  'notifications.event.no_show_alert': 'حجوزات لم تُحسم بعد الإقلاع',
 
   // Phase 9 — payments. Amounts always carry their currency in the sentence, because a bare number in a
   // money screen is a number somebody will misread.
@@ -2170,6 +2225,54 @@ export const en: Record<TranslationKey, string> = {
     'Your trip {tripCode} ({origin} → {destination}) departs in {hours} hours. Your booking is {bookingCode}.',
   'notifications.verificationSla':
     'A verification request ({subjectType}) has been waiting for {ageHours} hours.',
+  'notifications.planChanged': 'Your plan moved from {from} to {to}, effective {effective}.',
+  'notifications.agentCashInSettled':
+    'Your cash-in of {amount} YER was settled; your balance is now {balance} YER.',
+  'notifications.noShowAlert':
+    'Trip {tripCode}: {count} of the bookings are still "accepted" {minutes} minutes after departure. Mark who boarded and who did not.',
+  'notifications.tripReminderTomorrow':
+    'Your trip {tripCode} is tomorrow: {origin} to {destination}, departing {departureAt}.',
+  'notifications.tripReminderSoon':
+    'Your trip {tripCode} leaves in two hours: {origin} to {destination}, departing {departureAt}.',
+  'notifications.tripReminderDeparting':
+    'Trip {tripCode} departs now from {origin} to {destination}.',
+
+  // English only inflects for one, but every category is written out so a missing form is a type error rather
+  // than a fallback that silently prints the wrong sentence.
+  'notifications.savedSearchDigest': 'New trips match your saved search.',
+  'notifications.savedSearchDigest.zero': 'No new trips match your saved search today.',
+  'notifications.savedSearchDigest.one': 'One new trip matches your saved search.',
+  'notifications.savedSearchDigest.two': '{count} new trips match your saved search.',
+  'notifications.savedSearchDigest.few': '{count} new trips match your saved search.',
+  'notifications.savedSearchDigest.many': '{count} new trips match your saved search.',
+  'notifications.savedSearchDigest.other': '{count} new trips match your saved search.',
+  'notifications.unread.zero': 'Nothing unread',
+  'notifications.unread.one': '1 unread',
+  'notifications.unread.two': '{count} unread',
+  'notifications.unread.few': '{count} unread',
+  'notifications.unread.many': '{count} unread',
+  'notifications.unread.other': '{count} unread',
+  'search.matchCount.zero': 'No matching trips yet',
+  'search.matchCount.one': '1 trip matched so far',
+  'search.matchCount.two': '{count} trips matched so far',
+  'search.matchCount.few': '{count} trips matched so far',
+  'search.matchCount.many': '{count} trips matched so far',
+  'search.matchCount.other': '{count} trips matched so far',
+
+  'catalogue.title': 'Notification template preview',
+  'catalogue.subtitle':
+    'Every event, its default channels and the sentence people read, in Arabic and English. The sentence is rendered by the same function that sends it, so there is never a second copy to drift.',
+  'catalogue.caption':
+    'Each row is a contract: changing a key here changes what arrives on the phone.',
+  'catalogue.priority': 'Priority',
+  'catalogue.count': '{count} events in the catalogue',
+  'catalogue.timezone': 'Quiet hours are in {timezone}',
+  'catalogue.staffOnly': 'This screen is for platform staff only.',
+  'notifications.loading': 'Loading the notification history…',
+  'notifications.loadFailed': 'The notifications could not be loaded. Try again in a moment.',
+  'notifications.priority.critical': 'Critical, bypasses quiet hours',
+  'notifications.priority.normal': 'Normal',
+  'notifications.priority.low': 'Low',
 
   // Phase 11 — saved searches, described in words rather than in JSON.
   'search.upTo': 'up to {amount} YER',
@@ -2182,6 +2285,8 @@ export const en: Record<TranslationKey, string> = {
   'search.alertsOn': 'Alerts on',
   'search.alertsOff': 'Alerts paused',
   'search.saveCurrent': 'Save this search',
+  'search.digestOption': 'One daily summary instead of a message per trip',
+  'search.digestBadge': 'Daily summary',
   'search.saved': 'Search saved. You will be told about each new trip that matches it.',
   'search.remove': 'Delete search',
   'search.matches': '{count} matching trips so far',
@@ -2267,6 +2372,9 @@ export const en: Record<TranslationKey, string> = {
   'notifications.event.quota_threshold': 'Plan limit',
   'notifications.event.subscription_expiring': 'Subscription ending',
   'notifications.event.verification_sla': 'Verification waiting',
+  'notifications.event.subscription_plan_changed': 'Plan changed',
+  'notifications.event.agent_cash_in_settled': 'Agent cash-in settled',
+  'notifications.event.no_show_alert': 'Bookings unresolved after departure',
 
   // Phase 9 — payments. Amounts always carry their currency in the sentence, because a bare number in a
   // money screen is a number somebody will misread.

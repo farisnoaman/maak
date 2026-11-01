@@ -33,6 +33,7 @@ export function SaveSearchControl({
 
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [digest, setDigest] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const hasPredicate =
@@ -57,6 +58,7 @@ export function SaveSearchControl({
       action: 'search.save',
       filters,
       notify: true,
+      digest,
     });
 
     setBusy(false);
@@ -77,9 +79,21 @@ export function SaveSearchControl({
           <Link href={`/${locale}/account/notifications`}>{t('search.savedTitle')}</Link>
         </p>
       ) : (
-        <Button variant="subtle" size="sm" onClick={save} loading={busy}>
-          {t('search.saveCurrent')}
-        </Button>
+        <>
+          <Button variant="subtle" size="sm" onClick={save} loading={busy}>
+            {t('search.saveCurrent')}
+          </Button>
+          {/* The choice between one message per trip and one a day belongs at the moment of saving, not in a
+              settings page the person has to find later. */}
+          <label className="save-search__digest">
+            <input
+              type="checkbox"
+              checked={digest}
+              onChange={(event) => setDigest(event.target.checked)}
+            />
+            {t('search.digestOption')}
+          </label>
+        </>
       )}
       {error ? (
         <p className="form-error" role="alert">

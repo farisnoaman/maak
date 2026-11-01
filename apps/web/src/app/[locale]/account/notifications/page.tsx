@@ -4,6 +4,7 @@ import {
   describeSavedSearch,
   isLocale,
   translate,
+  translateCount,
   type Locale,
   type TranslationKey,
 } from '@maak/core';
@@ -89,12 +90,17 @@ export default async function NotificationsPage({
                       <p>{search.label ?? describeSavedSearch(filters, {}, { locale })}</p>
                       <p className="form-hint">
                         {describeSavedSearch(filters, {}, { locale })} ·{' '}
-                        {t('search.matches', { count: search.matches })}
+                        {translateCount(locale, 'search.matchCount', search.matches)}
                       </p>
                     </div>
-                    <Badge tone={search.notify ? 'success' : 'neutral'}>
-                      {search.notify ? t('search.alertsOn') : t('search.alertsOff')}
-                    </Badge>
+                    <div className="saved-search__badges">
+                      {search.digest ? (
+                        <Badge tone="neutral">{t('search.digestBadge')}</Badge>
+                      ) : null}
+                      <Badge tone={search.notify ? 'success' : 'neutral'}>
+                        {search.notify ? t('search.alertsOn') : t('search.alertsOff')}
+                      </Badge>
+                    </div>
                   </li>
                 );
               })}

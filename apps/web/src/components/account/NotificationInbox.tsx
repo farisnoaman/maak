@@ -7,7 +7,9 @@ import {
   errorKey,
   notificationCommandSpec,
   notificationText,
+  splitBidi,
   translate,
+  translateCount,
   type Locale,
   type NotificationChannel,
   type NotificationDeliveryStatus,
@@ -27,6 +29,29 @@ const CHANNEL_LABEL: Record<NotificationChannel, TranslationKey> = {
   email: 'notifications.channel.email',
   whatsapp: 'notifications.channel.whatsapp',
 };
+
+/**
+ * A rendered sentence with its Latin runs isolated.
+ *
+ * «حجزك BK-3C9923 على الرحلة AD-TA-56DD» contains two codes; without `<bdi>` the browser is free to move the
+ * hyphens and digits, and an Arabic reader sees a mangled booking reference. The split comes from `@maak/core`
+ * so it is unit-tested rather than checked by eye in one direction.
+ */
+function MixedText({ text }: { readonly text: string }) {
+  const segments = splitBidi(text);
+  if (segments.every((segment) => !segment.latin)) return <>{text}</>;
+  return (
+    <>
+      {segments.map((segment, index) =>
+        segment.latin ? (
+          <bdi key={index}>{segment.text}</bdi>
+        ) : (
+          <span key={index}>{segment.text}</span>
+        ),
+      )}
+    </>
+  );
+}
 
 const STATUS_LABEL: Record<NotificationDeliveryStatus, TranslationKey> = {
   sent: 'notifications.status.sent',
@@ -96,8 +121,10 @@ export function NotificationInbox({
   return (
     <div className="notification-centre">
       <div className="panel-head">
-        <p className="form-hint num" aria-live="polite">
-          {t('notifications.unreadCount', { count: remaining })}
+        {/* The count sentence is Arabic, and Arabic has six forms of it. `translateCount` picks the one the
+            number asks for; the live region announces the change to a screen reader. */}
+        <p className="form-hint num" aria-live="polite" role="status">
+          {translateCount(locale, 'notifications.unread', remaining)}
         </p>
         <Button
           variant="subtle"
@@ -126,7 +153,15 @@ export function NotificationInbox({
             >
               <div className="notification__main">
                 <span aria-hidden="true">{row.readAt ? '○' : '●'}</span>
-                {row.link ? <Link href={localeHref(row.link)}>{text}</Link> : <span>{text}</span>}
+                {row.link ? (
+                  <Link href={localeHref(row.link)}>
+                    <MixedText text={text} />
+                  </Link>
+                ) : (
+                  <span>
+                    <MixedText text={text} />
+                  </span>
+                )}
               </div>
 
               <div className="notification__meta">

@@ -51,6 +51,12 @@ alter type public.notification_kind add value if not exists 'trip_reminder';
 alter type public.notification_kind add value if not exists 'quota_threshold';
 alter type public.notification_kind add value if not exists 'subscription_expiring';
 alter type public.notification_kind add value if not exists 'verification_sla';
+-- The three events §6.10 names that no earlier phase could send: a plan upgrade/downgrade (Phase 10 wrote it
+-- to `subscription_events` and told nobody), an agent's cash-in being settled (Phase 9 moved the float and told
+-- nobody), and the no-show window (Phase 4 could mark a no-show; nothing prompted anybody to).
+alter type public.notification_kind add value if not exists 'subscription_plan_changed';
+alter type public.notification_kind add value if not exists 'agent_cash_in_settled';
+alter type public.notification_kind add value if not exists 'no_show_alert';
 
 -- A new enum value cannot be used as a literal in the transaction that adds it, and the catalogue below
 -- seeds rows for the five events above. So the enum step commits on its own and the rest starts fresh.
@@ -113,7 +119,10 @@ insert into public.notification_events (kind, title_key, priority, default_chann
   ('trip_reminder', 'notifications.tripReminder', 'normal', '{in_app, push}'),
   ('quota_threshold', 'notifications.quotaWarning', 'normal', '{in_app, email}'),
   ('subscription_expiring', 'notifications.subscriptionExpiring7', 'critical', '{in_app, push, email}'),
-  ('verification_sla', 'notifications.verificationSla', 'low', '{in_app, email}')
+  ('verification_sla', 'notifications.verificationSla', 'low', '{in_app, email}'),
+  ('subscription_plan_changed', 'notifications.planChanged', 'normal', '{in_app, email}'),
+  ('agent_cash_in_settled', 'notifications.agentCashInSettled', 'normal', '{in_app, push}'),
+  ('no_show_alert', 'notifications.noShowAlert', 'normal', '{in_app, push, email}')
 on conflict (kind) do nothing;
 
 -- ---------------------------------------------------------------------------
@@ -238,6 +247,9 @@ create table public.saved_searches (
   -- Exactly the payload `search_public_trips` takes, so an alert is the same predicate as the screen.
   filters         jsonb not null,
   notify          boolean not null default true,
+  -- One summary a day instead of a message per trip. Off by default: the acceptance criterion is one alert per
+  -- new matching trip, and a digest is the option for somebody watching a corridor, not the default behaviour.
+  digest          boolean not null default false,
   -- md5 of the canonical filters: saving the same search twice is one search, not a duplicate that alerts
   -- twice for the same trip.
   fingerprint     text not null,
@@ -255,6 +267,9 @@ create table public.saved_search_matches (
   saved_search_id uuid not null references public.saved_searches (id) on delete cascade,
   trip_id         uuid not null references public.trips (id) on delete cascade,
   notified_at     timestamptz not null default now(),
+  -- Set when a digest has counted this match. Null means "not yet reported", which is what makes the digest
+  -- job idempotent without a second table.
+  digested_at     timestamptz,
   unique (saved_search_id, trip_id)
 );
 
@@ -262,6 +277,8 @@ comment on table public.saved_search_matches is
   'One row per (search, trip). The unique key is the whole "once per new trip, not per refresh" requirement: the matching job can run every minute and cannot send twice.';
 
 create index saved_search_matches_trip_idx on public.saved_search_matches (trip_id);
+create index saved_search_matches_pending_idx
+  on public.saved_search_matches (saved_search_id) where digested_at is null;
 
 commit;
 
@@ -1235,6 +1252,67 @@ $$;
  * Rejected rather than ignored: a typo'd key (`price_max`) that is silently dropped turns into an alert that
  * fires for every trip in the country, which teaches the user to switch alerts off.
  */
+create or replace function app.saved_search_escape(p_value text)
+returns text
+language sql
+immutable
+set search_path = ''
+as $$
+  select replace(
+           replace(replace(replace(replace(coalesce(p_value, ''), '%', '%25'), '&', '%26'),
+                   '=', '%3D'), '?', '%3F'), '#', '%23');
+$$;
+
+/**
+ * The filters as a query string, so an alert opens *the search*, not a trip in isolation.
+ *
+ * The trips page reads exactly these keys, so tapping "a new trip matches your search" lands on the same
+ * filtered list the person built — which is the delivery requirement ("deep links preserving filters") and
+ * also the honest thing: the search is what they asked to be told about.
+ *
+ * Values are escaped with `replace` rather than `urlencode` because the only free-text filter is `q`, and a
+ * query that can carry `&` or `=` unescaped is a query that can smuggle a second filter in.
+ */
+create or replace function app.saved_search_query(p_filters jsonb)
+returns text
+language plpgsql
+immutable
+set search_path = ''
+as $$
+declare
+  v_parts text[] := array[]::text[];
+  v_key text;
+  v_value jsonb;
+  v_item text;
+  v_text text;
+begin
+  if p_filters is null or jsonb_typeof(p_filters) <> 'object' then
+    return null;
+  end if;
+
+  for v_key, v_value in select * from jsonb_each(p_filters) loop
+    continue when v_value is null or v_value = 'null'::jsonb;
+
+    if jsonb_typeof(v_value) = 'array' then
+      for v_item in select e.value #>> '{}' from jsonb_array_elements(v_value) e loop
+        v_parts := v_parts || (v_key || '=' || app.saved_search_escape(v_item));
+      end loop;
+    elsif jsonb_typeof(v_value) = 'boolean' then
+      -- The page reads `direct=1`; jsonb holds `true`.
+      v_parts := v_parts || (v_key || '=' || case when v_value::text = 'true' then '1' else '0' end);
+    else
+      v_parts := v_parts || (v_key || '=' || app.saved_search_escape(v_value #>> '{}'));
+    end if;
+  end loop;
+
+  v_text := array_to_string(v_parts, '&');
+  if v_text = '' or v_text is null then
+    return null;
+  end if;
+  return v_text;
+end;
+$$;
+
 create or replace function app.saved_search_filters_valid(p_filters jsonb)
 returns boolean
 language sql
@@ -1266,6 +1344,7 @@ create or replace function public.cmd_save_search(
   p_filters jsonb,
   p_label text default null,
   p_notify boolean default true,
+  p_digest boolean default false,
   p_request_id text default null,
   p_ip inet default null
 )
@@ -1289,8 +1368,9 @@ begin
 
   v_fingerprint := md5(p_filters::text);
 
-  insert into public.saved_searches (user_id, label, filters, notify, fingerprint)
-  values (v_uid, nullif(btrim(coalesce(p_label, '')), ''), p_filters, coalesce(p_notify, true), v_fingerprint)
+  insert into public.saved_searches (user_id, label, filters, notify, digest, fingerprint)
+  values (v_uid, nullif(btrim(coalesce(p_label, '')), ''), p_filters, coalesce(p_notify, true),
+          coalesce(p_digest, false), v_fingerprint)
   on conflict (user_id, fingerprint) do nothing
   returning id into v_id;
 
@@ -1300,6 +1380,7 @@ begin
      where s.user_id = v_uid and s.fingerprint = v_fingerprint;
     update public.saved_searches s
        set notify = coalesce(p_notify, s.notify),
+           digest = coalesce(p_digest, s.digest),
            label = coalesce(nullif(btrim(coalesce(p_label, '')), ''), s.label),
            updated_at = now()
      where s.id = v_id;
@@ -1309,7 +1390,8 @@ begin
 
   perform app.write_audit(
     v_uid, 'search.saved', 'saved_search', v_id::text, null,
-    jsonb_build_object('filters', p_filters, 'notify', coalesce(p_notify, true), 'created', v_created),
+    jsonb_build_object('filters', p_filters, 'notify', coalesce(p_notify, true),
+                       'digest', coalesce(p_digest, false), 'created', v_created),
     null, p_request_id, p_ip
   );
 
@@ -1337,6 +1419,8 @@ begin
              'label', s.label,
              'filters', s.filters,
              'notify', s.notify,
+             'digest', s.digest,
+             'href', '/trips' || coalesce('?' || app.saved_search_query(s.filters), ''),
              'matches', (select count(*)::int from public.saved_search_matches m where m.saved_search_id = s.id),
              'lastMatchedAt', s.last_matched_at,
              'createdAt', s.created_at
@@ -1352,6 +1436,7 @@ create or replace function public.cmd_update_saved_search(
   p_id uuid,
   p_notify boolean default null,
   p_label text default null,
+  p_digest boolean default null,
   p_request_id text default null,
   p_ip inet default null
 )
@@ -1369,6 +1454,7 @@ begin
 
   update public.saved_searches s
      set notify = coalesce(p_notify, s.notify),
+         digest = coalesce(p_digest, s.digest),
          label = coalesce(nullif(btrim(coalesce(p_label, '')), ''), s.label),
          updated_at = now()
    where s.id = p_id and s.user_id = v_uid;
@@ -1450,7 +1536,7 @@ declare
   v_locale text;
 begin
   for v_search in
-    select s.id, s.user_id, s.filters, s.created_at,
+    select s.id, s.user_id, s.filters, s.digest, s.created_at,
            coalesce(s.last_matched_at, s.created_at) as since
       from public.saved_searches s
      where s.notify
@@ -1487,7 +1573,9 @@ begin
 
       if found then
         v_new := v_new + 1;
-        if (app.enqueue_notification(
+        -- A digest search still records the match (the digest job counts these rows) and still advances the
+        -- window below; it just does not send one message per trip.
+        if not v_search.digest and (app.enqueue_notification(
           v_search.user_id,
           'saved_search_match',
           'notifications.savedSearchMatch',
@@ -1499,7 +1587,9 @@ begin
             'price', v_trip.price_from_yer,
             'seats', v_trip.seats_available
           ),
-          '/trips/' || v_trip.code,
+          -- The search, not the trip: the filters are the thing the person asked to be told about, and this
+          -- URL is the one their own search box would produce.
+          '/trips' || coalesce('?' || app.saved_search_query(v_search.filters), ''),
           'search:' || v_search.id::text || ':' || v_trip.trip_id::text
         ) ->> 'created')::boolean then
           v_matches := v_matches + 1;
@@ -1528,8 +1618,7 @@ $$;
  */
 create or replace function public.cmd_send_trip_reminders(
   p_actor uuid,
-  p_hours integer default 24,
-  p_band interval default '1 hour'
+  p_bands text[] default null
 )
 returns jsonb
 language plpgsql
@@ -1537,51 +1626,322 @@ security definer
 set search_path = ''
 as $$
 declare
-  v_hours integer := least(greatest(coalesce(p_hours, 24), 1), 72);
-  v_center timestamptz := now() + make_interval(hours => v_hours);
+  -- "Trip in 2 h", "departure" and "tomorrow" are the same question with three different lead times, so they
+  -- are three bands of one job rather than three jobs that drift. A band is a window, not an instant: the job
+  -- can run every five minutes and neither skip a booking nor send twice (the dedupe key is per band).
+  v_bands text[] := coalesce(p_bands, array['tomorrow', 'soon', 'departure']);
+  v_band record;
   v_sent integer := 0;
   v_row record;
   v_locale text;
 begin
+  for v_band in
+    select b.key, b.hours, b.width, b.title_key
+      from (values
+        ('tomorrow',  24, interval '60 minutes', 'notifications.tripReminderTomorrow'),
+        ('soon',       2, interval '30 minutes', 'notifications.tripReminderSoon'),
+        ('departure',  0, interval '20 minutes', 'notifications.tripReminderDeparting')
+      ) as b(key, hours, width, title_key)
+     where b.key = any (v_bands)
+  loop
+    for v_row in
+      select b.id as booking_id, b.code as booking_code, b.passenger_id,
+             t.code as trip_code, t.departure_at,
+             t.origin_governorate_id, t.destination_governorate_id
+        from public.bookings b
+        join public.trips t on t.id = b.trip_id
+       where b.status = 'accepted'
+         and t.status in ('published', 'in_progress')
+         and t.departure_at between now() + make_interval(hours => v_band.hours) - (v_band.width / 2)
+                                and now() + make_interval(hours => v_band.hours) + (v_band.width / 2)
+         and not exists (
+           select 1 from public.notifications n
+            where n.user_id = b.passenger_id
+              and n.dedupe_key = 'trip:' || b.id::text || ':' || v_band.key
+         )
+    loop
+      select coalesce(p.preferred_language, 'ar') into v_locale
+        from public.profiles p where p.id = v_row.passenger_id;
+
+      if (app.enqueue_notification(
+        v_row.passenger_id,
+        'trip_reminder',
+        v_band.title_key,
+        jsonb_build_object(
+          'tripCode', v_row.trip_code,
+          'bookingCode', v_row.booking_code,
+          'band', v_band.key,
+          'origin', (select case when v_locale = 'ar' then g.name_ar else coalesce(g.name_en, g.name_ar) end
+                       from public.governorates g where g.id = v_row.origin_governorate_id),
+          'destination', (select case when v_locale = 'ar' then g.name_ar else coalesce(g.name_en, g.name_ar) end
+                            from public.governorates g where g.id = v_row.destination_governorate_id),
+          'departureAt', to_char(v_row.departure_at at time zone app.notification_timezone(), 'YYYY-MM-DD"T"HH24:MI')
+        ),
+        '/bookings/' || v_row.booking_code,
+        'trip:' || v_row.booking_id::text || ':' || v_band.key
+      ) ->> 'created')::boolean then
+        v_sent := v_sent + 1;
+      end if;
+    end loop;
+  end loop;
+
+  return jsonb_build_object('sent', v_sent, 'bands', to_jsonb(v_bands));
+end;
+$$;
+
+/**
+ * Who answers for an owner's money: the owner, or the people who run their company.
+ *
+ * Shared by the plan-change trigger, the agent notice and the no-show window so "tell the operator" means the
+ * same people everywhere. Returns an array rather than a row: a company with two managers gets two messages.
+ */
+create or replace function app.billing_recipients(p_owner_user uuid, p_owner_org uuid)
+returns uuid[]
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select coalesce(array_agg(distinct r.uid), array[]::uuid[])
+    from (
+      select p_owner_user as uid where p_owner_user is not null
+      union
+      select m.user_id
+        from public.organization_members m
+       where p_owner_org is not null
+         and m.org_id = p_owner_org
+         and m.status = 'active'
+         and m.role in ('owner', 'manager')
+         and m.user_id is not null
+    ) r;
+$$;
+
+/**
+ * The no-show window: a trip left, and people are still "accepted".
+ *
+ * Phase 4 gave staff `cmd_mark_no_show`; nothing ever asked them to use it. Forty-five minutes after departure
+ * the operator is told how many bookings on that trip are still accepted, once per trip per day. It goes to
+ * the operator, not the passenger — "you did not board" is a decision a person makes, not a guess a query
+ * makes.
+ */
+create or replace function public.cmd_notify_no_shows(
+  p_actor uuid,
+  p_grace interval default '45 minutes'
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_row record;
+  v_uid uuid;
+  v_sent integer := 0;
+  v_today text := (now() at time zone app.notification_timezone())::date::text;
+begin
   for v_row in
-    select b.id as booking_id, b.code as booking_code, b.passenger_id,
-           t.code as trip_code, t.departure_at, t.origin_governorate_id, t.destination_governorate_id
+    select t.id as trip_id, t.code as trip_code, t.owner_user_id, t.owner_org_id,
+           count(*)::int as pending,
+           floor(extract(epoch from (now() - t.departure_at)) / 60)::int as minutes
       from public.bookings b
       join public.trips t on t.id = b.trip_id
      where b.status = 'accepted'
-       and t.status in ('published', 'in_progress')
-       and t.departure_at between v_center - (p_band / 2) and v_center + (p_band / 2)
-       and not exists (
-         select 1 from public.notifications n
-          where n.user_id = b.passenger_id
-            and n.dedupe_key = 'trip:' || b.id::text || ':' || v_hours::text || 'h'
-       )
+       and t.status in ('in_progress', 'completed')
+       and t.departure_at < now() - p_grace
+       and t.departure_at > now() - interval '2 days'
+     group by t.id, t.code, t.owner_user_id, t.owner_org_id, t.departure_at
   loop
-    select coalesce(p.preferred_language, 'ar') into v_locale
-      from public.profiles p where p.id = v_row.passenger_id;
+    foreach v_uid in array app.billing_recipients(v_row.owner_user_id, v_row.owner_org_id) loop
+      if (app.enqueue_notification(
+        v_uid,
+        'no_show_alert',
+        'notifications.noShowAlert',
+        jsonb_build_object(
+          'tripCode', v_row.trip_code,
+          'count', v_row.pending,
+          'minutes', v_row.minutes
+        ),
+        '/operator/trips/' || v_row.trip_id::text,
+        'no-show:' || v_row.trip_id::text || ':' || v_today
+      ) ->> 'created')::boolean then
+        v_sent := v_sent + 1;
+      end if;
+    end loop;
+  end loop;
 
+  return jsonb_build_object('sent', v_sent);
+end;
+$$;
+
+/**
+ * One summary instead of a message per trip, for a search that asked for it.
+ *
+ * Matches are recorded by the matching job either way; this job turns the ones nobody has reported yet into a
+ * single message and stamps them. It only stamps what it actually sent, so matches that arrive after a digest
+ * went out today are counted tomorrow rather than swallowed.
+ */
+create or replace function public.cmd_digest_saved_searches(p_actor uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_search record;
+  v_sent integer := 0;
+  v_today text := (now() at time zone app.notification_timezone())::date::text;
+begin
+  for v_search in
+    select s.id, s.user_id, s.filters, s.label, count(*)::int as matches
+      from public.saved_searches s
+      join public.saved_search_matches m
+        on m.saved_search_id = s.id
+       and m.digested_at is null
+     where s.notify
+       and s.digest
+     group by s.id, s.user_id, s.filters, s.label
+     order by s.id
+  loop
     if (app.enqueue_notification(
-      v_row.passenger_id,
-      'trip_reminder',
-      'notifications.tripReminder',
-      jsonb_build_object(
-        'tripCode', v_row.trip_code,
-        'bookingCode', v_row.booking_code,
-        'hours', v_hours,
-        'origin', (select case when v_locale = 'ar' then g.name_ar else coalesce(g.name_en, g.name_ar) end
-                     from public.governorates g where g.id = v_row.origin_governorate_id),
-        'destination', (select case when v_locale = 'ar' then g.name_ar else coalesce(g.name_en, g.name_ar) end
-                          from public.governorates g where g.id = v_row.destination_governorate_id),
-        'departureAt', to_char(v_row.departure_at at time zone app.notification_timezone(), 'YYYY-MM-DD"T"HH24:MI')
-      ),
-      '/bookings/' || v_row.booking_code,
-      'trip:' || v_row.booking_id::text || ':' || v_hours::text || 'h'
+      v_search.user_id,
+      'saved_search_match',
+      'notifications.savedSearchDigest',
+      jsonb_build_object('count', v_search.matches, 'label', v_search.label),
+      '/trips' || coalesce('?' || app.saved_search_query(v_search.filters), ''),
+      'search-digest:' || v_search.id::text || ':' || v_today
     ) ->> 'created')::boolean then
       v_sent := v_sent + 1;
+
+      update public.saved_search_matches m
+         set digested_at = now()
+       where m.saved_search_id = v_search.id
+         and m.digested_at is null;
     end if;
   end loop;
 
   return jsonb_build_object('sent', v_sent);
+end;
+$$;
+
+/**
+ * The two events other phases wrote down and never announced.
+ *
+ * A trigger rather than a call inside `cmd_change_plan`: Phase 10's command already records the transition in
+ * `subscription_events`, and a second writer in that file would be a second place for the two to disagree.
+ * Every path that changes a plan writes that row, so the notification cannot be forgotten by a new one.
+ */
+create or replace function app.notify_plan_change()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_sub record;
+  v_uid uuid;
+begin
+  if new.kind <> 'plan_changed' then
+    return new;
+  end if;
+
+  select s.owner_user_id, s.owner_org_id into v_sub
+    from public.subscriptions s where s.id = new.subscription_id;
+
+  foreach v_uid in array app.billing_recipients(v_sub.owner_user_id, v_sub.owner_org_id) loop
+    perform app.enqueue_notification(
+      v_uid,
+      'subscription_plan_changed',
+      'notifications.planChanged',
+      jsonb_build_object(
+        'from', new.from_plan,
+        'to', new.to_plan,
+        'effective', to_char(new.created_at at time zone app.notification_timezone(), 'YYYY-MM-DD')
+      ),
+      '/operator/billing',
+      'plan:' || new.id::text
+    );
+  end loop;
+
+  return new;
+end;
+$$;
+
+create trigger subscription_events_notify_plan
+  after insert on public.subscription_events
+  for each row execute function app.notify_plan_change();
+
+/**
+ * "Your cash-in was settled." Phase 9 moved the float and left the agent to discover it on the statement.
+ */
+create or replace function app.notify_agent_settlement()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_user uuid;
+begin
+  if new.kind <> 'settlement' then
+    return new;
+  end if;
+
+  select a.user_id into v_user from public.agents a where a.id = new.agent_id;
+
+  perform app.enqueue_notification(
+    v_user,
+    'agent_cash_in_settled',
+    'notifications.agentCashInSettled',
+    jsonb_build_object('amount', new.amount_yer, 'balance', new.balance_after_yer),
+    '/account',
+    'agent-settlement:' || new.id::text
+  );
+
+  return new;
+end;
+$$;
+
+create trigger agent_transactions_notify_settlement
+  after insert on public.agent_transactions
+  for each row execute function app.notify_agent_settlement();
+
+/**
+ * The catalogue, for the admin preview screen: every event, its default channels and its priority.
+ *
+ * Staff only. The templates themselves are in the dictionary (one copy), so the preview renders the same keys
+ * the sender renders, with sample values — a preview that shows different text from the message is worse than
+ * no preview.
+ */
+create or replace function public.cmd_get_notification_catalogue(p_actor uuid)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  v_uid uuid := coalesce(p_actor, app.uid());
+begin
+  if v_uid is null then
+    raise exception 'UNAUTHENTICATED: missing actor' using errcode = '28000';
+  end if;
+  if not app.is_platform_staff(v_uid) then
+    raise exception 'FORBIDDEN: the catalogue preview is staff-only' using errcode = '42501';
+  end if;
+
+  return jsonb_build_object(
+    'timezone', app.notification_timezone(),
+    'items', (
+      select coalesce(jsonb_agg(jsonb_build_object(
+               'kind', e.kind,
+               'titleKey', e.title_key,
+               'priority', e.priority,
+               'channels', to_jsonb(e.default_channels),
+               'critical', e.priority = 'critical'
+             ) order by e.kind), '[]'::jsonb)
+        from public.notification_events e
+    )
+  );
 end;
 $$;
 
@@ -1786,7 +2146,7 @@ begin
           'subjectType', v_request.subject_type,
           'ageHours', floor(extract(epoch from (now() - v_request.created_at)) / 3600)::int
         ),
-        '/staff/verification',
+        '/staff/verifications',
         'verification-sla:' || v_request.id::text || ':' || v_day
       ) ->> 'created')::boolean then
         v_sent := v_sent + 1;
@@ -1907,6 +2267,11 @@ revoke all on function app.notification_backoff(integer) from public, anon, auth
 revoke all on function app.notification_max_attempts() from public, anon, authenticated;
 revoke all on function app.notification_timezone() from public, anon, authenticated;
 revoke all on function app.saved_search_filters_valid(jsonb) from public, anon, authenticated;
+revoke all on function app.saved_search_query(jsonb) from public, anon, authenticated;
+revoke all on function app.saved_search_escape(text) from public, anon, authenticated;
+revoke all on function app.billing_recipients(uuid, uuid) from public, anon, authenticated;
+revoke all on function app.notify_plan_change() from public, anon, authenticated;
+revoke all on function app.notify_agent_settlement() from public, anon, authenticated;
 
 do $$
 declare
@@ -1923,12 +2288,15 @@ begin
     'public.cmd_revoke_device_token(uuid, uuid, text, inet)',
     'public.cmd_list_notifications(uuid, integer, timestamptz)',
     'public.cmd_get_notification_health(uuid)',
-    'public.cmd_save_search(uuid, jsonb, text, boolean, text, inet)',
+    'public.cmd_save_search(uuid, jsonb, text, boolean, boolean, text, inet)',
     'public.cmd_list_saved_searches(uuid)',
-    'public.cmd_update_saved_search(uuid, uuid, boolean, text, text, inet)',
+    'public.cmd_update_saved_search(uuid, uuid, boolean, text, boolean, text, inet)',
     'public.cmd_delete_saved_search(uuid, uuid, text, inet)',
     'public.cmd_match_saved_searches(uuid, integer, integer)',
-    'public.cmd_send_trip_reminders(uuid, integer, interval)',
+    'public.cmd_send_trip_reminders(uuid, text[])',
+    'public.cmd_notify_no_shows(uuid, interval)',
+    'public.cmd_digest_saved_searches(uuid)',
+    'public.cmd_get_notification_catalogue(uuid)',
     'public.cmd_notify_quota_thresholds(uuid, text)',
     'public.cmd_notify_subscription_expiring(uuid)',
     'public.cmd_notify_pending_verifications(uuid, interval)',
@@ -1968,8 +2336,14 @@ comment on function public.cmd_record_notification_delivery(uuid, uuid, text, te
   'Worker: records the outcome and schedules the backoff. Five failures is dead, and dead is visible.';
 comment on function public.cmd_match_saved_searches(uuid, integer, integer) is
   'Job: alerts once per (search, trip). Safe to run every minute.';
-comment on function public.cmd_send_trip_reminders(uuid, integer, interval) is
-  'Job: the day-before reminder, in a band around the lead time so a slow scheduler leaves no gap.';
+comment on function public.cmd_send_trip_reminders(uuid, text[]) is
+  'Job: the 24 h, 2 h and departure reminders. Each band is a window, so a slow scheduler leaves no gap.';
+comment on function public.cmd_notify_no_shows(uuid, interval) is
+  'Job: tells the operator how many bookings are still accepted on a trip that has already left.';
+comment on function public.cmd_digest_saved_searches(uuid) is
+  'Job: one summary per digest search, built from matches nobody has reported yet.';
+comment on function public.cmd_get_notification_catalogue(uuid) is
+  'Staff: the event catalogue for the preview screen, so the preview renders the dictionary the sender uses.';
 comment on function public.cmd_notify_quota_thresholds(uuid, text) is
   'Job: 80% and 100% usage warnings, once per metric per threshold per month.';
 comment on function public.cmd_notify_subscription_expiring(uuid) is

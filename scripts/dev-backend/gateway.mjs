@@ -223,6 +223,7 @@ const NOTIFICATION_CAPABILITY = {
   'notifications.device.register': 'notification.preferences',
   'notifications.device.revoke': 'notification.preferences',
   'notifications.health': 'notification.health',
+  'notifications.catalogue': 'notification.catalogue',
   'search.save': 'notification.savedSearch',
   'search.list': 'notification.savedSearch',
   'search.update': 'notification.savedSearch',

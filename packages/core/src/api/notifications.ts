@@ -25,6 +25,9 @@ import type { Locale } from '../i18n/locale';
 import type { Resource } from '../domain/policy';
 import { compactTripFilters, tripFiltersSchema } from './trips';
 
+// Re-exported because every helper below takes one: a caller of the templates should not need a second import.
+export type { Locale };
+
 const uuid = z.string().uuid();
 
 /** Kept in step with the `notification_kind` enum after 00032. */
@@ -60,6 +63,10 @@ export const notificationKindSchema = z.enum([
   'quota_threshold',
   'subscription_expiring',
   'verification_sla',
+  // Added after the first pass: §6.10 named these and no earlier phase could send them.
+  'subscription_plan_changed',
+  'agent_cash_in_settled',
+  'no_show_alert',
 ]);
 
 export type NotificationKind = z.infer<typeof notificationKindSchema>;
@@ -160,6 +167,8 @@ export const saveSearchSchema = z.object({
     .transform((value) => (value == null || value === '' ? null : value))
     .optional(),
   notify: z.boolean().default(true),
+  /** One summary a day instead of a message per trip. Optional, because a client that does not care omits it. */
+  digest: z.boolean().optional(),
 });
 
 export const listSearchesSchema = z.object({
@@ -170,6 +179,7 @@ export const updateSearchSchema = z.object({
   action: z.literal('search.update'),
   id: uuid,
   notify: z.boolean().optional(),
+  digest: z.boolean().optional(),
   label: z
     .string()
     .trim()
@@ -212,15 +222,30 @@ export const notificationJobSchema = z.object({
   action: z.literal('notifications.job.run'),
   job: z.enum([
     'saved-searches',
+    'search-digest',
     'trip-reminders',
+    'no-shows',
     'quota',
     'expiring',
     'verification-sla',
     'retry',
   ]),
   limit: z.number().int().min(1).max(1000).default(200),
-  /** `trip-reminders` only: how far ahead the reminder looks. */
-  hours: z.number().int().min(1).max(72).default(24),
+  /**
+   * `trip-reminders` only. The three bands are the plan's three reminders: "tomorrow", "in 2 h" and
+   * "departing now". Omitted means all three, which is what the scheduler should ask for.
+   */
+  bands: z
+    .array(z.enum(['tomorrow', 'soon', 'departure']))
+    .min(1)
+    .max(3)
+    .nullish()
+    .transform((value) => (value == null ? null : value)),
+});
+
+/** Staff: the event catalogue behind the admin preview screen. */
+export const notificationCatalogueSchema = z.object({
+  action: z.literal('notifications.catalogue'),
 });
 
 export const notificationActionSchema = z.discriminatedUnion('action', [
@@ -240,6 +265,7 @@ export const notificationActionSchema = z.discriminatedUnion('action', [
   claimNotificationsSchema,
   recordDeliverySchema,
   notificationJobSchema,
+  notificationCatalogueSchema,
 ]);
 
 export type NotificationAction = z.infer<typeof notificationActionSchema>;
@@ -328,6 +354,7 @@ export function notificationCommandArgs(
           p_filters: compactTripFilters(input.filters),
           p_label: input.label,
           p_notify: input.notify,
+          p_digest: input.digest ?? false,
           ...audit,
         },
       };
@@ -341,6 +368,7 @@ export function notificationCommandArgs(
           p_id: input.id,
           p_notify: input.notify ?? null,
           p_label: input.label,
+          p_digest: input.digest ?? null,
           ...audit,
         },
       };
@@ -366,6 +394,8 @@ export function notificationCommandArgs(
           ...audit,
         },
       };
+    case 'notifications.catalogue':
+      return { fn: 'cmd_get_notification_catalogue', args: { p_actor: actorId } };
     case 'notifications.job.run':
       return jobArgs(input.job, input, actorId);
   }
@@ -382,10 +412,17 @@ function jobArgs(
         fn: 'cmd_match_saved_searches',
         args: { p_actor: actorId, p_limit: input.limit, p_per_search: 3 },
       };
+    case 'search-digest':
+      return { fn: 'cmd_digest_saved_searches', args: { p_actor: actorId } };
     case 'trip-reminders':
       return {
         fn: 'cmd_send_trip_reminders',
-        args: { p_actor: actorId, p_hours: input.hours, p_band: '1 hour' },
+        args: { p_actor: actorId, p_bands: input.bands },
+      };
+    case 'no-shows':
+      return {
+        fn: 'cmd_notify_no_shows',
+        args: { p_actor: actorId, p_grace: '45 minutes' },
       };
     case 'quota':
       return { fn: 'cmd_notify_quota_thresholds', args: { p_actor: actorId, p_period: null } };
@@ -421,6 +458,11 @@ export interface NotificationLike {
 const PARAM_LABELS: Record<string, { prefix: string; fallback: TranslationKey }> = {
   metric: { prefix: 'metric.', fallback: 'metric.other' },
   subjectType: { prefix: 'staff.type.', fallback: 'staff.type.individual' },
+  // A plan code in the middle of a sentence is a leak, exactly like a metric name: `pro` is not a word.
+  plan: { prefix: 'plan.', fallback: 'plan.basic' },
+  from: { prefix: 'plan.', fallback: 'plan.basic' },
+  to: { prefix: 'plan.', fallback: 'plan.basic' },
+  status: { prefix: 'sub.status.', fallback: 'sub.status.active' },
 };
 
 /**
@@ -451,7 +493,176 @@ export function notificationText(
     params[name] = value;
   }
 
-  return translate(options.fallbackLocale ?? locale, item.titleKey as TranslationKey, params);
+  const target = options.fallbackLocale ?? locale;
+  const baseKey = item.titleKey as TranslationKey;
+  const count = typeof params.count === 'number' ? params.count : Number(params.count);
+
+  // A count-bearing event carries one base key and six forms (`.zero` … `.other`): Arabic needs all six, and
+  // the template with the right agreement is chosen here so no call site has to remember the rules.
+  if (Number.isFinite(count)) {
+    for (const key of [
+      `${baseKey}.${pluralCategory(target, count)}`,
+      `${baseKey}.other`,
+    ] as const) {
+      const text = translate(target, key as TranslationKey, params);
+      if (text !== key) return text;
+    }
+  }
+
+  return translate(target, baseKey, params);
+}
+
+// ---------------------------------------------------------------------------------------------
+// Plurals
+// ---------------------------------------------------------------------------------------------
+
+export type PluralCategory = 'zero' | 'one' | 'two' | 'few' | 'many' | 'other';
+
+/**
+ * CLDR plural categories, written out instead of imported.
+ *
+ * `Intl.PluralRules` exists in Node and in browsers but not reliably in Hermes (the engine behind the mobile
+ * app), and the rules for the two locales this product ships are six lines. A hand-written rule that a test can
+ * pin beats a platform feature that silently falls back to English in the app.
+ */
+export function pluralCategory(locale: Locale, count: number): PluralCategory {
+  const n = Math.abs(Math.trunc(count));
+  if (locale === 'ar') {
+    if (n === 0) return 'zero';
+    if (n === 1) return 'one';
+    if (n === 2) return 'two';
+    const mod100 = n % 100;
+    if (mod100 >= 3 && mod100 <= 10) return 'few';
+    if (mod100 >= 11 && mod100 <= 99) return 'many';
+    return 'other';
+  }
+  return n === 1 ? 'one' : 'other';
+}
+
+/**
+ * A count-bearing string, in the form its number asks for: `translateCount('ar', 'notifications.unread', 2)`.
+ *
+ * Falls back to `<key>.other` and then to the bare key, so a string with no plural forms still renders.
+ */
+export function translateCount(
+  locale: Locale,
+  /** The base key; the caller may pass one that is not a literal (`notifications.unread`), hence `string`. */
+  baseKey: string,
+  count: number,
+  vars: Record<string, string | number> = {},
+): string {
+  const params = { count, ...vars };
+  for (const key of [`${baseKey}.${pluralCategory(locale, count)}`, `${baseKey}.other`]) {
+    const text = translate(locale, key as TranslationKey, params);
+    if (text !== key) return text;
+  }
+  return translate(locale, baseKey as TranslationKey, params);
+}
+
+// ---------------------------------------------------------------------------------------------
+// Bidi
+// ---------------------------------------------------------------------------------------------
+
+export interface TextSegment {
+  readonly text: string;
+  /** True for a run that is Latin/digits — a trip code, a price, a date — inside Arabic prose. */
+  readonly latin: boolean;
+}
+
+/**
+ * Splits a rendered sentence into Arabic and Latin runs.
+ *
+ * `BK-3C9923` inside an Arabic sentence is bidirectionally ambiguous: without isolation the hyphen and the
+ * digits can reorder, so «حجزك BK-3C9923 على…» can render with the code's tail in the wrong place. The web
+ * renderer wraps the Latin runs in `<bdi>`; this function is the split, so the decision is testable without a
+ * browser.
+ */
+export function splitBidi(text: string): readonly TextSegment[] {
+  const segments: TextSegment[] = [];
+  const pattern = /[A-Za-z0-9][A-Za-z0-9\-_/:.,%+()#]*/g;
+  let cursor = 0;
+
+  for (const match of text.matchAll(pattern)) {
+    const start = match.index ?? 0;
+    // A full stop after a code belongs to the sentence, not to the code: isolating it would move the Arabic
+    // sentence's punctuation to the end of a left-to-right run.
+    const trailing = /[.,:;]+$/.exec(match[0])?.[0] ?? '';
+    const run = match[0].slice(0, match[0].length - trailing.length);
+    if (start > cursor) segments.push({ text: text.slice(cursor, start), latin: false });
+    if (run !== '') segments.push({ text: run, latin: true });
+    if (trailing !== '') segments.push({ text: trailing, latin: false });
+    cursor = start + match[0].length;
+  }
+
+  if (cursor < text.length) segments.push({ text: text.slice(cursor), latin: false });
+  return segments;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Preview samples
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * One realistic payload per event, for the admin preview and for the placeholder test.
+ *
+ * This is the "template registry" in the form that cannot rot: a template whose placeholders are not covered
+ * here fails a test, so an event cannot ship with `{reason}` in it and no idea where `reason` comes from.
+ */
+export const SAMPLE_PARAMS: Record<NotificationKind, Readonly<Record<string, string | number>>> = {
+  verification_submitted: {},
+  verification_approved: {},
+  verification_rejected: {},
+  verification_invalidated: {},
+  member_invited: {},
+  member_joined: {},
+  member_removed: {},
+  role_granted: {},
+  role_revoked: {},
+  booking_requested: { code: 'BK-3C9923', tripCode: 'AD-SA-2988', seats: 2 },
+  booking_accepted: { code: 'BK-3C9923', tripCode: 'AD-SA-2988' },
+  booking_rejected: { code: 'BK-3C9923', tripCode: 'AD-SA-2988', reason: 'المقاعد لم تعد متاحة' },
+  booking_cancelled: { code: 'BK-3C9923', tripCode: 'AD-SA-2988' },
+  vehicle_maintenance_due: { plate: 'عدن 12-345', due: '2026-11-20' },
+  vehicle_maintenance_overdue: { plate: 'عدن 12-345', due: '2026-10-30' },
+  vehicle_fuel_anomaly: { plate: 'عدن 12-345', value: '18,500', baseline: '9,200' },
+  payment_submitted: { amount: '2,500', code: 'BK-3C9923' },
+  payment_confirmed: { amount: '2,500', code: 'BK-3C9923' },
+  payment_rejected: { code: 'BK-3C9923', reason: 'المبلغ لا يطابق الإيصال' },
+  refund_decided: { amount: '2,500', code: 'BK-3C9923' },
+  payout_decided: { code: 'PO-EE386F', amount: '48,000' },
+  invoice_issued: { code: 'INV-684967', amount: '7,500' },
+  subscription_activated: { plan: 'pro', status: 'active' },
+  subscription_past_due: { plan: 'pro' },
+  subscription_expired: { plan: 'business' },
+  finance_alert: { failed: 2 },
+  saved_search_match: {
+    origin: 'عدن',
+    destination: 'صنعاء',
+    departureAt: '2026-11-06T07:30',
+    price: '4,500',
+    seats: 3,
+    tripCode: 'AD-SA-2988',
+  },
+  trip_reminder: {
+    tripCode: 'AD-SA-2988',
+    bookingCode: 'BK-3C9923',
+    band: 'tomorrow',
+    origin: 'عدن',
+    destination: 'صنعاء',
+    departureAt: '2026-11-06T07:30',
+  },
+  quota_threshold: { percent: 80, metric: 'finance_exports', used: 8, limit: 10 },
+  subscription_expiring: { endsAt: '2026-11-08' },
+  verification_sla: { subjectType: 'organization', ageHours: 52 },
+  subscription_plan_changed: { from: 'pro', to: 'business', effective: '2026-11-01' },
+  agent_cash_in_settled: { amount: '120,000', balance: '35,000' },
+  no_show_alert: { tripCode: 'AD-SA-2988', count: 3, minutes: 45 },
+};
+
+/** The sample payload for one event, or an empty object for a kind the client does not know yet. */
+export function sampleParamsFor(kind: NotificationKind | string): Record<string, string | number> {
+  const samples = SAMPLE_PARAMS[kind as NotificationKind];
+  return samples ? { ...samples } : {};
 }
 
 // ---------------------------------------------------------------------------------------------

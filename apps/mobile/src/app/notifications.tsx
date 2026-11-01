@@ -9,6 +9,7 @@ import {
   notificationCommandSpec,
   notificationText,
   translate,
+  translateCount,
   type Locale,
   type TranslationKey,
 } from '@maak/core';
@@ -114,7 +115,9 @@ export default function NotificationsScreen() {
       >
         <Text style={styles.link}>{t('notifications.preferencesTitle')}</Text>
       </Pressable>
-      <Text style={[styles.hint, align]}>{t('notifications.unreadCount', { count: unread })}</Text>
+      <Text style={[styles.hint, align]}>
+        {translateCount(locale, 'notifications.unread', unread)}
+      </Text>
 
       {loading ? <ActivityIndicator /> : null}
 
