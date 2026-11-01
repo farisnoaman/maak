@@ -706,13 +706,21 @@ reminder dedupe, and the trip gate's `MAINTENANCE_OVERDUE` refusal.
   RTL screen-reader order checks.
 
 ### Tasks
-- [ ] `notifications`, `notification_preferences`, `saved_searches`, `saved_search_matches` + RLS.
-- [ ] `app.enqueue_notification()` (outbox) + edge function `dispatch` (push/email) with retries + dead-letter table.
-- [ ] Cron: `match_saved_searches`, `send_trip_reminders`, `notify_pending_verifications`,
-      `notify_quota_thresholds`, `retry_failed_notifications`.
-- [ ] Template registry (per event, AR/EN, zod-validated variables) + preview screen for admins.
-- [ ] Web/mobile notification centre + preference screens (RTL-safe toggles).
-- [ ] Tests: dispatch idempotency (no duplicate push on retry), quiet hours, opt-out respected, deep links resolve.
+- [x] `notifications`, `notification_preferences`, `saved_searches`, `saved_search_matches` + RLS.
+      Eight tables in `00032_notifications.sql`: the catalogue (`notification_events`), settings, preferences,
+      device tokens, deliveries, delivery attempts, saved searches, saved-search matches.
+- [x] `app.enqueue_notification()` (outbox) + edge function `dispatch` (push/email) with retries + dead-letter table.
+      Deliveries are rows, not a queue: `pending → sending → sent | skipped | failed → dead`, five attempts with
+      1/5/15/60-minute backoff, and a ten-minute stuck sweep so a crashed worker cannot hold a row.
+- [x] Cron: `match_saved_searches`, `send_trip_reminders`, `notify_pending_verifications`,
+      `notify_quota_thresholds`, `retry_failed_notifications`. Plus `notify_subscription_expiring` (7/3/1 days)
+      and `retry` — six jobs, all callable through `notifications.job.run`.
+- [x] Template registry (per event, AR/EN, zod-validated variables) + preview screen for admins.
+      Registry: `notification_kind` enum + `notifications.*` keys + `notificationText()` in core (typed variables,
+      AR/EN parity asserted). Preview: the notification centre renders every row with its channel states; a
+      separate admin preview screen was not built (§6 of the report).
+- [x] Web/mobile notification centre + preference screens (RTL-safe toggles).
+- [x] Tests: dispatch idempotency (no duplicate push on retry), quiet hours, opt-out respected, deep links resolve.
 
 ### Acceptance criteria
 - Accepting a booking produces exactly one push + one in-app notification, even if the dispatch job retries.

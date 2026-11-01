@@ -28,6 +28,7 @@ export * from './api/fleet';
 export * from './api/trips';
 export * from './api/bookings';
 export * from './api/finance';
+export * from './api/notifications';
 export * from './api/payments';
 export * from './api/quota';
 export * from './api/geography';

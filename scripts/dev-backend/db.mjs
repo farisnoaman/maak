@@ -1049,11 +1049,24 @@ async function grantDemoScope(client) {
       and not exists (select 1 from public.places where name_ar = 'نقطة تجمع الشارع الخامس')
   `);
 
-  // Notifications for the admin, so the account screen shows a real list.
+  // A registered device, so "push" is a real channel in the demo instead of a skip: the notification centre
+  // shows the decision per channel, and a demo where every push reads "no device" teaches the wrong thing.
   await client.query(`
-    insert into public.notifications (user_id, kind, title_key, params, link)
-    select '11111111-1111-4111-8111-111111111111', 'verification_submitted',
-           'notifications.placePending', jsonb_build_object('name', 'نقطة تجمع الشارع الخامس'), '/admin/places'
+    insert into public.device_tokens (user_id, platform, token)
+    select '11111111-1111-4111-8111-111111111111', 'android', 'ExponentPushToken[maak-demo-admin]'
+    where not exists (
+      select 1 from public.device_tokens where token = 'ExponentPushToken[maak-demo-admin]'
+    )
+  `);
+
+  // The seeded notification goes through the same helper every call site uses (Phase 11), so it arrives with
+  // its delivery decisions instead of being a row with no trail.
+  await client.query(`
+    select app.enqueue_notification(
+      '11111111-1111-4111-8111-111111111111', 'verification_submitted',
+      'notifications.placePending', jsonb_build_object('name', 'نقطة تجمع الشارع الخامس'),
+      '/admin/places', 'seed:place-pending', null
+    )
     where not exists (
       select 1 from public.notifications
       where user_id = '11111111-1111-4111-8111-111111111111'

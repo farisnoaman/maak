@@ -215,6 +215,7 @@ const GATEWAY_MAP = {
   fleet: 'FLEET_CAPABILITY',
   geography: 'GEO_CAPABILITY',
   payments: 'PAYMENTS_CAPABILITY',
+  dispatch: 'NOTIFICATION_CAPABILITY',
   trips: 'TRIPS_CAPABILITY',
 };
 const gatewaySource = await readFile(join(root, 'scripts', 'dev-backend', 'gateway.mjs'), 'utf8');

@@ -108,6 +108,11 @@ export type Capability =
   | 'maintenance.complete'
   | 'maintenance.view'
   | 'fleet.settings'
+  // Phase 11 — the platform telling people things.
+  | 'notification.preferences'
+  | 'notification.savedSearch'
+  | 'notification.dispatch'
+  | 'notification.health'
   // Phase 10 — money, plans and the books.
   | 'expense.record'
   | 'expense.void'
@@ -151,6 +156,14 @@ const RULES: Record<Capability, Rule> = {
   'verification.decide': { roles: [...STAFF] },
   'role.manage': { roles: ['platform_admin'] },
   'notification.read': { roles: AUTHENTICATED },
+  // Phase 11. Everyone may choose their own channels and quiet hours; these are their own rows, and the
+  // command takes the user from the session rather than from the payload.
+  'notification.preferences': { roles: AUTHENTICATED },
+  'notification.savedSearch': { roles: AUTHENTICATED },
+  // The worker and the support view. `dispatch` is the cron's capability: it reads other people's
+  // notifications because it is the thing that delivers them, which is why it is staff-only.
+  'notification.dispatch': { roles: STAFF },
+  'notification.health': { roles: FINANCE },
 
   'trip.browse': {
     roles: [

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import {
   errorKey,
-  identityCommandSpec,
+  notificationCommandSpec,
   translate,
   type Locale,
   type TranslationKey,
@@ -64,7 +64,12 @@ export function NotificationPanel({
     }
     setBusy(true);
     setError(null);
-    const result = await client.call(identityCommandSpec, { action: 'notification.read' });
+    // `ids: null` means "everything I have not read yet", which is what the button promises. The
+    // command lives in the notifications edge function now (Phase 11), not the identity one.
+    const result = await client.call(notificationCommandSpec, {
+      action: 'notifications.read',
+      ids: null,
+    });
     setBusy(false);
     if (!result.ok) {
       setError(t(errorKey(result.error.code)));

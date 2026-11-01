@@ -30,7 +30,9 @@
     "check:responsive": "node scripts/check-responsive.mjs",
     "sql:check": "node scripts/sql-check.mjs",
     "check:all": "npm run check:guards && npm run check:responsive && npm run lint && npm run format:check && npm run typecheck && npm test && npm run test:coverage && npm run db:types:check && npm run check:functions && npm run sql:check",
-    "ci:install": "node scripts/install-ci.mjs"
+    "ci:install": "node scripts/install-ci.mjs",
+    "notify": "node scripts/notify-worker.mjs --once",
+    "notify:check": "node scripts/notify-worker.mjs --check"
   },
   "devDependencies": {
     "@embedded-postgres/linux-x64": "^17.10.0-beta.17",

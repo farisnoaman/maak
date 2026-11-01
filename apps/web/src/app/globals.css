@@ -4581,3 +4581,155 @@ a.booking-card__code:hover {
     max-inline-size: 52rem;
   }
 }
+
+/* -------------------------------------------------------------------------------------------
+ * Phase 11 — the notification centre and its preferences
+ *
+ * The inbox is a list of decisions, so each row carries its own meta line: event label, date, and the badge
+ * per channel. Nothing here colours a *skipped* delivery red — the user asked for it, and a warning tone on
+ * a choice teaches people to distrust the colour.
+ * ----------------------------------------------------------------------------------------- */
+
+.notification-centre .panel-head {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.notification__main {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+  min-width: 0;
+  flex: 1 1 22rem;
+}
+
+.notification__meta {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.notification__channels {
+  display: flex;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.preferences {
+  display: grid;
+  gap: var(--space-6);
+  margin-block-start: var(--space-5);
+}
+
+.preferences__block {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--line-200, #eaeaea);
+  border-radius: var(--radius-md);
+  background: #fff;
+}
+
+.preferences__block h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.preferences__quiet {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  align-items: end;
+}
+
+.preferences__actions {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+
+.preferences__table th[scope='row'] {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  font-weight: 500;
+  text-align: start;
+}
+
+.preferences__table td {
+  text-align: center;
+  vertical-align: middle;
+}
+
+/* A switch that is a switch: 44px of tappable row, not a 13px checkbox. */
+.toggle {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+  min-block-size: var(--tap-target, 44px);
+  padding-inline: var(--space-1);
+  cursor: pointer;
+}
+
+.toggle input {
+  inline-size: 1.15rem;
+  block-size: 1.15rem;
+  accent-color: var(--brand-600, #0f766e);
+}
+
+.saved-searches {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.saved-search {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  padding: var(--space-3);
+  border: 1px solid var(--line-200, #eaeaea);
+  border-radius: var(--radius-md);
+  background: #fff;
+}
+
+.saved-search p {
+  margin: 0;
+}
+
+.save-search {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  flex-wrap: wrap;
+  margin-block-start: var(--space-3);
+}
+
+/* A phone gets one column of meta, under the sentence, because two columns of badges in 360px is a wedge. */
+@media (max-width: 640px) {
+  .notification {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+
+  .notification__meta {
+    justify-content: flex-start;
+  }
+
+  .preferences__table th[scope='row'] {
+    min-inline-size: 9rem;
+  }
+}
