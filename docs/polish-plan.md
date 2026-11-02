@@ -47,7 +47,7 @@ questions in the order they ask them.**
 | 2 | Header + footer | 8 nav links including *المركبات* and *دليل المكوّنات*; no footer anywhere but home | `[x]` trimmed nav, shared `SiteFooter` |
 | 3 | Trips list (`/trips`) | Strong already (filters, keyset paging, facets) — but nothing showed *what* was filtering, sort was hidden in the panel, and the "no database" banner appeared over real data | `[x]` — visuals in §13 |
 | 4 | Trip detail (`/trips/[code]`) | The fare was the twelfth row of a table, below the luggage allowance; the reserve button was at the very bottom | `[x]` — visuals in §13 |
-| 5 | Booking + pay (`/book`, `/pay`) | Two flows that work; the pay screen is the one people screenshot when it goes wrong | `[ ]` — next |
+| 5 | Booking + pay (`/book`, `/pay`) | Two flows that work; the pay screen is the one people screenshot when it goes wrong | `[x]` — §15 |
 | 6 | Account (`/account`) | Lists are correct, hierarchy is flat — "next departure" should be the first thing | `[ ]` |
 | 7 | Auth (`/auth/*`) | Fine, but the sign-in form is the last place a person should meet jargon | `[ ]` |
 | 8 | Operator console | Dense tables are right for the job; the **overview** answers nothing at a glance | `[ ]` |
@@ -368,3 +368,52 @@ and the itinerary reads `عدن — Departs · Wed 4 Nov · 07:24`, `07:24 · YE
 **Not done here** — a driver photo (there is none in the schema, and an operator-uploaded portrait of a driver is a
 privacy decision for the owner, not a layout decision), and showing the driver's phone number (that belongs behind a
 confirmed booking, not on a public page).
+
+## 15. Booking and pay
+
+Two flows that worked and read as forms. Both were single columns of inputs whose only context was a code in the
+heading.
+
+**Booking (`/trips/[code]/book`).** A passenger arrives here from a search result or a shared link, and the page asked
+them to remember which trip, which day and which vehicle: the heading carried `BK-…`-style codes and nothing else.
+
+- **Fields on one side, the ticket on the other.** From 940px the summary is a sticky panel; on a phone it follows the
+  fields, which puts the price and the button exactly where a thumb arrives at the end of the form.
+- **The ticket restates the trip**: route, date and time, the vehicle, the driver's first name, and the seats in the
+  vehicle — the facts the passenger agreed to when they opened the page. It then shows the live breakdown and the
+  total on the display scale, with the reserve button under it.
+- **Seats are a stepper**, two 44px buttons and a number, not a `<input type="number">` with spinner arrows a thumb
+  cannot hit; the count is an `<output aria-live>` so a screen reader hears the change.
+- **Getting off is a list of the trip's own stops**, each with the clock time and the fare from the start, instead of a
+  `<select>` — a dropdown hides the fare and the arrival time of every option but the chosen one, which is exactly the
+  comparison being made.
+- **Fields are grouped**: *Who's travelling* and *Contact details*, with a rule between them.
+- **The confirmation panel** puts the booking code in a dashed box at display size in a monospace face, `user-select:
+  all`: it is the one thing they will be asked for at the desk, and it gets read out, copied, or typed by somebody else.
+
+**Pay (`/pay/[intent]`).** It was one card of `<dl>` rows with the amount in the middle of them.
+
+- **A page, not a card**: header band (title, status badge) → amount → where the money goes.
+- **The amount is the size of the thing it is** (`--text-3xl`), with booking, method and reference under a rule. Its
+  label changes with the state: *Amount due* while it is owed, *Amount paid* once it is confirmed — and the "transfer
+  it, then attach the receipt" subtitle only appears on a payment that is waiting for one.
+- **The account number is large, monospaced and direction-locked** (`dir="ltr"`), because it is read aloud and typed
+  into another app by somebody who is not looking at this screen.
+- **Progress is three steps, not a status word**: *Payment requested → Send the receipt → The company confirms*, done
+  / current / todo, with `aria-current="step"` on the one that is waiting. "Waiting for confirmation" is accurate and
+  tells a passenger nothing about whether *they* still have to do something, which is the only question the screen
+  exists to answer. A rejected payment turns its own step red.
+- Instructions moved to the side column with the progress, so the phone order is amount → account → upload, which is
+  the order of the job being done in a shop.
+
+**Verified** — `check:all` ✓ (676 tests ×2, 46 migrations, pgTAP, guards 32/185/46/135), `check:responsive` ✓ (74 media
+queries), a11y ✓ over `/trips*` (29 routes, including every discovered `/book` page). Both screens were rendered as a
+signed-in passenger in both locales: the booking page shows one `.booking-layout`, two grouped sections, one stepper,
+four stop options with times, and a summary carrying `Aden → Sana'a · Wed, 4 Nov · 07:24 · Toyota Hiace 2019 · خالد ·
+14 seats in the vehicle · YER 5,000`; the payment page was rendered in **both** states — confirmed, and
+`awaiting_proof` after temporarily flipping the dev row (then restored) — showing the upload form and the step states
+`done / current / todo`.
+
+**Gap, stated plainly**: `/pay/[intent]` is not in the a11y sweep's route list, because the route needs a real intent id
+and the seed creates them with random ids. It was checked by rendering both states, not by the automated sweep. Adding
+it needs the sweep to discover a payment link for the payer, the way it already discovers trip codes.

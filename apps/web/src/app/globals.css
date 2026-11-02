@@ -1874,6 +1874,11 @@ a {
   color: var(--danger-700, #8c1d1d);
 }
 
+.ui-alert--success {
+  background: var(--brand-50);
+  color: var(--brand-700);
+}
+
 .ui-alert--warning {
   background: var(--surface-muted);
   color: var(--ink-700, #3b4149);
@@ -4215,24 +4220,51 @@ input[type='file']::file-selector-button {
 
 .booking-done {
   display: grid;
+  justify-items: start;
   gap: var(--space-3);
   max-inline-size: 34rem;
-  margin-block-start: var(--space-5);
-  padding: var(--space-5);
+  margin-block-start: var(--space-6);
+  padding: var(--space-6);
   border: 1px solid var(--surface-sunken);
-  border-block-start: 4px solid var(--state-success);
+  border-block-start: 3px solid var(--state-success);
   border-radius: var(--radius-lg);
   background: var(--surface-base);
-  box-shadow: var(--shadow-sm);
+}
+
+.booking-done__mark {
+  display: grid;
+  place-items: center;
+  inline-size: 44px;
+  block-size: 44px;
+  border-radius: var(--radius-pill);
+  background: var(--brand-100);
+  color: var(--brand-700);
+}
+
+.booking-done h2 {
+  font-size: var(--text-lg);
+}
+
+.booking-done__note {
+  color: var(--ink-600);
+  font-size: var(--text-sm);
 }
 
 .booking-done__code {
-  font-size: 1.5rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  /* The one thing they will be asked for at the desk. Boxed, monospaced and selectable, because it gets read out,
+     copied into a message, or typed by somebody else. */
   margin: 0;
-  /* A reference number, not a word: stays readable in either direction. */
+  padding: var(--space-3) var(--space-4);
+  border: 1px dashed var(--brand-300);
+  border-radius: var(--radius-md);
+  background: var(--brand-50);
+  color: var(--brand-900);
+  font-family: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, monospace;
+  font-size: var(--text-lg);
+  font-weight: 700;
+  letter-spacing: 0.1em;
   font-variant-numeric: tabular-nums;
+  user-select: all;
 }
 
 .booking-list {
@@ -4319,6 +4351,302 @@ a.booking-card__code:hover {
 /* The booking page's own heading: the back link already separates it from the header. */
 .booking-page h1 {
   margin-block: 0 var(--space-2);
+}
+
+/* What is being booked, under the title: the route and the departure, because the heading can only carry the code. */
+.booking-route {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-md);
+  font-weight: 700;
+  color: var(--ink-800);
+}
+
+.booking-route .route-arrow {
+  display: inline-grid;
+  place-items: center;
+  color: var(--ink-400);
+}
+
+.booking-route__when {
+  font-weight: 500;
+  font-size: var(--text-sm);
+  color: var(--ink-500);
+}
+
+/* Fields on one side, the ticket on the other. */
+.booking-layout {
+  display: grid;
+  gap: var(--space-6);
+  margin-block-start: var(--space-6);
+  align-items: start;
+}
+
+@media (min-width: 940px) {
+  .booking-layout {
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: var(--space-8);
+  }
+}
+
+.booking-fields {
+  display: grid;
+  gap: var(--space-6);
+  min-inline-size: 0;
+}
+
+/* Two named groups with a rule between them, not nine fields in a column. */
+.booking-group {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.booking-group + .booking-group {
+  padding-block-start: var(--space-5);
+  border-block-start: 1px solid var(--surface-sunken);
+}
+
+.booking-group__title {
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-500);
+}
+
+/* Seats: two buttons and a number, not a number input with spinner arrows a thumb cannot hit. */
+.seat-stepper {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.seat-stepper__controls {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.seat-stepper__btn {
+  display: grid;
+  place-items: center;
+  inline-size: var(--tap-target);
+  block-size: var(--tap-target);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+  color: var(--ink-800);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.seat-stepper__btn:hover:not(:disabled) {
+  border-color: var(--brand-300);
+  background: var(--brand-50);
+  color: var(--brand-700);
+}
+
+.seat-stepper__btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.seat-stepper__value {
+  min-inline-size: 2.5rem;
+  text-align: center;
+  font-size: var(--text-lg);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Where you get off: rows, each with the time and the fare, so the options can be compared. */
+.stop-choice {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-inline-size: 0;
+}
+
+.stop-choice__list {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.stop-choice__option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: var(--tap-target);
+  padding: var(--space-3);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.stop-choice__option:has(input:checked) {
+  border-color: var(--brand-500);
+  background: var(--brand-50);
+}
+
+.stop-choice__option input {
+  margin: 0;
+  inline-size: 1.05rem;
+  block-size: 1.05rem;
+  flex: none;
+  accent-color: var(--brand-600);
+}
+
+.stop-choice__body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-3);
+  inline-size: 100%;
+  min-inline-size: 0;
+}
+
+.stop-choice__name {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 700;
+  font-size: var(--text-sm);
+}
+
+.stop-choice__seq {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 20px;
+  block-size: 20px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-sunken);
+  color: var(--ink-600);
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  line-height: 0;
+}
+
+.stop-choice__meta {
+  font-size: var(--text-xs);
+  color: var(--ink-500);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The ticket. Same visual family as the fare panel on the trip page, because it is the same object. */
+.booking-summary {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+}
+
+@media (min-width: 940px) {
+  .booking-summary {
+    position: sticky;
+    inset-block-start: var(--space-6);
+  }
+}
+
+.booking-summary__title {
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-500);
+}
+
+.booking-summary__route {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-lg);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.booking-summary__route .route-arrow {
+  display: inline-grid;
+  place-items: center;
+  color: var(--ink-400);
+}
+
+.booking-summary__when {
+  font-size: var(--text-sm);
+  color: var(--ink-600);
+}
+
+.booking-summary__facts {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-xs);
+  color: var(--ink-600);
+}
+
+.booking-summary__facts li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.booking-summary__breakdown {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--surface-sunken);
+  font-size: var(--text-sm);
+  color: var(--ink-600);
+}
+
+.booking-summary__breakdown > div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.booking-summary__breakdown dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.booking-summary__total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--surface-sunken);
+  font-size: var(--text-md);
+  font-weight: 800;
+  color: var(--ink-900);
+}
+
+.booking-summary__total .num {
+  font-size: var(--text-xl);
+  letter-spacing: -0.02em;
+}
+
+.booking-summary__note {
+  font-size: var(--text-2xs);
+  color: var(--ink-500);
+  line-height: var(--leading-snug);
 }
 
 /* The passenger's booking is a stack of blocks, not a grid — same reason as `.trip-detail`: a grid item
@@ -5426,7 +5754,262 @@ a.booking-card__code:hover {
 
 .pay-view {
   display: grid;
-  gap: var(--space-4);
+  gap: var(--space-5);
+  padding-block: var(--space-5) var(--space-10);
+}
+
+@media (min-width: 720px) {
+  .pay-view {
+    padding-block: var(--space-8) var(--space-12);
+  }
+}
+
+/* The payment screen is a page, not a card: a header band, then the amount, then where the money goes. */
+.pay-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.pay-head h1 {
+  font-size: var(--text-2xl);
+  letter-spacing: -0.02em;
+}
+
+.pay-head__sub {
+  margin-block-start: var(--space-1);
+  color: var(--ink-600);
+  font-size: var(--text-sm);
+  max-inline-size: 46ch;
+}
+
+.pay-layout {
+  display: grid;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+@media (min-width: 940px) {
+  .pay-layout {
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: var(--space-8);
+  }
+}
+
+.pay-main {
+  display: grid;
+  gap: var(--space-5);
+  min-inline-size: 0;
+}
+
+/* The amount, at the size of the thing it is. */
+.pay-due {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-5);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+}
+
+.pay-due__label {
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-500);
+}
+
+.pay-due__amount {
+  font-size: var(--text-3xl);
+  font-weight: 800;
+  line-height: var(--leading-tight);
+  letter-spacing: -0.03em;
+  color: var(--ink-900);
+}
+
+.pay-due__facts {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--surface-sunken);
+  font-size: var(--text-sm);
+}
+
+.pay-due__facts > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-3);
+}
+
+.pay-due__facts dt {
+  color: var(--ink-500);
+}
+
+.pay-due__facts dd {
+  margin: 0;
+  font-weight: 600;
+  color: var(--ink-900);
+}
+
+.pay-due__trip {
+  color: var(--ink-500);
+  font-weight: 500;
+}
+
+/* The account number is read aloud and retyped elsewhere: large, monospaced, direction-locked. */
+.pay-account {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  border: 1px solid var(--brand-300);
+  border-radius: var(--radius-lg);
+  background: var(--brand-50);
+}
+
+.pay-account__title {
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--brand-700);
+}
+
+.pay-account__number {
+  font-family: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, monospace;
+  font-size: var(--text-xl);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--brand-900);
+  font-variant-numeric: tabular-nums;
+  user-select: all;
+  overflow-wrap: anywhere;
+}
+
+.pay-account__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-6);
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--brand-900);
+}
+
+.pay-account__meta > div {
+  display: grid;
+  gap: 1px;
+}
+
+.pay-account__meta dt {
+  opacity: 0.7;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: var(--text-2xs);
+  font-weight: 700;
+}
+
+.pay-account__meta dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+.pay-side {
+  display: grid;
+  gap: var(--space-5);
+  min-inline-size: 0;
+}
+
+.pay-side__title {
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-500);
+}
+
+/* Three steps with a rail: what has happened, what is waiting on the payer, what is waiting on the company. */
+.pay-steps {
+  display: grid;
+  gap: var(--space-3);
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pay-steps__step {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: center;
+  font-size: var(--text-sm);
+  color: var(--ink-500);
+}
+
+.pay-steps__step:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  inline-size: 2px;
+  inset-block: calc(0.75rem + 2px) calc(var(--space-3) * -1 + 0.75rem);
+  inset-inline-start: calc(0.75rem - 1px);
+  background: var(--surface-sunken);
+}
+
+.pay-steps__dot {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  inline-size: 24px;
+  block-size: 24px;
+  border-radius: var(--radius-pill);
+  border: 2px solid var(--surface-sunken);
+  background: var(--surface-base);
+  color: #fff;
+  line-height: 0;
+}
+
+.pay-steps__step[data-state='done'] .pay-steps__dot {
+  border-color: var(--brand-600);
+  background: var(--brand-600);
+}
+
+.pay-steps__step[data-state='done'] {
+  color: var(--ink-700);
+}
+
+.pay-steps__step[data-state='current'] .pay-steps__dot {
+  border-color: var(--brand-600);
+}
+
+.pay-steps__step[data-state='current'] {
+  color: var(--ink-900);
+  font-weight: 700;
+}
+
+.pay-steps__step[data-state='error'] .pay-steps__dot {
+  border-color: var(--state-danger);
+  background: #fdecec;
+}
+
+.pay-steps__step[data-state='error'] {
+  color: var(--state-danger);
+  font-weight: 700;
+}
+
+.pay-instructions {
+  padding-block-start: var(--space-4);
+  border-block-start: 1px solid var(--surface-sunken);
+  font-size: var(--text-sm);
+  color: var(--ink-600);
+}
+
+.pay-instructions p {
+  margin-block-start: var(--space-2);
 }
 
 .payment-queue__list,

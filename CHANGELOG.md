@@ -37,6 +37,17 @@ on `main`; the tag is the last step, not the first.
 
 ### Changed
 
+- **Booking is a ticket beside the fields.** `/trips/[code]/book` was a single column whose only context was a code in
+  the heading: it now restates the route, date, vehicle, driver and seats in a sticky summary that carries the live
+  total and the reserve button, and on a phone that summary follows the fields so the button lands where the thumb
+  ends. Seats are a stepper with 44px targets and an `aria-live` count instead of a number input; getting off is a list
+  of the trip's own stops with the time and fare of each, because a `<select>` hides every option's price; the booking
+  code at the end is boxed at display size, `user-select: all`.
+- **The payment screen is a page with a progress track.** `/pay/[intent]` was one card of `<dl>` rows. It now has a
+  header band with the status, the amount at `--text-3xl` (labelled *Amount due* or *Amount paid* depending on the
+  state), the account number large and direction-locked for reading aloud, and three steps — *Payment requested → Send
+  the receipt → The company confirms* — with `aria-current="step"`. The "transfer it, then attach the receipt"
+  instruction no longer appears under a payment that is already settled.
 - **The trip page's stops are an itinerary**: start → stops → destination, with the clock time you reach each stop
   derived from the departure, the fare from the start, and the estimated arrival, joined by a rail. It was the
   intermediate stops alone, with "after 240 min" and no terminals.

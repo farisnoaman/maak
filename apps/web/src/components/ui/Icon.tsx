@@ -35,7 +35,9 @@ export type IconName =
   | 'chevron'
   | 'arrow'
   | 'menu'
-  | 'close';
+  | 'close'
+  | 'plus'
+  | 'minus';
 
 /**
  * 24×24 grid, 1.7 stroke, round caps and joins. Filled marks are the exception and are documented where used —
@@ -132,6 +134,8 @@ const PATHS: Record<IconName, { d: string; fill?: boolean }[]> = {
   arrow: [{ d: 'M4 12h15.5' }, { d: 'm13.5 5.5 6.5 6.5-6.5 6.5' }],
   menu: [{ d: 'M4 7h16M4 12h16M4 17h16' }],
   close: [{ d: 'm6 6 12 12M18 6 6 18' }],
+  plus: [{ d: 'M12 5v14M5 12h14' }],
+  minus: [{ d: 'M5 12h14' }],
 };
 
 export function Icon({
