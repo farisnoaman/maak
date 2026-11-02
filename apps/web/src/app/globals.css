@@ -9446,48 +9446,6 @@ button.card:hover {
   line-height: var(--leading-normal);
 }
 
-/* ---------- 19. places: a decision card, and a form that does not ask for a rejection reason up front ---------- */
-
-.geo-console .queue-card {
-  padding: var(--space-4);
-  border-color: color-mix(in srgb, var(--ink-900) 8%, var(--surface-sunken));
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-}
-
-.geo-console .unit-title {
-  font-size: var(--text-lg);
-  font-weight: 800;
-  letter-spacing: -0.01em;
-  color: var(--ink-900);
-}
-
-.geo-console .unit-meta {
-  color: var(--ink-600);
-  font-size: var(--text-sm);
-}
-
-.geo-console .geo-row-actions {
-  margin-block-start: var(--space-3);
-  padding-block-start: var(--space-3);
-  border-block-start: 1px solid var(--surface-sunken);
-  justify-content: flex-start;
-}
-
-/* Asking why, only once the answer was "no" — sand, because a human is now involved. */
-.queue-card__reject {
-  display: grid;
-  gap: var(--space-3);
-  margin-block-start: var(--space-3);
-  padding: var(--space-3);
-  border-radius: var(--radius-md);
-  background: var(--sand-50);
-}
-
-.queue-card__reject .ui-btn {
-  justify-self: start;
-}
-
 /* ---------- 20. the scanner's idle state: three sentences instead of a blank half-page ---------- */
 
 .scan-checks {
@@ -9824,4 +9782,239 @@ h3,
 .auth-aside {
   padding-block-start: var(--space-4);
   border-block-start: 2px solid color-mix(in srgb, var(--sand-500) 55%, transparent);
+}
+
+/* ---------- 19. places: the queue is a wall of cards, the forms are rows you press ---------- */
+
+.place-grid {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 880px) {
+  .place-grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 21rem), 1fr));
+    align-items: start;
+  }
+}
+
+/*
+ * One submission. It used to be a name, then two lines of text glued together with `·` — the kind, the district, the
+ * governorate, the coordinates and who sent it, all in the same grey run. The facts that decide the place are labelled
+ * rows now, so "which governorate" is a glance and not a parse.
+ */
+.place-card {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--ink-900) 8%, var(--surface-sunken));
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.place-card__head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.place-card__name {
+  font-size: var(--text-lg);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--ink-900);
+  text-wrap: balance;
+}
+
+.place-card__kind {
+  flex: none;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--brand-50) 70%, var(--surface-base));
+  color: var(--brand-700);
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.place-card__alt {
+  margin-block-start: calc(var(--space-3) * -1 + 2px);
+  color: var(--ink-500);
+  font-size: var(--text-sm);
+}
+
+.place-card__meta {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--surface-sunken);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.place-card__meta dt {
+  color: var(--ink-500);
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.place-card__meta dd {
+  margin: 0;
+  color: var(--ink-800);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.place-card__when {
+  color: var(--ink-500);
+  font-size: var(--text-xs);
+}
+
+.place-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--surface-sunken);
+}
+
+.place-card__reject {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--sand-50);
+}
+
+.place-card__reject-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/*
+ * A disclosure that reads as a row, not as a heading: the whole strip is the button, the title is one line and the
+ * reason you would open it is the line under. Native <details>, so it works with JavaScript off and the keyboard
+ * reaches it without help.
+ */
+.panel-disclosure {
+  border: 1px solid color-mix(in srgb, var(--ink-900) 9%, var(--surface-sunken));
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+  overflow: clip;
+}
+
+.panel-disclosure[open] {
+  box-shadow: var(--shadow-md);
+}
+
+.panel-disclosure__summary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  cursor: pointer;
+  list-style: none;
+}
+
+.panel-disclosure__summary::-webkit-details-marker {
+  display: none;
+}
+
+.panel-disclosure__summary:hover {
+  background: color-mix(in srgb, var(--brand-50) 35%, var(--surface-base));
+}
+
+.panel-disclosure__summary:focus-visible {
+  outline: 2px solid var(--brand-600);
+  outline-offset: -2px;
+}
+
+.panel-disclosure__icon {
+  display: grid;
+  place-items: center;
+  inline-size: 32px;
+  block-size: 32px;
+  border-radius: var(--radius-pill);
+  background: var(--brand-50);
+  color: var(--brand-700);
+  line-height: 0;
+}
+
+.panel-disclosure__text {
+  display: grid;
+  gap: 2px;
+  min-inline-size: 0;
+}
+
+.panel-disclosure__title {
+  color: var(--ink-900);
+  font-size: var(--text-md);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.panel-disclosure__hint {
+  color: var(--ink-500);
+  font-size: var(--text-xs);
+  line-height: 1.45;
+}
+
+.panel-disclosure__chevron {
+  display: grid;
+  place-items: center;
+  color: var(--ink-400);
+  line-height: 0;
+  transition: transform 0.16s ease;
+}
+
+.panel-disclosure[open] .panel-disclosure__chevron {
+  transform: rotate(180deg);
+}
+
+.panel-disclosure__body {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border-block-start: 1px solid var(--surface-sunken);
+}
+
+.panel-disclosure__note {
+  color: var(--ink-500);
+  font-size: var(--text-xs);
+}
+
+/* Two fieldsets, so eleven fields read as "what it is" and "where it is". */
+.place-group {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.place-group legend {
+  padding: 0;
+  margin-block-end: var(--space-1);
+  color: var(--ink-600);
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.place-group .form-grid {
+  margin-block: 0;
 }

@@ -968,6 +968,12 @@ export const ar = {
   'places.decided': 'تم تسجيل القرار.',
   'places.submittedBy': 'مقدّم الطلب',
   'places.gatheringPointNote': 'نقاط التجمّع التي تنشئها تظهر لك فقط حتى تعتمدها المنصة.',
+  'places.groupIdentity': 'هوية المكان',
+  'places.groupLocation': 'الموقع',
+  'places.coordinates': 'الإحداثيات',
+  'places.findPlace': 'ابحث عن مكان',
+  'places.submittedAt': 'أُرسل في {date}',
+  'places.fieldsRequired': 'الاسم بالعربية إلزامي، والباقي يمكن استكماله لاحقاً.',
 
   'supervisors.title': 'مشرفو المناطق',
   'supervisors.subtitle': 'التغطية تُحسب من الأقاليم إلى المديريات، وتُسحب فورًا عند الإلغاء.',
@@ -3127,6 +3133,12 @@ export const en: Record<TranslationKey, string> = {
   'places.submittedBy': 'Submitted by',
   'places.gatheringPointNote':
     'Gathering points you create stay visible to you only until the platform approves them.',
+  'places.groupIdentity': 'The place',
+  'places.groupLocation': 'Location',
+  'places.coordinates': 'Coordinates',
+  'places.findPlace': 'Find a place',
+  'places.submittedAt': 'Submitted {date}',
+  'places.fieldsRequired': 'The Arabic name is required; the rest can be filled in later.',
 
   'supervisors.title': 'Regional supervisors',
   'supervisors.subtitle':

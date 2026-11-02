@@ -63,6 +63,7 @@ questions in the order they ask them.**
 | 15 | **Staff desk** — trip detail, trip review queue, scan | A trip page that opened with its own code, a review box below the fold, a scanner whose idle state was a blank half-page, a queue whose filter had no fieldset names | `[x]` — §23 |
 | 16 | **Admin money and reference** — subscriptions, plans, alert templates, places | Two bare tables with no totals, a plan's eight limits joined into one sentence-cell, 37 template rows and no way in, a rejection-reason field on every queued place | `[x]` — §23 |
 | 17 | The skin itself | Warm direction chosen and applied once, as tokens and control rules, rather than page by page | `[x]` — §22 of the stylesheet |
+| 18 | `/admin/places`, again | Eleven fields standing open under the queue on every visit, a submission rendered as two runs of text glued with `·`, and two badges that said nothing | `[x]` — §24 |
 
 ## 3–4. Trips list and trip detail — what changed
 
@@ -892,3 +893,40 @@ block in both locales), `/en/admin/{plans,subscriptions,notifications,places}` (
 labels), plus their Arabic counterparts. `check:all` ✓, `check:responsive` ✓ (94 media queries), `check:a11y` ✓ (113
 routes), `check:guards` ✓. **Gaps:** no browser, so geometry at 375/768/1280, hover/focus, and the RTL of the new arrow
 discs are read back from CSS, not watched.
+
+## 24. Places, re-cut: a queue of cards, and two rows you press
+
+The second pass on `/admin/places`, after the desk pass made the rest of the console consistent. The complaint was
+specific and fair: *the add-a-place form is standing open, and the submitted places do not look like anything.*
+
+**What was wrong.**
+
+- **Eleven fields, always open.** The form was a section in the page flow, so every visit — including the nine in ten
+  where nobody is adding a place — ended in a wall of inputs below the thing you came for.
+- **A submission was two grey runs.** `نقطة تجمع الشارع الخامس` then
+  `كريتر · عدن · مقدّم الطلب: …` then `نقطة تجمع · 12.7801, 45.0302`: the kind, the district, the governorate, the
+  coordinates and the submitter all carried the same weight, so deciding a place meant re-reading the line.
+- **Two badges said nothing.** *بانتظار المراجعة* sat in the header of the add form (which is not pending — it is empty)
+  and *بحث* sat in the header of the picker (a badge is not a search box).
+
+**What it is now.**
+
+- **The queue is a wall of cards** (one column on a phone, `auto-fill` 21rem above 880px). Each card: the name as an
+  `h3` with the kind as a chip beside it, the Latin name underneath when there is one, then **four labelled rows** —
+  governorate, district, coordinates, submitter — a hairline, the submission date, and the two decisions. *Reject*
+  opens the reason in sand with a *Cancel* beside it, and the confirm button stays disabled under ten characters.
+- **The form is a row you press.** `<details class="panel-disclosure">` with a plus in a disc, the title, and the one
+  line that explains the consequence (*gathering points stay visible to you only until the platform approves them*).
+  It opens without JavaScript and the keyboard reaches it as a normal summary. Inside, the eleven fields are two
+  fieldsets — **The place** (Arabic name, Latin name, kind) and **Location** (governorate, district, latitude,
+  longitude) — so the form reads as two questions rather than eleven.
+- **The picker is the same row**, with a magnifier instead of a plus, because it is a tool you reach for rather than a
+  section you read.
+- **An operator with no queue sees the form as the page**, not as a disclosure to open: the disclosure only exists
+  where there is something above it to keep out of the way.
+
+**Verified.** `/en/admin/places` and `/ar/admin/places`: card with the four labelled rows and the date, the *Add a
+place* summary with its hint, the two fieldsets inside, the *Find a place* summary, empty queue as an `EmptyState`.
+`check:all` ✓ (692 tests), `check:responsive` ✓ (95 media queries), `check:guards` ✓, `check:a11y` ✓ (105 routes this
+run — the discovered detail-page count varies with the seeded data). **Gaps:** no browser, so the open/close motion and
+the card grid at 375/768 are read from CSS.

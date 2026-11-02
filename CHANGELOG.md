@@ -13,6 +13,18 @@ on `main`; the tag is the last step, not the first.
 
 ## [Unreleased] — after the last phase report
 
+### Changed — `/admin/places`, re-cut (`docs/polish-plan.md` §24)
+
+- **The add-a-place form is a row you press.** Eleven fields used to stand open under the queue on every visit; they
+  are a `<details>` with a plus, a title and the one line that explains the consequence — opened by `Enter`, working
+  with JavaScript off — and inside, two fieldsets (*The place*, *Location*) instead of eleven loose inputs. An
+  operator with no queue gets the form as the page, not as a disclosure.
+- **A submitted place is a card**: name as a heading, kind as a chip, Latin name beneath, then labelled rows for
+  governorate, district, coordinates and submitter, the submission date, and the two decisions — with *Reject*
+  opening its reason in sand, *Cancel* beside it, and the confirm disabled under ten characters.
+- **The location picker is the same disclosure row**, and two badges that said nothing (`Awaiting review` on the add
+  form, `Search` on the picker) are gone.
+
 ### Changed — the staff and admin desks (`docs/polish-plan.md` §23)
 
 - **The skin has a direction.** Warm and human, set once as tokens in `globals.css` §22: cream paper, 10/14/20/28
