@@ -26,6 +26,17 @@ on `main`; the tag is the last step, not the first.
 
 ### Fixed
 
+- **Every gateway-backed screen was blank for URL-token sessions.** The server-side gateway client read the access
+  token from `client.auth.getSession()`, which is `null` whenever the session arrives as the proxy's `x-maak-token`
+  header (`?st=`, the embedded preview, `persistSession: false`). The finance dashboard and statement answered *"The
+  ledger could not be read"* for anybody signed in that way, while the same account worked through the cookie — the
+  whole finance console looked down. `resolveAccessToken()` asks for the token whichever channel carries it.
+- **`loadAccountContext` returned other people's rows as if they were yours.** A `platform_staff` account may read every
+  row of `user_roles` and `organization_members`, because the staff consoles need the roster; the account helper
+  queried neither by `user_id`. That account's `roles` therefore contained the admin's role — so every page that
+  branches on roles (the admin doors, the finance scope) treated a staff member as an admin — and its `organizations`
+  contained a company it does not belong to, whose ledger the finance dashboard would have shown it. Memberships,
+  notifications and roles are all pinned to the visitor now.
 - **A CSRF hole in `isSameOriginRequest`.** Any `Origin` was accepted whenever every host the server could see was
   loopback — every dev-server request, and the preview proxy whenever it does not forward the host. A form on another
   site could create an account or sign a visitor in to the attacker's. The check now reads `Sec-Fetch-Site` first,
@@ -36,6 +47,14 @@ on `main`; the tag is the last step, not the first.
 
 ### Changed
 
+- **The finance console opens with the answer.** `/finance/dashboard` led with ten equal figures, so profit — the
+  number the desk exists for — had no weight, and the balances below it printed journal codes (`operator_payable`) and
+  a `Difference` column. It now leads with profit at display size (red when negative) beside the period it covers,
+  then collected and what is owed or withdrawable, with commission, subscription revenue, refunds and payouts as a
+  breakdown underneath; balances print the chart of accounts in the reader's language and the column is `Balance`. The
+  journal editor and ledger rows use the same names, reconciliation names its rails (`Jaib`, `Al-Kuraimi Bank`) instead
+  of enum values, and invoices puts *outstanding* in the header band — which removed a heading that repeated the page
+  title and three subtitles that appeared twice.
 - **The operator overview answers questions instead of listing screens.** `/operator` was five identical tiles with an
   `Open` button each — a menu that repeated the sidebar. It now opens with the four queues that can need an operator
   (*booking requests* naming the trip they are on, *receipts to confirm*, *vehicles* and *drivers awaiting review*),

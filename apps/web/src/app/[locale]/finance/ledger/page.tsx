@@ -12,7 +12,7 @@ import { ConsoleShell } from '@/components/ConsoleShell';
 import { JournalDesk } from '@/components/finance/JournalDesk';
 import { financeNav } from '@/components/payments/financeNav';
 import { loadAccountContext } from '@/lib/account';
-import { loadStatement } from '@/lib/finance';
+import { accountName, accountNames, loadLedgerAccounts, loadStatement } from '@/lib/finance';
 
 /**
  * `/finance/ledger` — the journal.
@@ -51,11 +51,18 @@ export default async function FinanceLedgerPage({
     loaded.roles.includes('finance_officer') || loaded.roles.includes('platform_admin');
   const org = loaded.organizations[0] ?? null;
   const { from, to } = monthBounds();
-  const statement = await loadStatement(
-    canPost ? { platform: true } : { orgId: org?.id ?? null, ownerUserId: loaded.user?.id ?? null },
-    from,
-    to,
-  );
+  const [statement, chart] = await Promise.all([
+    loadStatement(
+      canPost
+        ? { platform: true }
+        : { orgId: org?.id ?? null, ownerUserId: loaded.user?.id ?? null },
+      from,
+      to,
+    ),
+    // The journal printed `platform_cash`; the chart has carried names in both languages since `00031`.
+    loadLedgerAccounts(),
+  ]);
+  const names = accountNames(chart, locale);
 
   return (
     <>
@@ -70,7 +77,7 @@ export default async function FinanceLedgerPage({
       >
         <section>
           <h2>{t('ledger.post')}</h2>
-          <JournalDesk locale={locale} canPost={canPost} />
+          <JournalDesk locale={locale} canPost={canPost} accounts={names} />
         </section>
 
         <section>
@@ -100,7 +107,7 @@ export default async function FinanceLedgerPage({
                         <td data-label={t('ledger.description')}>
                           {journal.description ?? journal.sourceKind}
                         </td>
-                        <td data-label={t('ledger.account')}>{line.account}</td>
+                        <td data-label={t('ledger.account')}>{accountName(names, line.account)}</td>
                         <td data-label={t('ledger.debit')}>
                           {line.direction === 'debit'
                             ? formatMinor(line.amountYer, 'YER', { locale })

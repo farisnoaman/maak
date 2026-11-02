@@ -102,18 +102,25 @@ export async function loadAccountContext(): Promise<AccountContext> {
       )
       .eq('id', userId)
       .maybeSingle(),
+    // Every read below is pinned to the visitor. The policies are written for the *platform* — a staff
+    // member may read every membership and every role row, because staff consoles need the roster — so an
+    // unfiltered read here returned other people's rows as if they were this person's: a platform staff
+    // account saw the operator's organization (and with it, on the finance dashboard, the operator's
+    // ledger) and the admin's roles (and with them, every admin door in the navigation).
     client
       .from('organization_members')
       .select(
         'id, org_id, user_id, role, status, invited_email, invited_phone, joined_at, organizations(id, name, name_en, verification_status, plan, registration_no, phone, email, tax_no, kind)',
       )
+      .eq('user_id', userId)
       .order('created_at', { ascending: true }),
     client
       .from('notifications')
       .select('id, title_key, params, link, read_at, created_at')
+      .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(30),
-    client.from('user_roles').select('role').is('revoked_at', null),
+    client.from('user_roles').select('role').eq('user_id', userId).is('revoked_at', null),
   ]);
 
   const profileRow = profileResult.data as Record<string, unknown> | null;

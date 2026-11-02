@@ -52,7 +52,7 @@ questions in the order they ask them.**
 | 7 | Auth (`/auth/*`) | Fine, but the sign-in form is the last place a person should meet jargon | `[x]` — §17 |
 | 8 | Operator console | Dense tables are right for the job; the **overview** answers nothing at a glance | `[x]` — §18 |
 | 9a | **Staff console** (`/staff`, dashboard, scan, verifications, vehicles, trips) | The same five screens under five different sidebars; a phase number above every title; four zeroes and two empty boxes as the dashboard | `[x]` |
-| 9b | Finance console | Same: correct, unranked | `[ ]` |
+| 9b | Finance console | Same: correct, unranked | `[x]` — §19 |
 | 9c | **Admin console** (`/admin` + 6 screens) | Two frames around every screen (a card inside a card), five different sidebars, a hub whose second tile apologised for a phase that no longer exists, and UUIDs printed where names belong | `[x]` |
 | 10 | Mobile shell (`apps/mobile`) | Mirrors the same problem: the home screen is a list of links, one of them labelled *المرحلة* | `[ ]` |
 | 11 | Empty / error / loading states | The states a demo never shows and a launch always hits | `[ ]` |
@@ -567,3 +567,71 @@ no "could not read" state — the loaders return an empty list on error, so an o
 waiting" rather than "could not check". The staff dashboard solved that with `null` vs `0`; the payments and fleet
 readers do not expose the difference yet, and inventing it here would have meant changing four loaders in a slice
 about one screen. The timestamp beside the title is the honest mitigation until then.
+
+## 19. The finance console
+
+Scope: the money desk — `/finance/{dashboard,ledger,statements,invoices,payments,accounts,agents,payouts,reconciliation}`.
+The tables and the command forms behind them were already correct; this slice is about what a person sees first, and
+about two defects the polish exposed.
+
+**What it was.** The dashboard opened with a subtitle, then ten equal figures in two card grids: commission,
+subscription revenue, refunds and payouts at the same weight as profit, and the one number the desk exists for — *what
+did the platform make* — nowhere in particular. Below that, a balances table printed the journal's raw account codes
+(`platform_bank`, `operator_payable`) and a `Difference` column, which is a bookkeeping check, not an answer. Invoices
+repeated its own page title as a section heading, then repeated the subtitle, then printed a balance in a sentence;
+agents, payouts and reconciliation each printed their subtitle a second time under the heading. Reconciliation listed
+its rails as enum values: `jaib`, `kuraimi`, `tadhamon`, `cash_desk`.
+
+**What it is now.** The dashboard leads with **profit** at display size, red when it is negative, beside the period it
+covers as a stamp in the section head (`Nov 1, 2026 → Nov 2, 2026`). Next to it: *collected*, and what is owed or
+withdrawable — for the platform, *owed to operators*; for an operator, *withdrawable*. The rest of the period
+(commission, subscription revenue, refunds, payouts) drops to a breakdown underneath, where it belongs: the parts
+support the answer instead of competing with it. Balances print the chart of accounts in the reader's language
+(`Payable to operators`, `بنك المنصة`) and the column is named `Balance`, not `Difference`. The journal editor and the
+ledger rows use the same names — the submitted value is still the code, only the label changed. Reconciliation's rails
+read as the rails they are (`Jaib`, `Al-Kuraimi Bank`, `Tadhamon Bank`, `Cash at the office`). Invoices puts
+**outstanding** in the header band as a figure (`.console-head__figure`), which removed the duplicated heading and the
+sentence that explained it.
+
+**Two decisions.**
+
+- **One flow of the month, not ten tiles.** A finance desk asks *how much did we make*, then *what is still owed*.
+  `SummaryCards` now skips the three figures the headline already carries and returns `null` when it has nothing left,
+  so the same component still serves the operator and platform desks without printing profit twice.
+- **Names come from the chart of accounts, not from a map in the component.** `loadLedgerAccounts()` reads
+  `ledger_accounts` (10 rows, AR + EN) and `accountName()` falls back to the code only if the chart cannot be read —
+  so a new account appears in the journal picker without a code change.
+
+**Two defects found while rendering it. — both fixed here**
+
+1. **Every gateway-backed screen was blank for URL-token sessions.** `callGateway` took the access token from
+   `client.auth.getSession()`, which is `null` whenever the session arrives as the proxy's `x-maak-token` header
+   (`?st=`, the embedded preview, `persistSession: false`). The finance dashboard and statement rendered *"The ledger
+   could not be read"* for anybody signed in that way while the same account worked through the cookie — a whole
+   console that looked down. `resolveAccessToken()` asks for the token whichever channel carries it.
+2. **`loadAccountContext` returned other people's rows as if they were yours.** The policies are written for the
+   platform: a `platform_staff` account may read every row of `user_roles` and `organization_members`, because the staff
+   consoles need the roster. The account helper queried neither by `user_id`, so that account's `roles` contained the
+   admin's role — and every page that branches on roles (`canReadPlatformFinance`, the admin doors, the finance scope)
+   believed a staff member was an admin — while its `organizations` contained a company it does not belong to, which is
+   the ledger the finance dashboard would have shown it. All three reads (memberships, notifications, roles) are now
+   pinned to the visitor.
+
+**Verified.** `check:all` ✓ (691 tests: 676 core ×2 + 15 web; 46 migrations, pgTAP suites green, guards
+32/190/46/135, Edge bundle up to date), `check:responsive` ✓ (77 media queries, 11 tap targets), a11y ✓ (113 routes,
+both directions). Rendered all nine screens in both locales as `admin@` (platform scope), and the dashboard in both
+locales as `owner@` (org scope), `driver@` (personal, all zeroes) and `staff@`, in both auth channels — cookie and
+`?st=` — after the gateway fix. Figures read back from the platform dashboard: `Profit YER 7,600`, `Collected
+YER 2,500`, `Owed to operators YER 0`, then `Commission 100 / Subscription revenue 7,500 / Refunds 0 / Payouts 0`;
+balances `Platform bank 7,500 · Platform cash 2,500 · Payable to operators 2,400 · Commission revenue 100 ·
+Subscription revenue 7,500`; the owner's dashboard read `Profit 2,300 / Collected 2,400 / Withdrawable 2,400`. Arabic
+rendered `الربح 7,600 ر.ي` on the headline, `بنك المنصة` / `نقد المنصة` in the balances table, and the journal's
+picker `نقد المنصة · بنك المنصة · مستحق من الوكلاء · مستحق على المشغّلين · مستحق للمشغّلين · إيراد العمولة …`.
+
+**Gaps, stated plainly.** No browser here, so the phone layout (the headline stacking above the breakdown, RTL
+mirroring of the period stamp) is read back from markup and CSS plus `check:responsive`, not seen. `payableYer` comes
+back `null` on a fresh month, which renders as `—` rather than `YER 0`; that is intentional, and the live payload was
+checked to confirm it. A `platform_staff` account still sees the finance desk's doors in its sidebar even though the
+ledger writes are refused to it (`finance.viewAll` is finance officers and admins) — the pages now render, the actions
+answer `FORBIDDEN`; making the navigation capability-aware is its own slice, because it means deciding what the staff
+desk *does* with money rather than hiding buttons from it.

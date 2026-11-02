@@ -1,5 +1,5 @@
 import { notFound, redirect } from 'next/navigation';
-import { isLocale, translate, type Locale, type TranslationKey } from '@maak/core';
+import { isLocale, type Locale } from '@maak/core';
 import { SiteHeader } from '@/components/SiteHeader';
 import { ConsoleShell } from '@/components/ConsoleShell';
 import { PayoutQueue } from '@/components/payments/PayoutDesk';
@@ -24,7 +24,6 @@ export default async function FinancePayoutsPage({
   const { locale: raw } = await params;
   if (!isLocale(raw)) notFound();
   const locale: Locale = raw;
-  const t = (key: TranslationKey) => translate(locale, key);
 
   const loaded = await loadAccountContext();
   if (loaded.configured && !loaded.user) {
@@ -48,7 +47,8 @@ export default async function FinancePayoutsPage({
         items={financeNav(locale)}
       >
         <section>
-          <p className="form-hint">{t('financePayouts.subtitle')}</p>
+          {/* The console header already prints this sentence. Repeating it here was the page's first line of
+              content, above a table that had nothing to say yet. */}
           <PayoutQueue locale={locale} payouts={pending} />
         </section>
       </ConsoleShell>

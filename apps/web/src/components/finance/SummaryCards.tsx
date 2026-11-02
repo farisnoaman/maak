@@ -2,11 +2,14 @@ import { formatMinor, translate, type Locale, type TranslationKey } from '@maak/
 import type { MoneySummary } from '@/lib/finance';
 
 /**
- * The month's numbers, as a definition list.
+ * The rest of the month's numbers, as a definition list.
  *
  * A `<dl>` rather than a table of values, because that is what it is: labels and their figures. Every figure
- * carries its currency — a bare number on a money screen is a number somebody will misread — and the profit
- * line is last, because it is the one the operator came for.
+ * carries its currency — a bare number on a money screen is a number somebody will misread.
+ *
+ * The three figures the page leads with (profit, collected, owed/available) are rendered by `MoneyHeadline` at
+ * display size; repeating them here would print the same money twice and flatten the hierarchy that the headline
+ * exists to create, so those keys are skipped.
  */
 export function SummaryCards({
   locale,
@@ -42,9 +45,14 @@ export function SummaryCards({
         { key: 'financeDash.unpaidInvoices', value: String(summary.unpaidInvoices) },
       ];
 
+  const lead: TranslationKey[] = ['financeDash.profit', 'financeDash.gross', 'financeDash.payable'];
+  const secondary = rows.filter((row) => !lead.includes(row.key));
+
+  if (secondary.length === 0) return null;
+
   return (
     <dl className="finance-summary">
-      {rows.map((row) => (
+      {secondary.map((row) => (
         <div className="finance-summary__row" key={row.key}>
           <dt>{t(row.key)}</dt>
           <dd data-tone={row.tone ?? undefined}>{row.value}</dd>

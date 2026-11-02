@@ -14,7 +14,15 @@ interface DraftLine {
   readonly amount: string;
 }
 
-const ACCOUNTS = [
+/**
+ * The fallback chart, for the moment before the real one arrives.
+ *
+ * The editor used to hard-code this list and print the codes in the select — a finance officer choosing between
+ * `operator_payable` and `agent_receivable`. `act` arrives from the page, read from `ledger_accounts`, so the select
+ * shows the account's own name in the reader's language; this list only decides *which* accounts can be posted to
+ * when that map is unavailable, and the code is still what gets submitted.
+ */
+const FALLBACK_ACCOUNTS = [
   'platform_cash',
   'platform_bank',
   'agent_receivable',
@@ -46,9 +54,12 @@ function newLine(): DraftLine {
 export function JournalDesk({
   locale,
   canPost,
+  accounts,
 }: {
   readonly locale: Locale;
   readonly canPost: boolean;
+  /** `{ code: name }` from the chart of accounts, in the reader's language. */
+  readonly accounts: Record<string, string>;
 }) {
   const t = (key: TranslationKey, vars?: Record<string, string | number>) =>
     translate(locale, key, vars);
@@ -108,7 +119,10 @@ export function JournalDesk({
                   <Select
                     label={t('ledger.account')}
                     value={line.account}
-                    options={ACCOUNTS.map((account) => ({ value: account, label: account }))}
+                    options={FALLBACK_ACCOUNTS.map((account) => ({
+                      value: account,
+                      label: accounts[account] ?? account,
+                    }))}
                     onChange={(event) => update(line.key, { account: event.target.value })}
                   />
                 </th>

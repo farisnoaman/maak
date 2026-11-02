@@ -104,6 +104,19 @@ function scopePayload(scope: FinanceScope): Record<string, unknown> {
   return { orgId: null, ownerUserId: scope.ownerUserId ?? null };
 }
 
+/**
+ * Whether this session may read **the platform's** ledger, as opposed to its own.
+ *
+ * Both finance pages used to answer this with `['platform_admin', 'platform_staff', 'finance_officer']`. The policy
+ * says otherwise: `finance.viewAll` is granted to finance officers and platform admins only, and a `platform_staff`
+ * account holds `individual` like everybody else — so asking for the platform scope returned `FORBIDDEN` and the page
+ * rendered "we could not read the ledger", which reads as an outage rather than "you are looking at the wrong scope".
+ * A staff member has their own money view; that is the view they get.
+ */
+export function canReadPlatformFinance(roles: readonly string[]): boolean {
+  return roles.includes('finance_officer') || roles.includes('platform_admin');
+}
+
 export interface FinanceScope {
   readonly orgId?: string | null;
   readonly ownerUserId?: string | null;
@@ -126,6 +139,61 @@ function toSubscription(row: Record<string, unknown>): SubscriptionView {
     ownerUserId: (row.owner_user_id as string | null) ?? null,
     ownerName: null,
   };
+}
+
+/**
+ * The chart of accounts, as the database names it.
+ *
+ * Every finance screen used to print the raw code — `operator_payable`, `commission_revenue` — because that is the
+ * key the gateway returns. The table has carried `name_ar` and `name_en` since `00031`, and its RLS policy is
+ * deliberately open to any signed-in reader ("a statement that prints operator_payable has to be explainable"), so
+ * the names were there the whole time; nothing read them.
+ *
+ * Reading them beats a translation table: a new account added to the chart is named everywhere the moment it is
+ * inserted, and the two languages cannot drift from the ledger they describe.
+ */
+export interface LedgerAccount {
+  readonly code: string;
+  readonly kind: string;
+  readonly nameAr: string;
+  readonly nameEn: string;
+}
+
+export async function loadLedgerAccounts(): Promise<readonly LedgerAccount[]> {
+  const client = await getServerClient();
+  if (!client) return [];
+  const { data, error } = await client
+    .from('ledger_accounts')
+    .select('code, kind, name_ar, name_en')
+    .order('code');
+  if (error || !data) return [];
+  return (data as Record<string, unknown>[]).map((row) => ({
+    code: String(row.code),
+    kind: String(row.kind),
+    nameAr: String(row.name_ar),
+    nameEn: String(row.name_en),
+  }));
+}
+
+/** `{ code: name }` for the locale in hand, ready to look a printed account up. */
+export function accountNames(
+  accounts: readonly LedgerAccount[],
+  locale: 'ar' | 'en',
+): Record<string, string> {
+  const names: Record<string, string> = {};
+  for (const account of accounts) {
+    names[account.code] = locale === 'ar' ? account.nameAr : account.nameEn;
+  }
+  return names;
+}
+
+/** The name for one code, falling back to the code itself so a missing row is visible rather than blank. */
+export function accountName(
+  names: Record<string, string>,
+  code: string | null | undefined,
+): string {
+  if (!code) return '—';
+  return names[code] ?? code;
 }
 
 /** The dashboard. `null` when the gateway is unavailable, so a page can say so instead of throwing. */

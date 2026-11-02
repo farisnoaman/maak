@@ -48,14 +48,18 @@ export default async function FinanceInvoicesPage({
         title="invoices.title"
         subtitle="invoices.subtitle"
         items={financeNav(locale)}
+        actions={
+          /* Outstanding is the one number this page is opened for, so it sits in the header band where a console
+             puts its headline — not as a heading that repeated the page title above a sentence about it. */
+          <span className="console-head__figure">
+            <span className="console-head__figure-label">{t('invoices.outstanding')}</span>
+            <strong className="console-head__figure-value num">
+              {formatMinor(outstanding, 'YER', { locale })}
+            </strong>
+          </span>
+        }
       >
-        <section>
-          <h2>{t('invoices.title')}</h2>
-          <p className="form-hint">
-            {t('statement.balance')}: {formatMinor(outstanding, 'YER', { locale })}
-          </p>
-          <InvoiceDesk locale={locale} invoices={invoices} canSettle={isFinance || org !== null} />
-        </section>
+        <InvoiceDesk locale={locale} invoices={invoices} canSettle={isFinance || org !== null} />
       </ConsoleShell>
     </>
   );

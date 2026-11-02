@@ -1370,6 +1370,28 @@ a {
   gap: var(--space-2);
   align-items: center;
 }
+/* A figure in the header band: the one number a desk page is opened for. */
+.console-head__figure {
+  display: grid;
+  gap: 1px;
+  justify-items: end;
+}
+
+.console-head__figure-label {
+  color: var(--ink-500);
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.console-head__figure-value {
+  color: var(--ink-900);
+  font-size: var(--text-md);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
 .console-head__stamp {
   font-size: 0.78rem;
   font-variant-numeric: tabular-nums;
@@ -6778,6 +6800,88 @@ a.booking-card__code:hover {
    Three shapes: a figure list (`.finance-summary`), a desk (a form above a queue) and a wide form. All of
    them use logical properties, and the summary is a grid of `min(100%, …)` tracks so a narrow phone gets
    one column rather than a scrollbar. */
+
+/* The month's three figures, on the display scale.
+   One primary cell (profit) at --text-2xl and two secondary ones beside it; on a phone they stack full width, because a
+   money figure is only readable if it is not wrapped. */
+.money-headline {
+  display: grid;
+  gap: 0;
+  grid-template-columns: minmax(0, 1fr);
+  margin: 0 0 var(--space-5);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.money-headline__cell {
+  display: grid;
+  gap: 2px;
+  align-content: start;
+  padding: var(--space-4);
+  background: var(--surface-base);
+}
+
+.money-headline__cell + .money-headline__cell {
+  border-block-start: 1px solid var(--surface-sunken);
+}
+
+.money-headline__label {
+  color: var(--ink-500);
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.money-headline__value {
+  margin: 0;
+  color: var(--ink-900);
+  font-size: var(--text-lg);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.money-headline__value[data-tone='good'] {
+  color: var(--state-success);
+}
+
+.money-headline__value[data-tone='bad'] {
+  color: var(--state-danger);
+}
+
+.money-headline__note {
+  margin: 0;
+  color: var(--ink-500);
+  font-size: var(--text-xs);
+}
+
+.money-headline__cell--primary {
+  background: color-mix(in srgb, var(--brand-50) 60%, var(--surface-base));
+}
+
+.money-headline__cell--primary .money-headline__value {
+  font-size: var(--text-2xl);
+}
+
+@media (min-width: 720px) {
+  .money-headline {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .money-headline__cell + .money-headline__cell {
+    border-block-start: 0;
+    border-inline-start: 1px solid var(--surface-sunken);
+  }
+}
+
+.finance-month {
+  display: grid;
+  gap: var(--space-3);
+  margin-block-end: var(--space-6);
+}
 
 .finance-summary {
   display: grid;

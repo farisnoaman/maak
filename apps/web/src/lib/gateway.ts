@@ -7,7 +7,7 @@
  */
 
 import { getSupabaseConfig } from './supabase/config';
-import { getServerClient } from './supabase/server';
+import { resolveAccessToken } from './supabase/server';
 
 export interface GatewayFailure {
   readonly code: string;
@@ -19,12 +19,19 @@ export type GatewayResult<T> =
 
 export async function callGateway<T>(path: string, body: unknown): Promise<GatewayResult<T>> {
   const config = getSupabaseConfig();
-  const client = await getServerClient();
-  if (!config || !client)
-    return { ok: false, error: { code: 'INTERNAL', detail: 'not configured' } };
+  if (!config) return { ok: false, error: { code: 'INTERNAL', detail: 'not configured' } };
 
-  const { data: session } = await client.auth.getSession();
-  const token = session.session?.access_token;
+  /**
+   * `resolveAccessToken()`, not `client.auth.getSession()`.
+   *
+   * The session reaches a server render by one of two channels — the cookie, or the `x-maak-token` header the proxy
+   * injects from `?st=` for the embedded preview, where cookies cannot be kept. A client built for the second channel
+   * holds the token in its fetch headers and has **no session object at all** (`persistSession: false`), so
+   * `getSession()` returned null and every gateway-backed screen — the whole finance console, the verification
+   * queue — rendered as "unavailable" for anybody signed in through the URL. `resolveAccessToken` asks for the
+   * token, whichever channel carries it.
+   */
+  const token = await resolveAccessToken();
   if (!token) return { ok: false, error: { code: 'UNAUTHENTICATED' } };
 
   try {
