@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { translate, type Locale, type TranslationKey } from '@maak/core';
 import { Icon } from './ui/Icon';
+import { DetailsForDesktop } from './ui/DetailsForDesktop';
 
 export interface ConsoleNavItem {
   readonly key: TranslationKey;
@@ -102,7 +103,7 @@ export function ConsoleShell({
         {/* Not an <h1>: the page has exactly one, in the header band. Shown beside the sidebar, not in the menu. */}
         <p className="console-side__brand">{t(brand)}</p>
 
-        <details className="console-menu" suppressHydrationWarning>
+        <details className="console-menu" id="console-menu" suppressHydrationWarning>
           <summary className="console-menu__toggle">
             <span className="console-menu__text">
               <span className="console-menu__brand">{t(brand)}</span>
@@ -142,6 +143,10 @@ export function ConsoleShell({
             ))}
           </nav>
         </details>
+        {/* The sidebar above 900px is the same panel, open. Without this the console had no navigation at all on a
+            desktop: the summary is hidden there, and a closed `<details>` hides its own children in the UA shadow
+            tree. */}
+        <DetailsForDesktop id="console-menu" breakpoint={900} />
       </aside>
 
       <div className="console-main">

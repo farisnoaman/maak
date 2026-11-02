@@ -10504,3 +10504,61 @@ h3,
 [class*='disclosure'] > summary {
   border-color: var(--paper-edge);
 }
+
+/* ====================================================================================================================
+ * 27. THE DESKTOP NAVIGATION, WHICH WAS NOT THERE
+ *
+ * Both navigations — the site header's and the console sidebar's — live inside a `<details>`: a disclosure on a phone
+ * that costs no JavaScript and is keyboard-operable for free. Above the breakpoint the summary is hidden and the same
+ * links are laid out inline. That second half never worked, and the stylesheet said it did: `.site-menu__links` and
+ * `.console-nav` were given `display: flex/grid !important` inside the media query, which is a rule about an element
+ * the browser had already refused to render.
+ *
+ * A closed `<details>` hides its children in the user-agent shadow DOM (the content slot carries
+ * `content-visibility: hidden`), so no author rule on the children reaches them. On a desktop the header therefore
+ * showed the brand and the language switch and nothing else: no *Menu* button (hidden by the same media query), no
+ * links, **no way to sign in**. The console had no sidebar at all.
+ *
+ * `::details-content` is that slot, addressable since 2025. `content-visibility: visible` above the breakpoint is the
+ * one declaration that makes the inline navigation real; `DetailsForDesktop` also sets `open`, which is what the
+ * accessibility tree reads. An engine without the pseudo-element falls back to showing the *Menu* button on desktop,
+ * so the links are one press away instead of invisible — a menu, never a missing menu.
+ * ================================================================================================================== */
+
+@media (min-width: 720px) {
+  @supports (selector(::details-content)) {
+    .site-menu::details-content {
+      content-visibility: visible;
+    }
+  }
+
+  @supports not (selector(::details-content)) {
+    .site-menu__toggle {
+      display: inline-flex;
+    }
+  }
+}
+
+@media (min-width: 900px) {
+  @supports (selector(::details-content)) {
+    .console-menu::details-content {
+      content-visibility: visible;
+    }
+  }
+
+  @supports not (selector(::details-content)) {
+    .console-menu__toggle {
+      display: flex;
+    }
+  }
+}
+
+/* The panel is open above the breakpoint, so the toggle's "open" styling must not follow it there — the button is
+   either hidden (modern engines) or a fallback, and in neither case is it showing the closed state of a menu that is
+   laid out inline on the page. */
+@media (min-width: 720px) {
+  .site-menu[open] > .site-menu__toggle {
+    border-color: var(--surface-sunken);
+    color: var(--ink-600);
+  }
+}

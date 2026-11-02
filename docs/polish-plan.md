@@ -67,6 +67,7 @@ questions in the order they ask them.**
 | 19 | `/admin/regions` | A table of names with the coverage as one dotted sentence, an editor that replaced the list, and supervisors in a second table with an always-open assignment block | `[x]` — §25 |
 | 20 | **One job per page** in the console | Regions carried the tree, the editor and the supervisors; places carried the queue, the form and the search; plans carried the price list and the commission desk — every screen a scroll with three jobs in it | `[x]` — §26 |
 | 21 | The direction, applied to the dense half | The warm layer existed as tokens; the console still read as a spreadsheet in grey. The direction is now material: a tinted head band, warm paper, flat matte buttons | `[x]` — §26 |
+| 22 | **The desktop navigation did not exist** | Both navigations lived inside a closed `<details>` and were "opened" with `display: … !important`, which a closed `<details>` ignores — no menu, no links, no *Sign in* above 720px, and no console sidebar above 900px | `[x]` — §27 |
 
 ## 3–4. Trips list and trip detail — what changed
 
@@ -1015,3 +1016,50 @@ divided by rules, no card inside a card (§13). What changed is the material:
 `check:responsive` ✓ (100 media queries), `check:guards` ✓ (32 core files, 198 style files), `check:all` ✓.
 **Gaps:** there is still no browser in this sandbox, so the band's geometry at 375/768/1280, the focus ring on the pill
 nav and the dark-theme paper are read from CSS and markup, not seen.
+
+## 27. The navigation that was not there
+
+**The report.** *"In desktop view, how can I reach the menu, or log in?!!"* — a fair question, and the answer was: you
+could not. Above 720px the header showed the brand, the language switch, and empty space.
+
+**What was wrong.** Both navigations are one list of links inside a `<details>`: on a phone that is a disclosure with
+no JavaScript and free keyboard behaviour, and above the breakpoint the stylesheet hides the summary and lays the same
+links out inline. The second half was written as
+
+```css
+@media (min-width: 720px) {
+  .site-menu__toggle { display: none; }
+  .site-menu__links { display: flex !important; }
+}
+```
+
+A closed `<details>` hides its children **in the user-agent shadow DOM**: the content slot carries
+`content-visibility: hidden`, and no author rule on the light-DOM children reaches it. So the `!important` was a rule
+about an element the browser had already decided not to render, the toggle was hidden by the same media query, and the
+result was a header with no way in. The console sidebar (`.console-menu`, 900px) had the identical shape and the
+identical failure: on a desktop the console had no navigation at all.
+
+**Why the guards were green.** `check-responsive` asserted that no media query *hides* the navigation — it read our own
+stylesheet for `display: none` on a nav selector and found `.site-menu__links { display: flex !important }`, which
+looks like the opposite of a bug. The bug was inside the browser.
+
+**The fix, in two halves.**
+
+- `::details-content { content-visibility: visible }` above each breakpoint (§27 of the stylesheet) — the pseudo-element
+  *is* the content slot, so this is the one declaration that makes the inline navigation real. It paints immediately,
+  from the server-rendered CSS.
+- `DetailsForDesktop` sets `open` on the element when the viewport is at or above the breakpoint. That is what the
+  **accessibility tree** reads — skipped `content-visibility` content is hidden from screen readers even when a rule
+  paints it — and it is what keeps the fix working in an engine without the pseudo-element. It is a property set in an
+  effect, so the server HTML and the first client render agree (closed on a phone) and hydration cannot mismatch.
+- An engine without `::details-content` gets the *Menu* button back on desktop via `@supports not (…)`: the links are
+  one press away instead of invisible. A menu, never a missing menu.
+
+**The guard that would have caught it.** `check-responsive` now fails any stylesheet that reveals `.site-menu__links`
+or `.console-nav` above a breakpoint with `display: … !important` and does not also carry
+`::details-content { content-visibility: visible }`. Verified by removing the declaration: the check reports
+`globals.css:1445` and exits non-zero.
+
+**Verified.** `/en` and `/ar` render the four links and the *Sign in* button in the markup with the panel `open` set
+client-side; `tsc` ✓, `prettier` ✓, `check:responsive` ✓ (103 media queries), `check:guards` ✓. **Gap:** no browser in
+this sandbox — whether the panel is *painted* at 1280px is inferred from the spec of `::details-content`, not seen.

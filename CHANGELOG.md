@@ -13,6 +13,20 @@ on `main`; the tag is the last step, not the first.
 
 ## [Unreleased] — after the last phase report
 
+### Fixed — there was no navigation and no *Sign in* on a desktop (`docs/polish-plan.md` §27)
+
+- **Both navigations** (the site header's, and the console sidebar's) live inside a `<details>` and were "opened" above
+  the breakpoint with `display: flex/grid !important`. A closed `<details>` hides its children in the user-agent shadow
+  DOM, so that rule styled an element the browser had already refused to render: above 720px the header showed the
+  brand and the language switch and nothing else — no menu button (hidden by the same media query), no links, no way to
+  sign in — and above 900px the console had no sidebar at all.
+- `::details-content { content-visibility: visible }` above each breakpoint makes the inline navigation real, and
+  `DetailsForDesktop` sets `open` so the links also reach the accessibility tree (skipped `content-visibility` content is
+  invisible to screen readers even when painted). An engine without the pseudo-element gets the *Menu* button back
+  instead of an invisible nav.
+- `check-responsive` now fails a stylesheet that reveals a `<details>` navigation panel with `display: … !important`
+  without that declaration — the check that was green while the bug shipped.
+
 ### Changed — one job per page in the console (`docs/polish-plan.md` §26)
 
 - **`/admin/regions` keeps the tree.** Editing is `/admin/regions/[id]`, a new region is `/admin/regions/new`, and the

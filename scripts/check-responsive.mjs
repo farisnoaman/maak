@@ -104,6 +104,34 @@ for (const block of mediaBlocks(css)) {
 }
 
 // ---------------------------------------------------------------------------
+// 2b. A closed `<details>` cannot be revealed by `display` on its children
+// ---------------------------------------------------------------------------
+// Both navigations sit inside a `<details>` so a phone gets a disclosure for free, and the stylesheet used to
+// "open" them above the breakpoint with `display: flex/grid !important`. A closed `<details>` hides its children
+// in the user-agent shadow DOM, so that rule styled an element the browser had already refused to render: above
+// 720px the header showed the brand and the language switch and nothing else — no menu, no sign-in — and the
+// console sidebar was missing on a desktop. The old checks were green because they only read our own CSS.
+//
+// `::details-content { content-visibility: visible }` is the declaration that actually shows the panel, so a
+// stylesheet that reveals a disclosure panel by `display` must also carry it.
+
+const revealingPanel = [
+  ...css.matchAll(
+    /\.(?:site-menu__links|console-nav)\s*\{[^}]*display:\s*(?:flex|grid)\s*!important/g,
+  ),
+];
+if (
+  revealingPanel.length > 0 &&
+  !/::details-content\s*\{[^}]*content-visibility:\s*visible/.test(css)
+) {
+  fail(
+    'apps/web/src/app/globals.css',
+    lineOf(css, revealingPanel[0].index),
+    'a navigation panel inside a closed <details> is revealed with `display: … !important`, which the browser ignores — the content slot is hidden in the UA shadow tree. Add `::details-content { content-visibility: visible }` above the breakpoint (and `open` from the client, so the panel reaches the accessibility tree)',
+  );
+}
+
+// ---------------------------------------------------------------------------
 // 3. Grid tracks may not exceed their container
 // ---------------------------------------------------------------------------
 

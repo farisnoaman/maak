@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { translate, type Locale, type TranslationKey } from '@maak/core';
 import { Icon } from './ui/Icon';
 import { LocaleSwitch } from './LocaleSwitch';
+import { DetailsForDesktop } from './ui/DetailsForDesktop';
 import { OpenInTab } from './OpenInTab';
 
 /**
@@ -85,7 +86,7 @@ export function SiteHeader({
             from the server HTML. The same reasoning is written out at length in
             `components/trips/FilterDisclosure.tsx`; here nothing sets the attribute in JavaScript at all.
           */}
-          <details className="site-menu" suppressHydrationWarning>
+          <details className="site-menu" id="site-menu" suppressHydrationWarning>
             <summary className="site-menu__toggle" aria-label={t('nav.menu')}>
               {/* Two draws, one visible: the toggle says "menu" closed and "close" open. It used to be the
                   character `☰`, which stayed `☰` while the menu was open. */}
@@ -125,6 +126,11 @@ export function SiteHeader({
             </div>
           </details>
         </nav>
+
+        {/* Above 720px the links are laid out inline and the summary is hidden — which is only true if the panel
+            is actually open. `::details-content` paints it; this puts the `open` attribute on it, which is what
+            screen readers read. See the component for the whole story. */}
+        <DetailsForDesktop id="site-menu" breakpoint={720} />
 
         <LocaleSwitch
           current={locale}
