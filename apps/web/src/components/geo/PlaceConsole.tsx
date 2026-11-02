@@ -348,114 +348,140 @@ export function PlaceConsole({
             />
           ) : (
             <ul className="place-grid">
-              {queue.map((place) => (
-                <li key={place.id} className="place-card">
-                  <div className="place-card__head">
-                    <h3 className="place-card__name">{place.nameAr}</h3>
-                    <span className="place-card__kind">
-                      {t(PLACE_KIND_KEY[place.kind as PlaceKind] as TranslationKey)}
-                    </span>
-                  </div>
+              {queue.map((place) => {
+                /*
+                 * The card leads with the name in the reader's own language, and shows the other only when it says
+                 * something different. It used to print the Arabic name in both locales with the English underneath,
+                 * which read as a half-translated screen to an English-speaking reviewer.
+                 */
+                const hasEnglish = Boolean(place.nameEn && place.nameEn.trim() !== '');
+                const primary =
+                  locale === 'ar' ? place.nameAr : hasEnglish ? place.nameEn! : place.nameAr;
+                const secondary =
+                  locale === 'ar'
+                    ? hasEnglish
+                      ? place.nameEn
+                      : null
+                    : place.nameAr !== primary
+                      ? place.nameAr
+                      : null;
 
-                  {place.nameEn ? (
-                    <p className="place-card__alt" lang="en" dir="ltr">
-                      {place.nameEn}
-                    </p>
-                  ) : null}
+                return (
+                  <li key={place.id} className="place-card">
+                    <div className="place-card__head">
+                      <h3 className="place-card__name">{primary}</h3>
+                      <span className="place-card__kind">
+                        {t(PLACE_KIND_KEY[place.kind as PlaceKind] as TranslationKey)}
+                      </span>
+                    </div>
 
-                  <dl className="place-card__meta">
-                    <div>
-                      <dt>{t('places.governorate')}</dt>
-                      <dd>{place.governorateName ?? '—'}</dd>
-                    </div>
-                    <div>
-                      <dt>{t('places.district')}</dt>
-                      <dd>{place.districtName ?? '—'}</dd>
-                    </div>
-                    <div>
-                      <dt>{t('places.coordinates')}</dt>
-                      <dd className="num">
-                        {place.lat != null && place.lng != null ? (
-                          <bdi dir="ltr">
-                            {place.lat.toFixed(4)}, {place.lng.toFixed(4)}
-                          </bdi>
-                        ) : (
-                          '—'
-                        )}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>{t('places.submittedBy')}</dt>
-                      <dd>
-                        {place.submittedByName ??
-                          (place.submittedBy ? (
-                            <bdi dir="ltr" className="id-short">
-                              {place.submittedBy.slice(0, 8)}
+                    {secondary ? (
+                      <p
+                        className="place-card__alt"
+                        lang={locale === 'ar' ? 'en' : 'ar'}
+                        dir={locale === 'ar' ? 'ltr' : 'rtl'}
+                      >
+                        {secondary}
+                      </p>
+                    ) : null}
+
+                    <dl className="place-card__meta">
+                      <div>
+                        <dt>{t('places.governorate')}</dt>
+                        <dd>{place.governorateName ?? '—'}</dd>
+                      </div>
+                      <div>
+                        <dt>{t('places.district')}</dt>
+                        <dd>{place.districtName ?? '—'}</dd>
+                      </div>
+                      <div>
+                        <dt>{t('places.coordinates')}</dt>
+                        <dd className="num">
+                          {place.lat != null && place.lng != null ? (
+                            <bdi dir="ltr">
+                              {place.lat.toFixed(4)}, {place.lng.toFixed(4)}
                             </bdi>
                           ) : (
                             '—'
-                          ))}
-                      </dd>
-                    </div>
-                  </dl>
-
-                  {place.createdAt ? (
-                    <p className="place-card__when">
-                      {t('places.submittedAt', {
-                        date: formatDate(place.createdAt, { locale }),
-                      })}
-                    </p>
-                  ) : null}
-
-                  <div className="place-card__actions">
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      loading={busy === place.id}
-                      onClick={() => decide(place, 'approve')}
-                    >
-                      {t('places.approve')}
-                    </Button>
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      disabled={busy === place.id}
-                      onClick={() => setRejecting(rejecting === place.id ? null : place.id)}
-                    >
-                      {t('places.reject')}
-                    </Button>
-                  </div>
-
-                  {/* Asking why, only once the answer was "no" — sand, because a human is now involved. */}
-                  {rejecting === place.id ? (
-                    <div className="place-card__reject">
-                      <Field
-                        label={t('places.rejectReason')}
-                        hint={t('places.rejectHint')}
-                        value={reasons[place.id] ?? ''}
-                        onChange={(event) =>
-                          setReasons((current) => ({ ...current, [place.id]: event.target.value }))
-                        }
-                      />
-                      <div className="place-card__reject-actions">
-                        <Button
-                          variant="danger"
-                          size="sm"
-                          disabled={
-                            busy === place.id || (reasons[place.id] ?? '').trim().length < 10
-                          }
-                          onClick={() => decide(place, 'reject')}
-                        >
-                          {t('places.reject')}
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => setRejecting(null)}>
-                          {t('common.cancel')}
-                        </Button>
+                          )}
+                        </dd>
                       </div>
+                      <div>
+                        <dt>{t('places.submittedBy')}</dt>
+                        <dd>
+                          {place.submittedByName ??
+                            (place.submittedBy ? (
+                              <bdi dir="ltr" className="id-short">
+                                {place.submittedBy.slice(0, 8)}
+                              </bdi>
+                            ) : (
+                              '—'
+                            ))}
+                        </dd>
+                      </div>
+                    </dl>
+
+                    {place.createdAt ? (
+                      <p className="place-card__when">
+                        {t('places.submittedAt', {
+                          date: formatDate(place.createdAt, { locale }),
+                        })}
+                      </p>
+                    ) : null}
+
+                    <div className="place-card__actions">
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        loading={busy === place.id}
+                        onClick={() => decide(place, 'approve')}
+                      >
+                        {t('places.approve')}
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        disabled={busy === place.id}
+                        onClick={() => setRejecting(rejecting === place.id ? null : place.id)}
+                      >
+                        {t('places.reject')}
+                      </Button>
                     </div>
-                  ) : null}
-                </li>
-              ))}
+
+                    {/* Asking why, only once the answer was "no" — sand, because a human is now involved. */}
+                    {rejecting === place.id ? (
+                      <div className="place-card__reject">
+                        <Field
+                          label={t('places.rejectReason')}
+                          hint={t('places.rejectHint')}
+                          value={reasons[place.id] ?? ''}
+                          onChange={(event) =>
+                            setReasons((current) => ({
+                              ...current,
+                              [place.id]: event.target.value,
+                            }))
+                          }
+                        />
+                        <div className="place-card__reject-actions">
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            disabled={
+                              busy === place.id || (reasons[place.id] ?? '').trim().length < 10
+                            }
+                            onClick={() => decide(place, 'reject')}
+                          >
+                            {t('places.reject')}
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => setRejecting(null)}>
+                            {t('common.cancel')}
+                          </Button>
+                        </div>
+                      </div>
+                    ) : null}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </section>

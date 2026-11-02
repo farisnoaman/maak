@@ -13,6 +13,24 @@ on `main`; the tag is the last step, not the first.
 
 ## [Unreleased] — after the last phase report
 
+### Changed — one card shell and one action row (`docs/polish-plan.md` §31)
+
+- **Four card classes became one look**: `.trip-card`, `.place-card`, `.geo-region-card`, `.supervisor-card` (plus
+  `.sub-card`, `.plan-card`) now share the paper, the 1px warm edge, the 20px corner, the 16→20px padding and the
+  `--space-3` rhythm — no shadows, no per-screen hairlines. A retired region is the same card with a wash.
+- **Dividers inside a card are one dashed warm hairline** everywhere.
+- **Action rows are one row**: same gap and wrap, one filled button each, and the legacy `.btn` is brought onto the
+  `.ui-btn` scale (inherited font, 20px padding, flat primary, transparent ghost) — the trip page's footer row and its
+  fare button now use `.ui-btn` directly, which removes the product's last gradient button.
+
+### Changed — two more console pages split (`docs/polish-plan.md` §32)
+
+- **`/admin/subscriptions`** keeps the payer list; the quota grants moved to **`/admin/subscriptions/overrides`**, with
+  its own facts (`Grants`, `Platform-wide`) and empty state. New keys `subs.overridesSubtitle`, `subs.factGrants`.
+- **`/admin/users`** keeps the directory and roles; the account-deletion queue moved to **`/admin/users/deletions`**
+  with a waiting count in the band. New key `admin.deletionWaiting`.
+- Both new routes are in the a11y sweep (117 routes).
+
 ### Changed — `/admin/regions`, re-cut (`docs/polish-plan.md` §30)
 
 - **A card per region** instead of a table row: name, kind, status, then the coverage as **counted chips**

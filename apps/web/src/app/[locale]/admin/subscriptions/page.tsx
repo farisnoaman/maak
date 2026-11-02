@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import {
   formatDate,
@@ -12,14 +13,15 @@ import { ConsoleShell } from '@/components/ConsoleShell';
 import { adminNav } from '@/components/admin/AdminNav';
 import { Badge, EmptyState } from '@/components/ui/Feedback';
 import { loadAccountContext } from '@/lib/account';
-import { loadQuotaOverrides, loadSubscriptions } from '@/lib/finance';
+import { loadSubscriptions } from '@/lib/finance';
 
 /**
- * `/admin/subscriptions` — who is on what, and the support grants that sit beside the plan.
+ * `/admin/subscriptions` — who is on what.
  *
  * Read-only on purpose: the plans editor changes prices, and the *operator's* billing page changes their own
  * plan. An admin screen that could silently switch somebody's plan is an audit trail with a missing actor.
- * Quota overrides are the exception — they are a support action, and they expire.
+ * The quota grants support hands out are their own page (`/overrides`), because they answer a different question
+ * ("what did we promise?") from the one this list answers ("what are we billing?").
  */
 export const dynamic = 'force-dynamic';
 
@@ -62,10 +64,7 @@ export default async function AdminSubscriptionsPage({
     );
   }
 
-  const [subscriptions, overrides] = await Promise.all([
-    loadSubscriptions(),
-    loadQuotaOverrides(null),
-  ]);
+  const subscriptions = await loadSubscriptions();
 
   /*
    * Two numbers the table could not answer: how much of this page is *live* money, and how many rows are actually
@@ -89,6 +88,14 @@ export default async function AdminSubscriptionsPage({
         title="subs.title"
         subtitle="subs.subtitle"
         groups={adminNav(locale)}
+        actions={
+          <Link
+            className="ui-btn ui-btn--ghost ui-btn--sm"
+            href={`/${locale}/admin/subscriptions/overrides`}
+          >
+            {t('subs.overrides')}
+          </Link>
+        }
         facts={[
           { label: t('subs.factLive'), value: String(subscriptions.length) },
           { label: t('subs.factActive'), value: String(activeCount) },
@@ -178,66 +185,6 @@ export default async function AdminSubscriptionsPage({
                 );
               })}
             </ul>
-          )}
-        </section>
-
-        <section className="console-section" id="overrides">
-          <div className="console-section__head">
-            <h2>{t('subs.overrides')}</h2>
-            <span className="console-section__meta">{overrides.length}</span>
-          </div>
-          {overrides.length === 0 ? (
-            <EmptyState
-              title={t('subs.noOverrides')}
-              description={t('subs.noOverridesHint')}
-              icon="check"
-            />
-          ) : (
-            <div className="table-scroll">
-              <table className="data-table table-cards">
-                <caption className="visually-hidden">{t('subs.overrides')}</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">{t('subs.overrideFor')}</th>
-                    <th scope="col">{t('subs.metric')}</th>
-                    <th scope="col">{t('subs.limitValue')}</th>
-                    <th scope="col">{t('subs.expiresAt')}</th>
-                    <th scope="col">{t('subs.reason')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {overrides.map((override) => (
-                    <tr key={override.id}>
-                      <th scope="row" data-label={t('subs.overrideFor')}>
-                        {override.ownerOrgId ? (
-                          <bdi dir="ltr" className="id-short">
-                            {override.ownerOrgId.slice(0, 8)}
-                          </bdi>
-                        ) : (
-                          t('plans.platformWide')
-                        )}
-                      </th>
-                      <td data-label={t('subs.metric')}>
-                        {t(`metric.${override.metric}` as TranslationKey)}
-                      </td>
-                      <td data-label={t('subs.limitValue')}>
-                        {override.limitValue === null
-                          ? t('billing.unlimited')
-                          : override.limitValue}
-                      </td>
-                      <td data-label={t('subs.expiresAt')}>
-                        {override.expiresAt === null
-                          ? t('billing.unlimited')
-                          : t('billing.overrideUntil', {
-                              date: formatDate(override.expiresAt, { locale }),
-                            })}
-                      </td>
-                      <td data-label={t('subs.reason')}>{override.reason}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
           )}
         </section>
       </ConsoleShell>

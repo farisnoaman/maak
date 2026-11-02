@@ -71,6 +71,8 @@ questions in the order they ask them.**
 | 23 | **The trip page**, second pass | The itinerary was a rail of dots between two paragraphs, and the operator and the notes were the last two grey headings of a flat column | `[x]` — §28 |
 | 24 | The trip page, one material | §28 left the facts list and the fare panel wearing two older shells — three kinds of card on one screen | `[x]` — §29 |
 | 25 | `/admin/regions`, re-cut | A table of four columns with the coverage as one dotted sentence, an editor that replaced the list, and the supervisor assignment under it — three jobs in one scroll, two of them forms | `[x]` — §30 |
+| 26 | **Four card classes, four looks** | The trip page, the places queue, the regions tree and the supervisor roster each had their own border, shadow, padding and divider — and the trip page's footer row mixed `.btn` with `.ui-btn` | `[x]` — §31 |
+| 27 | Two more pages with two jobs each | Subscriptions carried the payer list and the support grants; users carried the directory and the deletion queue | `[x]` — §32 |
 
 ## 3–4. Trips list and trip detail — what changed
 
@@ -1160,3 +1162,49 @@ edited left the screen while it was being edited. The supervisor assignment stoo
 card with its three chips and its two actions, the *New region* row and the *Assign or change* row. `tsc` ✓,
 `prettier` ✓, `check:responsive` ✓ (107 media queries), `check:guards` ✓, `check:all` ✓, `check:a11y` ✓ (113 routes).
 **Gap:** no browser — the two-up grid at 760px and the disclosures' open/close are read from markup and CSS.
+
+## 31. One card, one action row
+
+**The report.** *"The cards look different — make all the cards consistent, and the action buttons at the bottom too."*
+
+**What was actually different.** Four card classes had grown up on four screens — `.trip-card`, `.place-card`,
+`.geo-region-card`, `.supervisor-card` — and each was reasonable alone: two had `box-shadow: var(--shadow-sm)`, all four
+drew their border from `--surface-sunken`, three were padded at 16px and one at 20px, and the dividers inside differed
+by a pixel of colour. The trip page's footer row was worse: `ShareTrip` renders `.ui-btn--ghost` and the two links beside
+it were `.btn--ghost`, so the same row had two font sizes, two paddings, two ghost backgrounds — and `.btn--primary` was
+the last gradient button in the product.
+
+**What it is now** (stylesheet §31).
+
+- **One shell, by class**: `.trip-card, .place-card, .geo-region-card, .supervisor-card, .sub-card, .plan-card` share
+  the paper (`--paper`), the edge (`--paper-edge`), the corner (`--radius-lg`), the padding (16px, 20px from 900px) and
+  the rhythm (`--space-3`). No shadows — elevation is not part of this direction. A retired region is the same card with
+  a wash, not a different object.
+- **One divider**: the dashed warm hairline the trip page's rows already used.
+- **One action row**: same gap, same wrap, one filled button per row — and `.btn` is brought onto `.ui-btn`'s scale
+  (font inherited, 20px padding, flat primary, transparent ghost), so the trip page's footer and the fare CTA match the
+  rest of the console. The trip page's own markup moved to `.ui-btn` for good measure.
+
+**Verified.** `/en|/ar` for `/trips/AD-SA-FHFC`, `/admin/regions`, `/admin/places`: one card shell in the markup of each,
+the footer row now four `.ui-btn`s. `tsc` ✓, `prettier` ✓, `check:responsive` ✓ (108 media queries), `check:guards` ✓,
+`check:all` ✓. **Gap:** no browser — the 16→20px padding step at 900px and the hover states are read from the CSS.
+
+## 32. Two more pages with two jobs each
+
+The one-job-per-page rule (§26) stopped at the admin screens that were already "finished". Two were still carrying a
+second subject at the bottom of a long list.
+
+- **`/admin/subscriptions`** is now the payer list only — who is on what, the live / active / monthly figures in the
+  band. **`/admin/subscriptions/overrides`** holds the quota grants support hands out, with its own facts (`Grants`,
+  `Platform-wide`) and its own empty state. They answer different questions: *what are we billing?* and *what did we
+  promise?*. The index header carries the door.
+- **`/admin/users`** is now the directory and roles. **`/admin/users/deletions`** holds the account-deletion queue — the
+  one thing on that screen somebody must act on, and it used to sit under up to fifty rows of directory. Both are
+  reached from the header of the page they belong to.
+
+Each new route is the same shape as the others: locale → session → role gate → loader → `ConsoleShell` with
+`title`/`subtitle`/`facts`, and a `PreviewBanner` where the data can be preview-only. Both are in the a11y sweep
+(117 routes now).
+
+**Verified.** `/en|/ar` for both new routes: facts, empty states and the cross-links render. `check:all` ✓,
+`check:responsive` ✓, `check:guards` ✓, `check:a11y` ✓.

@@ -82,7 +82,7 @@ export default async function PublicTripPage({
             title={t('trips.detail.notFound')}
             description={t('trips.search.subtitle')}
             action={
-              <Link className="btn btn--primary" href={`/${locale}/trips`}>
+              <Link className="ui-btn ui-btn--primary" href={`/${locale}/trips`}>
                 {t('trips.search.title')}
               </Link>
             }
@@ -413,10 +413,13 @@ export default async function PublicTripPage({
 
                 <div className="trip-form__actions">
                   <ShareTrip locale={locale} url={`/${locale}/trips/${trip.code}`} />
-                  <Link className="btn btn--ghost" href={`/${locale}/trips/${trip.code}/live`}>
+                  <Link
+                    className="ui-btn ui-btn--ghost"
+                    href={`/${locale}/trips/${trip.code}/live`}
+                  >
                     {t('live.open')}
                   </Link>
-                  <Link className="btn btn--ghost" href={`/${locale}/trips`}>
+                  <Link className="ui-btn ui-btn--ghost" href={`/${locale}/trips`}>
                     {t('trips.search.title')}
                   </Link>
                 </div>
@@ -485,7 +488,7 @@ export default async function PublicTripPage({
                   </p>
                 ) : (
                   <Link
-                    className="btn btn--primary trip-book__cta"
+                    className="ui-btn ui-btn--primary trip-book__cta"
                     href={`/${locale}/trips/${trip.code}/book`}
                   >
                     {t('bookings.reserve')}

@@ -10882,3 +10882,104 @@ h3,
 .trip-card .trip-facts__row {
   padding-block: var(--space-2);
 }
+
+/* ====================================================================================================================
+ * 31. ONE CARD, ONE ACTION ROW — the same object wherever a thing is itemised
+ *
+ * Four card classes had grown up on four screens: the trip page's (§28), the places queue's, the regions tree's and the
+ * supervisor roster's. Each was reasonable on its own and different from the others — a shadow here, a `--surface-sunken`
+ * hairlines there, a 4px radius on the dividers, two of them padded at 16 and one at 20. On one screen that reads as
+ * "unfinished"; on four screens it reads as four products.
+ *
+ * So the shell is stated once, by class, and the dividers inside are the same dashed hairline everywhere. The action
+ * rows are stated once too: same gap, same wrap, one filled button per row — including the legacy `.btn` rows on the
+ * trip page, which were the only buttons in the product still drawing a gradient.
+ * ================================================================================================================== */
+
+.trip-card,
+.place-card,
+.geo-region-card,
+.supervisor-card,
+.sub-card,
+.plan-card {
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--paper-edge);
+  border-radius: var(--radius-lg);
+  background: var(--paper);
+  box-shadow: none;
+}
+
+@media (min-width: 900px) {
+  .trip-card,
+  .place-card,
+  .geo-region-card,
+  .supervisor-card,
+  .sub-card,
+  .plan-card {
+    padding: var(--space-5);
+  }
+}
+
+/* A retired region is still a card; it is muted, not a different object. */
+.geo-region-card[data-retired='true'] {
+  background: var(--paper-wash);
+}
+
+/* Dividers inside a card: one hairline, dashed, warm — the same rule the trip page's rows use. */
+.place-card__meta,
+.geo-region-card__actions,
+.supervisor-card__regions,
+.trip-book__seats {
+  border-block-start-color: color-mix(in srgb, var(--ink-900) 12%, transparent);
+}
+
+/* ---------- the action row ----------
+ * Every row of buttons that sits under a card or at the foot of a form: same gap, same wrap, and the primary last so
+ * the eye lands on the one action that matters. `.btn` is the legacy class still used by the trip page's footer row;
+ * it is brought onto the same scale here rather than left as the product's only gradient button.
+ */
+.trip-form__actions,
+.form-actions,
+.place-card__actions,
+.geo-region-card__actions,
+.trip-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding-inline: var(--space-5);
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-weight: 700;
+}
+
+.btn--primary {
+  background: var(--brand-600);
+  border-color: var(--brand-700);
+  color: #fff;
+  box-shadow: var(--shadow-sm);
+}
+
+.btn--primary:hover {
+  background: var(--brand-700);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn--ghost {
+  background: transparent;
+  border-color: var(--paper-edge);
+  color: var(--ink-800);
+}
+
+.btn--ghost:hover {
+  background: var(--paper-wash);
+  border-color: color-mix(in srgb, var(--ink-900) 18%, transparent);
+}
