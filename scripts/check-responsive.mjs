@@ -278,6 +278,9 @@ const TARGETS = [
   // Two ways in on the sign-in page, and the password reveal beside the input: both are tapped on a phone.
   '.auth-method',
   '.ui-field__reveal',
+  // A framed list of doors (account hub, operator overview) and the operator's departure rows: every row is a link.
+  '.door',
+  '.departure',
 ];
 
 for (const selector of TARGETS) {

@@ -1700,8 +1700,24 @@ a {
   padding-block-end: var(--space-2);
 }
 .ops-section__head h2 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
   font-size: 1rem;
   font-weight: 700;
+}
+
+/* The company a whole list belongs to, said once beside its heading rather than on every row. */
+.ops-section__scope {
+  color: var(--ink-500);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+.ops-section__scope::before {
+  content: '·';
+  margin-inline-end: var(--space-2);
 }
 .link-more {
   font-size: 0.85rem;
@@ -2497,7 +2513,11 @@ a {
 }
 
 /* Console doors: a row each, because there are one to four of them. */
-.account-consoles {
+/* Next departures: the operator's own timetable, one row per trip.
+   Time in its own edge (the fact the list is sorted by), the route and its company in the middle, seats on the far
+   edge with a fill bar, and a flag when somebody is waiting to be accepted onto that trip. A phone drops the bar and
+   the flag onto their own lines rather than squeezing five facts into one. */
+.departures {
   display: grid;
   gap: 0;
   margin: 0;
@@ -2508,15 +2528,192 @@ a {
   overflow: hidden;
 }
 
-.account-consoles li + li {
+.departures li + li {
   border-block-start: 1px solid var(--surface-sunken);
 }
 
-.account-console {
+.departure {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  min-block-size: var(--tap-target);
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-base);
+  color: var(--ink-800);
+  text-decoration: none;
+  transition: background 0.15s ease;
+}
+
+.departure:hover,
+.departure:focus-visible {
+  background: var(--brand-50);
+}
+
+/* The time edge: the fact the list is sorted by, so it is the fact that gets the strong weight. */
+.departure__when {
+  display: grid;
+  gap: 1px;
+  min-inline-size: 4.6rem;
+  padding-inline-end: var(--space-3);
+  border-inline-end: 1px dashed var(--surface-sunken);
+}
+
+.departure__time {
+  color: var(--ink-900);
+  font-size: var(--text-md);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.departure__date {
+  color: var(--ink-500);
+  font-size: var(--text-xs);
+}
+
+.departure__body {
+  display: grid;
+  gap: 2px;
+  min-inline-size: 0;
+}
+
+.departure__route {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 700;
+  color: var(--ink-900);
+}
+
+.departure__arrow {
+  display: inline-grid;
+  place-items: center;
+  color: var(--brand-600);
+  line-height: 0;
+  transform: scaleX(var(--icon-flip, 1));
+}
+
+.departure__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  color: var(--ink-500);
+  font-size: var(--text-xs);
+}
+
+.departure__code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.02em;
+}
+
+.departure__seats {
+  display: grid;
+  gap: 2px;
+  grid-column: 2;
+  justify-items: start;
+}
+
+.departure__seats-label {
+  color: var(--ink-500);
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.departure__seats-value {
+  color: var(--ink-800);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+/* How full the vehicle is, drawn from the same numbers as the label above it. */
+.departure__bar {
+  inline-size: 100%;
+  max-inline-size: 8rem;
+  block-size: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-sunken);
+  overflow: hidden;
+}
+
+.departure__bar::before {
+  content: '';
+  display: block;
+  block-size: 100%;
+  inline-size: var(--fill, 0%);
+  border-radius: inherit;
+  background: var(--brand-500);
+}
+
+.departure__flag {
+  grid-column: 2;
+  justify-self: start;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--state-warning) 12%, var(--surface-base));
+  color: color-mix(in srgb, var(--state-warning) 80%, var(--ink-900));
+  font-size: var(--text-2xs);
+  font-weight: 800;
+}
+
+@media (min-width: 720px) {
+  .departure {
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+  }
+
+  .departure__seats {
+    grid-column: auto;
+    justify-items: end;
+    min-inline-size: 7rem;
+  }
+
+  .departure__flag {
+    grid-column: auto;
+    justify-self: end;
+  }
+}
+
+/* An empty band inside a console page: a sentence, a hint and the one verb that changes it. */
+.ops-empty {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+  padding: var(--space-5);
+  border: 1px dashed var(--surface-sunken);
+  border-radius: var(--radius-lg);
+}
+
+.ops-empty__title {
+  color: var(--ink-800);
+  font-weight: 700;
+}
+
+/* Doors: a framed list of places a signed-in person can go, one row each.
+   Shared by the account hub (the consoles a session may open) and the operator overview (the screens of the
+   console). It is deliberately not a grid of tiles: there are one to six of them, they are a list, and on a phone
+   a row is the only shape that stays tappable at 320px. */
+.doorlist {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.doorlist li + li {
+  border-block-start: 1px solid var(--surface-sunken);
+}
+
+.door {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  min-block-size: calc(var(--tap-target) + 8px);
+  min-block-size: var(--tap-target);
   padding: var(--space-3) var(--space-4);
   background: var(--surface-base);
   color: var(--ink-800);
@@ -2525,12 +2722,13 @@ a {
   transition: background 0.15s ease;
 }
 
-.account-console:hover {
+.door:hover,
+.door:focus-visible {
   background: var(--brand-50);
   color: var(--brand-700);
 }
 
-.account-console__icon {
+.door__icon {
   display: grid;
   place-items: center;
   inline-size: 30px;
@@ -2541,16 +2739,37 @@ a {
   color: var(--ink-600);
 }
 
-.account-console:hover .account-console__icon {
+.door:hover .door__icon,
+.door:focus-visible .door__icon {
   background: var(--brand-100);
   color: var(--brand-700);
 }
 
-.account-console__label {
+.door__label {
   flex: 1;
 }
 
-.account-console__go {
+/* The one sentence that says what is behind the door. Dim, and truncated before it can push the row wider than a
+   phone. */
+.door__note {
+  display: none;
+  color: var(--ink-500);
+  font-size: var(--text-xs);
+  font-weight: 500;
+}
+
+@media (min-width: 720px) {
+  .door__note {
+    display: block;
+    flex: 0 1 auto;
+    max-inline-size: 28rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.door__go {
   color: var(--ink-400);
   transform: scaleX(var(--icon-flip, 1));
 }

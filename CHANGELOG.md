@@ -30,8 +30,22 @@ on `main`; the tag is the last step, not the first.
   loopback — every dev-server request, and the preview proxy whenever it does not forward the host. A form on another
   site could create an account or sign a visitor in to the attacker's. The check now reads `Sec-Fetch-Site` first,
   rejects `cross-site` outright, and keeps the loopback escape only for browsers that send no fetch metadata.
+- **A driver's own licence no longer appears as an operator queue item.** The overview's first version counted any
+  pending driver profile belonging to the signed-in account, so a driver saw `Drivers awaiting review 1` — a number
+  they could do nothing about.
 
 ### Changed
+
+- **The operator overview answers questions instead of listing screens.** `/operator` was five identical tiles with an
+  `Open` button each — a menu that repeated the sidebar. It now opens with the four queues that can need an operator
+  (*booking requests* naming the trip they are on, *receipts to confirm*, *vehicles* and *drivers awaiting review*),
+  each a door into the queue behind it, and one sentence instead of four zeroes when none of them has anything. Under
+  it, the next four published departures: clock time, route, vehicle and trip code, seats taken with a fill bar, and a
+  flag on any trip with people waiting to be accepted. The screens dropped to a framed list of doors at the bottom.
+- **One list-of-doors style instead of two.** `.doorlist` / `.door` (icon, name, one line about what is behind it)
+  replaces `.account-consoles` / `.account-console`; the account hub and the operator overview share it.
+- **`loadTripRequests()`** counts pending bookings for a set of trips in one query, so the overview's request figure and
+  the trip inbox cannot disagree about the number.
 
 - **The sign-in page is a page.** It was a card in the middle of an empty screen with no header and no way back: now a
   header, the form on the near side, and a column that says what is behind the door (*your next journey*, *your booking

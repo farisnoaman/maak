@@ -241,6 +241,49 @@ export async function loadMyBookings(): Promise<readonly PassengerBooking[]> {
   );
 }
 
+/**
+ * Requests waiting on a decision, for a set of trips.
+ *
+ * The operator overview has to say "three people are waiting for you to accept them" without opening every trip's
+ * inbox, and it has to do it in one round trip rather than one per trip. RLS decides the scope
+ * (`app.can_read_booking` lets a trip's operator or the platform staff read its bookings), so this is a read the
+ * caller was always allowed to make — it was only ever missing an index-shaped way to ask.
+ *
+ * Only `pending` rows come back: the accepted ones are already counted as occupied seats by `trips.seats_available`,
+ * and counting them twice is how a dashboard starts disagreeing with the page it links to.
+ */
+export interface TripRequestCount {
+  readonly tripId: string;
+  readonly requests: number;
+  readonly seats: number;
+}
+
+export async function loadTripRequests(
+  tripIds: readonly string[],
+): Promise<readonly TripRequestCount[]> {
+  if (tripIds.length === 0) return [];
+  const client = await getServerClient();
+  if (!client) return [];
+
+  const result = await client
+    .from('bookings')
+    .select('trip_id, seats, status')
+    .in('trip_id', tripIds as string[])
+    .eq('status', 'pending');
+  if (result.error) return [];
+
+  const counts = new Map<string, { requests: number; seats: number }>();
+  for (const row of (result.data ?? []) as unknown as Row[]) {
+    const tripId = String(row.trip_id);
+    const current = counts.get(tripId) ?? { requests: 0, seats: 0 };
+    counts.set(tripId, {
+      requests: current.requests + 1,
+      seats: current.seats + num(row.seats),
+    });
+  }
+  return [...counts.entries()].map(([tripId, value]) => ({ tripId, ...value }));
+}
+
 /** One booking, if the caller may see it. `null` covers both "does not exist" and "not yours". */
 export async function loadBooking(id: string): Promise<PassengerBooking | null> {
   const client = await getServerClient();

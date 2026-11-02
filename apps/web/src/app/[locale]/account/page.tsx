@@ -314,15 +314,15 @@ export default async function AccountPage({
               <h2 id="account-consoles-title">{t('account.consoles')}</h2>
               <p className="form-hint">{t('account.consolesHint')}</p>
             </div>
-            <ul className="account-consoles">
+            <ul className="doorlist">
               {consoles.map((item) => (
                 <li key={item.href}>
-                  <Link className="account-console" href={`/${locale}${item.href}`}>
-                    <span className="account-console__icon" aria-hidden="true">
+                  <Link className="door" href={`/${locale}${item.href}`}>
+                    <span className="door__icon" aria-hidden="true">
                       <Icon name={item.icon} size={18} />
                     </span>
-                    <span className="account-console__label">{t(item.key)}</span>
-                    <Icon name="chevron" size={15} className="account-console__go" />
+                    <span className="door__label">{t(item.key)}</span>
+                    <Icon name="chevron" size={15} className="door__go" />
                   </Link>
                 </li>
               ))}

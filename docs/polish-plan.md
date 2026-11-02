@@ -50,7 +50,7 @@ questions in the order they ask them.**
 | 5 | Booking + pay (`/book`, `/pay`) | Two flows that work; the pay screen is the one people screenshot when it goes wrong | `[x]` — §15 |
 | 6 | Account (`/account`) | Lists are correct, hierarchy is flat — "next departure" should be the first thing | `[x]` — §16 |
 | 7 | Auth (`/auth/*`) | Fine, but the sign-in form is the last place a person should meet jargon | `[x]` — §17 |
-| 8 | Operator console | Dense tables are right for the job; the **overview** answers nothing at a glance | `[ ]` |
+| 8 | Operator console | Dense tables are right for the job; the **overview** answers nothing at a glance | `[x]` — §18 |
 | 9a | **Staff console** (`/staff`, dashboard, scan, verifications, vehicles, trips) | The same five screens under five different sidebars; a phase number above every title; four zeroes and two empty boxes as the dashboard | `[x]` |
 | 9b | Finance console | Same: correct, unranked | `[ ]` |
 | 9c | **Admin console** (`/admin` + 6 screens) | Two frames around every screen (a card inside a card), five different sidebars, a hub whose second tile apologised for a phase that no longer exists, and UUIDs printed where names belong | `[x]` |
@@ -511,3 +511,59 @@ has no mail catcher, so a reset flow could not be verified past its first screen
 would be exactly the kind of unverified claim this file exists to avoid. It also needs mail delivery before it means
 anything. The phone OTP path was rendered but not completed end to end (there is no SMS provider locally). The mobile
 app's `sign-in.tsx` is untouched: it is not a public page in the web app, and parity is its own job.
+
+## 18. Operator overview
+
+Scope of this slice: `/operator` only. The tables behind it (trips, vehicles, drivers, payments) are dense on purpose
+and were left alone — the plan's complaint was the **overview**, and that is what changed.
+
+**What it was.** Five identical tiles, each with an `Open` button and a note that repeated the page you were about to
+open. It answered *"what screens exist"*, which the sidebar answers three inches to the left, and it said nothing about
+the trips, the money or the people waiting. On a phone, between two departures, it was five taps of nothing.
+
+**What it is now.** Two questions, in the order an operator asks them.
+
+1. **What needs me before I go out again.** Four figures, each a door to the queue behind it:
+   *booking requests*, *receipts to confirm*, *vehicles awaiting review*, *drivers awaiting review*. The requests
+   figure names the trip they are on and links straight into that trip's inbox, so "1" is one tap from the person
+   waiting. A non-zero figure gets the warning edge; **when all four are zero the grid is not rendered at all** and one
+   sentence says it instead — four zeroes under a sentence that already says "nothing is waiting" is the same answer
+   twice.
+2. **What am I running next.** The next four published departures: clock time in its own edge (the fact the list is
+   sorted by, so it gets the weight), route, vehicle and trip code, seats taken with a fill bar, and a flag on the row
+   that has people waiting to be accepted. A list, not cards — one frame, rows inside it.
+
+Below both, the console's screens are a **framed list of doors** — icon, name, one line about what is behind it — rather
+than five tiles. That block is now shared with the account hub (`6.`): `.doorlist` / `.door` replaced
+`.account-consoles` / `.account-console`, so one list style exists instead of two that drift.
+
+**Three decisions worth writing down.**
+
+- **The overview is not scoped to one context.** `/operator/trips` makes you choose (personal by default, `?org=` for a
+  company), which is right for a list you are editing and wrong for a summary: a screen that says "nothing is waiting"
+  while a company trip has three requests is worse than no summary. The overview covers everything the account can act
+  on, and when the list mixes owners each row names its company; when every trip belongs to one company the name is
+  said once, beside the heading, instead of on all four rows.
+- **Requests are counted across every upcoming trip**, not only the four that fit on screen. The figure is a claim
+  about the whole account, so it has to be the whole account — and only `pending` rows count, because accepted seats are
+  already inside `seats_available` and counting them twice is how a dashboard starts disagreeing with the page it links
+  to. `loadTripRequests()` is one query for the set of trips, not one per trip.
+- **A driver's own licence is not a queue item.** The first version counted any pending driver profile whose account
+  was mine, so a driver signing in saw "Drivers awaiting review 1" — a number they could do nothing about. The queue is
+  the company's drivers plus the ones invited by phone (no org, no account); never your own profile.
+
+**Verified** — `check:all` ✓ (691 tests: 676 core ×2 + 15 web, 46 migrations, pgTAP, guards 32/189/46/135),
+`check:responsive` ✓ (76 media queries, 11 tap targets — the door rows and departure rows added), a11y ✓ over
+`/operator*` (40 routes, both locales). Rendered both locales as `owner@` and as `driver@`, in **both data states**: the
+seed's quiet state (one clear sentence, three departures) and a fabricated busy state — booking flipped to `pending`,
+receipt to `awaiting_confirmation`, a vehicle and a driver to `pending` — which produced four warning figures
+(`1 / AD-TA-BCBD`, `1`, `1`, `1`) and a "1 waiting" flag on the right departure. The dev rows were restored to their
+seeded values afterwards and re-rendered to confirm. Links were read back: `/operator`, `/operator/trips`,
+`?status=published`, each trip's own page, `/operator/vehicles`, `drivers`, `payments`, `payouts`, `trips/new`.
+
+**Gaps, stated plainly**: no browser here, so the phone layout (rows stacking, bar hidden below 720px, the RTL mirror
+of the time edge) is read back from the emitted markup and CSS plus `check:responsive`, not seen. The four figures have
+no "could not read" state — the loaders return an empty list on error, so an outage would render as "nothing is
+waiting" rather than "could not check". The staff dashboard solved that with `null` vs `0`; the payments and fleet
+readers do not expose the difference yet, and inventing it here would have meant changing four loaders in a slice
+about one screen. The timestamp beside the title is the honest mitigation until then.
