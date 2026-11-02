@@ -13,6 +13,18 @@ on `main`; the tag is the last step, not the first.
 
 ## [Unreleased] — after the last phase report
 
+### Changed — `/admin/regions`, re-cut (`docs/polish-plan.md` §30)
+
+- **A card per region** instead of a table row: name, kind, status, then the coverage as **counted chips**
+  (`10 districts`, `2 governorates`, `1 extra district`) on a hairline, with *Edit* and *Retire* under it. A sub-region's
+  card is indented with a brand rule; retired regions are their own muted group with a count.
+- **The editor and the supervisor assignment are disclosure rows** (`New region`, `Assign or change`), so the list stays
+  on screen while a region is edited; *Edit* opens the same row prefilled, and closing it by hand is a cancel.
+- **The coverage picker counts what is covered as you tick it**, using `expandCoverage` — the same call the command
+  stores — and the governorate chips spell out how many districts each one brings.
+- **Facts in the header band**: live regions, districts covered (the union across the active ones, computed with
+  `expandCoverage`), and supervisors — the existing `geo.fact*` keys.
+
 ### Changed — one material for every card on the trip page (`docs/polish-plan.md` §29)
 
 - **The facts list is a card** with the same head as the rest (`The trip`, ticket glyph) and the same dashed rows the

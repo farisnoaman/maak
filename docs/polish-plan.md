@@ -70,6 +70,7 @@ questions in the order they ask them.**
 | 22 | **The desktop navigation did not exist** | Both navigations lived inside a closed `<details>` and were "opened" with `display: … !important`, which a closed `<details>` ignores — no menu, no links, no *Sign in* above 720px, and no console sidebar above 900px | `[x]` — §27 |
 | 23 | **The trip page**, second pass | The itinerary was a rail of dots between two paragraphs, and the operator and the notes were the last two grey headings of a flat column | `[x]` — §28 |
 | 24 | The trip page, one material | §28 left the facts list and the fare panel wearing two older shells — three kinds of card on one screen | `[x]` — §29 |
+| 25 | `/admin/regions`, re-cut | A table of four columns with the coverage as one dotted sentence, an editor that replaced the list, and the supervisor assignment under it — three jobs in one scroll, two of them forms | `[x]` — §30 |
 
 ## 3–4. Trips list and trip detail — what changed
 
@@ -1131,3 +1132,31 @@ eye lands on first outside it.
 notes, fare), six `.trip-card__head`s, the fare aside carrying `trip-book trip-card`. `tsc` ✓, `prettier` ✓,
 `check:responsive` ✓, `check:guards` ✓, `check:all` ✓. **Gap:** no browser — the equal padding and corner at 360px, and
 the fare card in the phone's first position (`order: -1`), are read from the CSS.
+
+## 30. Regions, re-cut — cards for the tree, two rows you press
+
+**What was wrong.** The same three complaints as places, one screen over. The tree was a `data-table`: even the
+governorate chips were a `<td>` of 22 chips, and the coverage was a sentence (`10 districts · 2 governorates`) where an
+admin wants three numbers to compare region against region. *Edit* swapped the table for a tall form, so the thing being
+edited left the screen while it was being edited. The supervisor assignment stood open under the table on every visit.
+
+**What it is now** (this is also one job per page — `/new`, `/[id]`, `/supervisors` under `/admin/regions`, §26).
+
+- **A card per region**, in a grid that goes two-up at 760px: the name as a heading, the kind as a chip, the status as
+  a badge, then the coverage as **three counted chips** — `10 districts`, `2 governorates`, `1 extra district` — on a
+  hairline, with *Edit* and *Retire* under it. A sub-region's card is indented with a 3px brand rule on its inline edge,
+  so the tree is still visible without thirty rows of table.
+- **Retired regions are a group of their own**, under a tracked micro-caps heading with a count, drawn muted and without
+  a shadow: reachable, not competing.
+- **The editor is a disclosure row** — `New region`, a plus in a disc, and the one line that says what the row does —
+  opening into two groups, *Identity* and *Coverage*, so the list stays on screen behind it. *Edit* opens the same row
+  prefilled; closing it by hand is a cancel. The coverage picker counts what is actually covered as you tick it, in the
+  server's own terms (`expandCoverage`, the same call the command stores).
+- **Supervisors are cards too**: the person, the regions they answer for as chips, and the districts that follow from
+  them. Assignment is a second disclosure row (*Assign or change*) with the user select and the regions as a checklist.
+- **Facts in the header band**: live regions, districts covered (the union across active regions), and supervisors.
+
+**Verified.** `/en/admin/regions` and `/ar/admin/regions` — facts `Regions 1 · Districts 10 · Supervisors 1`, the region
+card with its three chips and its two actions, the *New region* row and the *Assign or change* row. `tsc` ✓,
+`prettier` ✓, `check:responsive` ✓ (107 media queries), `check:guards` ✓, `check:all` ✓, `check:a11y` ✓ (113 routes).
+**Gap:** no browser — the two-up grid at 760px and the disclosures' open/close are read from markup and CSS.
