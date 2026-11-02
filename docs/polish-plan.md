@@ -48,7 +48,7 @@ questions in the order they ask them.**
 | 3 | Trips list (`/trips`) | Strong already (filters, keyset paging, facets) — but nothing showed *what* was filtering, sort was hidden in the panel, and the "no database" banner appeared over real data | `[x]` — visuals in §13 |
 | 4 | Trip detail (`/trips/[code]`) | The fare was the twelfth row of a table, below the luggage allowance; the reserve button was at the very bottom | `[x]` — visuals in §13 |
 | 5 | Booking + pay (`/book`, `/pay`) | Two flows that work; the pay screen is the one people screenshot when it goes wrong | `[x]` — §15 |
-| 6 | Account (`/account`) | Lists are correct, hierarchy is flat — "next departure" should be the first thing | `[ ]` |
+| 6 | Account (`/account`) | Lists are correct, hierarchy is flat — "next departure" should be the first thing | `[x]` — §16 |
 | 7 | Auth (`/auth/*`) | Fine, but the sign-in form is the last place a person should meet jargon | `[ ]` |
 | 8 | Operator console | Dense tables are right for the job; the **overview** answers nothing at a glance | `[ ]` |
 | 9a | **Staff console** (`/staff`, dashboard, scan, verifications, vehicles, trips) | The same five screens under five different sidebars; a phase number above every title; four zeroes and two empty boxes as the dashboard | `[x]` |
@@ -417,3 +417,44 @@ four stop options with times, and a summary carrying `Aden → Sana'a · Wed, 4 
 **Gap, stated plainly**: `/pay/[intent]` is not in the a11y sweep's route list, because the route needs a real intent id
 and the seed creates them with random ids. It was checked by rendering both states, not by the automated sweep. Adding
 it needs the sweep to discover a payment link for the payer, the way it already discovers trip codes.
+
+## 16. Account
+
+The hub was a stack of equal cards: profile, companies, notifications, every console link in the platform, and a
+delete button, all the same size. The order answered "what is in the account" and nobody opens this page to ask that.
+
+- **Who you are, as a band.** Avatar initial, name, email (`dir="ltr"` so it does not scramble inside an Arabic page),
+  the identity document type, and the two document doors — verification and licence. A rule above and below instead of
+  a card, because it is one fact about the person, not a panel of settings.
+- **The next journey is the first block.** `nextJourney` is the soonest booking that has not departed and is still
+  `pending`/`accepted`. It carries route, date and time, the booking code, the seat count, the total, the status badge,
+  and one primary door into the booking. A passenger opens `/account` to look up a trip they have already paid for;
+  that used to be two clicks away under a heading called *Bookings*.
+- **When there is nothing ahead, the page says so** — "No upcoming journey" with one sentence and a *Find a trip*
+  button, instead of an empty section that looks broken.
+- **Companies are rows in one frame**, not a grid of cards (a card inside a page section read as a box inside a box).
+  Each row: mark, name, *Current* pill on the organisation the page is scoped to, role · plan, and its two doors on the
+  far edge. A company that is not yet verified shows its badge here; a verified one does not, because a row that
+  repeats "verified" on every visit is decoration.
+- **Consoles appear only if the session can open them**: `/operator` when the person belongs to an organisation,
+  `/staff` and `/admin` from the platform roles, `/finance` for staff or admin. The page used to offer everybody the
+  verification queue and the roles screen, which answer 403 to a passenger — a door onto a refusal is worse than no
+  door. A passenger sees no console block at all rather than an empty heading.
+- **Deleting the account is the last block and the only bordered one**, on the muted surface: the one control on the
+  page that ends things should look like it.
+
+**Fixed on the way, because the hub exposed it.** `loadMyBookings` read *every booking the caller may see*, and RLS is
+deliberately wider than "mine": a driver assigned to a trip may read the bookings on it. A driver account therefore
+found a stranger's seat, price and reference under *My bookings* — and the new hub promoted it to *Your next journey*.
+The web and mobile readers now filter on `passenger_id`, which is the row's own answer to "is this mine" (the booking
+command already sets `booked_by = passenger_id =` the actor).
+
+**Verified** — `check:all` ✓ (676 tests ×2, 46 migrations, pgTAP, guards 32/185/46/135), `check:responsive` ✓ (73 media
+queries), a11y ✓ over `/account*` (28 routes). Rendered both locales as four different accounts: `owner@` (journey card
+with `BK-525DA6`, one company row marked *Current*, one console door), `staff@` (four doors, no operator row),
+`admin@` (same four), `driver@` (empty next-journey state, **no console block**, and no foreign booking — the scoping
+fix above). The Arabic page keeps `dir="rtl"` and mirrors the row edges through logical properties.
+
+**Gap, stated plainly**: there is no browser in this sandbox, so phone-width overflow, the sticky/stacked behaviour of
+the journey card, and the RTL mirroring were checked by reading the emitted markup and CSS plus `check:responsive`, not
+by looking at a screen. The user's preview is the first place they are seen.

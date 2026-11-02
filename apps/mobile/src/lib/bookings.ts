@@ -140,6 +140,9 @@ export async function loadMyBookings(): Promise<{
     .select(
       'id, code, status, seats, total_yer, refund_yer, currency, created_at, hold_expires_at, reject_reason, cancel_reason, payment_status, trip_id',
     )
+    // Same distinction as the web hub: RLS lets an operator, a driver on the trip and staff read a booking,
+    // but "my bookings" means the rows where this account is the passenger.
+    .eq('passenger_id', userData.user.id)
     .order('created_at', { ascending: false });
 
   if (error || !data) return { configured: true, items: [] };

@@ -37,6 +37,17 @@ on `main`; the tag is the last step, not the first.
 
 ### Changed
 
+- **The account hub opens with the next journey.** `/account` was a stack of equal cards — profile, companies,
+  notifications, every console link in the platform, delete — which answered "what is in the account" and left the trip
+  two clicks away. It now opens with who you are (a band with the email, the document type, and the verification and
+  licence doors), then the soonest booking that has not departed: route, date, code, seats, total, status and one
+  primary door. With nothing ahead it says so and offers *Find a trip* instead of rendering an empty section. Companies
+  are rows in one frame with a *Current* pill rather than cards inside the page's card, and the console links are
+  gated by role — a passenger used to be offered the verification queue and the roles screen, both of which answer 403.
+- **`loadMyBookings` returns *my* bookings.** Row-level security is deliberately wider: an operator, a driver assigned
+  to the trip and platform staff may all read a booking. A driver account therefore saw a stranger's seat, price and
+  reference under *My bookings* (web and mobile) — and the new hub promoted it to *Your next journey*. Both readers now
+  filter on `passenger_id`.
 - **Booking is a ticket beside the fields.** `/trips/[code]/book` was a single column whose only context was a code in
   the heading: it now restates the route, date, vehicle, driver and seats in a sticky summary that carries the live
   total and the reserve button, and on a phone that summary follows the fields so the button lands where the thumb

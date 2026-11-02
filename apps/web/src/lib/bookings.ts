@@ -1,4 +1,4 @@
-import { getServerClient } from '@/lib/supabase/server';
+import { getServerClient, getSession } from '@/lib/supabase/server';
 import { signedObjectUrl } from '@/lib/storage';
 
 /**
@@ -186,9 +186,23 @@ export async function loadMyBookings(): Promise<readonly PassengerBooking[]> {
   const client = await getServerClient();
   if (!client) return [];
 
+  /**
+   * "Mine" is not "everything I may read".
+   *
+   * Row-level security lets an operator, a driver on the trip and platform staff read a booking, which is exactly
+   * right for the console that has to act on it. It is wrong for a page titled *My bookings*: a driver who was
+   * assigned to a trip opened this list and found a stranger's seat, price and reference sitting under their own
+   * name — and the account hub promoted it to "your next journey". The filter is the passenger column (or the
+   * account that booked it), so the list says what it claims to say.
+   */
+  const session = await getSession();
+  const uid = session.user?.id;
+  if (!uid) return [];
+
   const result = await client
     .from('bookings')
     .select(BOOKING_COLUMNS)
+    .eq('passenger_id', uid)
     .order('created_at', { ascending: false })
     .limit(100);
   if (result.error) return [];
