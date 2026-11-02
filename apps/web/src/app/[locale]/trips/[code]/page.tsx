@@ -16,6 +16,7 @@ import {
 import { SiteHeader } from '@/components/SiteHeader';
 import { PreviewBanner } from '@/components/PreviewBanner';
 import { Badge, EmptyState } from '@/components/ui/Feedback';
+import { Icon } from '@/components/ui/Icon';
 import { loadPublicTrip } from '@/lib/trips';
 import { isSupabaseConfigured } from '@/lib/supabase/config';
 import { ShareTrip } from '@/components/trips/ShareTrip';
@@ -74,6 +75,12 @@ export default async function PublicTripPage({
           />
         ) : (
           <article className="trip-detail">
+            <nav className="trip-detail__back" aria-label={t('trips.search.title')}>
+              <Link href={`/${locale}/trips`}>
+                <Icon name="chevron" size={16} className="trip-detail__back-icon" />
+                {t('trips.search.title')}
+              </Link>
+            </nav>
             {/* The same facts the page shows, in the form a crawler reads. Rendered from one payload so
                 the structured data cannot advertise a different price than the screen. */}
             <script
@@ -86,7 +93,7 @@ export default async function PublicTripPage({
                 <h1>
                   {trip.origin.name}
                   <span className="route-arrow" aria-hidden="true">
-                    {' → '}
+                    <Icon name="arrow" size={20} />
                   </span>
                   {trip.destination.name}
                 </h1>
@@ -272,6 +279,7 @@ export default async function PublicTripPage({
                 )}
 
                 <p className="trip-book__seats">
+                  <Icon name="seat" size={15} />
                   {trip.seatsAvailable > 0
                     ? t('trips.seatsAvailable', { count: trip.seatsAvailable })
                     : t('trips.badgeSoldOut')}

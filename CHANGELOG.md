@@ -29,6 +29,16 @@ on `main`; the tag is the last step, not the first.
 
 ### Changed
 
+- **The marketplace card is a ticket.** The departure time — the fact a timetable is sorted by, and the third most
+  prominent thing on the card — now has its own edge: large, tabular, date beneath, separated by a dashed tear-line.
+  The heavy shadow is gone (a page of eight shadowed cards is eight shadows competing) and the card lifts on hover and
+  focus instead. Home's "next departures" use the same card.
+- **The filter panel is three named groups**, each a `<fieldset>` with a `<legend>` — *Route*, *Ride conditions*, *Date
+  and fare* — separated by a rule, instead of nine identically sized controls in a column. The disclosure chevron and
+  the filter chip's remove mark were characters (`⌄`, `✕`) and are now drawn.
+- **The trip page**: back link at the top, drawn route arrow at page-title size, fact rows on hairlines instead of
+  eight floating pairs, a rail joining the itinerary's numbered stops, the price on the display scale, and a wider
+  article so the 320px fare panel is not floating in dead space.
 - **A type scale, named.** `--text-2xs … --text-3xl` and `--leading-tight … --leading-ui` replace sizes written by
   hand at the point of use. Headings land on it by default, display sizes tighten their leading, and the home hero,
   section titles and step cards all read from the same three numbers.

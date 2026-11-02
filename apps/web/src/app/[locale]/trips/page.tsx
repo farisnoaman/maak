@@ -15,6 +15,7 @@ import {
 import { SiteHeader } from '@/components/SiteHeader';
 import { PreviewBanner } from '@/components/PreviewBanner';
 import { EmptyState } from '@/components/ui/Feedback';
+import { Icon } from '@/components/ui/Icon';
 import { FilterDisclosure } from '@/components/trips/FilterDisclosure';
 import { PublicTripCard } from '@/components/trips/PublicTripCard';
 import { SaveSearchControl } from '@/components/trips/SaveSearchControl';
@@ -220,120 +221,138 @@ export default async function TripsPage({
               {activeCount > 0 ? <span className="trip-filters__count">{activeCount}</span> : null}
             </summary>
             <form method="get" action={base}>
-              <div className="trip-filters__group">
-                <label htmlFor="filter-q">{t('trips.search.q')}</label>
-                <input
-                  id="filter-q"
-                  name="q"
-                  type="search"
-                  defaultValue={state.q ?? ''}
-                  className="ui-input"
-                />
-              </div>
+              {/* Three named groups, not nine controls in a column. A filter panel is an argument about the trip:
+                  where it goes, who it is for, when and for how much. Filed any other way it is just a form. */}
+              <fieldset className="trip-filters__section">
+                <legend className="trip-filters__legend">{t('trips.search.groupRoute')}</legend>
 
-              <div className="trip-filters__group">
-                <label htmlFor="filter-origin">{t('trips.origin')}</label>
-                <select
-                  id="filter-origin"
-                  name="origin"
-                  defaultValue={state.origin?.[0] ?? ''}
-                  className="ui-select"
-                >
-                  <option value="">{t('trips.search.any')}</option>
-                  {page.facets.origins.map((governorate) => (
-                    <option key={governorate.id} value={governorate.id}>
-                      {governorate.name} ({governorate.count})
-                    </option>
-                  ))}
-                </select>
-              </div>
+                <div className="trip-filters__group">
+                  <label htmlFor="filter-q">{t('trips.search.q')}</label>
+                  <input
+                    id="filter-q"
+                    name="q"
+                    type="search"
+                    defaultValue={state.q ?? ''}
+                    className="ui-input"
+                  />
+                </div>
 
-              <div className="trip-filters__group">
-                <label htmlFor="filter-destination">{t('trips.destination')}</label>
-                <select
-                  id="filter-destination"
-                  name="destination"
-                  defaultValue={state.destination?.[0] ?? ''}
-                  className="ui-select"
-                >
-                  <option value="">{t('trips.search.any')}</option>
-                  {page.facets.destinations.map((governorate) => (
-                    <option key={governorate.id} value={governorate.id}>
-                      {governorate.name} ({governorate.count})
-                    </option>
-                  ))}
-                </select>
-              </div>
+                <div className="trip-filters__group">
+                  <label htmlFor="filter-origin">{t('trips.origin')}</label>
+                  <select
+                    id="filter-origin"
+                    name="origin"
+                    defaultValue={state.origin?.[0] ?? ''}
+                    className="ui-select"
+                  >
+                    <option value="">{t('trips.search.any')}</option>
+                    {page.facets.origins.map((governorate) => (
+                      <option key={governorate.id} value={governorate.id}>
+                        {governorate.name} ({governorate.count})
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-              <fieldset className="trip-filters__group">
-                <legend>{t('trips.genderPolicy')}</legend>
-                <div className="trip-filters__options">
-                  {GENDERS.map((value) => {
-                    const facet = page.facets.genders.find((row) => row.value === value);
-                    return (
-                      <label className="trip-filters__option" key={value}>
-                        <input
-                          type="radio"
-                          name="gender"
-                          value={value}
-                          defaultChecked={state.gender?.[0] === value}
-                        />
-                        <span>{t(`trips.gender.${value}` as TranslationKey)}</span>
-                        <span className="trip-filters__count">{facet?.count ?? 0}</span>
-                      </label>
-                    );
-                  })}
+                <div className="trip-filters__group">
+                  <label htmlFor="filter-destination">{t('trips.destination')}</label>
+                  <select
+                    id="filter-destination"
+                    name="destination"
+                    defaultValue={state.destination?.[0] ?? ''}
+                    className="ui-select"
+                  >
+                    <option value="">{t('trips.search.any')}</option>
+                    {page.facets.destinations.map((governorate) => (
+                      <option key={governorate.id} value={governorate.id}>
+                        {governorate.name} ({governorate.count})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="trip-filters__group">
+                  <label className="trip-filters__option" htmlFor="filter-direct">
+                    <input
+                      id="filter-direct"
+                      type="checkbox"
+                      name="direct"
+                      value="1"
+                      defaultChecked={state.direct === true}
+                    />
+                    <span>{t('trips.search.direct')}</span>
+                    <span className="trip-filters__count">{page.facets.direct.direct}</span>
+                  </label>
                 </div>
               </fieldset>
 
-              <div className="trip-filters__group">
-                <label className="trip-filters__option" htmlFor="filter-direct">
+              <fieldset className="trip-filters__section">
+                <legend className="trip-filters__legend">{t('trips.search.groupRide')}</legend>
+
+                <div
+                  className="trip-filters__group"
+                  role="group"
+                  aria-label={t('trips.genderPolicy')}
+                >
+                  <span className="trip-filters__label">{t('trips.genderPolicy')}</span>
+                  <div className="trip-filters__options">
+                    {GENDERS.map((value) => {
+                      const facet = page.facets.genders.find((row) => row.value === value);
+                      return (
+                        <label className="trip-filters__option" key={value}>
+                          <input
+                            type="radio"
+                            name="gender"
+                            value={value}
+                            defaultChecked={state.gender?.[0] === value}
+                          />
+                          <span>{t(`trips.gender.${value}` as TranslationKey)}</span>
+                          <span className="trip-filters__count">{facet?.count ?? 0}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              </fieldset>
+
+              <fieldset className="trip-filters__section">
+                <legend className="trip-filters__legend">{t('trips.search.groupTime')}</legend>
+
+                <div className="trip-filters__group">
+                  <label htmlFor="filter-price">{t('trips.search.priceMax')}</label>
                   <input
-                    id="filter-direct"
-                    type="checkbox"
-                    name="direct"
-                    value="1"
-                    defaultChecked={state.direct === true}
+                    id="filter-price"
+                    name="priceMax"
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    defaultValue={state.priceMax ?? ''}
+                    className="ui-input"
                   />
-                  <span>{t('trips.search.direct')}</span>
-                  <span className="trip-filters__count">{page.facets.direct.direct}</span>
-                </label>
-              </div>
+                </div>
 
-              <div className="trip-filters__group">
-                <label htmlFor="filter-price">{t('trips.search.priceMax')}</label>
-                <input
-                  id="filter-price"
-                  name="priceMax"
-                  type="number"
-                  inputMode="numeric"
-                  min={0}
-                  defaultValue={state.priceMax ?? ''}
-                  className="ui-input"
-                />
-              </div>
+                <div className="trip-filters__group">
+                  <label htmlFor="filter-from">{t('trips.search.dateFrom')}</label>
+                  <input
+                    id="filter-from"
+                    name="dateFrom"
+                    type="date"
+                    defaultValue={state.dateFrom ?? ''}
+                    className="ui-input"
+                  />
+                </div>
 
-              <div className="trip-filters__group">
-                <label htmlFor="filter-from">{t('trips.search.dateFrom')}</label>
-                <input
-                  id="filter-from"
-                  name="dateFrom"
-                  type="date"
-                  defaultValue={state.dateFrom ?? ''}
-                  className="ui-input"
-                />
-              </div>
-
-              <div className="trip-filters__group">
-                <label htmlFor="filter-to">{t('trips.search.dateTo')}</label>
-                <input
-                  id="filter-to"
-                  name="dateTo"
-                  type="date"
-                  defaultValue={state.dateTo ?? ''}
-                  className="ui-input"
-                />
-              </div>
+                <div className="trip-filters__group">
+                  <label htmlFor="filter-to">{t('trips.search.dateTo')}</label>
+                  <input
+                    id="filter-to"
+                    name="dateTo"
+                    type="date"
+                    defaultValue={state.dateTo ?? ''}
+                    className="ui-input"
+                  />
+                </div>
+              </fieldset>
 
               {/* Sort is not a filter: it does not narrow the list, and hiding it in a collapsed panel made the
                   cheapest trip three taps away. The visible control is the row of links above the results; this
@@ -377,7 +396,7 @@ export default async function TripsPage({
                     <Link className="filter-chip" href={chip.href}>
                       <span>{chip.label}</span>
                       <span className="filter-chip__x" aria-hidden="true">
-                        ✕
+                        <Icon name="close" size={12} />
                       </span>
                       <span className="sr-only">
                         {t('trips.search.removeFilter', { name: chip.label })}

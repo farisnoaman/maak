@@ -45,8 +45,8 @@ questions in the order they ask them.**
 | --- | --- | --- | --- |
 | 1 | **Home** (`/[locale]`) | Reads as a build report; ignores the trips it could show; promises five consoles | `[x]` rebuilt |
 | 2 | Header + footer | 8 nav links including *المركبات* and *دليل المكوّنات*; no footer anywhere but home | `[x]` trimmed nav, shared `SiteFooter` |
-| 3 | Trips list (`/trips`) | Strong already (filters, keyset paging, facets) — but nothing showed *what* was filtering, sort was hidden in the panel, and the "no database" banner appeared over real data | `[x]` |
-| 4 | Trip detail (`/trips/[code]`) | The fare was the twelfth row of a table, below the luggage allowance; the reserve button was at the very bottom | `[x]` |
+| 3 | Trips list (`/trips`) | Strong already (filters, keyset paging, facets) — but nothing showed *what* was filtering, sort was hidden in the panel, and the "no database" banner appeared over real data | `[x]` — visuals in §13 |
+| 4 | Trip detail (`/trips/[code]`) | The fare was the twelfth row of a table, below the luggage allowance; the reserve button was at the very bottom | `[x]` — visuals in §13 |
 | 5 | Booking + pay (`/book`, `/pay`) | Two flows that work; the pay screen is the one people screenshot when it goes wrong | `[ ]` — next |
 | 6 | Account (`/account`) | Lists are correct, hierarchy is flat — "next departure" should be the first thing | `[ ]` |
 | 7 | Auth (`/auth/*`) | Fine, but the sign-in form is the last place a person should meet jargon | `[ ]` |
@@ -288,3 +288,40 @@ page. **Still HTML-and-CSS-level verification** — this sandbox has no browser,
 
 **Next in this layer** — the screens whose layout has not been revisited for looks at all: `/trips` (the card grid and
 filter rail), `/trips/[code]` (the itinerary and the fare panel), then §5 booking and pay.
+
+## 13. The marketplace, drawn
+
+§3 and §4 fixed what these two screens *say*. This is the pass that made them look like the product.
+
+**The result card is a ticket, not a tile.** It was a stack: a row of badges, the route, one grey meta line
+(`Sat, 14 Nov · 06:30 · 12 seats · Al-Noor`), a price and a button, all with the same weight. The departure time — the
+thing a timetable is sorted by, and the reason the page exists — was the third most prominent fact on it.
+
+- The time now has its own edge, the way a ticket has it: large, tabular, with the date under it, separated from the
+  rest by a **dashed tear-line**. The remaining facts (seats, operator) are a quieter line below the route, separated
+  by a middot drawn in CSS so it follows the reading direction.
+- The shadow is gone. Eight shadowed cards on a page are eight shadows competing; a hairline does the work and the
+  card lifts on hover/focus instead.
+- Home uses the same card, so the three "next departures" gained the same edge.
+
+**The filter panel is an argument, not a form.** Nine labelled controls stacked in a column, all the same size. They
+are now three named groups — *Route*, *Ride conditions*, *Date and fare* — each a `<fieldset>` with a `<legend>` (so
+the grouping is real to a screen reader, not just a heading), separated by a rule. The disclosure's chevron was
+`content: '⌄'`, a character in a pseudo-element where it can never be an icon; it is two borders rotated 45°, which
+also mirrors correctly in Arabic.
+
+**Chips**: the remove mark was `✕` — a character again. It is the icon, in a disc that fills on hover, and the chip's
+growl still carries the accessible name ("remove filter …").
+
+**The trip page**: a back link at the top, where a reader arriving from a shared link needs it (there was one at the
+bottom only); the route is the page title at page-title size with a drawn arrow; the fact list is a table with a
+hairline per row instead of eight floating pairs; the itinerary has a **rail** joining the numbered stops, so it reads
+as a route and not as a list; the fare panel's price is on the display scale and the seats line carries a seat mark;
+the article widened from 48rem to 58rem so the 320px fare panel is not floating in dead space on a desktop.
+
+**Verified** — `check:all` ✓ (676 tests ×2, 45 migrations, pgTAP, guards 32/185/45/135), `check:responsive` ✓
+(68 media queries), a11y sweep ✓ over `/en/*` and `/ar/*` (60 and 63 routes). Rendered and read back: three grouped
+sections and three filter legends on the list in both locales, the time edge on every card, the chip icons, the back
+nav, 14 fact rows and the six-stop rail on the detail page. No browser here, so this is markup and CSS.
+
+**Next** — §5 booking and pay, then §6 account.

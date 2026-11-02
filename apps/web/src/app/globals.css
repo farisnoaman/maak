@@ -2867,16 +2867,79 @@ input[type='file']::file-selector-button {
   }
 }
 
-.trip-card {
+/* A result is a row with a ticket edge, not a floating tile: the shadow is gone (a page of eight shadowed
+   cards is eight shadows competing), the hairline does the work, and the whole card lifts on hover instead. */
+.card.trip-card {
   display: grid;
   gap: var(--space-3);
   padding: var(--space-4);
+  box-shadow: none;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    translate 0.15s ease;
+}
+
+.card.trip-card:hover,
+.card.trip-card:focus-within {
+  border-color: var(--brand-300);
+  box-shadow: var(--shadow-sm);
 }
 
 @media (min-width: 560px) {
-  .trip-card {
+  .card.trip-card {
     padding: var(--space-5);
   }
+}
+
+.trip-card__row {
+  display: grid;
+  gap: var(--space-3) var(--space-4);
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+
+@media (min-width: 480px) {
+  .trip-card__row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+}
+
+/* The departure time, on its own edge, separated by a dashed tear-line — the one rule on the card that is not
+   a card border. Dashed because a ticket is perforated, and because a solid rule here reads as a table column. */
+.trip-card__when {
+  display: grid;
+  gap: 2px;
+  align-content: start;
+  padding-block: var(--space-1);
+}
+
+@media (min-width: 480px) {
+  .trip-card__when {
+    min-inline-size: 5.5rem;
+    padding-inline-end: var(--space-4);
+    border-inline-end: 1px dashed var(--surface-sunken);
+  }
+}
+
+.trip-card__time {
+  font-size: var(--text-lg);
+  font-weight: 800;
+  line-height: var(--leading-tight);
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+.trip-card__date {
+  font-size: var(--text-xs);
+  color: var(--ink-500);
+  line-height: var(--leading-snug);
+}
+
+.trip-card__main {
+  display: grid;
+  gap: var(--space-2);
+  min-inline-size: 0;
 }
 
 .trip-card__route {
@@ -2920,9 +2983,17 @@ input[type='file']::file-selector-button {
 .trip-card__meta {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2) var(--space-4);
-  font-size: 0.85rem;
-  color: var(--ink-600);
+  gap: var(--space-1) var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--ink-500);
+}
+
+/* A dot between facts, drawn by the layout rather than typed into the string — so the separator follows the
+   reading direction and disappears from the last item without a condition in the markup. */
+.trip-card__meta > * + *::before {
+  content: '·';
+  margin-inline-end: var(--space-3);
+  color: var(--ink-400);
 }
 
 .trip-card__footer {
@@ -2948,9 +3019,10 @@ input[type='file']::file-selector-button {
 }
 
 .trip-price {
-  font-size: 1.05rem;
+  font-size: var(--text-lg);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }
 
 .trip-price small {
@@ -3047,10 +3119,23 @@ input[type='file']::file-selector-button {
 }
 
 .trip-timeline li {
+  position: relative;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   gap: var(--space-1) var(--space-3);
   align-items: center;
+}
+
+/* The rail. It runs from under one marker to the next, drawn by the row that comes before the gap, so the
+   last stop has no line hanging below it. Logical insets keep it on the correct side in Arabic. */
+.trip-timeline li:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  inline-size: 2px;
+  border-radius: 2px;
+  background: var(--surface-sunken);
+  inset-block: calc(0.75rem + 2px) calc(var(--space-4) * -1 + 0.75rem);
+  inset-inline-start: calc(0.75rem - 1px);
 }
 
 /* The marker carries the stop's sequence number. It used to be a 0.7rem dot with the digit inside it,
@@ -3129,16 +3214,20 @@ input[type='file']::file-selector-button {
 }
 
 .trip-filters > summary::after {
-  content: '⌄';
+  content: '';
+  inline-size: 8px;
+  block-size: 8px;
   margin-inline-start: auto;
-  color: var(--ink-500);
-  font-weight: 800;
-  line-height: 1;
+  margin-block-start: -4px;
+  border-inline-end: 2px solid var(--ink-500);
+  border-block-end: 2px solid var(--ink-500);
+  transform: rotate(45deg);
   transition: transform 120ms ease;
 }
 
 .trip-filters[open] > summary::after {
-  transform: rotate(180deg);
+  margin-block-start: 0;
+  transform: rotate(225deg);
 }
 
 @media (min-width: 900px) {
@@ -3156,7 +3245,33 @@ input[type='file']::file-selector-button {
    them — without this the nine controls stack flush against each other. */
 .trip-filters > form {
   display: grid;
+  gap: var(--space-4);
+}
+
+/* Three sections with a rule between them. The heading is a label for a group of controls, not a title:
+   small, uppercase, muted — it names the group without competing with the results beside it. */
+.trip-filters__section {
+  display: grid;
   gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-inline-size: 0;
+}
+
+.trip-filters__section + .trip-filters__section {
+  padding-block-start: var(--space-4);
+  border-block-start: 1px solid var(--surface-sunken);
+}
+
+.trip-filters__legend {
+  padding: 0;
+  margin-block-end: var(--space-3);
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-500);
 }
 
 .trip-filters__group {
@@ -3167,9 +3282,11 @@ input[type='file']::file-selector-button {
   border: 0;
 }
 
-.trip-filters__group > label:not(.trip-filters__option) {
-  font-size: 0.78rem;
+.trip-filters__group > label:not(.trip-filters__option),
+.trip-filters__label {
+  font-size: var(--text-2xs);
   font-weight: 700;
+  letter-spacing: 0.04em;
   color: var(--ink-600);
 }
 
@@ -3294,11 +3411,12 @@ input[type='file']::file-selector-button {
 
 .trip-summary {
   display: grid;
-  gap: var(--space-2);
-  padding: var(--space-4);
+  gap: 0;
+  padding: 0;
   border: 1px solid var(--surface-sunken);
   border-radius: var(--radius-lg);
-  background: var(--surface-muted);
+  background: var(--surface-base);
+  overflow: hidden;
 }
 
 .trip-summary__row {
@@ -3306,7 +3424,17 @@ input[type='file']::file-selector-button {
   flex-wrap: wrap;
   justify-content: space-between;
   gap: var(--space-2);
-  font-size: 0.9rem;
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-sm);
+}
+
+.trip-summary__row + .trip-summary__row {
+  border-block-start: 1px solid var(--surface-sunken);
+}
+
+.trip-summary__row dd {
+  font-weight: 600;
+  color: var(--ink-900);
 }
 
 .trip-summary__row--total {
@@ -3417,22 +3545,40 @@ input[type='file']::file-selector-button {
   gap: var(--space-3);
 }
 
+.trip-detail__head {
+  align-items: flex-end;
+}
+
 .trip-detail__head h1,
 .trip-detail__head h2 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
   margin-block: var(--space-1);
-  font-size: 1.2rem;
+  font-size: var(--text-xl);
 }
 
 .trip-detail__head h1 {
   /* The route is the page title, so it sets the scale; the code above it stays a hint. */
-  font-size: clamp(1.3rem, 3.2vw, 1.7rem);
+  font-size: var(--text-2xl);
+  letter-spacing: -0.02em;
+  row-gap: var(--space-1);
+}
+
+.trip-detail__head .route-arrow {
+  display: inline-grid;
+  place-items: center;
+  color: var(--ink-400);
 }
 
 /* One column of blocks, deliberately *not* a grid: `position: sticky` on the book bar needs the article
    to be its containing block, and a grid item is confined to its own row — a grid here silently unpins
    the bar. The rhythm comes from the sibling rule instead. */
 .trip-detail {
-  max-inline-size: 48rem;
+  /* Two columns from 940px: the facts, then a 320px fare panel. Capped at 48rem the article stayed a phone column
+     on a desktop and left the fare panel floating beside dead space. */
+  max-inline-size: 58rem;
 }
 
 .trip-detail > * + * {
@@ -3440,8 +3586,33 @@ input[type='file']::file-selector-button {
 }
 
 .trip-detail h2 {
-  font-size: 1.05rem;
+  font-size: var(--text-md);
+  font-weight: 800;
+  letter-spacing: -0.005em;
   margin-block: 0 var(--space-2);
+}
+
+/* The way back, at the top where a reader who arrived from a link actually needs it. The chevron is the mirror
+   image of "forward", so it flips with the same token every other directional mark uses. */
+.trip-detail__back {
+  margin-block-start: var(--space-4);
+}
+
+.trip-detail__back a {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--ink-500);
+}
+
+.trip-detail__back a:hover {
+  color: var(--brand-700);
+}
+
+.trip-detail__back-icon {
+  transform: scaleX(var(--icon-flip, 1)) rotate(180deg);
 }
 
 .trip-detail section > * + * {
@@ -3489,13 +3660,14 @@ input[type='file']::file-selector-button {
 }
 
 .trips-hero h1 {
-  font-size: clamp(1.35rem, 4vw, 1.9rem);
+  font-size: var(--text-2xl);
   margin-block-end: var(--space-2);
 }
 
 .trips-hero p {
   color: var(--ink-600);
   max-inline-size: 46ch;
+  font-size: var(--text-md);
 }
 
 .trips-layout {
@@ -3516,8 +3688,9 @@ input[type='file']::file-selector-button {
 }
 
 .trips-count {
-  color: var(--ink-600);
-  font-size: 0.9rem;
+  color: var(--ink-700);
+  font-size: var(--text-sm);
+  font-weight: 600;
 }
 
 .trips-pager {
@@ -5910,13 +6083,17 @@ a.booking-card__code:hover {
  * before JavaScript and all three survive being shared.
  */
 
+/* One bar: how many results on the reading edge, how they are ordered on the other, a hairline under both.
+   Without the rule the count, the chips and the first card all floated in the same grey. */
 .trips-toolbar {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-3);
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
+  padding-block-end: var(--space-3);
   margin-block-end: var(--space-4);
+  border-block-end: 1px solid var(--surface-sunken);
 }
 
 .trips-sort {
@@ -5925,6 +6102,7 @@ a.booking-card__code:hover {
   gap: var(--space-1);
   padding: 3px;
   border-radius: var(--radius-pill);
+  border: 1px solid var(--surface-sunken);
   background: var(--surface-sunken);
 }
 
@@ -5980,8 +6158,19 @@ a.booking-card__code:hover {
 }
 
 .filter-chip__x {
-  font-size: 0.7rem;
-  opacity: 0.7;
+  display: inline-grid;
+  place-items: center;
+  inline-size: 16px;
+  block-size: 16px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--brand-500) 16%, transparent);
+  color: var(--brand-700);
+  line-height: 0;
+}
+
+.filter-chip:hover .filter-chip__x {
+  background: var(--brand-500);
+  color: #fff;
 }
 
 .filter-chip--clear {
@@ -6000,7 +6189,7 @@ a.booking-card__code:hover {
 .trip-card__link {
   display: inline-flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   gap: var(--space-2);
   color: inherit;
   text-decoration: none;
@@ -6060,9 +6249,10 @@ a.booking-card__code:hover {
 }
 
 .trip-book__price {
-  font-size: 1.9rem;
+  font-size: var(--text-2xl);
   font-weight: 800;
-  line-height: 1.1;
+  line-height: var(--leading-tight);
+  letter-spacing: -0.02em;
   color: var(--ink-900);
 }
 
@@ -6090,10 +6280,13 @@ a.booking-card__code:hover {
 }
 
 .trip-book__seats {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   margin-block-start: var(--space-2);
   padding-block-start: var(--space-3);
   border-block-start: 1px solid var(--surface-sunken);
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
   font-weight: 700;
   color: var(--brand-700);
 }
