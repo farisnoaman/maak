@@ -43,7 +43,14 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
  */
 const WIDE = '(min-width: 900px)';
 
-export function FilterDisclosure({ children }: { readonly children: ReactNode }) {
+export function FilterDisclosure({
+  children,
+  activeCount = 0,
+}: {
+  readonly children: ReactNode;
+  /** How many filters are in force — used only to mark the panel, never to open it. */
+  readonly activeCount?: number;
+}) {
   const details = useRef<HTMLDetailsElement | null>(null);
   const [enhanced, setEnhanced] = useState(false);
 
@@ -55,20 +62,37 @@ export function FilterDisclosure({ children }: { readonly children: ReactNode })
     const sync = () => {
       setEnhanced(true);
       // Wide: always open, because the summary above is hidden and there is nothing left to open it with.
-      // Narrow: untouched — it is a disclosure, and the count beside "Filter" already says it has something
+      // Narrow: untouched — it is a disclosure, and the count beside "Filters" already says it has something
       // in it.
       if (query.matches) element.open = true;
     };
 
+    /**
+     * Applying the filters closes the panel on a phone.
+     *
+     * The form is a plain GET, so pressing *Apply filters* reloads the page — with the panel still open, over the
+     * results the person just asked for. They had to scroll past the form they had finished with to see the answer.
+     * The submit event bubbles from the form to this element, so one listener puts the panel away before the
+     * navigation starts; on a wide screen it stays open, because there it *is* the sidebar.
+     */
+    const onSubmit = () => {
+      if (!query.matches) element.open = false;
+    };
+
     sync();
     query.addEventListener('change', sync);
-    return () => query.removeEventListener('change', sync);
+    element.addEventListener('submit', onSubmit);
+    return () => {
+      query.removeEventListener('change', sync);
+      element.removeEventListener('submit', onSubmit);
+    };
   }, []);
 
   return (
     <details
       className="trip-filters"
       data-enhanced={enhanced ? 'true' : undefined}
+      data-active={activeCount > 0 ? 'true' : undefined}
       ref={details}
       // See the comment above: `open` is set by the user, by the browser's form-state restoration and by the
       // effect below — never by React. Comparing it during hydration can only produce a warning.

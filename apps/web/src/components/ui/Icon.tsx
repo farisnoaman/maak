@@ -38,7 +38,8 @@ export type IconName =
   | 'close'
   | 'plus'
   | 'minus'
-  | 'inbox';
+  | 'inbox'
+  | 'filter';
 
 /**
  * 24×24 grid, 1.7 stroke, round caps and joins. Filled marks are the exception and are documented where used —
@@ -67,6 +68,7 @@ export const ICON_NAMES = [
   'chevron',
   'arrow',
   'inbox',
+  'filter',
 ] as const satisfies readonly IconName[];
 
 const PATHS: Record<IconName, { d: string; fill?: boolean }[]> = {
@@ -141,6 +143,8 @@ const PATHS: Record<IconName, { d: string; fill?: boolean }[]> = {
   /* A tray, for "there is nothing in it yet". The empty state used to draw the character `◇`, which is not a
      mark in this set and not a word in any language — the same diamond stood in for "no trips", "no
      notifications" and "no results" on forty screens. */
+  /* A funnel: the one mark that says "narrow this list" without a word, for the marketplace's panel row. */
+  filter: [{ d: 'M4 5.5h16l-6.2 7.3v6.3l-3.6-1.9v-4.4Z' }],
   inbox: [
     { d: 'M3.5 13.5 6 5.5h12l2.5 8v4a1.5 1.5 0 0 1-1.5 1.5H5a1.5 1.5 0 0 1-1.5-1.5Z' },
     { d: 'M3.5 13.5H9l1.2 2h3.6l1.2-2h5.5' },

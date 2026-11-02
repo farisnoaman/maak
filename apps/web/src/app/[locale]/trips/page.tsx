@@ -215,11 +215,29 @@ export default async function TripsPage({
         </header>
 
         <div className="trips-layout">
-          <FilterDisclosure>
+          <FilterDisclosure activeCount={activeCount}>
+            {/*
+              One panel, two presentations. On a phone the summary is the whole visible control: a funnel, the word
+              *Filters*, and — once something is in force — how many. On a laptop the summary is hidden and the head
+              below it takes over, because a sidebar with no title is a column of unlabelled controls.
+            */}
             <summary>
-              {t('trips.search.filter')}
+              <span className="trip-filters__summary-icon" aria-hidden="true">
+                <Icon name="filter" size={16} />
+              </span>
+              <span className="trip-filters__summary-label">{t('trips.search.filtersTitle')}</span>
               {activeCount > 0 ? <span className="trip-filters__count">{activeCount}</span> : null}
             </summary>
+
+            <div className="trip-filters__head">
+              <h2>{t('trips.search.filtersTitle')}</h2>
+              {activeCount > 0 ? (
+                <Link className="trip-filters__reset" href={base}>
+                  {t('trips.search.reset')}
+                </Link>
+              ) : null}
+            </div>
+
             <form method="get" action={base}>
               {/* Three named groups, not nine controls in a column. A filter panel is an argument about the trip:
                   where it goes, who it is for, when and for how much. Filed any other way it is just a form. */}
@@ -272,7 +290,13 @@ export default async function TripsPage({
                 </div>
 
                 <div className="trip-filters__group">
-                  <label className="trip-filters__option" htmlFor="filter-direct">
+                  {/* A count of zero is information — there are no direct departures left — so the pill stays and
+                      dims rather than vanishing, which would look like the option had been removed. */}
+                  <label
+                    className="trip-filters__option"
+                    htmlFor="filter-direct"
+                    data-empty={page.facets.direct.direct === 0 ? 'true' : undefined}
+                  >
                     <input
                       id="filter-direct"
                       type="checkbox"
@@ -299,7 +323,11 @@ export default async function TripsPage({
                     {GENDERS.map((value) => {
                       const facet = page.facets.genders.find((row) => row.value === value);
                       return (
-                        <label className="trip-filters__option" key={value}>
+                        <label
+                          className="trip-filters__option"
+                          key={value}
+                          data-empty={(facet?.count ?? 0) === 0 ? 'true' : undefined}
+                        >
                           <input
                             type="radio"
                             name="gender"
@@ -361,11 +389,15 @@ export default async function TripsPage({
 
               <div className="trip-filters__actions">
                 <button type="submit" className="ui-btn ui-btn--primary">
-                  {t('trips.search.filter')}
+                  {t('trips.search.apply')}
                 </button>
-                <Link className="ui-btn ui-btn--ghost" href={base}>
-                  {t('trips.search.clear')}
-                </Link>
+                {/* *Clear* with nothing to clear is a control that cannot do anything. It appears with the first
+                    filter and not before. */}
+                {activeCount > 0 ? (
+                  <Link className="ui-btn ui-btn--ghost" href={base}>
+                    {t('trips.search.clear')}
+                  </Link>
+                ) : null}
               </div>
             </form>
           </FilterDisclosure>

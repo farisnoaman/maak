@@ -8721,3 +8721,128 @@ button.card:hover {
   display: grid;
   gap: var(--space-3);
 }
+
+/* ---------- 12. the marketplace filter panel: a titled sidebar, and a panel that puts itself away ---------- */
+
+/*
+ * The panel was already a disclosure on a phone and a sidebar on a laptop; what it was not was designed. On a
+ * laptop the summary is hidden, so the column began with a micro-caps "ROUTE" and no title at all — a stack of
+ * unlabelled controls beside a page with a heading. On a phone the summary was the word "Filter" and a chevron.
+ *
+ * Both ends are the same panel now: a funnel, the word *Filters*, a count when something is in force. Above 900px
+ * that row is replaced by a real heading and a *Reset* link, the panel sticks beside the results (a list can be long;
+ * the filters should not scroll away from it), and *Clear* only exists once there is something to clear.
+ */
+
+.trip-filters > summary {
+  gap: var(--space-3);
+  color: var(--ink-900);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.trip-filters__summary-icon {
+  display: grid;
+  place-items: center;
+  inline-size: 30px;
+  block-size: 30px;
+  border-radius: var(--radius-sm);
+  background: var(--brand-50);
+  color: var(--brand-700);
+  transition:
+    background 120ms ease,
+    color 120ms ease;
+}
+
+/* With filters in force the row itself says so, in the same green as every other action on the page. */
+.trip-filters[data-active='true'] > summary .trip-filters__summary-icon {
+  background: var(--brand-600);
+  color: #fff;
+}
+
+/* A sidebar does not need the summary, so the head below it is the title there and nothing here. */
+.trip-filters__head {
+  display: none;
+}
+
+@media (min-width: 900px) {
+  .trip-filters {
+    position: sticky;
+    inset-block-start: calc(68px + var(--space-4));
+    max-block-size: calc(100dvh - 68px - var(--space-8));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: var(--space-5);
+  }
+
+  .trip-filters__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-2);
+    padding-block-end: var(--space-3);
+    border-block-end: 1px solid var(--surface-sunken);
+  }
+
+  .trip-filters__head h2 {
+    font-size: var(--text-lg);
+    font-weight: 800;
+    letter-spacing: -0.012em;
+  }
+
+  /* A panel with something in it is not the same panel as one that is idle. */
+  .trip-filters[data-active='true'] {
+    border-color: color-mix(in srgb, var(--brand-500) 38%, var(--surface-sunken));
+  }
+}
+
+.trip-filters__reset {
+  color: var(--brand-700);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.22em;
+}
+
+.trip-filters__reset:hover {
+  text-decoration-thickness: 2px;
+}
+
+/* Field labels name a control; they are not captions. They now match every other form label in the product
+   (12px, 700, no tracking) instead of borrowing the panel's micro-caps. */
+.trip-filters__group > label:not(.trip-filters__option),
+.trip-filters__label {
+  color: var(--ink-700);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.trip-filters__legend {
+  color: var(--ink-700);
+}
+
+/* A facet with nothing behind it stays visible — its zero is information — and stops competing for the eye. */
+.trip-filters__option[data-empty='true'] {
+  border-style: dashed;
+  color: var(--ink-400);
+}
+
+.trip-filters__option[data-empty='true'] .trip-filters__count {
+  border: 1px solid var(--surface-sunken);
+  background: transparent;
+  color: var(--ink-500);
+}
+
+/* The commit row: a rule above it, and two full-width targets on a phone. */
+.trip-filters__actions {
+  padding-block-start: var(--space-4);
+  border-block-start: 1px solid var(--surface-sunken);
+}
+
+@media (max-width: 559.98px) {
+  .trip-filters__actions .ui-btn {
+    inline-size: 100%;
+  }
+}

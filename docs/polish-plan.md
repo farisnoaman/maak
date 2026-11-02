@@ -59,6 +59,7 @@ questions in the order they ask them.**
 | 11 | Empty / error / loading states | The states a demo never shows and a launch always hits | `[x]` — §21 |
 | 12 | Console navigation on a phone | Nine destinations wrapped three rows deep above every page title; no way home on a desktop | `[x]` — §21 |
 | 13 | **The design layer** — type, accent, header, states | Four identical grey links, no current page, 404s that were not pages, Latin tracking in Arabic | `[x]` — §21 |
+| 14 | Marketplace filter panel (`/trips`) | A sidebar with no title, a phone panel that stayed open over the results it had just produced, *Clear* with nothing to clear | `[x]` — §22 |
 
 ## 3–4. Trips list and trip detail — what changed
 
@@ -555,7 +556,7 @@ than five tiles. That block is now shared with the account hub (`6.`): `.doorlis
   was mine, so a driver signing in saw "Drivers awaiting review 1" — a number they could do nothing about. The queue is
   the company's drivers plus the ones invited by phone (no org, no account); never your own profile.
 
-**Verified** — `check:all` ✓ (691 tests: 676 core ×2 + 15 web, 46 migrations, pgTAP, guards 32/189/46/135),
+**Verified** — `check:all` ✓ (692 tests: 677 core ×2 + 15 web, 46 migrations, pgTAP, guards 32/189/46/135),
 `check:responsive` ✓ (76 media queries, 11 tap targets — the door rows and departure rows added), a11y ✓ over
 `/operator*` (40 routes, both locales). Rendered both locales as `owner@` and as `driver@`, in **both data states**: the
 seed's quiet state (one clear sentence, three departures) and a fabricated busy state — booking flipped to `pending`,
@@ -758,3 +759,37 @@ motion are read back from the CSS, not seen, and `prefers-reduced-motion` is hon
 design layer is appended to `globals.css` as one commented block (§1–§11) so it can be reviewed — or lifted into
 `packages/design-tokens` — as a unit. The sand/brand split is asserted by convention and a single `:has()` selector,
 not by a lint rule.
+
+## 22. The marketplace filter panel
+
+The same brief as §21, applied to the one screen in the product whose whole job is *narrowing*: `/trips`.
+
+**What was wrong.** The panel was already correct — a disclosure on a phone, a sidebar on a laptop, a form that
+degrades to a plain GET with JavaScript off — and it had never been designed. On a laptop the summary is hidden, so the
+column began with a micro-caps **ROUTE** and no title at all: a stack of unlabelled controls beside a page that has a
+heading, which is why it read as a form that happened to be there rather than as the tool for the page. On a phone the
+row said *Filter* and a chevron, gave no sign it was a panel until tapped, and — the real cost — **stayed open after
+you applied it**, so the results you had just asked for were underneath the form you had finished with.
+
+**What it is now.**
+
+- **One control, named once.** The summary is a funnel in a tinted square, the word *Filters*, and a count once
+  anything is in force; the square fills with brand green when it is (`data-active`). Above 900px that row disappears
+  and the panel opens with a real `h2` and a *Reset* link beside it.
+- **The panel sticks.** A result list is longer than a viewport, and a filter column that scrolls away from the list it
+  filters is the reason people give up and re-load the page with the URL. It is `position: sticky` under the header,
+  capped to the viewport, and scrolls inside itself.
+- **Applying puts the panel away on a phone.** The form is a GET, so *Apply filters* navigates; a `submit` listener on
+  the disclosure closes it first. On a laptop it stays open, because there it *is* the sidebar.
+- ***Clear* exists only when there is something to clear**, and the button says what it does — *Apply filters*, not a
+  second *Filter* that means "submit" while the first one means "open".
+- **Zero is information, not absence.** A facet with nothing behind it (`Men only 0`) stays, dashed and muted, instead
+  of disappearing — and the filter you have chosen does not vanish from under the pointer when it empties the list.
+- **Labels are labels.** The field captions were 11px micro-caps with Latin tracking (on a *form field*); they now match
+  every other label in the product — 12px, 700, untracked — and the panel's group headings keep the micro-caps.
+
+**Verified** — both locales, idle and filtered: EN `Filters | Route | … | Apply filters` with `data-active` on the
+disclosure, AR `الفلاتر | إعادة تعيين | المسار | … | تطبيق الفلاتر`, `data-empty="true"` on the zero facets,
+`check:all` ✓ (692 tests: 677 core ×2 + 15 web), `check:responsive` ✓ (87 media queries), `check:a11y` ✓ over all 113
+routes. **Gaps:** as in §21 — no browser here, so the sticky offset and the close-on-apply are read back from the code,
+not watched.

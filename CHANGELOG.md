@@ -75,6 +75,12 @@ on `main`; the tag is the last step, not the first.
   `0.05em` in Latin and `0` in RTL: letter-spacing on a cursive script prises the joins apart. Display headings lose
   their negative tracking in Arabic for the same reason.
 - **The sign-in form is one card**, on a wash, instead of fields floating on bare paper.
+- **The marketplace filter panel is designed, not just functional.** On a laptop it begins with a real heading and a
+  *Reset* link (it used to open straight into a micro-caps `ROUTE` with no title) and sticks beside the results instead
+  of scrolling away from them; on a phone the row is a funnel, the word *Filters* and a count, tinted when filters are
+  in force, and **applying closes the panel** so the results are not behind the form that produced them. The button
+  says *Apply filters*; *Clear* appears only when there is something to clear; zero-count facets stay, dashed and
+  muted. New `trips.search.filtersTitle` / `.apply` / `.reset` keys and a `filter` glyph (`docs/polish-plan.md` §22).
 
 - **The coverage screen (`/admin/regions`) is a flat page, with editing as a view.** It used to be a card per region
   (hierarchy written out as a sentence), a bare editor below it, 22 governorate chips at field width and a caption
