@@ -26,7 +26,7 @@ import { parse } from 'node-html-parser';
 
 const BASE = process.argv[2] ?? 'http://127.0.0.1:3000';
 
-const ROUTES = [
+const ALL_ROUTES = [
   { path: '/ar', lang: 'ar', dir: 'rtl', account: null },
   { path: '/en', lang: 'en', dir: 'ltr', account: null },
   { path: '/ar/styleguide', lang: 'ar', dir: 'rtl', account: null },
@@ -39,6 +39,8 @@ const ROUTES = [
   { path: '/en/terms', lang: 'en', dir: 'ltr', account: null },
   { path: '/ar/auth/sign-in', lang: 'ar', dir: 'rtl', account: null },
   { path: '/en/auth/sign-in', lang: 'en', dir: 'ltr', account: null },
+  { path: '/ar/auth/sign-up', lang: 'ar', dir: 'rtl', account: null },
+  { path: '/en/auth/sign-up', lang: 'en', dir: 'ltr', account: null },
   { path: '/ar/operator', lang: 'ar', dir: 'rtl', account: 'owner' },
   { path: '/en/staff', lang: 'en', dir: 'ltr', account: 'staff' },
   // Phase 1 surfaces
@@ -155,6 +157,22 @@ const ROUTES = [
   { path: '/ar/admin/subscriptions', lang: 'ar', dir: 'rtl', account: 'staff' },
   { path: '/en/admin/subscriptions', lang: 'en', dir: 'ltr', account: 'staff' },
 ];
+
+/*
+ * `A11Y_FILTER=/admin` checks the routes whose path contains the needle.
+ *
+ * The full sweep is 113 routes and several minutes of server rendering; in a sandbox with a small memory budget that
+ * is enough to take the dev server down mid-run and report ninety "unreachable" routes, which says nothing about the
+ * pages. Filtering is how a slice about one screen gets a real answer in seconds. No filter, no change: CI runs the
+ * whole list.
+ */
+const FILTER = process.env.A11Y_FILTER?.trim();
+const ROUTES = FILTER ? ALL_ROUTES.filter((route) => route.path.includes(FILTER)) : ALL_ROUTES;
+
+if (FILTER && ROUTES.length === 0) {
+  console.error(`✖ a11y check failed: A11Y_FILTER="${FILTER}" matched no route`);
+  process.exit(1);
+}
 
 const failures = [];
 const skipped = [];

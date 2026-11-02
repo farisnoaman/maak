@@ -68,8 +68,9 @@ export function DeletionPanel({
   }
 
   return (
-    <div className="card console-panel">
-      <h2 style={{ fontSize: '1.05rem' }}>{t('account.deletion')}</h2>
+    // No heading of its own: the page's section already says "Delete account", and repeating it inside a bordered
+    // box made one small setting look like a screen.
+    <div className="account-danger">
       <p className="form-hint">{t('account.deletionHint')}</p>
 
       {requested ? <p className="form-warning">{t('account.deletionPending')}</p> : null}

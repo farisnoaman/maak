@@ -15,6 +15,7 @@ import { Field } from '@/components/ui/Field';
 import { Select } from '@/components/ui/Select';
 import type { ReconciliationView } from '@/lib/finance';
 import { FinanceAlert, useFinanceCommand } from './useFinanceCommand';
+import { paymentMethodKey } from '@/lib/payment-labels';
 
 const SOURCES = ['jaib', 'kuraimi', 'tadhamon', 'cash_desk', 'bank_transfer', 'other'] as const;
 
@@ -64,7 +65,7 @@ export function ReconciliationDesk({
         <Select
           label={t('recon.source')}
           value={source}
-          options={SOURCES.map((value) => ({ value, label: value }))}
+          options={SOURCES.map((value) => ({ value, label: t(paymentMethodKey(value)) }))}
           onChange={(event) => setSource(event.target.value)}
         />
         <Field
@@ -135,7 +136,9 @@ export function ReconciliationDesk({
           {t('recon.exceptions')} ({exceptions.length})
         </h2>
         {exceptions.length === 0 ? (
-          <p className="form-hint">{t('recon.empty')}</p>
+          /* "No imports yet" was the sentence here — a different question. An exceptions queue that is empty is
+             good news, not a missing import. */
+          <p className="form-hint">{t('recon.noExceptions')}</p>
         ) : (
           <div className="table-scroll">
             <table className="data-table table-cards">
@@ -187,7 +190,8 @@ export function ReconciliationDesk({
       </section>
 
       <section>
-        <h2>{t('recon.title')}</h2>
+        {/* Not the page title again: the header band already says "Reconciliation". */}
+        <h2>{t('recon.imports')}</h2>
         {data.imports.length === 0 ? (
           <p className="form-hint">{t('recon.empty')}</p>
         ) : (
@@ -207,7 +211,7 @@ export function ReconciliationDesk({
                 {data.imports.map((item) => (
                   <tr key={item.id}>
                     <th scope="row" data-label={t('recon.source')}>
-                      {item.source}
+                      {t(paymentMethodKey(item.source))}
                     </th>
                     <td data-label={t('statement.from')}>
                       {formatDate(item.periodFrom, { locale })}

@@ -15,6 +15,133 @@ on `main`; the tag is the last step, not the first.
 
 ### Added
 
+- **Registration** (`/auth/sign-up`, `/api/auth/sign-up`). The sign-in page had always offered *Create account* — the
+  link pointed back at the sign-in page, so a new passenger had no way to become one. Three fields (name, email,
+  password) post to a server endpoint that calls `signUp` and lets `app.handle_new_user` write the profile; with
+  confirmations on, the page says *check your email* instead of pretending there is a session. A signed-in visitor is
+  sent to their account.
+- **A password reveal** on every password field (`ui/PasswordField.tsx`, `aria-pressed`, label flips with the state).
+- **`@maak/web` runs its tests.** The workspace had no `test` script, so `src/lib/__tests__/legal.test.ts` had never
+  been executed by `npm test`; `origin.test.ts` covers the CSRF cases below.
+
+### Fixed
+
+- **Every gateway-backed screen was blank for URL-token sessions.** The server-side gateway client read the access
+  token from `client.auth.getSession()`, which is `null` whenever the session arrives as the proxy's `x-maak-token`
+  header (`?st=`, the embedded preview, `persistSession: false`). The finance dashboard and statement answered *"The
+  ledger could not be read"* for anybody signed in that way, while the same account worked through the cookie — the
+  whole finance console looked down. `resolveAccessToken()` asks for the token whichever channel carries it.
+- **`loadAccountContext` returned other people's rows as if they were yours.** A `platform_staff` account may read every
+  row of `user_roles` and `organization_members`, because the staff consoles need the roster; the account helper
+  queried neither by `user_id`. That account's `roles` therefore contained the admin's role — so every page that
+  branches on roles (the admin doors, the finance scope) treated a staff member as an admin — and its `organizations`
+  contained a company it does not belong to, whose ledger the finance dashboard would have shown it. Memberships,
+  notifications and roles are all pinned to the visitor now.
+- **A CSRF hole in `isSameOriginRequest`.** Any `Origin` was accepted whenever every host the server could see was
+  loopback — every dev-server request, and the preview proxy whenever it does not forward the host. A form on another
+  site could create an account or sign a visitor in to the attacker's. The check now reads `Sec-Fetch-Site` first,
+  rejects `cross-site` outright, and keeps the loopback escape only for browsers that send no fetch metadata.
+- **A driver's own licence no longer appears as an operator queue item.** The overview's first version counted any
+  pending driver profile belonging to the signed-in account, so a driver saw `Drivers awaiting review 1` — a number
+  they could do nothing about.
+
+### Changed
+
+- **The coverage screen (`/admin/regions`) is a flat page, with editing as a view.** It used to be a card per region
+  (hierarchy written out as a sentence), a bare editor below it, 22 governorate chips at field width and a caption
+  reading "1 extra districts". It is now a heading, a table and a section: *Region* (sub-regions indented), *Coverage*,
+  *Status* (retired rows muted in the same table) and the row's actions, with **New region** in the section head — and
+  `Edit` swaps the table for the editor (identity left, coverage right, *← Regions* to come back) instead of leaving a
+  form in a card beside it. Supervisors follows the same shape: a table, then the assignment form under a rule. Counts
+  are grammatical in both languages through `translateCount()` — Arabic dual, broken plural and plural zero included,
+  which is where "1 extra districts" went.
+- **The finance console opens with the answer.** `/finance/dashboard` led with ten equal figures, so profit — the
+  number the desk exists for — had no weight, and the balances below it printed journal codes (`operator_payable`) and
+  a `Difference` column. It now leads with profit at display size (red when negative) beside the period it covers,
+  then collected and what is owed or withdrawable, with commission, subscription revenue, refunds and payouts as a
+  breakdown underneath; balances print the chart of accounts in the reader's language and the column is `Balance`. The
+  journal editor and ledger rows use the same names, reconciliation names its rails (`Jaib`, `Al-Kuraimi Bank`) instead
+  of enum values, and invoices puts *outstanding* in the header band — which removed a heading that repeated the page
+  title and three subtitles that appeared twice.
+- **The operator overview answers questions instead of listing screens.** `/operator` was five identical tiles with an
+  `Open` button each — a menu that repeated the sidebar. It now opens with the four queues that can need an operator
+  (*booking requests* naming the trip they are on, *receipts to confirm*, *vehicles* and *drivers awaiting review*),
+  each a door into the queue behind it, and one sentence instead of four zeroes when none of them has anything. Under
+  it, the next four published departures: clock time, route, vehicle and trip code, seats taken with a fill bar, and a
+  flag on any trip with people waiting to be accepted. The screens dropped to a framed list of doors at the bottom.
+- **One list-of-doors style instead of two.** `.doorlist` / `.door` (icon, name, one line about what is behind it)
+  replaces `.account-consoles` / `.account-console`; the account hub and the operator overview share it.
+- **`loadTripRequests()`** counts pending bookings for a set of trips in one query, so the overview's request figure and
+  the trip inbox cannot disagree about the number.
+
+- **The sign-in page is a page.** It was a card in the middle of an empty screen with no header and no way back: now a
+  header, the form on the near side, and a column that says what is behind the door (*your next journey*, *your booking
+  code*, *your company*) with *Browse trips without an account* under it. The two methods are links with
+  `aria-current` instead of `role="tab"` anchors with no tabpanel — which also fixes the "selected" tab having no
+  selected style at all. Errors are a band above the form.
+- **The product ships its own typefaces** (`@fontsource-variable/cairo`, `@fontsource-variable/inter`): Arabic was
+  rendering in whatever the operating system supplied — Tahoma on Windows, never Cairo — which is why the same screen
+  looked different on every machine and why Arabic text sat badly in its line box. Both are variable, self-hosted, and
+  subset by `unicode-range`, so the browser downloads only the script it draws: no third-party request, no layout
+  shift, and `--leading-ui` gives Arabic the 1.8 it needs where Latin is comfortable at 1.65.
+- **An icon set** (`components/ui/Icon.tsx`): 20 hand-authored paths on one 24px grid at one stroke weight, drawn in
+  `currentColor`. The interface had been using characters (`◆`, `✓`, `→`, `⌄`) as marks — they take the body font's
+  weight and sidebearings, change shape with the fallback face, and cannot be centred against text. The styleguide
+  enumerates the set from the component, so a mark cannot exist in the app and be missing from the documentation.
+- **`HeroField`**: a contour-and-route drawing behind the home hero — the topology the product actually sells, not a
+  stock photograph of a coastline it does not cross.
+
+### Added
+
+- **The trip page names the driver** (`00046_public_driver.sql`): `get_trip_public` dropped `driver_id`, so the one fact
+  a passenger needs at the door was missing. The public payload now carries a first name and whether the licence is
+  verified — and nothing else from `driver_profiles`; a pgTAP assertion fails the build if the licence number or invited
+  phone number ever appears in it. The page shows it as a *Vehicle and driver* block with the vehicle's seat count
+  spelled out and only the amenities the vehicle actually declares.
+
+### Changed
+
+- **The account hub opens with the next journey.** `/account` was a stack of equal cards — profile, companies,
+  notifications, every console link in the platform, delete — which answered "what is in the account" and left the trip
+  two clicks away. It now opens with who you are (a band with the email, the document type, and the verification and
+  licence doors), then the soonest booking that has not departed: route, date, code, seats, total, status and one
+  primary door. With nothing ahead it says so and offers *Find a trip* instead of rendering an empty section. Companies
+  are rows in one frame with a *Current* pill rather than cards inside the page's card, and the console links are
+  gated by role — a passenger used to be offered the verification queue and the roles screen, both of which answer 403.
+- **`loadMyBookings` returns *my* bookings.** Row-level security is deliberately wider: an operator, a driver assigned
+  to the trip and platform staff may all read a booking. A driver account therefore saw a stranger's seat, price and
+  reference under *My bookings* (web and mobile) — and the new hub promoted it to *Your next journey*. Both readers now
+  filter on `passenger_id`.
+- **Booking is a ticket beside the fields.** `/trips/[code]/book` was a single column whose only context was a code in
+  the heading: it now restates the route, date, vehicle, driver and seats in a sticky summary that carries the live
+  total and the reserve button, and on a phone that summary follows the fields so the button lands where the thumb
+  ends. Seats are a stepper with 44px targets and an `aria-live` count instead of a number input; getting off is a list
+  of the trip's own stops with the time and fare of each, because a `<select>` hides every option's price; the booking
+  code at the end is boxed at display size, `user-select: all`.
+- **The payment screen is a page with a progress track.** `/pay/[intent]` was one card of `<dl>` rows. It now has a
+  header band with the status, the amount at `--text-3xl` (labelled *Amount due* or *Amount paid* depending on the
+  state), the account number large and direction-locked for reading aloud, and three steps — *Payment requested → Send
+  the receipt → The company confirms* — with `aria-current="step"`. The "transfer it, then attach the receipt"
+  instruction no longer appears under a payment that is already settled.
+- **The trip page's stops are an itinerary**: start → stops → destination, with the clock time you reach each stop
+  derived from the departure, the fare from the start, and the estimated arrival, joined by a rail. It was the
+  intermediate stops alone, with "after 240 min" and no terminals.
+- **The marketplace card is a ticket.** The departure time — the fact a timetable is sorted by, and the third most
+  prominent thing on the card — now has its own edge: large, tabular, date beneath, separated by a dashed tear-line.
+  The heavy shadow is gone (a page of eight shadowed cards is eight shadows competing) and the card lifts on hover and
+  focus instead. Home's "next departures" use the same card.
+- **The filter panel is three named groups**, each a `<fieldset>` with a `<legend>` — *Route*, *Ride conditions*, *Date
+  and fare* — separated by a rule, instead of nine identically sized controls in a column. The disclosure chevron and
+  the filter chip's remove mark were characters (`⌄`, `✕`) and are now drawn.
+- **The trip page**: back link at the top, drawn route arrow at page-title size, fact rows on hairlines instead of
+  eight floating pairs, a rail joining the itinerary's numbered stops, the price on the display scale, and a wider
+  article so the 320px fare panel is not floating in dead space.
+- **A type scale, named.** `--text-2xs … --text-3xl` and `--leading-tight … --leading-ui` replace sizes written by
+  hand at the point of use. Headings land on it by default, display sizes tighten their leading, and the home hero,
+  section titles and step cards all read from the same three numbers.
+- **The home page's steps are a sequence, not three boxes**: a rule above each and the number beside its title,
+  instead of three bordered cards that read as three things to choose between.
+- **The menu button is drawn, not typed**, and says *close* while the menu is open (`[open]` swaps the glyph in CSS).
 - **Install paths, written down** (`docs/apps.md` §"How to install it on a phone"): the web app as a PWA (works
   today, no account), Expo Go for the inner loop, `eas build --profile preview` for an APK a tester keeps, and the
   store route that waits on accounts. `apps/mobile/.env.example` lists the four variables the app reads.

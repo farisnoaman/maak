@@ -8,6 +8,7 @@ import {
   type Locale,
 } from '../src/i18n/locale';
 import { ar, dictionaries, en, keyParity, translate } from '../src/i18n/dictionaries';
+import { translateCount } from '../src/api/notifications';
 import { PLACE_KIND_KEY } from '../src/domain/geo';
 
 describe('locale handling', () => {
@@ -89,6 +90,30 @@ describe('every key the product can render exists', () => {
       expect(ar[key as keyof typeof ar]).not.toBe(key);
       expect(en[key as keyof typeof en]).not.toBe(key);
     }
+  });
+
+  it('writes the coverage counts as sentences, in both directions', () => {
+    // The regions screen prints three counts through `translateCount()`; the base key is the 11+ form and the
+    // suffixed keys carry the singular, the dual and 3–10. A missing form silently falls back to the base, which is
+    // how «1 extra districts» shipped once.
+    const counts = ['geo.districtCount', 'geo.governorateCount', 'geo.extraCount'];
+    for (const base of counts) {
+      for (const form of ['zero', 'one', 'two', 'few']) {
+        expect(ar, `ar is missing ${base}.${form}`).toHaveProperty([`${base}.${form}`]);
+        expect(en, `en is missing ${base}.${form}`).toHaveProperty([`${base}.${form}`]);
+      }
+      expect(ar).toHaveProperty([base]);
+      expect(en).toHaveProperty([base]);
+    }
+
+    expect(translateCount('en', 'geo.districtCount', 1)).toBe('1 district');
+    expect(translateCount('en', 'geo.districtCount', 10)).toBe('10 districts');
+    expect(translateCount('ar', 'geo.districtCount', 2)).toBe('مديريتان');
+    expect(translateCount('ar', 'geo.districtCount', 10)).toBe('10 مديريات');
+    expect(translateCount('ar', 'geo.governorateCount', 22)).toBe('22 محافظة');
+    // Zero takes the plural in Arabic, not the singular: «٠ مديريات», never «0 مديرية».
+    expect(translateCount('ar', 'geo.districtCount', 0)).toBe('0 مديريات');
+    expect(translateCount('en', 'geo.districtCount', 0)).toBe('0 districts');
   });
 
   it('has a label for every notification the database can create', () => {

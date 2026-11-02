@@ -35,8 +35,9 @@ body {
   background: var(--surface-base);
   color: var(--ink-900);
   font-family: var(--font-ui);
-  font-size: 16px;
-  line-height: 1.7;
+  font-size: var(--text-md);
+  /* Set per direction in tokens.css: Arabic needs 1.8 where Latin is comfortable at 1.65. */
+  line-height: var(--leading-ui);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
@@ -46,6 +47,30 @@ h2,
 h3,
 p {
   margin: 0;
+}
+
+/* Headings land on the scale by default instead of inheriting the body size and being fixed up page by page.
+   Display sizes tighten their leading; a 3rem line at 1.65 is a paragraph, not a title. */
+h1,
+h2,
+h3 {
+  line-height: var(--leading-snug);
+  letter-spacing: -0.012em;
+  font-weight: 800;
+}
+
+h1 {
+  font-size: var(--text-2xl);
+}
+
+h2 {
+  font-size: var(--text-xl);
+}
+
+h3 {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  letter-spacing: -0.005em;
 }
 
 a {
@@ -85,6 +110,39 @@ a {
   .shell {
     padding-inline: var(--space-5);
   }
+}
+
+/* ---------- icons ----------
+ * One grid (24), one stroke (1.7), one colour (`currentColor`). `vertical-align` aligns the icon's optical centre
+ * with the text's x-height rather than its box, which is the difference between a tick beside a sentence and a
+ * tick floating above it. Directional marks rotate, and the two that point "forward" also mirror in RTL.
+ * ------------------------------------------------------------------------- */
+
+.ui-icon,
+.ui-directional-icon {
+  display: inline-block;
+  flex: none;
+  vertical-align: -0.16em;
+}
+
+.ui-directional-icon--up {
+  transform: rotate(180deg);
+}
+
+.ui-directional-icon--forward {
+  transform: rotate(-90deg);
+}
+
+.ui-directional-icon--back {
+  transform: rotate(90deg);
+}
+
+.ui-directional-icon--flip-forward {
+  transform: scaleX(var(--icon-flip, 1)) rotate(-90deg);
+}
+
+.ui-directional-icon--flip-back {
+  transform: scaleX(var(--icon-flip, 1)) rotate(90deg);
 }
 
 /* ---------- header ---------- */
@@ -220,10 +278,37 @@ a {
 
 .hero h1 {
   margin-block-start: var(--space-5);
-  font-size: clamp(1.9rem, 4.2vw, 3rem);
-  line-height: 1.25;
-  letter-spacing: -0.01em;
+  font-size: var(--text-3xl);
+  line-height: var(--leading-tight);
+  letter-spacing: -0.02em;
   font-weight: 800;
+}
+
+/* The contour drawing. It sits behind the hero's right-hand column, is decoration (`aria-hidden` in the
+   component), and disappears on a phone where it would be three strokes behind the search form. */
+.hero__art {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-end: max(-60px, -4vw);
+  inline-size: min(520px, 52vw);
+  block-size: auto;
+  max-block-size: 108%;
+  translate: 0 -50%;
+  color: var(--brand-300);
+  opacity: 0.5;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.hero > .shell {
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 719px) {
+  .hero__art {
+    display: none;
+  }
 }
 
 .hero p.lead {
@@ -409,9 +494,9 @@ a {
 }
 
 .section__head h2 {
-  font-size: clamp(1.35rem, 2.6vw, 1.75rem);
+  font-size: var(--text-xl);
   font-weight: 800;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.014em;
 }
 
 .section__head p {
@@ -906,6 +991,30 @@ a {
 }
 
 /* ---------- styleguide layout ---------- */
+.sg-icons {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 104px), 1fr));
+  gap: var(--space-3);
+  margin-block-start: var(--space-6);
+  padding: 0;
+  list-style: none;
+}
+
+.sg-icons li {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-2);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-md);
+  color: var(--ink-700);
+}
+
+.sg-icons code {
+  font-size: var(--text-2xs);
+  color: var(--ink-500);
+}
+
 .sg-row {
   display: flex;
   flex-wrap: wrap;
@@ -929,69 +1038,205 @@ a {
 }
 
 /* ---------- auth ---------- */
-.auth-shell {
+
+/*
+ * Sign in and sign up share one frame: the form on the near side, and a quiet column that says what is behind the
+ * door. The page used to be a 440px card floating in the middle of an empty screen with no header, no way back to the
+ * marketplace and a "Create account" line that linked to itself.
+ *
+ * No card here at all. The form is the page; a bordered box around it only said "this is a widget".
+ */
+.auth-page {
   display: grid;
-  place-items: center;
-  padding-block: var(--space-16);
+  gap: var(--space-6);
+  padding-block: var(--space-8) var(--space-16);
 }
-.auth-card {
-  inline-size: min(440px, 100%);
-  padding: var(--space-8);
+
+.auth-cols {
+  display: grid;
+  gap: var(--space-8);
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
 }
-.auth-card h1 {
-  font-size: 1.4rem;
-  font-weight: 800;
+
+.auth-panel {
+  display: grid;
+  gap: var(--space-4);
+  inline-size: 100%;
+  max-inline-size: 26rem;
 }
-.auth-card p.sub {
-  margin-block-start: var(--space-2);
+
+.auth-title {
+  font-size: var(--text-2xl);
+  letter-spacing: -0.02em;
+}
+
+.auth-sub {
+  max-inline-size: 34rem;
   color: var(--ink-600);
-  font-size: 0.9rem;
+  font-size: var(--text-sm);
 }
+
 .auth-form {
   display: grid;
   gap: var(--space-4);
-  margin-block-start: var(--space-6);
+  margin-block-start: var(--space-2);
 }
+
 .auth-notice {
-  margin-block-start: var(--space-5);
   padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--sand-300);
   border-radius: var(--radius-md);
   background: var(--sand-50);
-  border: 1px solid var(--sand-300);
   color: var(--ink-700);
-  font-size: 0.82rem;
+  font-size: var(--text-sm);
 }
-.auth-tabs {
-  display: inline-flex;
+
+.auth-notice--error {
+  border-color: transparent;
+  background: var(--danger-50, #fdecec);
+  color: var(--danger-700, #8c1d1d);
+}
+
+/* Two ways in, as two links with a segmented control's look: whichever is current reads as pressed. */
+.auth-methods {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 2px;
+  margin-block-start: var(--space-1);
   padding: 3px;
+  border-radius: var(--radius-pill);
   background: var(--surface-sunken);
-  border-radius: var(--radius-pill);
-  margin-block-start: var(--space-5);
 }
-.auth-tabs button {
-  border: 0;
-  background: transparent;
-  font: inherit;
-  font-size: 0.82rem;
-  font-weight: 700;
+
+.auth-method {
+  display: grid;
+  place-items: center;
+  min-block-size: var(--tap-target);
+  border-radius: var(--radius-pill);
   color: var(--ink-600);
-  padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius-pill);
-  min-block-size: 34px;
-  cursor: pointer;
+  font-size: var(--text-sm);
+  font-weight: 700;
 }
-.auth-tabs button[aria-selected='true'] {
+
+.auth-method[aria-current='page'] {
   background: var(--surface-base);
   color: var(--ink-900);
   box-shadow: var(--shadow-sm);
 }
-.auth-foot {
-  margin-block-start: var(--space-5);
-  font-size: 0.82rem;
-  color: var(--ink-600);
+
+.auth-alt {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
+  margin-block-start: var(--space-2);
+  color: var(--ink-600);
+  font-size: var(--text-sm);
+}
+
+.auth-alt a {
+  color: var(--brand-700);
+  font-weight: 700;
+}
+
+/* The other half: on a phone it is reassurance under the form, from 900px it is its own column on a rule. */
+.auth-aside {
+  display: grid;
+  gap: var(--space-5);
+  padding-block-start: var(--space-6);
+  border-block-start: 1px solid var(--surface-sunken);
+}
+
+.auth-aside__title {
+  color: var(--ink-500);
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.auth-points {
+  display: grid;
+  gap: var(--space-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.auth-point {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.auth-point__icon {
+  display: grid;
+  place-items: center;
+  inline-size: 36px;
+  block-size: 36px;
+  flex: none;
+  border-radius: var(--radius-md);
+  background: var(--brand-50);
+  color: var(--brand-700);
+}
+
+.auth-point__body {
+  display: grid;
+  gap: 2px;
+  min-inline-size: 0;
+}
+
+.auth-point__title {
+  color: var(--ink-900);
+  font-weight: 700;
+}
+
+.auth-point__text {
+  color: var(--ink-600);
+  font-size: var(--text-sm);
+}
+
+/* The reveal toggle sits beside the input, never inside its label. */
+.ui-field__control .ui-input {
+  min-inline-size: 0;
+}
+
+.ui-field__reveal {
+  flex: none;
+  min-block-size: var(--tap-target);
+  padding-inline: var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--brand-700);
+  font: inherit;
+  font-size: var(--text-xs);
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.ui-field__reveal:hover {
+  background: var(--brand-50);
+}
+
+@media (min-width: 900px) {
+  .auth-cols {
+    grid-template-columns: minmax(0, 26rem) minmax(0, 1fr);
+    gap: var(--space-16);
+  }
+
+  .auth-panel {
+    max-inline-size: none;
+  }
+
+  .auth-aside {
+    padding-block-start: 0;
+    padding-inline-start: var(--space-12);
+    border-block-start: 0;
+    border-inline-start: 1px solid var(--surface-sunken);
+  }
 }
 
 /* ---------- app shell (consoles) ---------- */
@@ -1125,6 +1370,28 @@ a {
   gap: var(--space-2);
   align-items: center;
 }
+/* A figure in the header band: the one number a desk page is opened for. */
+.console-head__figure {
+  display: grid;
+  gap: 1px;
+  justify-items: end;
+}
+
+.console-head__figure-label {
+  color: var(--ink-500);
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.console-head__figure-value {
+  color: var(--ink-900);
+  font-size: var(--text-md);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
 .console-head__stamp {
   font-size: 0.78rem;
   font-variant-numeric: tabular-nums;
@@ -1455,8 +1722,24 @@ a {
   padding-block-end: var(--space-2);
 }
 .ops-section__head h2 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
   font-size: 1rem;
   font-weight: 700;
+}
+
+/* The company a whole list belongs to, said once beside its heading rather than on every row. */
+.ops-section__scope {
+  color: var(--ink-500);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+.ops-section__scope::before {
+  content: '·';
+  margin-inline-end: var(--space-2);
 }
 .link-more {
   font-size: 0.85rem;
@@ -1575,6 +1858,25 @@ a {
 
 .site-menu__toggle::-webkit-details-marker {
   display: none;
+}
+
+.site-menu__glyphs {
+  display: inline-grid;
+  place-items: center;
+  line-height: 0;
+}
+
+.site-menu__glyph--close {
+  display: none;
+}
+
+/* One glyph swaps for the other when the disclosure opens — no JavaScript, no second state to keep in sync. */
+.site-menu[open] .site-menu__glyph--open {
+  display: none;
+}
+
+.site-menu[open] .site-menu__glyph--close {
+  display: inline-block;
 }
 
 /* 320px: the brand loses its subtitle and the menu button loses its word, but nothing is hidden
@@ -1744,6 +2046,11 @@ a {
 .ui-alert--error {
   background: var(--danger-50, #fdecec);
   color: var(--danger-700, #8c1d1d);
+}
+
+.ui-alert--success {
+  background: var(--brand-50);
+  color: var(--brand-700);
 }
 
 .ui-alert--warning {
@@ -1953,26 +2260,91 @@ a {
   margin-inline-start: auto;
 }
 
+/* Companies: rows in one frame, not a grid of cards. A person belongs to one or two, the row says which one
+   is current, and the two doors sit on the row instead of under a heading — the previous cards put a card
+   inside the page's card and a box inside the card. */
 .account-orgs {
   display: grid;
-  gap: var(--space-3);
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
-  margin-block: var(--space-4);
+  gap: 0;
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.account-orgs li + li {
+  border-block-start: 1px solid var(--surface-sunken);
 }
 
 .account-org {
-  display: grid;
-  gap: var(--space-2);
-  padding: var(--space-4);
-  border: 1px solid var(--surface-sunken);
-  border-radius: var(--radius-lg);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3) var(--space-4);
   background: var(--surface-base);
-  box-shadow: var(--shadow-sm);
 }
 
 .account-org--active {
-  border-color: var(--brand-500, #0d7a5f);
-  box-shadow: 0 0 0 1px var(--brand-500, #0d7a5f);
+  background: var(--brand-50);
+  box-shadow: inset 3px 0 0 var(--brand-500);
+}
+
+.account-org__mark {
+  display: grid;
+  place-items: center;
+  inline-size: 34px;
+  block-size: 34px;
+  flex: none;
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  color: var(--ink-600);
+  font-weight: 800;
+}
+
+.account-org--active .account-org__mark {
+  background: var(--brand-100);
+  color: var(--brand-700);
+}
+
+.account-org__body {
+  flex: 1 1 10rem;
+  min-inline-size: 0;
+}
+
+.account-org__name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 700;
+  color: var(--ink-900);
+  overflow-wrap: anywhere;
+}
+
+.account-org__current {
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--brand-100);
+  color: var(--brand-700);
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.account-org__meta {
+  font-size: var(--text-xs);
+  color: var(--ink-500);
+}
+
+.account-org__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-inline-start: auto;
 }
 
 /* ---------------------------------------------------------------------------
@@ -1986,11 +2358,442 @@ a {
 /* Five screens, one measure: a form or a card that runs the full 1120px of the shell is a page nobody
    can read. */
 .account-page {
-  max-inline-size: 56rem;
+  max-inline-size: 60rem;
+}
+
+.account-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-block-end: var(--space-4);
 }
 
 .account-head h1 {
   margin-block-end: var(--space-1);
+  font-size: var(--text-2xl);
+  letter-spacing: -0.02em;
+}
+
+/* Who this is: a band of avatar, name, contact, and the two document doors. */
+.account-identity {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+  margin-block: var(--space-5) 0;
+  padding-block: var(--space-4);
+  border-block: 1px solid var(--surface-sunken);
+}
+
+.account-identity__avatar {
+  display: grid;
+  place-items: center;
+  inline-size: 46px;
+  block-size: 46px;
+  flex: none;
+  border-radius: var(--radius-pill);
+  background: var(--brand-50);
+  color: var(--brand-700);
+  font-size: var(--text-lg);
+  font-weight: 800;
+}
+
+.account-identity__body {
+  flex: 1 1 12rem;
+  min-inline-size: 0;
+}
+
+.account-identity__name {
+  font-size: var(--text-lg);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.account-identity__contact {
+  font-size: var(--text-sm);
+  color: var(--ink-600);
+  overflow-wrap: anywhere;
+}
+
+.account-identity__meta {
+  font-size: var(--text-xs);
+  color: var(--ink-500);
+}
+
+.account-identity__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* A section head with its link on the far edge, used by every block on this page. */
+.account-section__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  margin-block-end: var(--space-3);
+}
+
+.account-section__head h2 {
+  font-size: var(--text-md);
+  font-weight: 800;
+  letter-spacing: -0.005em;
+}
+
+/* The next journey: the block the page exists for. */
+.account-next {
+  margin-block-start: var(--space-6);
+}
+
+.journey {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border: 1px solid var(--brand-300);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, var(--brand-50), transparent 60%), var(--surface-base);
+}
+
+.journey__route {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xl);
+  font-weight: 800;
+  letter-spacing: -0.015em;
+}
+
+.journey__arrow {
+  display: inline-grid;
+  place-items: center;
+  color: var(--brand-600);
+  transform: scaleX(var(--icon-flip, 1));
+  line-height: 0;
+}
+
+.journey__when {
+  font-size: var(--text-sm);
+  color: var(--ink-600);
+  font-variant-numeric: tabular-nums;
+}
+
+.journey__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-8);
+  margin: 0;
+  padding-block: var(--space-3);
+  border-block: 1px solid var(--surface-sunken);
+}
+
+.journey__facts > div {
+  display: grid;
+  gap: 1px;
+}
+
+.journey__facts dt {
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-500);
+}
+
+.journey__facts dd {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--ink-900);
+  font-variant-numeric: tabular-nums;
+}
+
+.journey__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.account-next__empty {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  border: 1px dashed var(--surface-sunken);
+  border-radius: var(--radius-lg);
+}
+
+.account-next__empty-title {
+  font-weight: 700;
+  color: var(--ink-800);
+}
+
+/* Console doors: a row each, because there are one to four of them. */
+/* Next departures: the operator's own timetable, one row per trip.
+   Time in its own edge (the fact the list is sorted by), the route and its company in the middle, seats on the far
+   edge with a fill bar, and a flag when somebody is waiting to be accepted onto that trip. A phone drops the bar and
+   the flag onto their own lines rather than squeezing five facts into one. */
+.departures {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.departures li + li {
+  border-block-start: 1px solid var(--surface-sunken);
+}
+
+.departure {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  min-block-size: var(--tap-target);
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-base);
+  color: var(--ink-800);
+  text-decoration: none;
+  transition: background 0.15s ease;
+}
+
+.departure:hover,
+.departure:focus-visible {
+  background: var(--brand-50);
+}
+
+/* The time edge: the fact the list is sorted by, so it is the fact that gets the strong weight. */
+.departure__when {
+  display: grid;
+  gap: 1px;
+  min-inline-size: 4.6rem;
+  padding-inline-end: var(--space-3);
+  border-inline-end: 1px dashed var(--surface-sunken);
+}
+
+.departure__time {
+  color: var(--ink-900);
+  font-size: var(--text-md);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.departure__date {
+  color: var(--ink-500);
+  font-size: var(--text-xs);
+}
+
+.departure__body {
+  display: grid;
+  gap: 2px;
+  min-inline-size: 0;
+}
+
+.departure__route {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 700;
+  color: var(--ink-900);
+}
+
+.departure__arrow {
+  display: inline-grid;
+  place-items: center;
+  color: var(--brand-600);
+  line-height: 0;
+  transform: scaleX(var(--icon-flip, 1));
+}
+
+.departure__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  color: var(--ink-500);
+  font-size: var(--text-xs);
+}
+
+.departure__code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.02em;
+}
+
+.departure__seats {
+  display: grid;
+  gap: 2px;
+  grid-column: 2;
+  justify-items: start;
+}
+
+.departure__seats-label {
+  color: var(--ink-500);
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.departure__seats-value {
+  color: var(--ink-800);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+/* How full the vehicle is, drawn from the same numbers as the label above it. */
+.departure__bar {
+  inline-size: 100%;
+  max-inline-size: 8rem;
+  block-size: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-sunken);
+  overflow: hidden;
+}
+
+.departure__bar::before {
+  content: '';
+  display: block;
+  block-size: 100%;
+  inline-size: var(--fill, 0%);
+  border-radius: inherit;
+  background: var(--brand-500);
+}
+
+.departure__flag {
+  grid-column: 2;
+  justify-self: start;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--state-warning) 12%, var(--surface-base));
+  color: color-mix(in srgb, var(--state-warning) 80%, var(--ink-900));
+  font-size: var(--text-2xs);
+  font-weight: 800;
+}
+
+@media (min-width: 720px) {
+  .departure {
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+  }
+
+  .departure__seats {
+    grid-column: auto;
+    justify-items: end;
+    min-inline-size: 7rem;
+  }
+
+  .departure__flag {
+    grid-column: auto;
+    justify-self: end;
+  }
+}
+
+/* An empty band inside a console page: a sentence, a hint and the one verb that changes it. */
+.ops-empty {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+  padding: var(--space-5);
+  border: 1px dashed var(--surface-sunken);
+  border-radius: var(--radius-lg);
+}
+
+.ops-empty__title {
+  color: var(--ink-800);
+  font-weight: 700;
+}
+
+/* Doors: a framed list of places a signed-in person can go, one row each.
+   Shared by the account hub (the consoles a session may open) and the operator overview (the screens of the
+   console). It is deliberately not a grid of tiles: there are one to six of them, they are a list, and on a phone
+   a row is the only shape that stays tappable at 320px. */
+.doorlist {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.doorlist li + li {
+  border-block-start: 1px solid var(--surface-sunken);
+}
+
+.door {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: var(--tap-target);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-base);
+  color: var(--ink-800);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  transition: background 0.15s ease;
+}
+
+.door:hover,
+.door:focus-visible {
+  background: var(--brand-50);
+  color: var(--brand-700);
+}
+
+.door__icon {
+  display: grid;
+  place-items: center;
+  inline-size: 30px;
+  block-size: 30px;
+  flex: none;
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  color: var(--ink-600);
+}
+
+.door:hover .door__icon,
+.door:focus-visible .door__icon {
+  background: var(--brand-100);
+  color: var(--brand-700);
+}
+
+.door__label {
+  flex: 1;
+}
+
+/* The one sentence that says what is behind the door. Dim, and truncated before it can push the row wider than a
+   phone. */
+.door__note {
+  display: none;
+  color: var(--ink-500);
+  font-size: var(--text-xs);
+  font-weight: 500;
+}
+
+@media (min-width: 720px) {
+  .door__note {
+    display: block;
+    flex: 0 1 auto;
+    max-inline-size: 28rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.door__go {
+  color: var(--ink-400);
+  transform: scaleX(var(--icon-flip, 1));
 }
 
 .account-nav {
@@ -2063,25 +2866,25 @@ a {
 }
 
 /* The doorways out of the account: tiles, because they are all the same size and all lead somewhere. */
-.account-links {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-2);
-}
-
-@media (min-width: 560px) {
-  .account-links {
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
-  }
-}
-
-.account-links .ui-btn {
-  min-block-size: var(--tap-target);
-  justify-content: center;
-}
 
 /* Signing out is not one of the actions of the page, so it sits below them, behind a rule, with its own
    line of explanation. */
+/* Deleting the account sits at the bottom, in a bordered block on the danger tone — the one place on the page
+   that should look like it can end things. */
+.account-danger {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+  padding: var(--space-4);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-md);
+  background: var(--surface-muted);
+}
+
+.account-danger .form-actions {
+  margin-block-start: 0;
+}
+
 .account-signout {
   display: grid;
   gap: var(--space-2);
@@ -2089,6 +2892,225 @@ a {
   margin-block-start: var(--space-8);
   padding-block-start: var(--space-4);
   border-block-start: 1px solid var(--surface-sunken);
+}
+
+/* --- the coverage screen: a flat list, and an editor that takes its place ---- */
+
+/*
+ * No card wraps this page. A console screen is a page: a heading with its count, a table, and the one way in. The
+ * editor is a *view* — it replaces the list, so the form is never a panel sitting in the corner of a page it is not
+ * about. The only frames are rows (a phone stacks the table into row cards) and the editor's own bands.
+ */
+/* A section's heading row: what it is on the left, the action on the right, one line. */
+.geo-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  align-items: start;
+  justify-content: space-between;
+}
+.geo-section-head h2 {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+}
+.geo-section-head .form-hint {
+  margin-block: 2px 0;
+}
+
+/* A region's kind: metadata under its name, at metadata weight. */
+.geo-kind {
+  display: block;
+  color: var(--ink-500);
+  font-size: 0.75rem;
+}
+
+/* The count beside a section heading: a figure, not a badge. */
+.geo-count {
+  color: var(--ink-500);
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A region's name, indented by its depth in the tree; the guide mark says what the indent means. */
+.geo-name {
+  display: block;
+  font-weight: 700;
+  color: var(--ink-900);
+}
+.geo-name[data-depth='1'] {
+  padding-inline-start: 1.1rem;
+  position: relative;
+}
+.geo-name[data-depth='1']::before {
+  content: '└';
+  position: absolute;
+  inset-inline-start: 0;
+  color: var(--ink-400);
+  font-weight: 400;
+}
+.geo-name[data-depth='2'] {
+  padding-inline-start: 2.2rem;
+  position: relative;
+}
+.geo-name[data-depth='2']::before {
+  content: '└';
+  position: absolute;
+  inset-inline-start: 1.1rem;
+  color: var(--ink-400);
+  font-weight: 400;
+}
+.data-table tr[data-retired='true'] .geo-name {
+  color: var(--ink-500);
+  font-weight: 600;
+}
+
+/* One row's actions, side by side rather than stacked by the table's cell padding. */
+.geo-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.geo-coverage-cell {
+  color: var(--ink-600);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The way back out of the editor: a quiet button above the heading it belongs to. */
+.geo-back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/*
+ * The editor: identity on the left, coverage on the right.
+ *
+ * Two columns from 900px — the fields do not need more than 22rem, and the chip grid reads four or five across at the
+ * width that leaves, which is what stops 22 governorates turning into eleven rows of two.
+ */
+.geo-editor {
+  scroll-margin-block-start: var(--space-4);
+}
+.geo-editor:focus {
+  outline: none;
+}
+.geo-editor__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+@media (min-width: 900px) {
+  .geo-editor__grid {
+    grid-template-columns: minmax(min(100%, 22rem), 0.8fr) minmax(0, 1.2fr);
+    gap: var(--space-8);
+  }
+}
+
+/* A labelled group: a micro-label, an optional count, then the controls. No border, no fill. */
+.geo-group {
+  display: grid;
+  gap: var(--space-2);
+  align-content: start;
+  min-inline-size: 0;
+}
+.geo-group__label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--ink-700);
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.geo-group__label--sub {
+  margin-block-start: var(--space-3);
+}
+.geo-group__count {
+  color: var(--ink-500);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+  font-variant-numeric: tabular-nums;
+}
+.geo-group > .form-hint {
+  margin: 0;
+}
+
+/* The editor's fields: one column in the narrow one, two across when there is room. */
+.geo-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+}
+.geo-fields__wide {
+  min-inline-size: 0;
+}
+@media (min-width: 560px) {
+  .geo-fields {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .geo-fields__wide {
+    grid-column: 1 / -1;
+  }
+}
+
+/* The filter above the district chips: one control, not a row of them. */
+.geo-filter {
+  max-inline-size: min(100%, 20rem);
+}
+
+/* The foot of the editor: what the choices add up to, and the buttons that end it. */
+.geo-editor__foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  align-items: center;
+  justify-content: space-between;
+  padding-block-start: var(--space-4);
+  border-block-start: 1px solid var(--surface-sunken);
+}
+.geo-editor__recap {
+  margin: 0;
+  color: var(--ink-600);
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+}
+.geo-editor__foot .form-actions {
+  margin-block-start: 0;
+}
+
+/* Supervisors: the table above, the assignment form below, separated by a rule rather than boxed. */
+.geo-assign {
+  display: grid;
+  gap: var(--space-3);
+  margin-block-start: var(--space-2);
+  padding-block-start: var(--space-4);
+  border-block-start: 1px solid var(--surface-sunken);
+}
+.geo-assign__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+@media (min-width: 900px) {
+  .geo-assign__grid {
+    grid-template-columns: minmax(min(100%, 18rem), 0.4fr) minmax(0, 1fr);
+    gap: var(--space-6);
+  }
 }
 
 /* --- geography (Phase 2) --------------------------------------------------- */
@@ -2116,19 +3138,40 @@ a {
 .geo-check-grid {
   display: grid;
   gap: var(--space-2);
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr));
+  /* 140px, not 190: these are chips, not fields — three fit across a phone-width card instead of two, which is
+     fourteen rows of governorates saved on the narrow screen this screen is used from. */
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 140px), 1fr));
   margin-block-end: var(--space-3);
 }
 .geo-check {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: 0.4rem 0.55rem;
-  border: 1px solid var(--border, #d8dde6);
-  border-radius: 0.5rem;
-  background: var(--surface, #fff);
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
   cursor: pointer;
-  font-size: 0.92rem;
+  font-size: 0.86rem;
+  min-inline-size: 0;
+}
+.geo-check:hover {
+  background: var(--surface-base);
+}
+.geo-check:has(input:checked) {
+  border-color: var(--brand-500);
+  background: var(--surface-base);
+}
+.geo-check__name {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+.geo-check__code {
+  margin-inline-start: auto;
+  color: var(--ink-500);
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 .geo-check input {
   accent-color: var(--accent, #0b7a5a);
@@ -2739,25 +3782,89 @@ input[type='file']::file-selector-button {
   }
 }
 
-.trip-card {
+/* A result is a row with a ticket edge, not a floating tile: the shadow is gone (a page of eight shadowed
+   cards is eight shadows competing), the hairline does the work, and the whole card lifts on hover instead. */
+.card.trip-card {
   display: grid;
   gap: var(--space-3);
   padding: var(--space-4);
+  box-shadow: none;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    translate 0.15s ease;
+}
+
+.card.trip-card:hover,
+.card.trip-card:focus-within {
+  border-color: var(--brand-300);
+  box-shadow: var(--shadow-sm);
 }
 
 @media (min-width: 560px) {
-  .trip-card {
+  .card.trip-card {
     padding: var(--space-5);
   }
+}
+
+.trip-card__row {
+  display: grid;
+  gap: var(--space-3) var(--space-4);
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+
+@media (min-width: 480px) {
+  .trip-card__row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+}
+
+/* The departure time, on its own edge, separated by a dashed tear-line — the one rule on the card that is not
+   a card border. Dashed because a ticket is perforated, and because a solid rule here reads as a table column. */
+.trip-card__when {
+  display: grid;
+  gap: 2px;
+  align-content: start;
+  padding-block: var(--space-1);
+}
+
+@media (min-width: 480px) {
+  .trip-card__when {
+    min-inline-size: 5.5rem;
+    padding-inline-end: var(--space-4);
+    border-inline-end: 1px dashed var(--surface-sunken);
+  }
+}
+
+.trip-card__time {
+  font-size: var(--text-lg);
+  font-weight: 800;
+  line-height: var(--leading-tight);
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+.trip-card__date {
+  font-size: var(--text-xs);
+  color: var(--ink-500);
+  line-height: var(--leading-snug);
+}
+
+.trip-card__main {
+  display: grid;
+  gap: var(--space-2);
+  min-inline-size: 0;
 }
 
 .trip-card__route {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   gap: var(--space-2);
-  font-size: 1.05rem;
+  font-size: var(--text-lg);
   font-weight: 800;
+  letter-spacing: -0.01em;
 }
 
 /* One glyph for "and then, over there". The arrow has to point along the reading direction, which in
@@ -2770,6 +3877,19 @@ input[type='file']::file-selector-button {
   transform: scaleX(var(--icon-flip, 1));
 }
 
+/* Between two city names, the arrow is the only thing saying "and then". It gets a disc so it reads as a
+   direction rather than as punctuation that drifted in from the heading. */
+.trip-card__arrow {
+  display: grid;
+  place-items: center;
+  inline-size: 26px;
+  block-size: 26px;
+  border-radius: var(--radius-pill);
+  background: var(--brand-50);
+  color: var(--brand-600);
+  line-height: 0;
+}
+
 .trip-card__arrow,
 .route-arrow {
   color: var(--ink-400);
@@ -2778,9 +3898,17 @@ input[type='file']::file-selector-button {
 .trip-card__meta {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2) var(--space-4);
-  font-size: 0.85rem;
-  color: var(--ink-600);
+  gap: var(--space-1) var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--ink-500);
+}
+
+/* A dot between facts, drawn by the layout rather than typed into the string — so the separator follows the
+   reading direction and disappears from the last item without a condition in the markup. */
+.trip-card__meta > * + *::before {
+  content: '·';
+  margin-inline-end: var(--space-3);
+  color: var(--ink-400);
 }
 
 .trip-card__footer {
@@ -2806,9 +3934,10 @@ input[type='file']::file-selector-button {
 }
 
 .trip-price {
-  font-size: 1.05rem;
+  font-size: var(--text-lg);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }
 
 .trip-price small {
@@ -2894,6 +4023,216 @@ input[type='file']::file-selector-button {
   cursor: pointer;
 }
 
+/* ---------- the trip page: who is driving, and the route as travelled ---------- */
+
+/* Vehicle and driver: two facts side by side, each a label and a value, on the same hairline grid as the fact
+   table above so it does not read as a third kind of box. */
+.trip-crew__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  overflow: hidden;
+}
+
+@media (min-width: 560px) {
+  .trip-crew__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.trip-crew__driver,
+.trip-crew__vehicle {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding: var(--space-4);
+  min-inline-size: 0;
+}
+
+.trip-crew__vehicle {
+  display: grid;
+  gap: var(--space-1);
+  border-block-start: 1px solid var(--surface-sunken);
+}
+
+@media (min-width: 560px) {
+  .trip-crew__vehicle {
+    border-block-start: 0;
+    border-inline-start: 1px solid var(--surface-sunken);
+  }
+}
+
+.trip-crew__avatar {
+  display: grid;
+  place-items: center;
+  inline-size: 38px;
+  block-size: 38px;
+  flex: none;
+  border-radius: var(--radius-pill);
+  background: var(--brand-50);
+  color: var(--brand-700);
+}
+
+.trip-crew__label {
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-500);
+}
+
+.trip-crew__name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-block-start: 2px;
+  font-size: var(--text-md);
+  font-weight: 700;
+  color: var(--ink-900);
+}
+
+.trip-crew__name--empty {
+  font-weight: 500;
+  font-size: var(--text-sm);
+  color: var(--ink-500);
+}
+
+.trip-crew__verified,
+.trip-crew__seats {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--brand-50);
+  color: var(--brand-700);
+  font-size: var(--text-2xs);
+  font-weight: 700;
+}
+
+.trip-crew__seats {
+  background: var(--surface-sunken);
+  color: var(--ink-700);
+  font-variant-numeric: tabular-nums;
+}
+
+.trip-crew__amenities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-xs);
+  color: var(--ink-600);
+}
+
+.trip-crew__amenities li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.trip-itinerary__hint {
+  margin-block: calc(var(--space-1) * -1) var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--ink-500);
+}
+
+/* The itinerary is one line with marks on it: a start, the stops, an end. The rail is drawn by every node except
+   the last, so it never hangs below the destination. */
+.itinerary {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.itinerary__node {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+}
+
+.itinerary__node:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  inline-size: 2px;
+  border-radius: 2px;
+  background: var(--surface-sunken);
+  inset-block: 1.75rem calc(var(--space-4) * -1);
+  inset-inline-start: calc(0.8125rem - 1px);
+}
+
+/* The rail turns solid brand behind the nodes already travelled — the same language the live panel uses. */
+.itinerary__node--start::before,
+.itinerary__node:has(.itinerary__marker:not(.num))::before {
+  background: var(--brand-100);
+}
+
+.itinerary__marker {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  inline-size: 26px;
+  block-size: 26px;
+  border-radius: var(--radius-pill);
+  border: 2px solid var(--surface-base);
+  background: var(--surface-sunken);
+  color: var(--ink-600);
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 0;
+}
+
+.itinerary__node--start .itinerary__marker {
+  background: var(--brand-600);
+  color: #fff;
+}
+
+.itinerary__node--end .itinerary__marker {
+  background: var(--surface-base);
+  border-color: var(--brand-600);
+  color: var(--brand-700);
+}
+
+.itinerary__node--empty .itinerary__marker {
+  background: var(--surface-base);
+  border-color: var(--surface-sunken);
+  color: var(--ink-400);
+}
+
+.itinerary__body {
+  padding-block-start: 2px;
+  min-inline-size: 0;
+}
+
+.itinerary__name {
+  font-size: var(--text-md);
+  font-weight: 700;
+  color: var(--ink-900);
+}
+
+.itinerary__meta {
+  font-size: var(--text-xs);
+  color: var(--ink-500);
+  font-variant-numeric: tabular-nums;
+}
+
+.itinerary__fare {
+  font-weight: 700;
+  color: var(--ink-700);
+}
+
 /* ---------- the route timeline (detail page) ---------- */
 
 .trip-timeline {
@@ -2905,10 +4244,23 @@ input[type='file']::file-selector-button {
 }
 
 .trip-timeline li {
+  position: relative;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   gap: var(--space-1) var(--space-3);
   align-items: center;
+}
+
+/* The rail. It runs from under one marker to the next, drawn by the row that comes before the gap, so the
+   last stop has no line hanging below it. Logical insets keep it on the correct side in Arabic. */
+.trip-timeline li:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  inline-size: 2px;
+  border-radius: 2px;
+  background: var(--surface-sunken);
+  inset-block: calc(0.75rem + 2px) calc(var(--space-4) * -1 + 0.75rem);
+  inset-inline-start: calc(0.75rem - 1px);
 }
 
 /* The marker carries the stop's sequence number. It used to be a 0.7rem dot with the digit inside it,
@@ -2987,16 +4339,20 @@ input[type='file']::file-selector-button {
 }
 
 .trip-filters > summary::after {
-  content: '⌄';
+  content: '';
+  inline-size: 8px;
+  block-size: 8px;
   margin-inline-start: auto;
-  color: var(--ink-500);
-  font-weight: 800;
-  line-height: 1;
+  margin-block-start: -4px;
+  border-inline-end: 2px solid var(--ink-500);
+  border-block-end: 2px solid var(--ink-500);
+  transform: rotate(45deg);
   transition: transform 120ms ease;
 }
 
 .trip-filters[open] > summary::after {
-  transform: rotate(180deg);
+  margin-block-start: 0;
+  transform: rotate(225deg);
 }
 
 @media (min-width: 900px) {
@@ -3014,7 +4370,33 @@ input[type='file']::file-selector-button {
    them — without this the nine controls stack flush against each other. */
 .trip-filters > form {
   display: grid;
+  gap: var(--space-4);
+}
+
+/* Three sections with a rule between them. The heading is a label for a group of controls, not a title:
+   small, uppercase, muted — it names the group without competing with the results beside it. */
+.trip-filters__section {
+  display: grid;
   gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-inline-size: 0;
+}
+
+.trip-filters__section + .trip-filters__section {
+  padding-block-start: var(--space-4);
+  border-block-start: 1px solid var(--surface-sunken);
+}
+
+.trip-filters__legend {
+  padding: 0;
+  margin-block-end: var(--space-3);
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-500);
 }
 
 .trip-filters__group {
@@ -3025,9 +4407,11 @@ input[type='file']::file-selector-button {
   border: 0;
 }
 
-.trip-filters__group > label:not(.trip-filters__option) {
-  font-size: 0.78rem;
+.trip-filters__group > label:not(.trip-filters__option),
+.trip-filters__label {
+  font-size: var(--text-2xs);
   font-weight: 700;
+  letter-spacing: 0.04em;
   color: var(--ink-600);
 }
 
@@ -3152,11 +4536,12 @@ input[type='file']::file-selector-button {
 
 .trip-summary {
   display: grid;
-  gap: var(--space-2);
-  padding: var(--space-4);
+  gap: 0;
+  padding: 0;
   border: 1px solid var(--surface-sunken);
   border-radius: var(--radius-lg);
-  background: var(--surface-muted);
+  background: var(--surface-base);
+  overflow: hidden;
 }
 
 .trip-summary__row {
@@ -3164,7 +4549,17 @@ input[type='file']::file-selector-button {
   flex-wrap: wrap;
   justify-content: space-between;
   gap: var(--space-2);
-  font-size: 0.9rem;
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-sm);
+}
+
+.trip-summary__row + .trip-summary__row {
+  border-block-start: 1px solid var(--surface-sunken);
+}
+
+.trip-summary__row dd {
+  font-weight: 600;
+  color: var(--ink-900);
 }
 
 .trip-summary__row--total {
@@ -3275,22 +4670,40 @@ input[type='file']::file-selector-button {
   gap: var(--space-3);
 }
 
+.trip-detail__head {
+  align-items: flex-end;
+}
+
 .trip-detail__head h1,
 .trip-detail__head h2 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
   margin-block: var(--space-1);
-  font-size: 1.2rem;
+  font-size: var(--text-xl);
 }
 
 .trip-detail__head h1 {
   /* The route is the page title, so it sets the scale; the code above it stays a hint. */
-  font-size: clamp(1.3rem, 3.2vw, 1.7rem);
+  font-size: var(--text-2xl);
+  letter-spacing: -0.02em;
+  row-gap: var(--space-1);
+}
+
+.trip-detail__head .route-arrow {
+  display: inline-grid;
+  place-items: center;
+  color: var(--ink-400);
 }
 
 /* One column of blocks, deliberately *not* a grid: `position: sticky` on the book bar needs the article
    to be its containing block, and a grid item is confined to its own row — a grid here silently unpins
    the bar. The rhythm comes from the sibling rule instead. */
 .trip-detail {
-  max-inline-size: 48rem;
+  /* Two columns from 940px: the facts, then a 320px fare panel. Capped at 48rem the article stayed a phone column
+     on a desktop and left the fare panel floating beside dead space. */
+  max-inline-size: 58rem;
 }
 
 .trip-detail > * + * {
@@ -3298,8 +4711,33 @@ input[type='file']::file-selector-button {
 }
 
 .trip-detail h2 {
-  font-size: 1.05rem;
+  font-size: var(--text-md);
+  font-weight: 800;
+  letter-spacing: -0.005em;
   margin-block: 0 var(--space-2);
+}
+
+/* The way back, at the top where a reader who arrived from a link actually needs it. The chevron is the mirror
+   image of "forward", so it flips with the same token every other directional mark uses. */
+.trip-detail__back {
+  margin-block-start: var(--space-4);
+}
+
+.trip-detail__back a {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--ink-500);
+}
+
+.trip-detail__back a:hover {
+  color: var(--brand-700);
+}
+
+.trip-detail__back-icon {
+  transform: scaleX(var(--icon-flip, 1)) rotate(180deg);
 }
 
 .trip-detail section > * + * {
@@ -3347,13 +4785,14 @@ input[type='file']::file-selector-button {
 }
 
 .trips-hero h1 {
-  font-size: clamp(1.35rem, 4vw, 1.9rem);
+  font-size: var(--text-2xl);
   margin-block-end: var(--space-2);
 }
 
 .trips-hero p {
   color: var(--ink-600);
   max-inline-size: 46ch;
+  font-size: var(--text-md);
 }
 
 .trips-layout {
@@ -3374,8 +4813,9 @@ input[type='file']::file-selector-button {
 }
 
 .trips-count {
-  color: var(--ink-600);
-  font-size: 0.9rem;
+  color: var(--ink-700);
+  font-size: var(--text-sm);
+  font-weight: 600;
 }
 
 .trips-pager {
@@ -3690,24 +5130,51 @@ input[type='file']::file-selector-button {
 
 .booking-done {
   display: grid;
+  justify-items: start;
   gap: var(--space-3);
   max-inline-size: 34rem;
-  margin-block-start: var(--space-5);
-  padding: var(--space-5);
+  margin-block-start: var(--space-6);
+  padding: var(--space-6);
   border: 1px solid var(--surface-sunken);
-  border-block-start: 4px solid var(--state-success);
+  border-block-start: 3px solid var(--state-success);
   border-radius: var(--radius-lg);
   background: var(--surface-base);
-  box-shadow: var(--shadow-sm);
+}
+
+.booking-done__mark {
+  display: grid;
+  place-items: center;
+  inline-size: 44px;
+  block-size: 44px;
+  border-radius: var(--radius-pill);
+  background: var(--brand-100);
+  color: var(--brand-700);
+}
+
+.booking-done h2 {
+  font-size: var(--text-lg);
+}
+
+.booking-done__note {
+  color: var(--ink-600);
+  font-size: var(--text-sm);
 }
 
 .booking-done__code {
-  font-size: 1.5rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  /* The one thing they will be asked for at the desk. Boxed, monospaced and selectable, because it gets read out,
+     copied into a message, or typed by somebody else. */
   margin: 0;
-  /* A reference number, not a word: stays readable in either direction. */
+  padding: var(--space-3) var(--space-4);
+  border: 1px dashed var(--brand-300);
+  border-radius: var(--radius-md);
+  background: var(--brand-50);
+  color: var(--brand-900);
+  font-family: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, monospace;
+  font-size: var(--text-lg);
+  font-weight: 700;
+  letter-spacing: 0.1em;
   font-variant-numeric: tabular-nums;
+  user-select: all;
 }
 
 .booking-list {
@@ -3794,6 +5261,302 @@ a.booking-card__code:hover {
 /* The booking page's own heading: the back link already separates it from the header. */
 .booking-page h1 {
   margin-block: 0 var(--space-2);
+}
+
+/* What is being booked, under the title: the route and the departure, because the heading can only carry the code. */
+.booking-route {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-md);
+  font-weight: 700;
+  color: var(--ink-800);
+}
+
+.booking-route .route-arrow {
+  display: inline-grid;
+  place-items: center;
+  color: var(--ink-400);
+}
+
+.booking-route__when {
+  font-weight: 500;
+  font-size: var(--text-sm);
+  color: var(--ink-500);
+}
+
+/* Fields on one side, the ticket on the other. */
+.booking-layout {
+  display: grid;
+  gap: var(--space-6);
+  margin-block-start: var(--space-6);
+  align-items: start;
+}
+
+@media (min-width: 940px) {
+  .booking-layout {
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: var(--space-8);
+  }
+}
+
+.booking-fields {
+  display: grid;
+  gap: var(--space-6);
+  min-inline-size: 0;
+}
+
+/* Two named groups with a rule between them, not nine fields in a column. */
+.booking-group {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.booking-group + .booking-group {
+  padding-block-start: var(--space-5);
+  border-block-start: 1px solid var(--surface-sunken);
+}
+
+.booking-group__title {
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-500);
+}
+
+/* Seats: two buttons and a number, not a number input with spinner arrows a thumb cannot hit. */
+.seat-stepper {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.seat-stepper__controls {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.seat-stepper__btn {
+  display: grid;
+  place-items: center;
+  inline-size: var(--tap-target);
+  block-size: var(--tap-target);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+  color: var(--ink-800);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.seat-stepper__btn:hover:not(:disabled) {
+  border-color: var(--brand-300);
+  background: var(--brand-50);
+  color: var(--brand-700);
+}
+
+.seat-stepper__btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.seat-stepper__value {
+  min-inline-size: 2.5rem;
+  text-align: center;
+  font-size: var(--text-lg);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Where you get off: rows, each with the time and the fare, so the options can be compared. */
+.stop-choice {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-inline-size: 0;
+}
+
+.stop-choice__list {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.stop-choice__option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: var(--tap-target);
+  padding: var(--space-3);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.stop-choice__option:has(input:checked) {
+  border-color: var(--brand-500);
+  background: var(--brand-50);
+}
+
+.stop-choice__option input {
+  margin: 0;
+  inline-size: 1.05rem;
+  block-size: 1.05rem;
+  flex: none;
+  accent-color: var(--brand-600);
+}
+
+.stop-choice__body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-3);
+  inline-size: 100%;
+  min-inline-size: 0;
+}
+
+.stop-choice__name {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 700;
+  font-size: var(--text-sm);
+}
+
+.stop-choice__seq {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 20px;
+  block-size: 20px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-sunken);
+  color: var(--ink-600);
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  line-height: 0;
+}
+
+.stop-choice__meta {
+  font-size: var(--text-xs);
+  color: var(--ink-500);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The ticket. Same visual family as the fare panel on the trip page, because it is the same object. */
+.booking-summary {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+}
+
+@media (min-width: 940px) {
+  .booking-summary {
+    position: sticky;
+    inset-block-start: var(--space-6);
+  }
+}
+
+.booking-summary__title {
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-500);
+}
+
+.booking-summary__route {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-lg);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.booking-summary__route .route-arrow {
+  display: inline-grid;
+  place-items: center;
+  color: var(--ink-400);
+}
+
+.booking-summary__when {
+  font-size: var(--text-sm);
+  color: var(--ink-600);
+}
+
+.booking-summary__facts {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-xs);
+  color: var(--ink-600);
+}
+
+.booking-summary__facts li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.booking-summary__breakdown {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--surface-sunken);
+  font-size: var(--text-sm);
+  color: var(--ink-600);
+}
+
+.booking-summary__breakdown > div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.booking-summary__breakdown dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.booking-summary__total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--surface-sunken);
+  font-size: var(--text-md);
+  font-weight: 800;
+  color: var(--ink-900);
+}
+
+.booking-summary__total .num {
+  font-size: var(--text-xl);
+  letter-spacing: -0.02em;
+}
+
+.booking-summary__note {
+  font-size: var(--text-2xs);
+  color: var(--ink-500);
+  line-height: var(--leading-snug);
 }
 
 /* The passenger's booking is a stack of blocks, not a grid — same reason as `.trip-detail`: a grid item
@@ -4901,7 +6664,262 @@ a.booking-card__code:hover {
 
 .pay-view {
   display: grid;
-  gap: var(--space-4);
+  gap: var(--space-5);
+  padding-block: var(--space-5) var(--space-10);
+}
+
+@media (min-width: 720px) {
+  .pay-view {
+    padding-block: var(--space-8) var(--space-12);
+  }
+}
+
+/* The payment screen is a page, not a card: a header band, then the amount, then where the money goes. */
+.pay-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.pay-head h1 {
+  font-size: var(--text-2xl);
+  letter-spacing: -0.02em;
+}
+
+.pay-head__sub {
+  margin-block-start: var(--space-1);
+  color: var(--ink-600);
+  font-size: var(--text-sm);
+  max-inline-size: 46ch;
+}
+
+.pay-layout {
+  display: grid;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+@media (min-width: 940px) {
+  .pay-layout {
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: var(--space-8);
+  }
+}
+
+.pay-main {
+  display: grid;
+  gap: var(--space-5);
+  min-inline-size: 0;
+}
+
+/* The amount, at the size of the thing it is. */
+.pay-due {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-5);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+}
+
+.pay-due__label {
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-500);
+}
+
+.pay-due__amount {
+  font-size: var(--text-3xl);
+  font-weight: 800;
+  line-height: var(--leading-tight);
+  letter-spacing: -0.03em;
+  color: var(--ink-900);
+}
+
+.pay-due__facts {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--surface-sunken);
+  font-size: var(--text-sm);
+}
+
+.pay-due__facts > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-3);
+}
+
+.pay-due__facts dt {
+  color: var(--ink-500);
+}
+
+.pay-due__facts dd {
+  margin: 0;
+  font-weight: 600;
+  color: var(--ink-900);
+}
+
+.pay-due__trip {
+  color: var(--ink-500);
+  font-weight: 500;
+}
+
+/* The account number is read aloud and retyped elsewhere: large, monospaced, direction-locked. */
+.pay-account {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  border: 1px solid var(--brand-300);
+  border-radius: var(--radius-lg);
+  background: var(--brand-50);
+}
+
+.pay-account__title {
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--brand-700);
+}
+
+.pay-account__number {
+  font-family: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, monospace;
+  font-size: var(--text-xl);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--brand-900);
+  font-variant-numeric: tabular-nums;
+  user-select: all;
+  overflow-wrap: anywhere;
+}
+
+.pay-account__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-6);
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--brand-900);
+}
+
+.pay-account__meta > div {
+  display: grid;
+  gap: 1px;
+}
+
+.pay-account__meta dt {
+  opacity: 0.7;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: var(--text-2xs);
+  font-weight: 700;
+}
+
+.pay-account__meta dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+.pay-side {
+  display: grid;
+  gap: var(--space-5);
+  min-inline-size: 0;
+}
+
+.pay-side__title {
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-500);
+}
+
+/* Three steps with a rail: what has happened, what is waiting on the payer, what is waiting on the company. */
+.pay-steps {
+  display: grid;
+  gap: var(--space-3);
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pay-steps__step {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: center;
+  font-size: var(--text-sm);
+  color: var(--ink-500);
+}
+
+.pay-steps__step:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  inline-size: 2px;
+  inset-block: calc(0.75rem + 2px) calc(var(--space-3) * -1 + 0.75rem);
+  inset-inline-start: calc(0.75rem - 1px);
+  background: var(--surface-sunken);
+}
+
+.pay-steps__dot {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  inline-size: 24px;
+  block-size: 24px;
+  border-radius: var(--radius-pill);
+  border: 2px solid var(--surface-sunken);
+  background: var(--surface-base);
+  color: #fff;
+  line-height: 0;
+}
+
+.pay-steps__step[data-state='done'] .pay-steps__dot {
+  border-color: var(--brand-600);
+  background: var(--brand-600);
+}
+
+.pay-steps__step[data-state='done'] {
+  color: var(--ink-700);
+}
+
+.pay-steps__step[data-state='current'] .pay-steps__dot {
+  border-color: var(--brand-600);
+}
+
+.pay-steps__step[data-state='current'] {
+  color: var(--ink-900);
+  font-weight: 700;
+}
+
+.pay-steps__step[data-state='error'] .pay-steps__dot {
+  border-color: var(--state-danger);
+  background: #fdecec;
+}
+
+.pay-steps__step[data-state='error'] {
+  color: var(--state-danger);
+  font-weight: 700;
+}
+
+.pay-instructions {
+  padding-block-start: var(--space-4);
+  border-block-start: 1px solid var(--surface-sunken);
+  font-size: var(--text-sm);
+  color: var(--ink-600);
+}
+
+.pay-instructions p {
+  margin-block-start: var(--space-2);
 }
 
 .payment-queue__list,
@@ -5022,6 +7040,88 @@ a.booking-card__code:hover {
    Three shapes: a figure list (`.finance-summary`), a desk (a form above a queue) and a wide form. All of
    them use logical properties, and the summary is a grid of `min(100%, …)` tracks so a narrow phone gets
    one column rather than a scrollbar. */
+
+/* The month's three figures, on the display scale.
+   One primary cell (profit) at --text-2xl and two secondary ones beside it; on a phone they stack full width, because a
+   money figure is only readable if it is not wrapped. */
+.money-headline {
+  display: grid;
+  gap: 0;
+  grid-template-columns: minmax(0, 1fr);
+  margin: 0 0 var(--space-5);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.money-headline__cell {
+  display: grid;
+  gap: 2px;
+  align-content: start;
+  padding: var(--space-4);
+  background: var(--surface-base);
+}
+
+.money-headline__cell + .money-headline__cell {
+  border-block-start: 1px solid var(--surface-sunken);
+}
+
+.money-headline__label {
+  color: var(--ink-500);
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.money-headline__value {
+  margin: 0;
+  color: var(--ink-900);
+  font-size: var(--text-lg);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.money-headline__value[data-tone='good'] {
+  color: var(--state-success);
+}
+
+.money-headline__value[data-tone='bad'] {
+  color: var(--state-danger);
+}
+
+.money-headline__note {
+  margin: 0;
+  color: var(--ink-500);
+  font-size: var(--text-xs);
+}
+
+.money-headline__cell--primary {
+  background: color-mix(in srgb, var(--brand-50) 60%, var(--surface-base));
+}
+
+.money-headline__cell--primary .money-headline__value {
+  font-size: var(--text-2xl);
+}
+
+@media (min-width: 720px) {
+  .money-headline {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .money-headline__cell + .money-headline__cell {
+    border-block-start: 0;
+    border-inline-start: 1px solid var(--surface-sunken);
+  }
+}
+
+.finance-month {
+  display: grid;
+  gap: var(--space-3);
+  margin-block-end: var(--space-6);
+}
 
 .finance-summary {
   display: grid;
@@ -5489,13 +7589,11 @@ a.booking-card__code:hover {
 .trust-row__tick {
   display: grid;
   place-items: center;
-  inline-size: 18px;
-  block-size: 18px;
+  inline-size: 20px;
+  block-size: 20px;
   border-radius: var(--radius-pill);
   background: var(--brand-100);
   color: var(--brand-700);
-  font-size: 0.7rem;
-  font-weight: 800;
 }
 
 /* A section head with its "all trips" link on the far end. */
@@ -5584,6 +7682,13 @@ a.booking-card__code:hover {
   background: var(--brand-50);
 }
 
+.destination-chip__pin {
+  display: inline-grid;
+  place-items: center;
+  color: var(--brand-600);
+  line-height: 0;
+}
+
 .destination-chip__name {
   font-weight: 700;
   font-size: 0.9rem;
@@ -5610,36 +7715,46 @@ a.booking-card__code:hover {
   }
 }
 
+/* Three steps are a sequence, not three products: a rule above each and the number beside the title reads as
+   one list that continues, where three bordered boxes read as three things to choose between. */
 .step {
   position: relative;
-  padding: var(--space-6);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--surface-sunken);
-  background: var(--surface-base);
+  padding-block-start: var(--space-5);
+  border-block-start: 2px solid var(--ink-900);
 }
 
 .step__num {
-  display: grid;
+  display: inline-grid;
   place-items: center;
-  inline-size: 30px;
-  block-size: 30px;
+  inline-size: 26px;
+  block-size: 26px;
   border-radius: var(--radius-pill);
-  background: var(--brand-600);
-  color: #fff;
-  font-size: 0.85rem;
+  background: var(--brand-50);
+  color: var(--brand-700);
+  font-size: var(--text-xs);
   font-weight: 800;
+  vertical-align: middle;
+  margin-inline-end: var(--space-2);
 }
 
 .step h3 {
-  margin-block-start: var(--space-3);
-  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-block-start: var(--space-2);
+  font-size: var(--text-md);
   font-weight: 700;
+}
+
+.step h3 .step__num {
+  margin-inline-end: 0;
 }
 
 .step p {
   margin-block-start: var(--space-2);
   color: var(--ink-600);
-  font-size: 0.9rem;
+  font-size: var(--text-sm);
+  max-inline-size: 34ch;
 }
 
 /* Calculator beside its explanation, rather than floating in the hero. */
@@ -5753,13 +7868,17 @@ a.booking-card__code:hover {
  * before JavaScript and all three survive being shared.
  */
 
+/* One bar: how many results on the reading edge, how they are ordered on the other, a hairline under both.
+   Without the rule the count, the chips and the first card all floated in the same grey. */
 .trips-toolbar {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-3);
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
+  padding-block-end: var(--space-3);
   margin-block-end: var(--space-4);
+  border-block-end: 1px solid var(--surface-sunken);
 }
 
 .trips-sort {
@@ -5768,6 +7887,7 @@ a.booking-card__code:hover {
   gap: var(--space-1);
   padding: 3px;
   border-radius: var(--radius-pill);
+  border: 1px solid var(--surface-sunken);
   background: var(--surface-sunken);
 }
 
@@ -5823,8 +7943,19 @@ a.booking-card__code:hover {
 }
 
 .filter-chip__x {
-  font-size: 0.7rem;
-  opacity: 0.7;
+  display: inline-grid;
+  place-items: center;
+  inline-size: 16px;
+  block-size: 16px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--brand-500) 16%, transparent);
+  color: var(--brand-700);
+  line-height: 0;
+}
+
+.filter-chip:hover .filter-chip__x {
+  background: var(--brand-500);
+  color: #fff;
 }
 
 .filter-chip--clear {
@@ -5843,7 +7974,7 @@ a.booking-card__code:hover {
 .trip-card__link {
   display: inline-flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   gap: var(--space-2);
   color: inherit;
   text-decoration: none;
@@ -5903,9 +8034,10 @@ a.booking-card__code:hover {
 }
 
 .trip-book__price {
-  font-size: 1.9rem;
+  font-size: var(--text-2xl);
   font-weight: 800;
-  line-height: 1.1;
+  line-height: var(--leading-tight);
+  letter-spacing: -0.02em;
   color: var(--ink-900);
 }
 
@@ -5933,10 +8065,13 @@ a.booking-card__code:hover {
 }
 
 .trip-book__seats {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   margin-block-start: var(--space-2);
   padding-block-start: var(--space-3);
   border-block-start: 1px solid var(--surface-sunken);
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
   font-weight: 700;
   color: var(--brand-700);
 }

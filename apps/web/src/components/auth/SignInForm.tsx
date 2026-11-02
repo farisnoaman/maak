@@ -1,8 +1,10 @@
 'use client';
 
+import Link from 'next/link';
 import { PHONE_PLACEHOLDER, translate, type Locale, type TranslationKey } from '@maak/core';
 import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
+import { PasswordField } from '@/components/ui/PasswordField';
 
 export type SignInTab = 'email' | 'phone';
 
@@ -22,10 +24,17 @@ export interface SignInFormProps {
  * The POST goes to `/api/auth/sign-in`, which holds the session cookie on the redirect response, so
  * there is nothing here that can succeed on the client and fail on the server. Errors come back as a
  * redirect with `?error=` and are rendered from the dictionaries, which keeps both locales honest.
+ *
+ * The two methods are **links, not tabs**. They were `<a role="tab">` inside a `role="tablist"` with no tabpanel
+ * anywhere: that tells a screen reader two panels exist and that the arrow keys move between them, neither of
+ * which was true — and the stylesheet only styled `button[aria-selected]`, so the "active" tab looked exactly like
+ * the inactive one. Two links that load two URLs are two links; `aria-current` says which one you are on.
  */
 export function SignInForm({ locale, configured, next, tab, phone, error }: SignInFormProps) {
   const t = (key: TranslationKey) => translate(locale, key);
   const waitingForCode = Boolean(phone);
+  const withNext = (path: string) =>
+    next ? `${path}${path.includes('?') ? '&' : '?'}next=${encodeURIComponent(next)}` : path;
 
   const errorMessage =
     error === 'invalid'
@@ -47,9 +56,9 @@ export function SignInForm({ locale, configured, next, tab, phone, error }: Sign
                     : null;
 
   return (
-    <div className="card auth-card">
-      <h1>{t('auth.title')}</h1>
-      <p className="sub">{t('auth.subtitle')}</p>
+    <div className="auth-panel">
+      <h1 className="auth-title">{t('auth.title')}</h1>
+      <p className="auth-sub">{t('auth.subtitle')}</p>
 
       {!configured ? (
         <p className="auth-notice" role="status">
@@ -58,7 +67,7 @@ export function SignInForm({ locale, configured, next, tab, phone, error }: Sign
       ) : null}
 
       {errorMessage ? (
-        <p className="auth-notice" role="alert">
+        <p className="auth-notice auth-notice--error" role="alert">
           {errorMessage}
         </p>
       ) : null}
@@ -76,24 +85,22 @@ export function SignInForm({ locale, configured, next, tab, phone, error }: Sign
         </a>
       ) : null}
 
-      <div className="auth-tabs" role="tablist" aria-label={t('auth.title')}>
-        <a
-          role="tab"
-          aria-selected={tab === 'email'}
-          className={tab === 'email' ? 'is-active' : undefined}
-          href={`/${locale}/auth/sign-in${next ? `?next=${encodeURIComponent(next)}` : ''}`}
+      <nav className="auth-methods" aria-label={t('auth.method')}>
+        <Link
+          className="auth-method"
+          aria-current={tab === 'email' ? 'page' : undefined}
+          href={withNext(`/${locale}/auth/sign-in`)}
         >
-          {t('auth.email')}
-        </a>
-        <a
-          role="tab"
-          aria-selected={tab === 'phone'}
-          className={tab === 'phone' ? 'is-active' : undefined}
-          href={`/${locale}/auth/sign-in?tab=phone${next ? `&next=${encodeURIComponent(next)}` : ''}`}
+          {t('auth.tabEmail')}
+        </Link>
+        <Link
+          className="auth-method"
+          aria-current={tab === 'phone' ? 'page' : undefined}
+          href={withNext(`/${locale}/auth/sign-in?tab=phone`)}
         >
-          {t('auth.signInWithPhone')}
-        </a>
-      </div>
+          {t('auth.tabPhone')}
+        </Link>
+      </nav>
 
       <form className="auth-form" method="post" action="/api/auth/sign-in">
         <input type="hidden" name="locale" value={locale} />
@@ -110,9 +117,9 @@ export function SignInForm({ locale, configured, next, tab, phone, error }: Sign
               required
               disabled={!configured}
             />
-            <Field
+            <PasswordField
+              locale={locale}
               label={t('auth.password')}
-              type="password"
               name="password"
               autoComplete="current-password"
               required
@@ -159,6 +166,11 @@ export function SignInForm({ locale, configured, next, tab, phone, error }: Sign
           </>
         )}
       </form>
+
+      <p className="auth-alt">
+        <span>{t('auth.newHere')}</span>
+        <Link href={withNext(`/${locale}/auth/sign-up`)}>{t('auth.createAccount')}</Link>
+      </p>
     </div>
   );
 }

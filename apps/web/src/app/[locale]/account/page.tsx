@@ -1,14 +1,25 @@
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
-import { isLocale, translate, type Locale, type TranslationKey } from '@maak/core';
+import {
+  BOOKING_STATUS_KEY,
+  bookingTone,
+  departureLabel,
+  formatMinor,
+  isLocale,
+  translate,
+  type Locale,
+  type TranslationKey,
+} from '@maak/core';
 import { SiteHeader } from '@/components/SiteHeader';
 import { PreviewBanner } from '@/components/PreviewBanner';
 import { Badge } from '@/components/ui/Feedback';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/Button';
 import { NotificationPanel } from '@/components/account/NotificationPanel';
 import { CreateOrganizationForm } from '@/components/account/CreateOrganizationForm';
 import { DeletionPanel } from '@/components/account/DeletionPanel';
 import { AccountNav } from '@/components/account/AccountNav';
+import { loadMyBookings } from '@/lib/bookings';
 import { activeOrganization, loadAccountContext, type AccountContext } from '@/lib/account';
 import { previewAccount } from '@/lib/preview-data';
 
@@ -36,7 +47,8 @@ export default async function AccountPage({
   const { locale: raw } = await params;
   if (!isLocale(raw)) notFound();
   const locale: Locale = raw;
-  const t = (key: TranslationKey) => translate(locale, key);
+  const t = (key: TranslationKey, vars?: Record<string, string | number>) =>
+    translate(locale, key, vars);
 
   const loaded = await loadAccountContext();
   if (loaded.configured && !loaded.user) {
@@ -50,54 +62,98 @@ export default async function AccountPage({
   const current = activeOrganization(data, requestedOrg);
   const profile = data.profile;
 
+  /**
+   * The journey this person is most likely here to check.
+   *
+   * The hub listed the profile, the organisations, the notifications and the delete button — everything about the
+   * account and nothing about the trip. A passenger opens this page to look up a departure, a code and a seat count,
+   * which meant a second click into bookings every time. The soonest booking that has not left yet is the answer, so
+   * it is the first block on the page.
+   */
+  const bookings = await loadMyBookings();
+  const now = Date.now();
+  const nextJourney =
+    bookings
+      .filter(
+        (booking) =>
+          booking.trip != null &&
+          new Date(booking.trip.departureAt).getTime() > now &&
+          (booking.status === 'pending' || booking.status === 'accepted'),
+      )
+      .sort(
+        (a, b) =>
+          new Date(a.trip?.departureAt ?? 0).getTime() -
+          new Date(b.trip?.departureAt ?? 0).getTime(),
+      )[0] ?? null;
+  const nextWhen = nextJourney?.trip ? departureLabel(nextJourney.trip.departureAt, locale) : null;
+
+  /**
+   * Which consoles this person may actually open.
+   *
+   * The hub offered *everybody* a link to the verification queue and to the roles screen — doors that answer 403 to a
+   * passenger. A doorway that opens onto a refusal is worse than no doorway: it tells a person they have access they
+   * do not. The list is built from the roles the session already carries.
+   */
+  const isStaff = data.roles.includes('platform_staff') || data.roles.includes('platform_admin');
+  const isAdmin = data.roles.includes('platform_admin');
+  const hasOperator = data.organizations.length > 0;
+  const consoles: {
+    key: TranslationKey;
+    href: string;
+    icon: 'users' | 'shield' | 'wallet' | 'bus';
+  }[] = [
+    ...(hasOperator
+      ? ([{ key: 'console.operator', href: '/operator', icon: 'bus' }] as const)
+      : []),
+    ...(isStaff ? ([{ key: 'console.staff', href: '/staff', icon: 'shield' }] as const) : []),
+    ...(isAdmin ? ([{ key: 'console.admin', href: '/admin', icon: 'users' }] as const) : []),
+    ...(isStaff || isAdmin
+      ? ([{ key: 'console.finance', href: '/finance', icon: 'wallet' }] as const)
+      : []),
+  ];
+
   return (
     <>
       <SiteHeader locale={locale} pathname="/account" />
       <main id="main" className="shell section account-page">
         <header className="account-head">
-          <h1>{t('account.title')}</h1>
-          <p className="form-hint">{t('account.subtitle')}</p>
+          <div>
+            <h1>{t('account.title')}</h1>
+            <p className="form-hint">{t('account.subtitle')}</p>
+          </div>
+          <Badge tone={STATUS_TONE[profile?.verificationStatus ?? 'unverified']}>
+            {t(STATUS_LABEL[profile?.verificationStatus ?? 'unverified'])}
+          </Badge>
         </header>
 
         <AccountNav locale={locale} current="/account" />
 
         {preview ? <PreviewBanner locale={locale} /> : null}
 
-        <section className="card account-card" aria-labelledby="account-profile-title">
-          <div className="panel-head">
-            <div>
-              <p className="account-name" id="account-profile-title">
-                {profile?.fullName ?? t('account.personal')}
-              </p>
-              <p className="form-hint" dir="ltr">
-                {data.user?.email ?? profile?.phone ?? ''}
-              </p>
-            </div>
-            <Badge tone={STATUS_TONE[profile?.verificationStatus ?? 'unverified']}>
-              {t(STATUS_LABEL[profile?.verificationStatus ?? 'unverified'])}
-            </Badge>
+        {/* Who this is: a band, not a card with a badge and three buttons in it. */}
+        <section className="account-identity" aria-labelledby="account-profile-title">
+          <span className="account-identity__avatar" aria-hidden="true">
+            {(profile?.fullName ?? t('account.personal')).slice(0, 1)}
+          </span>
+          <div className="account-identity__body">
+            <h2 className="account-identity__name" id="account-profile-title">
+              {profile?.fullName ?? t('account.personal')}
+            </h2>
+            <p className="account-identity__contact" dir="ltr">
+              {data.user?.email ?? profile?.phone ?? ''}
+            </p>
+            <p className="account-identity__meta">
+              {profile?.nationalIdType
+                ? `${t('verification.nationalIdType')}: ${profile.nationalIdType}`
+                : t('verification.subtitle')}
+            </p>
           </div>
-
-          <p className="form-hint">
-            {profile?.nationalIdType
-              ? `${t('verification.nationalIdType')}: ${profile.nationalIdType}`
-              : t('verification.subtitle')}
-          </p>
-
-          <div className="form-actions">
+          <div className="account-identity__actions">
             <Link
-              className="ui-btn ui-btn--primary ui-btn--md"
+              className="ui-btn ui-btn--ghost ui-btn--md"
               href={`/${locale}/account/verification`}
             >
               {t('nav.verification')}
-            </Link>
-            {/* A booking is the thing a passenger comes back to check, so it is the second action and not
-                a link buried in a list of doorways. */}
-            <Link
-              className="ui-btn ui-btn--primary ui-btn--md"
-              href={`/${locale}/account/bookings`}
-            >
-              {t('bookings.myTitle')}
             </Link>
             {/* A driver's licence is a document about the person, so it lives with the account — and it
                 must be reachable from the account, or the only way to add one is to know the URL. */}
@@ -107,47 +163,111 @@ export default async function AccountPage({
           </div>
         </section>
 
-        {/* The consoles belong to other audiences, but a driver who is never shown the door will drive
-            without logging the trip. They are doorways, so they look like doorways — one size, one grid. */}
-        <section className="account-section" aria-labelledby="account-links-title">
-          <h2 id="account-links-title">{t('account.quickLinks')}</h2>
-          <div className="account-links">
-            <Link className="ui-btn ui-btn--subtle ui-btn--md" href={`/${locale}/driver`}>
-              {t('driver.title')}
-            </Link>
-            <Link
-              className="ui-btn ui-btn--subtle ui-btn--md"
-              href={`/${locale}/staff/verifications`}
-            >
-              {t('nav.verificationQueue')}
-            </Link>
-            <Link className="ui-btn ui-btn--subtle ui-btn--md" href={`/${locale}/admin/users`}>
-              {t('nav.roles')}
+        {/* First, because it is what the page is opened for. Everything below is about the account; this is about
+            the trip. */}
+        <section className="account-next" aria-labelledby="account-next-title">
+          <div className="account-section__head">
+            <h2 id="account-next-title">{t('account.nextJourney')}</h2>
+            <Link className="link-more" href={`/${locale}/account/bookings`}>
+              {t('account.allBookings')}
             </Link>
           </div>
+
+          {nextJourney && nextJourney.trip ? (
+            <article className="journey">
+              <p className="journey__route">
+                <span>{nextJourney.trip.originName ?? '—'}</span>
+                <span className="journey__arrow" aria-hidden="true">
+                  <Icon name="arrow" size={16} />
+                </span>
+                <span>{nextJourney.trip.destinationName ?? '—'}</span>
+              </p>
+              <p className="journey__when">
+                {t('account.departs')}
+                {nextWhen ? (
+                  <>
+                    {' · '}
+                    {nextWhen.date} · <bdi className="num">{nextWhen.time}</bdi>
+                  </>
+                ) : null}
+              </p>
+              <dl className="journey__facts">
+                <div>
+                  <dt>{t('bookings.myTitle')}</dt>
+                  <dd>
+                    <bdi dir="ltr">{nextJourney.code}</bdi>
+                  </dd>
+                </div>
+                <div>
+                  <dt>{t('trips.seats')}</dt>
+                  <dd>{nextJourney.seats}</dd>
+                </div>
+                <div>
+                  <dt>{t('bookings.total')}</dt>
+                  <dd className="num">{formatMinor(nextJourney.totalYer, 'YER', { locale })}</dd>
+                </div>
+              </dl>
+              <div className="journey__actions">
+                <Badge tone={bookingTone(nextJourney.status)}>
+                  {t(
+                    BOOKING_STATUS_KEY[nextJourney.status as keyof typeof BOOKING_STATUS_KEY] ??
+                      'bookings.status.pending',
+                  )}
+                </Badge>
+                <Link
+                  className="btn btn--primary"
+                  href={`/${locale}/account/bookings/${nextJourney.id}`}
+                >
+                  {t('account.viewBooking')}
+                </Link>
+              </div>
+            </article>
+          ) : (
+            <div className="account-next__empty">
+              <p className="account-next__empty-title">{t('account.noJourney')}</p>
+              <p className="form-hint">{t('account.noJourneyBody')}</p>
+              <Link className="btn btn--primary" href={`/${locale}/trips`}>
+                {t('account.findTrip')}
+              </Link>
+            </div>
+          )}
         </section>
 
         <section className="account-section" aria-labelledby="account-orgs-title">
-          <h2 id="account-orgs-title">{t('account.organizations')}</h2>
+          <div className="account-section__head">
+            <h2 id="account-orgs-title">{t('account.organizations')}</h2>
+          </div>
           {data.organizations.length === 0 ? (
             <p className="form-hint">{t('account.noOrganizations')}</p>
           ) : (
-            <div className="account-orgs">
+            <ul className="account-orgs">
               {data.organizations.map((org) => (
-                <article
+                <li
                   key={org.id}
                   className={`account-org${org.id === current?.id ? ' account-org--active' : ''}`}
                 >
-                  <div className="panel-head">
-                    <p className="account-name">{org.name}</p>
+                  <span className="account-org__mark" aria-hidden="true">
+                    {org.name.slice(0, 1)}
+                  </span>
+                  <div className="account-org__body">
+                    <p className="account-org__name">
+                      {org.name}
+                      {org.id === current?.id ? (
+                        <span className="account-org__current">{t('account.current')}</span>
+                      ) : null}
+                    </p>
+                    <p className="account-org__meta">
+                      {t(`org.role.${org.role}` as TranslationKey)} · {org.plan}
+                    </p>
+                  </div>
+                  {/* Only an unverified company earns a badge here: a row that says "verified" on every visit
+                      is decoration, a row that says "pending" is something to act on. */}
+                  {org.verificationStatus !== 'verified' ? (
                     <Badge tone={STATUS_TONE[org.verificationStatus]}>
                       {t(STATUS_LABEL[org.verificationStatus])}
                     </Badge>
-                  </div>
-                  <p className="form-hint">
-                    {t(`org.role.${org.role}` as TranslationKey)} · {org.plan}
-                  </p>
-                  <div className="form-actions">
+                  ) : null}
+                  <div className="account-org__actions">
                     <Link
                       className="ui-btn ui-btn--subtle ui-btn--sm"
                       href={`/${locale}/operator/settings?org=${org.id}`}
@@ -161,9 +281,9 @@ export default async function AccountPage({
                       {t('org.team')}
                     </Link>
                   </div>
-                </article>
+                </li>
               ))}
-            </div>
+            </ul>
           )}
 
           <CreateOrganizationForm locale={locale} configured={!preview} />
@@ -184,6 +304,31 @@ export default async function AccountPage({
             }))}
           />
         </section>
+
+        {/* The consoles, and only the ones this session can actually open. The page used to show everybody the
+            verification queue and the roles screen; both answer 403 to a passenger, and a door that opens onto a
+            refusal is worse than no door. */}
+        {consoles.length > 0 ? (
+          <section className="account-section" aria-labelledby="account-consoles-title">
+            <div className="account-section__head">
+              <h2 id="account-consoles-title">{t('account.consoles')}</h2>
+              <p className="form-hint">{t('account.consolesHint')}</p>
+            </div>
+            <ul className="doorlist">
+              {consoles.map((item) => (
+                <li key={item.href}>
+                  <Link className="door" href={`/${locale}${item.href}`}>
+                    <span className="door__icon" aria-hidden="true">
+                      <Icon name={item.icon} size={18} />
+                    </span>
+                    <span className="door__label">{t(item.key)}</span>
+                    <Icon name="chevron" size={15} className="door__go" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
 
         <section className="account-section" aria-labelledby="account-deletion-title">
           <h2 id="account-deletion-title">{t('account.deletion')}</h2>

@@ -1,4 +1,4 @@
-import { getServerClient } from '@/lib/supabase/server';
+import { getServerClient, getSession } from '@/lib/supabase/server';
 import { signedObjectUrl } from '@/lib/storage';
 
 /**
@@ -186,9 +186,23 @@ export async function loadMyBookings(): Promise<readonly PassengerBooking[]> {
   const client = await getServerClient();
   if (!client) return [];
 
+  /**
+   * "Mine" is not "everything I may read".
+   *
+   * Row-level security lets an operator, a driver on the trip and platform staff read a booking, which is exactly
+   * right for the console that has to act on it. It is wrong for a page titled *My bookings*: a driver who was
+   * assigned to a trip opened this list and found a stranger's seat, price and reference sitting under their own
+   * name — and the account hub promoted it to "your next journey". The filter is the passenger column (or the
+   * account that booked it), so the list says what it claims to say.
+   */
+  const session = await getSession();
+  const uid = session.user?.id;
+  if (!uid) return [];
+
   const result = await client
     .from('bookings')
     .select(BOOKING_COLUMNS)
+    .eq('passenger_id', uid)
     .order('created_at', { ascending: false })
     .limit(100);
   if (result.error) return [];
@@ -225,6 +239,49 @@ export async function loadMyBookings(): Promise<readonly PassengerBooking[]> {
       documentRows.get(String(row.id)) ?? null,
     ),
   );
+}
+
+/**
+ * Requests waiting on a decision, for a set of trips.
+ *
+ * The operator overview has to say "three people are waiting for you to accept them" without opening every trip's
+ * inbox, and it has to do it in one round trip rather than one per trip. RLS decides the scope
+ * (`app.can_read_booking` lets a trip's operator or the platform staff read its bookings), so this is a read the
+ * caller was always allowed to make — it was only ever missing an index-shaped way to ask.
+ *
+ * Only `pending` rows come back: the accepted ones are already counted as occupied seats by `trips.seats_available`,
+ * and counting them twice is how a dashboard starts disagreeing with the page it links to.
+ */
+export interface TripRequestCount {
+  readonly tripId: string;
+  readonly requests: number;
+  readonly seats: number;
+}
+
+export async function loadTripRequests(
+  tripIds: readonly string[],
+): Promise<readonly TripRequestCount[]> {
+  if (tripIds.length === 0) return [];
+  const client = await getServerClient();
+  if (!client) return [];
+
+  const result = await client
+    .from('bookings')
+    .select('trip_id, seats, status')
+    .in('trip_id', tripIds as string[])
+    .eq('status', 'pending');
+  if (result.error) return [];
+
+  const counts = new Map<string, { requests: number; seats: number }>();
+  for (const row of (result.data ?? []) as unknown as Row[]) {
+    const tripId = String(row.trip_id);
+    const current = counts.get(tripId) ?? { requests: 0, seats: 0 };
+    counts.set(tripId, {
+      requests: current.requests + 1,
+      seats: current.seats + num(row.seats),
+    });
+  }
+  return [...counts.entries()].map(([tripId, value]) => ({ tripId, ...value }));
 }
 
 /** One booking, if the caller may see it. `null` covers both "does not exist" and "not yours". */

@@ -119,6 +119,23 @@ export function resolveRequest(request: { headers: Headers }): RequestContext {
  * navigation or a server-to-server call, not a cross-site form post.
  */
 export function isSameOriginRequest(request: { headers: Headers }): boolean {
+  /**
+   * `Sec-Fetch-Site` first, because it is the only signal a page cannot forge and the only one that survives a proxy
+   * that rewrites `Host`.
+   *
+   * The hole it closes: a browser on `http://127.0.0.1:3000` sends `Host: 127.0.0.1:3000`, so *every* host this
+   * server could see was loopback and the escape below accepted **any** origin — including `https://evil.example`.
+   * A form on another site could register an account, or sign a visitor in to the attacker's account so their next
+   * booking landed in it. The preview proxy has the same shape whenever it does not forward the host.
+   *
+   * `cross-site` is a forgery attempt by definition: nothing in this app posts a credentials form from a third-party
+   * page. `same-origin` and `same-site` are the browser stating the request came from us; `none` is a typed URL or a
+   * bookmark, which a cross-site form cannot produce.
+   */
+  const site = (request.headers.get('sec-fetch-site') ?? '').trim().toLowerCase();
+  if (site === 'cross-site') return false;
+  if (site === 'same-origin' || site === 'same-site') return true;
+
   const rawOrigin = request.headers.get('origin');
   if (!rawOrigin) return true;
 
@@ -132,9 +149,11 @@ export function isSameOriginRequest(request: { headers: Headers }): boolean {
 
   if (known.includes(origin.host.toLowerCase())) return true;
 
-  // Every host we can see is loopback, so the request cannot be verified at all. Refusing would break
-  // sign-in behind any proxy that rewrites `Host`; an attacker still cannot make `Origin` match a
-  // public host, which is the case that matters.
+  /**
+   * No fetch metadata and no matching host: a browser older than 2020 (Safari gained the header in 16.4) posting to a
+   * server that can only see loopback. Refusing breaks sign-in behind a proxy that rewrites `Host`; allowing leaves a
+   * cross-site post possible for those browsers only. The warning is the record that this is the weaker branch.
+   */
   if (known.length > 0 && known.every((value) => LOOPBACK.test(value))) {
     console.warn(`[auth] cannot verify the request origin (host ${known.join(', ')}); allowing`);
     return true;

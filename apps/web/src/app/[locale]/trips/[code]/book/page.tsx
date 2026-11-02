@@ -1,9 +1,10 @@
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
-import { isLocale, translate, type Locale, type TranslationKey } from '@maak/core';
+import { departureLabel, isLocale, translate, type Locale, type TranslationKey } from '@maak/core';
 import { SiteHeader } from '@/components/SiteHeader';
 import { PreviewBanner } from '@/components/PreviewBanner';
 import { EmptyState } from '@/components/ui/Feedback';
+import { Icon } from '@/components/ui/Icon';
 import { BookingForm, type BookableStop } from '@/components/bookings/BookingForm';
 import { loadAccountContext } from '@/lib/account';
 import { loadMyBookings } from '@/lib/bookings';
@@ -37,6 +38,7 @@ export default async function BookTripPage({
 
   const trip = await loadPublicTrip(code, locale);
   if (!trip) notFound();
+  const when = departureLabel(trip.departureAt, locale);
 
   // `get_trip_public` carries a stop's sequence and price but not its row id, because the marketplace
   // never needed one. A booking needs the id, so it is read from the (publicly readable) stops table.
@@ -48,6 +50,13 @@ export default async function BookTripPage({
         .eq('trip_id', trip.id)
         .order('seq')
     : { data: [] };
+  const at = (minutesAfterStart: number): string | null => {
+    const start = new Date(trip.departureAt).getTime();
+    if (Number.isNaN(start)) return null;
+    return departureLabel(new Date(start + minutesAfterStart * 60_000).toISOString(), locale).time;
+  };
+  const offsetBySeq = new Map(trip.stops.map((stop) => [stop.seq, stop.arriveOffsetMinutes]));
+
   const stops: BookableStop[] = ((stopsResult.data ?? []) as Record<string, unknown>[]).map(
     (row) => ({
       id: String(row.id),
@@ -57,6 +66,7 @@ export default async function BookTripPage({
       ),
       priceFromOriginYer:
         row.price_from_origin_yer == null ? null : Number(row.price_from_origin_yer),
+      arrivalTime: at(offsetBySeq.get(Number(row.seq)) ?? 0),
     }),
   );
 
@@ -79,12 +89,20 @@ export default async function BookTripPage({
       <SiteHeader locale={locale} pathname="/trips" />
       <main id="main" className="shell section booking-page">
         <Link className="trip-back" href={`/${locale}/trips/${trip.code}`}>
-          <span className="back-arrow" aria-hidden="true">
-            ←{' '}
-          </span>
+          <Icon name="chevron" size={16} className="back-arrow" />
           {t('common.back')}
         </Link>
         <h1>{t('bookings.bookTitle', { code: trip.code })}</h1>
+        <p className="booking-route">
+          <span>{trip.origin.name}</span>
+          <Icon name="arrow" size={15} className="route-arrow" />
+          <span>{trip.destination.name}</span>
+          {when ? (
+            <span className="booking-route__when">
+              {when.date} · <bdi className="num">{when.time}</bdi>
+            </span>
+          ) : null}
+        </p>
         <p className="trip-form__hint">{t('bookings.bookSubtitle')}</p>
         {!loaded.configured ? <PreviewBanner locale={locale} /> : null}
 
@@ -136,6 +154,15 @@ export default async function BookTripPage({
               genderPolicy: trip.genderPolicy,
             }}
             stops={stops}
+            facts={{
+              origin: trip.origin.name,
+              destination: trip.destination.name,
+              date: when?.date ?? null,
+              time: when?.time ?? null,
+              vehicle: trip.vehicle?.label ?? null,
+              seatsTotal: trip.vehicle?.seatsTotal ?? trip.seatsTotal,
+              driver: trip.driver?.name ?? null,
+            }}
           />
         )}
       </main>

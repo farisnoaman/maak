@@ -10,10 +10,17 @@ import {
 import Link from 'next/link';
 import { SiteHeader } from '@/components/SiteHeader';
 import { ConsoleShell } from '@/components/ConsoleShell';
+import { MoneyHeadline } from '@/components/finance/MoneyHeadline';
 import { SummaryCards } from '@/components/finance/SummaryCards';
 import { financeNav } from '@/components/payments/financeNav';
 import { loadAccountContext } from '@/lib/account';
-import { loadFinanceDashboard } from '@/lib/finance';
+import {
+  accountName,
+  accountNames,
+  canReadPlatformFinance,
+  loadFinanceDashboard,
+  loadLedgerAccounts,
+} from '@/lib/finance';
 
 /**
  * `/finance/dashboard` — the money page.
@@ -41,16 +48,23 @@ export default async function FinanceDashboardPage({
     redirect(`/${locale}/auth/sign-in?next=/${locale}/finance/dashboard`);
   }
 
-  const platform = loaded.roles.some((role) =>
-    ['platform_admin', 'platform_staff', 'finance_officer'].includes(role),
-  );
+  const platform = canReadPlatformFinance(loaded.roles);
   const org = loaded.organizations[0] ?? null;
 
-  const dashboard = await loadFinanceDashboard(
-    platform
-      ? { platform: true }
-      : { orgId: org?.id ?? null, ownerUserId: loaded.user?.id ?? null },
-  );
+  const [dashboard, accounts] = await Promise.all([
+    loadFinanceDashboard(
+      platform
+        ? { platform: true }
+        : { orgId: org?.id ?? null, ownerUserId: loaded.user?.id ?? null },
+    ),
+    // The chart of accounts, so the balances below are named ("Payable to operators") rather than keyed
+    // ("operator_payable"). Reference data, read with the visitor's own session.
+    loadLedgerAccounts(),
+  ]);
+  const names = accountNames(accounts, locale);
+  const period = dashboard
+    ? `${formatDate(dashboard.period.from, { locale })} → ${formatDate(dashboard.period.to, { locale })}`
+    : '';
 
   return (
     <>
@@ -64,15 +78,28 @@ export default async function FinanceDashboardPage({
         items={financeNav(locale)}
       >
         {dashboard === null ? (
-          <p className="form-hint">{t('financeDash.subtitle')}</p>
+          /* Not the subtitle again: the header already carries it. "We could not read the ledger" is the one thing
+             this state has to say, and it is a different sentence from "here is what this page is". */
+          <div className="ops-empty">
+            <p className="ops-empty__title">{t('financeDash.unavailable')}</p>
+            <p className="form-hint">{t('financeDash.unavailableBody')}</p>
+            <Link className="ui-btn ui-btn--ghost" href={`/${locale}/finance/dashboard`}>
+              {t('common.retry')}
+            </Link>
+          </div>
         ) : (
           <>
-            <section>
-              <h2>
-                {t('financeDash.month')} · {t('statement.from')}{' '}
-                {formatDate(dashboard.period.from, { locale })} →{' '}
-                {formatDate(dashboard.period.to, { locale })}
-              </h2>
+            <section className="finance-month" aria-labelledby="finance-month">
+              <div className="ops-section__head">
+                <h2 id="finance-month">{t('financeDash.month')}</h2>
+                {/* When the figures were read. A count without a time is a count you cannot trust. */}
+                <span className="console-head__stamp">{period}</span>
+              </div>
+              <MoneyHeadline
+                locale={locale}
+                summary={dashboard.summary}
+                platform={dashboard.platform}
+              />
               <SummaryCards
                 locale={locale}
                 summary={dashboard.summary}
@@ -83,7 +110,7 @@ export default async function FinanceDashboardPage({
             <section>
               <h2>{t('statement.accounts')}</h2>
               {Object.keys(dashboard.totals).length === 0 ? (
-                <p className="form-hint">{t('ledger.empty')}</p>
+                <p className="form-hint">{t('financeDash.noActivity')}</p>
               ) : (
                 <div className="table-scroll">
                   <table className="data-table table-cards">
@@ -93,14 +120,14 @@ export default async function FinanceDashboardPage({
                         <th scope="col">{t('ledger.account')}</th>
                         <th scope="col">{t('ledger.debit')}</th>
                         <th scope="col">{t('ledger.credit')}</th>
-                        <th scope="col">{t('ledger.balance')}</th>
+                        <th scope="col">{t('financeDash.netBalance')}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {Object.entries(dashboard.totals).map(([account, total]) => (
                         <tr key={account}>
                           <th scope="row" data-label={t('ledger.account')}>
-                            {account}
+                            {accountName(names, account)}
                           </th>
                           <td data-label={t('ledger.debit')}>
                             {formatMinor(total.debit, 'YER', { locale })}
@@ -108,7 +135,7 @@ export default async function FinanceDashboardPage({
                           <td data-label={t('ledger.credit')}>
                             {formatMinor(total.credit, 'YER', { locale })}
                           </td>
-                          <td data-label={t('ledger.balance')}>
+                          <td data-label={t('financeDash.netBalance')}>
                             {formatMinor(total.net, 'YER', { locale })}
                           </td>
                         </tr>

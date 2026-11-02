@@ -12,7 +12,7 @@ import { ConsoleShell } from '@/components/ConsoleShell';
 import { StatementExport } from '@/components/finance/StatementExport';
 import { financeNav } from '@/components/payments/financeNav';
 import { loadAccountContext } from '@/lib/account';
-import { loadStatement } from '@/lib/finance';
+import { canReadPlatformFinance, loadStatement } from '@/lib/finance';
 
 /**
  * `/finance/statements` — the period statement, and the export of it.
@@ -49,9 +49,7 @@ export default async function FinanceStatementsPage({
   const from = typeof query.from === 'string' && query.from !== '' ? query.from : defaultFrom;
   const to = typeof query.to === 'string' && query.to !== '' ? query.to : defaultTo;
 
-  const platform = loaded.roles.some((role) =>
-    ['platform_admin', 'platform_staff', 'finance_officer'].includes(role),
-  );
+  const platform = canReadPlatformFinance(loaded.roles);
   const org = loaded.organizations[0] ?? null;
   const statement = await loadStatement(
     platform

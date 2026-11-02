@@ -38,6 +38,21 @@
   --state-danger: #b4232a;
   --state-info: #1d5f9e;
 
+  /* A type scale with names, so a heading is `--text-2xl` in one place and the same size in the next.
+     Sizes carry their own line-height: a display size and a body size do not share one. */
+  --text-2xs: 0.6875rem; /* 11px — table chrome, eyebrow */
+  --text-xs: 0.75rem; /* 12px — captions, meta */
+  --text-sm: 0.875rem; /* 13px — dense rows */
+  --text-md: 1rem; /* body */
+  --text-lg: 1.125rem; /* lead-in, card title */
+  --text-xl: clamp(1.25rem, 1.15rem + 0.4vw, 1.5rem); /* section titles */
+  --text-2xl: clamp(1.5rem, 1.3rem + 0.9vw, 1.9rem); /* page titles */
+  --text-3xl: clamp(1.95rem, 1.45rem + 2.4vw, 3.05rem); /* the one hero per site */
+  --leading-tight: 1.16;
+  --leading-snug: 1.32;
+  --leading-normal: 1.55;
+  --hairline: 1px;
+
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -56,8 +71,13 @@
   --radius-xl: 26px;
   --radius-pill: 999px;
 
-  --font-arabic: 'Cairo', 'IBM Plex Sans Arabic', 'Segoe UI', Tahoma, sans-serif;
-  --font-latin: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  /* `… Variable` are the families @fontsource-variable ships; the rest is the fallback chain for the one
+     request that fails. Arabic before Tahoma, always — Tahoma is a fallback, not a choice. */
+  --font-arabic:
+    'Cairo Variable', 'Cairo', 'IBM Plex Sans Arabic', 'Noto Naskh Arabic', 'Segoe UI', Tahoma,
+    sans-serif;
+  --font-latin:
+    'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
   --shadow-sm: 0 1px 2px rgba(11, 18, 32, 0.06);
   --shadow-md: 0 6px 24px rgba(11, 18, 32, 0.08);
@@ -69,12 +89,16 @@
 
 :root[dir='rtl'] {
   --font-ui: var(--font-arabic);
+  /* Arabic sits differently in its line box: ascenders and descenders both run further, so the same
+     line-height that looks airy in Latin crowds the diacritics. One multiplier, set once. */
+  --leading-ui: 1.8;
   /* Directional glyphs flip once, here, instead of with rtl: variants in every component. */
   --icon-flip: -1;
 }
 
 :root[dir='ltr'] {
   --font-ui: var(--font-latin);
+  --leading-ui: 1.65;
   --icon-flip: 1;
 }
 
