@@ -13,6 +13,17 @@ on `main`; the tag is the last step, not the first.
 
 ## [Unreleased] — after the last phase report
 
+### Changed — `/admin/regions`, re-cut (`docs/polish-plan.md` §25)
+
+- **The region tree is a wall of cards**: name, kind, status badge, and the coverage as counted chips (`10 districts`,
+  `2 governorates`, `1 extra district`) instead of one dotted sentence; a sub-region's card is indented with a brand
+  rule, and retired regions are their own muted group with a count.
+- **The editor and the supervisor assignment are disclosure rows** (`New region`, `Assign or change`), so the list stays
+  on screen while a region is edited — *Edit* opens the same row, prefilled, and closing it by hand cancels.
+- **Supervisors are cards**: the person, the districts that follow from their regions, and the regions as chips.
+- **Three facts in the header band**: live regions, districts covered (computed with the same `expandCoverage` the
+  command stores), and supervisors.
+
 ### Changed — `/admin/places`, re-cut (`docs/polish-plan.md` §24)
 
 - **The add-a-place form is a row you press.** Eleven fields used to stand open under the queue on every visit; they

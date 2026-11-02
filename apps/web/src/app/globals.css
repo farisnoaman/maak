@@ -10018,3 +10018,210 @@ h3,
 .place-group .form-grid {
   margin-block: 0;
 }
+
+/* ---------- 24. regions: cards for the tree, and two rows you press ---------- */
+
+.geo-regions-page {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.geo-region-grid {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 900px) {
+  .geo-region-grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
+    align-items: start;
+  }
+}
+
+/*
+ * One region. The tree is kept by indenting a sub-region's card and drawing a rule on its inline edge — the hierarchy
+ * is still visible, and the card is still a card rather than a box inside a box.
+ */
+.geo-region-card {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--ink-900) 8%, var(--surface-sunken));
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.geo-region-card[data-depth='1'] {
+  margin-inline-start: var(--space-4);
+  border-inline-start: 3px solid var(--brand-300);
+}
+
+.geo-region-card[data-depth='2'] {
+  margin-inline-start: var(--space-8);
+  border-inline-start: 3px solid var(--brand-100);
+}
+
+.geo-region-card[data-retired='true'] {
+  background: var(--surface-muted);
+  box-shadow: none;
+}
+
+.geo-region-card__head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.geo-region-card__identity {
+  display: grid;
+  gap: 2px;
+  min-inline-size: 0;
+}
+
+.geo-region-card__name {
+  font-size: var(--text-lg);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--ink-900);
+  text-wrap: balance;
+}
+
+.geo-region-card__kind {
+  color: var(--ink-500);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+/* Coverage as counts you can compare across cards, not a sentence with two interpuncts in it. */
+.geo-region-card__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.geo-region-card__facts li {
+  padding: 2px var(--space-2);
+  border: 1px solid color-mix(in srgb, var(--ink-900) 10%, var(--surface-sunken));
+  border-radius: var(--radius-pill);
+  background: var(--surface-muted);
+  color: var(--ink-700);
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.geo-region-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--surface-sunken);
+}
+
+/* Retired regions are reachable, but they are not the list: a heading, a count and a muted card each. */
+.geo-retired {
+  display: grid;
+  gap: var(--space-3);
+  margin-block-start: var(--space-5);
+}
+
+.geo-retired__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--ink-600);
+  font-size: var(--text-xs);
+  font-weight: 800;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+/* The two disclosures on this page are cards, so the old "rule above an open form" treatment has to go. */
+.geo-assign.panel-disclosure {
+  margin-block-start: var(--space-4);
+  padding-block-start: 0;
+  border-block-start: 1px solid color-mix(in srgb, var(--ink-900) 9%, var(--surface-sunken));
+}
+
+.geo-editor.panel-disclosure {
+  scroll-margin-block-start: var(--space-4);
+}
+
+.geo-editor .geo-editor__grid {
+  margin-block-start: 0;
+}
+
+/* Supervisors: a card each — the person, their regions, and the number of districts that follow from them. */
+.supervisor-list {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 900px) {
+  .supervisor-list {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
+    align-items: start;
+  }
+}
+
+.supervisor-card {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--ink-900) 8%, var(--surface-sunken));
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.supervisor-card__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.supervisor-card__name {
+  font-size: var(--text-md);
+  font-weight: 800;
+  color: var(--ink-900);
+}
+
+.supervisor-card__scope {
+  color: var(--ink-500);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.supervisor-card__regions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.supervisor-card__regions li {
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--brand-50) 70%, var(--surface-base));
+  color: var(--brand-700);
+  font-size: var(--text-2xs);
+  font-weight: 700;
+}

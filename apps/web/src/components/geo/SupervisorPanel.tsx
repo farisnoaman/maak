@@ -12,8 +12,11 @@ import {
   type TranslationKey,
 } from '@maak/core';
 import { Button } from '@/components/ui/Button';
+import { DirectionalIcon } from '@/components/ui/DirectionalIcon';
+import { Icon } from '@/components/ui/Icon';
 import { Select } from '@/components/ui/Select';
 import { getApiClient } from '@/lib/api';
+import { EmptyState } from '@/components/ui/Feedback';
 import type { GeoDirectory, GeoSupervisor } from '@/lib/geo-types';
 
 /**
@@ -131,121 +134,139 @@ export function SupervisorPanel({
 
   return (
     <section className="console-section geo-supervisors" aria-labelledby="geo-supervisors">
-      <div className="geo-section-head">
-        <div>
-          <h2 id="geo-supervisors">{t('supervisors.title')}</h2>
-          <p className="form-hint">{t('supervisors.subtitle')}</p>
-        </div>
+      <div className="console-section__head">
+        <h2 id="geo-supervisors">{t('supervisors.title')}</h2>
+        <span className="console-section__meta">{supervisors.length}</span>
       </div>
+      <p className="form-hint">{t('supervisors.subtitle')}</p>
 
       {supervisors.length === 0 ? (
-        <p className="form-hint">{t('supervisors.none')}</p>
+        <EmptyState
+          title={t('supervisors.none')}
+          description={t('supervisors.assignHint')}
+          icon="users"
+        />
       ) : (
-        <div className="table-scroll">
-          <table className="data-table table-cards">
-            <caption className="visually-hidden">{t('supervisors.title')}</caption>
-            <thead>
-              <tr>
-                <th scope="col">{t('supervisors.user')}</th>
-                <th scope="col">{t('supervisors.regions')}</th>
-                <th scope="col">{t('supervisors.scope')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {supervisors.map((row) => (
-                <tr key={row.userId}>
-                  <td data-label={t('supervisors.user')}>
-                    <span className="geo-name">{row.name ?? row.userId}</span>
-                  </td>
-                  <td data-label={t('supervisors.regions')}>
-                    {row.regionIds
-                      .map((id) => {
-                        const region = directory.regions.find((candidate) => candidate.id === id);
-                        return region ? (locale === 'ar' ? region.nameAr : region.nameEn) : id;
-                      })
-                      .join(' · ')}
-                  </td>
-                  <td data-label={t('supervisors.scope')}>
-                    {translateCount(locale, 'geo.districtCount', row.districtCount)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        /*
+         * One supervisor is one card: the person, the regions they answer for as chips, and the district count that
+         * comes out of them. The table said the same thing in three columns, one of which was a run of names joined
+         * with `·` — and on a phone it stacked into three unlabelled lines.
+         */
+        <ul className="supervisor-list">
+          {supervisors.map((row) => (
+            <li key={row.userId} className="supervisor-card">
+              <div className="supervisor-card__head">
+                <h3 className="supervisor-card__name">
+                  {row.name ?? (
+                    <bdi dir="ltr" className="id-short">
+                      {row.userId.slice(0, 8)}
+                    </bdi>
+                  )}
+                </h3>
+                <span className="supervisor-card__scope">
+                  {translateCount(locale, 'geo.districtCount', row.districtCount)}
+                </span>
+              </div>
+              <ul className="supervisor-card__regions">
+                {row.regionIds.map((id) => {
+                  const region = directory.regions.find((candidate) => candidate.id === id);
+                  return (
+                    <li key={id}>
+                      {region ? (locale === 'ar' ? region.nameAr : region.nameEn) : id.slice(0, 8)}
+                    </li>
+                  );
+                })}
+              </ul>
+            </li>
+          ))}
+        </ul>
       )}
 
-      {/* Assignment is a form, not an item: a labelled band with the fields on one line, no frame of its own. */}
-      <div className="geo-assign">
-        <p className="geo-group__label">{t('supervisors.groupAssign')}</p>
-        <div className="geo-assign__grid">
-          <Select
-            label={t('supervisors.user')}
-            value={userId}
-            onChange={(event) => selectUser(event.target.value)}
-            options={
-              directory.users.length === 0
-                ? [{ value: '', label: t('supervisors.selectUser'), disabled: true }]
-                : directory.users.map((user) => ({
-                    value: user.id,
-                    label: user.name ?? user.id,
-                  }))
-            }
-          />
-          <div className="geo-group">
-            <p className="geo-group__label geo-group__label--sub">
-              {t('supervisors.regions')}
-              <span className="geo-group__count" aria-live="polite">
-                {translateCount(locale, 'geo.districtCount', projected)}
-              </span>
-            </p>
-            <div className="geo-check-grid">
-              {directory.regions.map((region) => (
-                <label key={region.id} className="geo-check">
-                  <input
-                    type="checkbox"
-                    checked={regionIds.includes(region.id)}
-                    onChange={() => toggle(region.id)}
-                  />
-                  <span className="geo-check__name">
-                    {locale === 'ar' ? region.nameAr : region.nameEn}
-                  </span>
-                </label>
-              ))}
+      {/* Assignment is a form you reach for, not a panel that stands open under the list. */}
+      <details className="panel-disclosure geo-assign" suppressHydrationWarning>
+        <summary className="panel-disclosure__summary">
+          <span className="panel-disclosure__icon" aria-hidden="true">
+            <Icon name="users" size={16} />
+          </span>
+          <span className="panel-disclosure__text">
+            <span className="panel-disclosure__title">{t('supervisors.groupAssign')}</span>
+            <span className="panel-disclosure__hint">{t('supervisors.assignHint')}</span>
+          </span>
+          <span className="panel-disclosure__chevron" aria-hidden="true">
+            <DirectionalIcon direction="down" size={16} />
+          </span>
+        </summary>
+
+        <div className="panel-disclosure__body">
+          <div className="geo-assign__grid">
+            <Select
+              label={t('supervisors.user')}
+              value={userId}
+              onChange={(event) => selectUser(event.target.value)}
+              options={
+                directory.users.length === 0
+                  ? [{ value: '', label: t('supervisors.selectUser'), disabled: true }]
+                  : directory.users.map((user) => ({
+                      value: user.id,
+                      label: user.name ?? user.id,
+                    }))
+              }
+            />
+            <div className="geo-group">
+              <p className="geo-group__label geo-group__label--sub">
+                {t('supervisors.regions')}
+                <span className="geo-group__count" aria-live="polite">
+                  {translateCount(locale, 'geo.districtCount', projected)}
+                </span>
+              </p>
+              <div className="geo-check-grid">
+                {directory.regions.map((region) => (
+                  <label key={region.id} className="geo-check">
+                    <input
+                      type="checkbox"
+                      checked={regionIds.includes(region.id)}
+                      onChange={() => toggle(region.id)}
+                    />
+                    <span className="geo-check__name">
+                      {locale === 'ar' ? region.nameAr : region.nameEn}
+                    </span>
+                  </label>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="form-actions">
-          <Button
-            variant="primary"
-            onClick={() => submit('assign')}
-            disabled={busy !== null || !userId}
-            loading={busy === 'assign'}
-          >
-            {t('supervisors.assign')}
-          </Button>
-          <Button
-            variant="danger"
-            onClick={() => submit('revoke')}
-            disabled={busy !== null || !userId || !current}
-            loading={busy === 'revoke'}
-          >
-            {t('supervisors.revoke')}
-          </Button>
-        </div>
+          <div className="form-actions">
+            <Button
+              variant="primary"
+              onClick={() => submit('assign')}
+              disabled={busy !== null || !userId}
+              loading={busy === 'assign'}
+            >
+              {t('supervisors.assign')}
+            </Button>
+            <Button
+              variant="danger"
+              onClick={() => submit('revoke')}
+              disabled={busy !== null || !userId || !current}
+              loading={busy === 'revoke'}
+            >
+              {t('supervisors.revoke')}
+            </Button>
+          </div>
 
-        {message ? (
-          <p className="form-success" role="status">
-            {message}
-          </p>
-        ) : null}
-        {error ? (
-          <p className="form-error" role="alert">
-            {error}
-          </p>
-        ) : null}
-      </div>
+          {message ? (
+            <p className="form-success" role="status">
+              {message}
+            </p>
+          ) : null}
+          {error ? (
+            <p className="form-error" role="alert">
+              {error}
+            </p>
+          ) : null}
+        </div>
+      </details>
     </section>
   );
 }

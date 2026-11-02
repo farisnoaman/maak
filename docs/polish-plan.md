@@ -64,6 +64,7 @@ questions in the order they ask them.**
 | 16 | **Admin money and reference** — subscriptions, plans, alert templates, places | Two bare tables with no totals, a plan's eight limits joined into one sentence-cell, 37 template rows and no way in, a rejection-reason field on every queued place | `[x]` — §23 |
 | 17 | The skin itself | Warm direction chosen and applied once, as tokens and control rules, rather than page by page | `[x]` — §22 of the stylesheet |
 | 18 | `/admin/places`, again | Eleven fields standing open under the queue on every visit, a submission rendered as two runs of text glued with `·`, and two badges that said nothing | `[x]` — §24 |
+| 19 | `/admin/regions` | A table of names with the coverage as one dotted sentence, an editor that replaced the list, and supervisors in a second table with an always-open assignment block | `[x]` — §25 |
 
 ## 3–4. Trips list and trip detail — what changed
 
@@ -930,3 +931,40 @@ place* summary with its hint, the two fieldsets inside, the *Find a place* summa
 `check:all` ✓ (692 tests), `check:responsive` ✓ (95 media queries), `check:guards` ✓, `check:a11y` ✓ (105 routes this
 run — the discovered detail-page count varies with the seeded data). **Gaps:** no browser, so the open/close motion and
 the card grid at 375/768 are read from CSS.
+
+## 25. Regions, re-cut: cards for the tree, two rows for the two forms
+
+The last page in the console to get the treatment the rest of the desks already had — same brief, same rules: cards
+where a thing is a thing, groups where there are groups, the form behind a row you press, and a header that answers a
+question before you read the page.
+
+**What was wrong.**
+
+- **The coverage was a sentence.** `10 districts · 2 governorates · 1 extra district` sat in a table cell as one grey
+  run, and the same three numbers were all an admin had to compare one region with another.
+- **Editing replaced the list.** Pressing *Edit* swapped the table for a very tall form, so the thing being edited left
+  the screen while it was being edited, and coming back meant a second navigation.
+- **The assignment form stood open** under the supervisors table on every visit, whether or not anyone was assigning
+  anything — the same defect the places form had.
+
+**What it is now.**
+
+- **A card per region**, in a grid that goes two-up above 900px: the name as an `h3`, the kind under it, the status as a
+  badge, the coverage as **three counted chips** (`10 districts`, `2 governorates`, `1 extra district`), then *Edit* and
+  *Retire* on a hairline. A sub-region's card is indented with a 3px brand rule on its inline edge — the tree is still
+  visible without thirty rows of table.
+- **Retired regions are a group of their own**, under a tracked micro-caps heading with a count, drawn muted and without
+  a shadow — reachable, not competing.
+- **The editor is a disclosure row** (`New region`, plus in a disc, and the hint *name the region, then choose what it
+  covers*). Inside: the same two groups as before — **Identity** and **Coverage** — but the list stays on screen behind
+  it. *Edit* opens the same row with the fields filled and the title changed; closing it by hand is a cancel.
+- **Supervisors are cards too**: the person, the districts that follow from their regions, and the regions themselves as
+  chips. Assignment is a second disclosure row (*Assign or change*) with the user select and the region checkboxes.
+- **Three facts in the header band**: live regions, districts covered (the union the command stores, computed with the
+  same `expandCoverage` the server uses), and supervisors.
+
+**Verified.** `/en/admin/regions` and `/ar/admin/regions`: facts `Regions 1 · Districts 10 · Supervisors 1`, the region
+card with its three chips, the *New region* row, the *Identity*/*Coverage* groups inside, the supervisor card and the
+*Assign or change* row. `check:all` ✓, `check:responsive` ✓ (97 media queries), `check:guards` ✓, `check:a11y` ✓ over
+**113 routes** (run against a production build, because the dev server in this sandbox is killed mid-run). **Gaps:** no
+browser, so the grid at 375/768/1280 and the disclosure's open/close are read from markup and CSS.

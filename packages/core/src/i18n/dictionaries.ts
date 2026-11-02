@@ -858,6 +858,7 @@ export const ar = {
   'geo.statusRetired': 'موقوف',
   'geo.backToList': 'الأقاليم',
   'geo.treeHeading': 'الأقاليم القائمة',
+  'geo.factActive': 'أقاليم',
   'geo.factRegions': 'أقاليم',
   'geo.factGovernorates': 'محافظات',
   'geo.factDistricts': 'مديريات',
@@ -986,6 +987,7 @@ export const ar = {
   'supervisors.regions': 'الأقاليم',
   'supervisors.groupAssigned': 'المشرفون الحاليون',
   'supervisors.groupAssign': 'تعيين أو تعديل',
+  'supervisors.assignHint': 'اختر المستخدم، ثم الأقاليم التي يغطيها — عدد المديريات يتحدّث وحده.',
 
   'picker.title': 'الموقع',
   'picker.governorate': 'المحافظة',
@@ -3021,6 +3023,7 @@ export const en: Record<TranslationKey, string> = {
   'geo.statusRetired': 'Retired',
   'geo.backToList': 'Regions',
   'geo.treeHeading': 'The region tree',
+  'geo.factActive': 'Regions',
   'geo.factRegions': 'Regions',
   'geo.factGovernorates': 'Governorates',
   'geo.factDistricts': 'Districts',
@@ -3152,6 +3155,8 @@ export const en: Record<TranslationKey, string> = {
   'supervisors.regions': 'Regions',
   'supervisors.groupAssigned': 'Current supervisors',
   'supervisors.groupAssign': 'Assign or change',
+  'supervisors.assignHint':
+    'Pick the person, then the regions they cover — the district count follows on its own.',
 
   'picker.title': 'Location',
   'picker.governorate': 'Governorate',
