@@ -275,6 +275,9 @@ const TARGETS = [
   '.site-menu__toggle',
   '.fleet-toggle',
   '.tabbar__link',
+  // Two ways in on the sign-in page, and the password reveal beside the input: both are tapped on a phone.
+  '.auth-method',
+  '.ui-field__reveal',
 ];
 
 for (const selector of TARGETS) {

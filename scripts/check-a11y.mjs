@@ -39,6 +39,8 @@ const ROUTES = [
   { path: '/en/terms', lang: 'en', dir: 'ltr', account: null },
   { path: '/ar/auth/sign-in', lang: 'ar', dir: 'rtl', account: null },
   { path: '/en/auth/sign-in', lang: 'en', dir: 'ltr', account: null },
+  { path: '/ar/auth/sign-up', lang: 'ar', dir: 'rtl', account: null },
+  { path: '/en/auth/sign-up', lang: 'en', dir: 'ltr', account: null },
   { path: '/ar/operator', lang: 'ar', dir: 'rtl', account: 'owner' },
   { path: '/en/staff', lang: 'en', dir: 'ltr', account: 'staff' },
   // Phase 1 surfaces

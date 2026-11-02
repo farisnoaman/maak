@@ -49,7 +49,7 @@ questions in the order they ask them.**
 | 4 | Trip detail (`/trips/[code]`) | The fare was the twelfth row of a table, below the luggage allowance; the reserve button was at the very bottom | `[x]` — visuals in §13 |
 | 5 | Booking + pay (`/book`, `/pay`) | Two flows that work; the pay screen is the one people screenshot when it goes wrong | `[x]` — §15 |
 | 6 | Account (`/account`) | Lists are correct, hierarchy is flat — "next departure" should be the first thing | `[x]` — §16 |
-| 7 | Auth (`/auth/*`) | Fine, but the sign-in form is the last place a person should meet jargon | `[ ]` |
+| 7 | Auth (`/auth/*`) | Fine, but the sign-in form is the last place a person should meet jargon | `[x]` — §17 |
 | 8 | Operator console | Dense tables are right for the job; the **overview** answers nothing at a glance | `[ ]` |
 | 9a | **Staff console** (`/staff`, dashboard, scan, verifications, vehicles, trips) | The same five screens under five different sidebars; a phase number above every title; four zeroes and two empty boxes as the dashboard | `[x]` |
 | 9b | Finance console | Same: correct, unranked | `[ ]` |
@@ -458,3 +458,56 @@ fix above). The Arabic page keeps `dir="rtl"` and mirrors the row edges through 
 **Gap, stated plainly**: there is no browser in this sandbox, so phone-width overflow, the sticky/stacked behaviour of
 the journey card, and the RTL mirroring were checked by reading the emitted markup and CSS plus `check:responsive`, not
 by looking at a screen. The user's preview is the first place they are seen.
+
+## 17. Auth
+
+Two screens, and one of them did not exist. The sign-in page was a 440px card in the middle of an empty page: no
+header, no way back to the marketplace, and under it a line that read **New here? Create account** whose link pointed
+at `/auth/sign-in` — the door opened onto itself. A new passenger had no way to become one.
+
+**What the page is now.** The form on the near side, and a column that says what is behind the door: *your next
+journey*, *your booking code*, *your company*, then a way out — *Browse trips without an account*. Those three are
+things the product already does, not promises. From 900px the second column sits on its own rule; on a phone it
+follows the form, because it is reassurance, not navigation. There is no card: the form is the page.
+
+- **Two ways in are two links**, not `role="tab"` anchors inside a `role="tablist"` with no tabpanel anywhere. The old
+  markup told a screen reader that two panels existed and that arrow keys moved between them, and the stylesheet only
+  styled `button[aria-selected]` — so the "selected" tab looked exactly like the other one. `aria-current="page"` on
+  two links that load two URLs is both truthful and visible.
+- **The password can be read.** A reveal toggle beside the field (`aria-pressed`, label flips with the state). Typing a
+  long password blind on a phone keyboard is the most common reason a first sign-in fails.
+- **Errors are a band above the form**, in the danger tone, not a paragraph of grey.
+
+**Registration (`/auth/sign-up`) is new.** Three fields — name, email, password — because that is everything
+`app.handle_new_user` needs; the phone, the identity document and the company are asked for where they are used. It
+posts to `/api/auth/sign-up`, which does the same thing the sign-in endpoint does: `signUp` on the server, the cookie
+written on the redirect, no JavaScript in the submit path. If the project has confirmations on, `signUp` returns no
+session and the page says *check your email*; pretending to sign someone in and bouncing them off `/account` is how
+that becomes a support ticket. A signed-in visitor is sent to their account instead of being shown a registration form.
+
+**A CSRF hole found on the way, and fixed.** `isSameOriginRequest` accepted **any** `Origin` when every host the server
+could see was loopback — which is every request on a dev server, and the preview proxy whenever it does not forward the
+host. A form on `https://evil.example` could therefore create an account, or sign a visitor in to the attacker's
+account so that their next booking landed in it. The check now reads `Sec-Fetch-Site` first — a header a page cannot
+set — and rejects `cross-site` outright, accepts `same-origin`/`same-site` as the browser's own testimony, and keeps
+the loopback escape only for browsers that send no fetch metadata at all (Safari < 16.4), where it logs. Reproduced
+before the fix with a `curl` post carrying `Origin: https://evil.example`, which created a user and 303'd to
+`/en/account`; after it, the same request 303s to `?error=origin` and nothing is created.
+
+**A test file that had never run.** `apps/web` had no `test` script, so `src/lib/__tests__/legal.test.ts` was outside
+`npm test` and never executed. `@maak/web` now runs vitest, and `origin.test.ts` was written for the CSRF cases above
+(8 assertions, including the legacy-browser branch that remains).
+
+**Verified** — `check:all` ✓ (691 tests: 676 in `@maak/core` ×2, 15 now in `@maak/web`; 46 migrations, pgTAP, guards
+32/189/46/135), `check:responsive` ✓ (74 media queries, 9 tap targets — the method links and the reveal button added),
+a11y ✓ over `/auth*` (both locales, both pages). Rendered in both locales: sign-in with the email tab, the phone tab,
+and the code step; sign-up in the form state, the *check your email* state, and with `error=exists` / `weak` / `origin`.
+A real registration was posted through `/api/auth/sign-up` and the profile row came out of the trigger with the right
+name and `preferred_language`, then the throwaway users were deleted; duplicate email, short password and cross-site
+posts each returned their own error.
+
+**Gaps, stated plainly**: there is no password reset. The dev backend implements no `/auth/v1/recover` and the stack
+has no mail catcher, so a reset flow could not be verified past its first screen — building it and calling it done
+would be exactly the kind of unverified claim this file exists to avoid. It also needs mail delivery before it means
+anything. The phone OTP path was rendered but not completed end to end (there is no SMS provider locally). The mobile
+app's `sign-in.tsx` is untouched: it is not a public page in the web app, and parity is its own job.

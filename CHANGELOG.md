@@ -15,6 +15,29 @@ on `main`; the tag is the last step, not the first.
 
 ### Added
 
+- **Registration** (`/auth/sign-up`, `/api/auth/sign-up`). The sign-in page had always offered *Create account* — the
+  link pointed back at the sign-in page, so a new passenger had no way to become one. Three fields (name, email,
+  password) post to a server endpoint that calls `signUp` and lets `app.handle_new_user` write the profile; with
+  confirmations on, the page says *check your email* instead of pretending there is a session. A signed-in visitor is
+  sent to their account.
+- **A password reveal** on every password field (`ui/PasswordField.tsx`, `aria-pressed`, label flips with the state).
+- **`@maak/web` runs its tests.** The workspace had no `test` script, so `src/lib/__tests__/legal.test.ts` had never
+  been executed by `npm test`; `origin.test.ts` covers the CSRF cases below.
+
+### Fixed
+
+- **A CSRF hole in `isSameOriginRequest`.** Any `Origin` was accepted whenever every host the server could see was
+  loopback — every dev-server request, and the preview proxy whenever it does not forward the host. A form on another
+  site could create an account or sign a visitor in to the attacker's. The check now reads `Sec-Fetch-Site` first,
+  rejects `cross-site` outright, and keeps the loopback escape only for browsers that send no fetch metadata.
+
+### Changed
+
+- **The sign-in page is a page.** It was a card in the middle of an empty screen with no header and no way back: now a
+  header, the form on the near side, and a column that says what is behind the door (*your next journey*, *your booking
+  code*, *your company*) with *Browse trips without an account* under it. The two methods are links with
+  `aria-current` instead of `role="tab"` anchors with no tabpanel — which also fixes the "selected" tab having no
+  selected style at all. Errors are a band above the form.
 - **The product ships its own typefaces** (`@fontsource-variable/cairo`, `@fontsource-variable/inter`): Arabic was
   rendering in whatever the operating system supplied — Tahoma on Windows, never Cairo — which is why the same screen
   looked different on every machine and why Arabic text sat badly in its line box. Both are variable, self-hosted, and

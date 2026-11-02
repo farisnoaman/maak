@@ -1038,69 +1038,205 @@ a {
 }
 
 /* ---------- auth ---------- */
-.auth-shell {
+
+/*
+ * Sign in and sign up share one frame: the form on the near side, and a quiet column that says what is behind the
+ * door. The page used to be a 440px card floating in the middle of an empty screen with no header, no way back to the
+ * marketplace and a "Create account" line that linked to itself.
+ *
+ * No card here at all. The form is the page; a bordered box around it only said "this is a widget".
+ */
+.auth-page {
   display: grid;
-  place-items: center;
-  padding-block: var(--space-16);
+  gap: var(--space-6);
+  padding-block: var(--space-8) var(--space-16);
 }
-.auth-card {
-  inline-size: min(440px, 100%);
-  padding: var(--space-8);
+
+.auth-cols {
+  display: grid;
+  gap: var(--space-8);
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
 }
-.auth-card h1 {
-  font-size: 1.4rem;
-  font-weight: 800;
+
+.auth-panel {
+  display: grid;
+  gap: var(--space-4);
+  inline-size: 100%;
+  max-inline-size: 26rem;
 }
-.auth-card p.sub {
-  margin-block-start: var(--space-2);
+
+.auth-title {
+  font-size: var(--text-2xl);
+  letter-spacing: -0.02em;
+}
+
+.auth-sub {
+  max-inline-size: 34rem;
   color: var(--ink-600);
-  font-size: 0.9rem;
+  font-size: var(--text-sm);
 }
+
 .auth-form {
   display: grid;
   gap: var(--space-4);
-  margin-block-start: var(--space-6);
+  margin-block-start: var(--space-2);
 }
+
 .auth-notice {
-  margin-block-start: var(--space-5);
   padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--sand-300);
   border-radius: var(--radius-md);
   background: var(--sand-50);
-  border: 1px solid var(--sand-300);
   color: var(--ink-700);
-  font-size: 0.82rem;
+  font-size: var(--text-sm);
 }
-.auth-tabs {
-  display: inline-flex;
+
+.auth-notice--error {
+  border-color: transparent;
+  background: var(--danger-50, #fdecec);
+  color: var(--danger-700, #8c1d1d);
+}
+
+/* Two ways in, as two links with a segmented control's look: whichever is current reads as pressed. */
+.auth-methods {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 2px;
+  margin-block-start: var(--space-1);
   padding: 3px;
+  border-radius: var(--radius-pill);
   background: var(--surface-sunken);
-  border-radius: var(--radius-pill);
-  margin-block-start: var(--space-5);
 }
-.auth-tabs button {
-  border: 0;
-  background: transparent;
-  font: inherit;
-  font-size: 0.82rem;
-  font-weight: 700;
+
+.auth-method {
+  display: grid;
+  place-items: center;
+  min-block-size: var(--tap-target);
+  border-radius: var(--radius-pill);
   color: var(--ink-600);
-  padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius-pill);
-  min-block-size: 34px;
-  cursor: pointer;
+  font-size: var(--text-sm);
+  font-weight: 700;
 }
-.auth-tabs button[aria-selected='true'] {
+
+.auth-method[aria-current='page'] {
   background: var(--surface-base);
   color: var(--ink-900);
   box-shadow: var(--shadow-sm);
 }
-.auth-foot {
-  margin-block-start: var(--space-5);
-  font-size: 0.82rem;
-  color: var(--ink-600);
+
+.auth-alt {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
+  margin-block-start: var(--space-2);
+  color: var(--ink-600);
+  font-size: var(--text-sm);
+}
+
+.auth-alt a {
+  color: var(--brand-700);
+  font-weight: 700;
+}
+
+/* The other half: on a phone it is reassurance under the form, from 900px it is its own column on a rule. */
+.auth-aside {
+  display: grid;
+  gap: var(--space-5);
+  padding-block-start: var(--space-6);
+  border-block-start: 1px solid var(--surface-sunken);
+}
+
+.auth-aside__title {
+  color: var(--ink-500);
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.auth-points {
+  display: grid;
+  gap: var(--space-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.auth-point {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.auth-point__icon {
+  display: grid;
+  place-items: center;
+  inline-size: 36px;
+  block-size: 36px;
+  flex: none;
+  border-radius: var(--radius-md);
+  background: var(--brand-50);
+  color: var(--brand-700);
+}
+
+.auth-point__body {
+  display: grid;
+  gap: 2px;
+  min-inline-size: 0;
+}
+
+.auth-point__title {
+  color: var(--ink-900);
+  font-weight: 700;
+}
+
+.auth-point__text {
+  color: var(--ink-600);
+  font-size: var(--text-sm);
+}
+
+/* The reveal toggle sits beside the input, never inside its label. */
+.ui-field__control .ui-input {
+  min-inline-size: 0;
+}
+
+.ui-field__reveal {
+  flex: none;
+  min-block-size: var(--tap-target);
+  padding-inline: var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--brand-700);
+  font: inherit;
+  font-size: var(--text-xs);
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.ui-field__reveal:hover {
+  background: var(--brand-50);
+}
+
+@media (min-width: 900px) {
+  .auth-cols {
+    grid-template-columns: minmax(0, 26rem) minmax(0, 1fr);
+    gap: var(--space-16);
+  }
+
+  .auth-panel {
+    max-inline-size: none;
+  }
+
+  .auth-aside {
+    padding-block-start: 0;
+    padding-inline-start: var(--space-12);
+    border-block-start: 0;
+    border-inline-start: 1px solid var(--surface-sunken);
+  }
 }
 
 /* ---------- app shell (consoles) ---------- */
