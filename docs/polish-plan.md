@@ -325,3 +325,46 @@ sections and three filter legends on the list in both locales, the time edge on 
 nav, 14 fact rows and the six-stop rail on the detail page. No browser here, so this is markup and CSS.
 
 **Next** — §5 booking and pay, then §6 account.
+
+## 14. Who is driving, and what the route looks like
+
+The trip page named the operator and the vehicle and stopped there. The one fact a passenger needs at the door —
+**who is picking me up** — was not on the page, and could not have been: `get_trip_public` dropped `driver_id`.
+
+**The driver, with a privacy line drawn deliberately.** `00046_public_driver.sql` adds a `driver` object to the public
+payload containing exactly two things: a first name (`split_part(full_name, ' ', 1)`) and whether the licence is
+verified. The function is `security definer` and reachable by trip code from an unauthenticated page, so everything else
+in `driver_profiles` — the invited phone number, the licence number, the licence photo path — stays out of it. A pgTAP
+assertion checks the payload does not contain either of those values, so the boundary is a test and not a comment.
+
+The page shows it as a **"Vehicle and driver"** block beside the fact table: an avatar, the driver's name, a *Licence
+verified* chip, the vehicle label with its seat count spelled out ("14 seats in the vehicle", not a bare `14`), and only
+the amenities the vehicle actually declares — an un-ticked box is not a feature, so an unchecked amenity is not rendered
+rather than shown greyed out. `trips.vehicle` left the fact table, which keeps the same fact from appearing twice on one
+screen. When no driver is assigned the block says so in a sentence instead of showing an empty value.
+
+**The itinerary, not a list of stops.** The stops section was the intermediate stops alone — numbered, named, with
+"after 240 min" and a price — so "the itinerary" was three places between two others, with no clock time and no
+terminals.
+
+- It now runs **start → stops → destination**. The start carries the departure date and time; each stop carries the
+  **clock time you reach it** and the fare from the start; the destination carries the **estimated arrival**. The times
+  are derived from the departure the payload already carries, through the same `departureLabel` the header uses, so the
+  itinerary and the header cannot disagree about the day or the timezone.
+- A **rail** joins the nodes, brand-coloured behind the start, so the shape says "a line between two points" rather
+  than "a list".
+- A trip with no intermediate stops says so, in the same rail, instead of disappearing: the destination is still a node.
+- Both locales render it; the rail is logical-property positioned, so it sits on the right in Arabic without a second
+  rule.
+
+**Verified** — `check:all` ✓ (676 tests ×2, **46 migrations**, pgTAP 122 assertions in the trips suite, guards
+32/185/46/135), `check:responsive` ✓ (70 media queries), a11y sweep ✓ over `/ar/*` (63 routes) and every `/en/*` slice
+(trips 13, account 19, operator 25, staff 19, admin 18, finance 21) — the full English sweep still OOMs this sandbox's
+2GB dev server, so it runs in slices and each slice is reported. Read back from the live server, both locales: the crew
+block shows `خالد · Licence verified · Toyota Hiace 2019 · 14 seats in the vehicle · Air conditioning · USB charging`,
+and the itinerary reads `عدن — Departs · Wed 4 Nov · 07:24`, `07:24 · YER 5,000`, `11:24 · …`, `15:24 · …`,
+`صنعاء — Arrives (estimated) · 15:24`.
+
+**Not done here** — a driver photo (there is none in the schema, and an operator-uploaded portrait of a driver is a
+privacy decision for the owner, not a layout decision), and showing the driver's phone number (that belongs behind a
+confirmed booking, not on a public page).

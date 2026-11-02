@@ -516,6 +516,14 @@ export interface PublicTripDetail {
     readonly userId: string | null;
     readonly orgId: string | null;
   } | null;
+  /**
+   * The person driving, as the public projection may describe them: a first name and whether their licence is
+   * verified. `null` when no driver is assigned yet — a published trip can be waiting for one.
+   */
+  readonly driver: {
+    readonly name: string | null;
+    readonly verified: boolean;
+  } | null;
   readonly vehicle: {
     readonly label: string;
     readonly bodyType: string;
@@ -671,6 +679,7 @@ export async function loadPublicTrip(
   const discount = (payload.discount ?? {}) as Record<string, unknown>;
   const operatorRow = (payload.operator ?? null) as Record<string, unknown> | null;
   const vehicleRow = (payload.vehicle ?? null) as Record<string, unknown> | null;
+  const driverRow = (payload.driver ?? null) as Record<string, unknown> | null;
   const breakdown = (value: unknown): PriceBreakdown | null => {
     const row = (value ?? null) as Record<string, unknown> | null;
     if (!row) return null;
@@ -717,6 +726,12 @@ export async function loadPublicTrip(
           verified: operatorRow.verified === true,
           userId: str(operatorRow.userId),
           orgId: str(operatorRow.orgId),
+        }
+      : null,
+    driver: driverRow
+      ? {
+          name: str(driverRow.name),
+          verified: driverRow.verified === true,
         }
       : null,
     vehicle: vehicleRow

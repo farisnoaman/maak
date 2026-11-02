@@ -3108,6 +3108,216 @@ input[type='file']::file-selector-button {
   cursor: pointer;
 }
 
+/* ---------- the trip page: who is driving, and the route as travelled ---------- */
+
+/* Vehicle and driver: two facts side by side, each a label and a value, on the same hairline grid as the fact
+   table above so it does not read as a third kind of box. */
+.trip-crew__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  overflow: hidden;
+}
+
+@media (min-width: 560px) {
+  .trip-crew__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.trip-crew__driver,
+.trip-crew__vehicle {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding: var(--space-4);
+  min-inline-size: 0;
+}
+
+.trip-crew__vehicle {
+  display: grid;
+  gap: var(--space-1);
+  border-block-start: 1px solid var(--surface-sunken);
+}
+
+@media (min-width: 560px) {
+  .trip-crew__vehicle {
+    border-block-start: 0;
+    border-inline-start: 1px solid var(--surface-sunken);
+  }
+}
+
+.trip-crew__avatar {
+  display: grid;
+  place-items: center;
+  inline-size: 38px;
+  block-size: 38px;
+  flex: none;
+  border-radius: var(--radius-pill);
+  background: var(--brand-50);
+  color: var(--brand-700);
+}
+
+.trip-crew__label {
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-500);
+}
+
+.trip-crew__name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-block-start: 2px;
+  font-size: var(--text-md);
+  font-weight: 700;
+  color: var(--ink-900);
+}
+
+.trip-crew__name--empty {
+  font-weight: 500;
+  font-size: var(--text-sm);
+  color: var(--ink-500);
+}
+
+.trip-crew__verified,
+.trip-crew__seats {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--brand-50);
+  color: var(--brand-700);
+  font-size: var(--text-2xs);
+  font-weight: 700;
+}
+
+.trip-crew__seats {
+  background: var(--surface-sunken);
+  color: var(--ink-700);
+  font-variant-numeric: tabular-nums;
+}
+
+.trip-crew__amenities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-xs);
+  color: var(--ink-600);
+}
+
+.trip-crew__amenities li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.trip-itinerary__hint {
+  margin-block: calc(var(--space-1) * -1) var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--ink-500);
+}
+
+/* The itinerary is one line with marks on it: a start, the stops, an end. The rail is drawn by every node except
+   the last, so it never hangs below the destination. */
+.itinerary {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.itinerary__node {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+}
+
+.itinerary__node:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  inline-size: 2px;
+  border-radius: 2px;
+  background: var(--surface-sunken);
+  inset-block: 1.75rem calc(var(--space-4) * -1);
+  inset-inline-start: calc(0.8125rem - 1px);
+}
+
+/* The rail turns solid brand behind the nodes already travelled — the same language the live panel uses. */
+.itinerary__node--start::before,
+.itinerary__node:has(.itinerary__marker:not(.num))::before {
+  background: var(--brand-100);
+}
+
+.itinerary__marker {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  inline-size: 26px;
+  block-size: 26px;
+  border-radius: var(--radius-pill);
+  border: 2px solid var(--surface-base);
+  background: var(--surface-sunken);
+  color: var(--ink-600);
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 0;
+}
+
+.itinerary__node--start .itinerary__marker {
+  background: var(--brand-600);
+  color: #fff;
+}
+
+.itinerary__node--end .itinerary__marker {
+  background: var(--surface-base);
+  border-color: var(--brand-600);
+  color: var(--brand-700);
+}
+
+.itinerary__node--empty .itinerary__marker {
+  background: var(--surface-base);
+  border-color: var(--surface-sunken);
+  color: var(--ink-400);
+}
+
+.itinerary__body {
+  padding-block-start: 2px;
+  min-inline-size: 0;
+}
+
+.itinerary__name {
+  font-size: var(--text-md);
+  font-weight: 700;
+  color: var(--ink-900);
+}
+
+.itinerary__meta {
+  font-size: var(--text-xs);
+  color: var(--ink-500);
+  font-variant-numeric: tabular-nums;
+}
+
+.itinerary__fare {
+  font-weight: 700;
+  color: var(--ink-700);
+}
+
 /* ---------- the route timeline (detail page) ---------- */
 
 .trip-timeline {

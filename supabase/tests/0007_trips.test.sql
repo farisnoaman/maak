@@ -21,7 +21,7 @@ begin;
 
 create extension if not exists pgtap;
 
-select plan(119);
+select plan(122);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -737,6 +737,26 @@ select is(
   jsonb_array_length(public.get_trip_public((select code from trip1), 'ar') -> 'stops'),
   2,
   'the detail payload lists the route stops'
+);
+
+-- The person driving, which the passenger meets at the door. A first name and "verified" — nothing from
+-- `driver_profiles` that is not needed to recognise someone, and nothing that identifies them off the platform.
+select is(
+  public.get_trip_public((select code from trip1), 'ar') -> 'driver' ->> 'name',
+  split_part((select full_name from public.driver_profiles where id = 'eeee00b1-0000-4000-8000-eeeeeeeeeeee'), ' ', 1),
+  'the detail payload names the driver — first name only'
+);
+
+select is(
+  public.get_trip_public((select code from trip1), 'ar') -> 'driver' ->> 'verified',
+  'true',
+  'and says whether their licence is verified'
+);
+
+select ok(
+  not (public.get_trip_public((select code from trip1), 'ar')::text like '%YE-DL-770011%')
+  and not (public.get_trip_public((select code from trip1), 'ar')::text like '%+967733400005%'),
+  'the public payload carries neither the licence number nor the invited phone'
 );
 
 select is(

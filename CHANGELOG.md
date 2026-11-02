@@ -27,8 +27,19 @@ on `main`; the tag is the last step, not the first.
 - **`HeroField`**: a contour-and-route drawing behind the home hero — the topology the product actually sells, not a
   stock photograph of a coastline it does not cross.
 
+### Added
+
+- **The trip page names the driver** (`00046_public_driver.sql`): `get_trip_public` dropped `driver_id`, so the one fact
+  a passenger needs at the door was missing. The public payload now carries a first name and whether the licence is
+  verified — and nothing else from `driver_profiles`; a pgTAP assertion fails the build if the licence number or invited
+  phone number ever appears in it. The page shows it as a *Vehicle and driver* block with the vehicle's seat count
+  spelled out and only the amenities the vehicle actually declares.
+
 ### Changed
 
+- **The trip page's stops are an itinerary**: start → stops → destination, with the clock time you reach each stop
+  derived from the departure, the fare from the start, and the estimated arrival, joined by a rail. It was the
+  intermediate stops alone, with "after 240 min" and no terminals.
 - **The marketplace card is a ticket.** The departure time — the fact a timetable is sorted by, and the third most
   prominent thing on the card — now has its own edge: large, tabular, date beneath, separated by a dashed tear-line.
   The heavy shadow is gone (a page of eight shadowed cards is eight shadows competing) and the card lifts on hover and
