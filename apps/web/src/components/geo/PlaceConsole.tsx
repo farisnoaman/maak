@@ -12,7 +12,7 @@ import {
   type PlaceKind,
   type TranslationKey,
 } from '@maak/core';
-import { Badge } from '@/components/ui/Feedback';
+import { EmptyState } from '@/components/ui/Feedback';
 import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
 import { Select } from '@/components/ui/Select';
@@ -41,6 +41,8 @@ export function PlaceConsole({
 
   const [queue, setQueue] = useState<readonly GeoPendingPlace[]>(directory.pendingPlaces);
   const [reasons, setReasons] = useState<Record<string, string>>({});
+  /* Rejecting asks a question, so it opens; the reason field is not furniture on every queued place. */
+  const [rejecting, setRejecting] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -182,13 +184,17 @@ export function PlaceConsole({
     <div className="geo-console">
       {canDecide ? (
         <section className="console-section" aria-labelledby="places-queue">
-          <div className="panel-head">
+          <div className="console-section__head">
             <h2 id="places-queue">{t('places.queueTitle')}</h2>
-            <Badge tone="warning">{queue.length}</Badge>
+            <span className="console-section__meta">{queue.length}</span>
           </div>
 
           {queue.length === 0 ? (
-            <p className="form-hint">{t('places.queueEmpty')}</p>
+            <EmptyState
+              title={t('places.queueEmpty')}
+              description={t('places.subtitle')}
+              icon="check"
+            />
           ) : (
             <ul className="queue-list">
               {queue.map((place) => (
@@ -220,14 +226,6 @@ export function PlaceConsole({
                         </>
                       ) : null}
                     </p>
-                    <Field
-                      label={t('places.rejectReason')}
-                      hint={t('places.rejectHint')}
-                      value={reasons[place.id] ?? ''}
-                      onChange={(event) =>
-                        setReasons((current) => ({ ...current, [place.id]: event.target.value }))
-                      }
-                    />
                   </div>
                   <div className="geo-row-actions">
                     <Button
@@ -242,11 +240,31 @@ export function PlaceConsole({
                       variant="danger"
                       size="sm"
                       disabled={busy === place.id}
-                      onClick={() => decide(place, 'reject')}
+                      onClick={() => setRejecting(rejecting === place.id ? null : place.id)}
                     >
                       {t('places.reject')}
                     </Button>
                   </div>
+                  {rejecting === place.id ? (
+                    <div className="queue-card__reject">
+                      <Field
+                        label={t('places.rejectReason')}
+                        hint={t('places.rejectHint')}
+                        value={reasons[place.id] ?? ''}
+                        onChange={(event) =>
+                          setReasons((current) => ({ ...current, [place.id]: event.target.value }))
+                        }
+                      />
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        disabled={busy === place.id || (reasons[place.id] ?? '').trim().length < 10}
+                        onClick={() => decide(place, 'reject')}
+                      >
+                        {t('places.reject')}
+                      </Button>
+                    </div>
+                  ) : null}
                 </li>
               ))}
             </ul>
@@ -255,9 +273,8 @@ export function PlaceConsole({
       ) : null}
 
       <section className="console-section" aria-labelledby="places-create">
-        <div className="panel-head">
+        <div className="console-section__head">
           <h2 id="places-create">{t('places.addPlace')}</h2>
-          <Badge tone="info">{t('places.pending')}</Badge>
         </div>
         <p className="form-hint">{t('places.gatheringPointNote')}</p>
 
@@ -350,9 +367,8 @@ export function PlaceConsole({
       </section>
 
       <section className="console-section" aria-labelledby="places-picker">
-        <div className="panel-head">
+        <div className="console-section__head">
           <h2 id="places-picker">{t('picker.title')}</h2>
-          <Badge tone="info">{t('places.search')}</Badge>
         </div>
         <PlacePicker locale={locale} directory={directory} label="picker.place" />
       </section>

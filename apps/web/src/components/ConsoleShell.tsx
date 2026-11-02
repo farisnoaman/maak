@@ -43,6 +43,7 @@ export function ConsoleShell({
   items,
   groups,
   actions,
+  facts,
   layout = 'content',
   children,
 }: {
@@ -57,6 +58,14 @@ export function ConsoleShell({
   readonly groups?: readonly ConsoleNavGroup[];
   /** The page's primary verb — beside the title, where a console puts its action, not buried in the content. */
   readonly actions?: ReactNode;
+  /**
+   * Two or three numbers from this screen's own data, in the header band.
+   *
+   * A console page should answer "how much" before it is read: three live subscriptions, 37 events, one region.
+   * They are text and a figure, not KPI cards — the band already exists, and a row of tiles above a table is the
+   * dashboard costume a console does not need.
+   */
+  readonly facts?: readonly { readonly label: string; readonly value: string }[];
   /**
    * `content` is one full-width column: the right shape for a table, a form or a list. `tiles` is the auto-filling
    * grid the overview screens use.
@@ -141,7 +150,19 @@ export function ConsoleShell({
             <h1>{t(title)}</h1>
             <p className="console-head__sub">{t(subtitle)}</p>
           </div>
-          {actions ? <div className="console-head__actions">{actions}</div> : null}
+          <div className="console-head__end">
+            {facts && facts.length > 0 ? (
+              <dl className="console-facts">
+                {facts.map((fact) => (
+                  <div key={fact.label}>
+                    <dt>{fact.label}</dt>
+                    <dd className="num">{fact.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            ) : null}
+            {actions ? <div className="console-head__actions">{actions}</div> : null}
+          </div>
         </header>
         <div className={layout === 'tiles' ? 'console-body console-body--tiles' : 'console-body'}>
           {children}

@@ -60,6 +60,9 @@ questions in the order they ask them.**
 | 12 | Console navigation on a phone | Nine destinations wrapped three rows deep above every page title; no way home on a desktop | `[x]` — §21 |
 | 13 | **The design layer** — type, accent, header, states | Four identical grey links, no current page, 404s that were not pages, Latin tracking in Arabic | `[x]` — §21 |
 | 14 | Marketplace filter panel (`/trips`) | A sidebar with no title, a phone panel that stayed open over the results it had just produced, *Clear* with nothing to clear | `[x]` — §22 |
+| 15 | **Staff desk** — trip detail, trip review queue, scan | A trip page that opened with its own code, a review box below the fold, a scanner whose idle state was a blank half-page, a queue whose filter had no fieldset names | `[x]` — §23 |
+| 16 | **Admin money and reference** — subscriptions, plans, alert templates, places | Two bare tables with no totals, a plan's eight limits joined into one sentence-cell, 37 template rows and no way in, a rejection-reason field on every queued place | `[x]` — §23 |
+| 17 | The skin itself | Warm direction chosen and applied once, as tokens and control rules, rather than page by page | `[x]` — §22 of the stylesheet |
 
 ## 3–4. Trips list and trip detail — what changed
 
@@ -793,3 +796,99 @@ disclosure, AR `الفلاتر | إعادة تعيين | المسار | … | ت
 `check:all` ✓ (692 tests: 677 core ×2 + 15 web), `check:responsive` ✓ (87 media queries), `check:a11y` ✓ over all 113
 routes. **Gaps:** as in §21 — no browser here, so the sticky offset and the close-on-apply are read back from the code,
 not watched.
+
+## 23. The staff and admin desks — six screens, one standard
+
+The brief for this pass was the brief for §21 and §22, applied one page at a time to the screens a person actually
+works in: **grouped, carded where a thing is a thing, informative (counts and state, not rows), fewer wasted gaps, one
+obvious action, RTL parity**. Everything below was designed against that, not against a screenshot.
+
+### 23a. Staff — trip detail (`/staff/trips/[id]`)
+
+**What was wrong.** The page opened with a 14-character trip code above the route, so the first thing a reviewer read
+was an identifier; the navigation above it was hand-rolled in this one file and had already drifted from `staffNav`; the
+verification decision sat *below* the trip's own facts, which meant scrolling past the thing you were deciding; and the
+same date and time was printed three times in three styles.
+
+**What it is now.**
+
+- **One identity line.** `Sana'a → Aden · SA-AD-6744 · Fri, 6 Nov 2026 · 00:24` in one row with a drawn arrow in a disc
+  — the code in `bdi` with tabular figures, because it is the one string on the page that must never reorder.
+- **The two doors at the top.** *Passenger manifest* (primary) and *Scan a trip* (ghost) sit beside the status badges
+  where the reader's eye lands, instead of mid-page in a paragraph of links.
+- **The decision is a panel, not a footnote.** Pending trips render `StaffTripReview variant="panel"` **below** the
+  detail in its own labelled section: the sand tint the product already uses for "a human must decide", the reason
+  field always open (it is the point of the panel), and *Reject* disabled until the reason is worth reading.
+- **One back link, one arrow.** `←` — a character that points the wrong way in Arabic — became the shared
+  `DirectionalIcon` in a `.detail-back` disc.
+
+### 23b. Staff — trip review queue (`/staff/trips`)
+
+- The filter block's **second group of checkboxes had no name** (the verification states floated under the date row).
+  It has a heading now, and its own `.trip-filters__legend` weight.
+- **The result count and *Export results* became a toolbar** — one line, count at the start, the action at the end —
+  instead of a count paragraph and a lone button in a paragraph of its own.
+- **The header band carries the queue depth** (`Awaiting review 0`), or the result count once a search is in force, so
+  the answer to "is there work here" is visible before the empty state says the same thing in more words.
+- The route column used `←`; it now uses `DirectionalIcon direction="forward"`, which flips with the document.
+
+### 23c. Staff — scan (`/staff/scan`)
+
+**What was wrong.** The scanner worked and the page said nothing: a form, then blank paper until you scanned. A staff
+member meeting it for the first time had no idea whether it checked the trip, the passenger, or both.
+
+- **The verdict is a panel now.** *Cleared to board* is a green-tinted sheet with a check in a disc, the route, and the
+  trip's facts beneath a hairline; a refusal is the same shape in danger red with `role="alert"`. The neutral card it
+  replaced gave the 14-character code the largest type on the screen.
+- **The idle state explains itself**: three lines for what a scan confirms, and one that says what it will *not* show
+  (passenger names), because a checkpoint tool that hides its rules gets used wrongly.
+
+### 23d. Admin — subscriptions (`/admin/subscriptions`)
+
+- **Three facts in the band**: live subscriptions, active, monthly value — the question an admin opens a billing page
+  with is the run rate, and the table never answered it.
+- **A subscription is a card**: who pays, the plan, the price at display size, the period, and — separately, in sand —
+  the two states that change the answer (*cancels at period end*, *moves to Pro next period*), which were previously
+  not shown at all.
+- **Quota overrides say whose they are** (a short id, or *Platform-wide* — the row previously showed nothing but the
+  metric, so an override looked like a global setting), and the empty state explains what an override would do.
+
+### 23e. Admin — plans and limits (`/admin/plans`)
+
+- **The eight limits left the table.** They were joined into one cell — `Vehicles 1 · Drivers 1 · Team members 1 · Trips
+  per month 5…` — which is a paragraph pretending to be a column. Each plan is a card with a price and the same eight
+  rows in the same order, so three plans can be compared by moving your eyes sideways.
+- **Commission rules got a heading, a count, and their own form heading.** The section previously printed the same
+  explanatory sentence three times (heading hint, field hint, rules table) and titled the form *Add a rule* while its
+  submit button also said *Add a rule*; the field hint now says the useful thing — *leave blank to apply it
+  platform-wide* — and a platform rule's row reads *Platform-wide* instead of repeating the section title.
+
+### 23f. Admin — alert templates (`/admin/notifications`)
+
+- **Seven drawers instead of 37 rows.** Kind names are machine words (`agent_cash_in_settled` next to
+  `booking_accepted`); the prefixes became families — trips and bookings, money, plans and quota, verifications, people,
+  access, fleet, platform ops — each a `<details>` with its count, open by default.
+- **Channels are chips, not a list inside a cell**, and both sentences are rendered by `notificationText` with the sample
+  payload in a two-up comparison, because the question is whether the Arabic and the English say the same thing.
+
+### 23g. Admin — places (`/admin/places`)
+
+- **The rejection-reason field is not furniture.** It sat on every queued place, eleven fields tall; *Reject* now opens
+  it, in sand, with *Reject* disabled under ten characters — the same rule as the trip decision panel.
+- **Two meaningless badges removed**: the add-form's header badge said *Awaiting review* and the picker's said *Search*.
+- Counts moved into `.console-section__head`, and an empty queue is an `EmptyState` with a drawn mark instead of a
+  sentence.
+
+### 23h. The skin, set once (§22 of `globals.css`)
+
+The direction chosen for the product is **warm and human**, and it is applied as tokens and control rules rather than
+per page: paper is a cream rather than a cool grey; corners are 10 / 14 / 20 / 28; shadows are short and warm-tinted;
+fields sit on white and lift their border on focus; buttons keep one loud brand green; headings balance and prose does
+not strand a word. Light-mode only — the dark theme keeps its own surfaces.
+
+**Verified.** `/en` and `/en/trips` (200), `/en/staff/trips` (facts `Awaiting review | 0`, toolbar, named verification
+group), `/en/staff/trips/04332a29-…` (single identity line, both actions, `.detail-back`), `/en/staff/scan` (idle checks
+block in both locales), `/en/admin/{plans,subscriptions,notifications,places}` (cards, three facts, seven drawers,
+labels), plus their Arabic counterparts. `check:all` ✓, `check:responsive` ✓ (94 media queries), `check:a11y` ✓ (113
+routes), `check:guards` ✓. **Gaps:** no browser, so geometry at 375/768/1280, hover/focus, and the RTL of the new arrow
+discs are read back from CSS, not watched.

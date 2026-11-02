@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   computePrice,
@@ -23,6 +23,7 @@ import {
 } from '@maak/core';
 import { Badge } from '@/components/ui/Feedback';
 import { Button } from '@/components/ui/Button';
+import { Icon } from '@/components/ui/Icon';
 import { Field } from '@/components/ui/Field';
 import { getApiClient } from '@/lib/api';
 import type { TripEventRow, TripOptions, TripRow, TripStopRow } from '@/lib/trips';
@@ -62,6 +63,7 @@ export function TripDetail({
   events,
   options,
   canManage,
+  actions,
 }: {
   readonly locale: Locale;
   readonly trip: TripRow;
@@ -69,6 +71,14 @@ export function TripDetail({
   readonly events: readonly TripEventRow[];
   readonly options: TripOptions;
   readonly canManage: boolean;
+  /**
+   * Things this trip lets you *do*, supplied by the screen that is showing it.
+   *
+   * On the operator side there are none. On staff's trip review the head carries the two doors out of the page —
+   * the passenger manifest and the scanner — and they belong beside the trip's identity, not in a paragraph of
+   * buttons three blocks below it.
+   */
+  readonly actions?: ReactNode;
 }) {
   const router = useRouter();
   const t = (key: TranslationKey, vars?: Record<string, string | number>) =>
@@ -185,22 +195,34 @@ export function TripDetail({
   return (
     <section aria-labelledby="trip-detail-title">
       <div className="trip-detail__head">
-        <div>
+        <div className="trip-detail__identity">
           <h2 id="trip-detail-title">
-            {trip.origin.nameAr}
-            <span aria-hidden="true"> ← </span>
-            {trip.destination.nameAr}
+            {locale === 'ar' ? trip.origin.nameAr : (trip.origin.nameEn ?? trip.origin.nameAr)}
+            <span className="trip-detail__arrow" aria-hidden="true">
+              <Icon name="arrow" size={16} />
+            </span>
+            {locale === 'ar'
+              ? trip.destination.nameAr
+              : (trip.destination.nameEn ?? trip.destination.nameAr)}
           </h2>
-          <p className="trip-form__hint">
-            {trip.code} · {when.date} · <bdi>{when.time}</bdi>
+          {/*
+            The route used to be drawn from the Arabic names in both languages — an English reviewer read
+            «صنعاء ← عدن» — with the character `←`, which does not point the right way in Arabic and took the weight
+            of whatever font the system shipped. It is the product's own arrow now, and the names follow the locale.
+          */}
+          <p className="trip-detail__meta">
+            <bdi className="num">{trip.code}</bdi> · {when.date} · <bdi>{when.time}</bdi>
           </p>
         </div>
-        <div className="trip-badges">
-          {badges.map((badge) => (
-            <Badge key={badge.code} tone={TONE[badge.tone]}>
-              {t(badge.labelKey)}
-            </Badge>
-          ))}
+        <div className="trip-detail__end">
+          <div className="trip-badges">
+            {badges.map((badge) => (
+              <Badge key={badge.code} tone={TONE[badge.tone]}>
+                {t(badge.labelKey)}
+              </Badge>
+            ))}
+          </div>
+          {actions ? <div className="trip-detail__actions">{actions}</div> : null}
         </div>
       </div>
 

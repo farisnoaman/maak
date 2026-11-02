@@ -82,55 +82,50 @@ export function PlansEditor({
         </p>
       ) : null}
 
-      <section>
-        <h2>{t('plans.priceList')}</h2>
-        <div className="table-scroll">
-          <table className="data-table table-cards">
-            <caption className="visually-hidden">{t('plans.title')}</caption>
-            <thead>
-              <tr>
-                <th scope="col">{t('billing.plan')}</th>
-                <th scope="col">{t('plans.price')}</th>
-                <th scope="col">{t('plans.trialDays')}</th>
-                <th scope="col">{t('plans.metric')}</th>
-                <th scope="col">{t('common.actions')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {plans.map((plan) => (
-                <tr key={plan.code}>
-                  <th scope="row" data-label={t('billing.plan')}>
-                    {t(`plan.${plan.code}` as TranslationKey)}
-                  </th>
-                  <td data-label={t('plans.price')}>
-                    {formatMinor(plan.priceYer, 'YER', { locale })}
-                  </td>
-                  <td data-label={t('plans.trialDays')}>{plan.trialDays}</td>
-                  <td data-label={t('plans.metric')}>
-                    {METRICS.filter((metric) => plan.limits[metric] !== undefined)
-                      .map(
-                        (metric) =>
-                          `${t(`metric.${metric}` as TranslationKey)} ${
-                            plan.limits[metric] === null
-                              ? t('plans.unlimited')
-                              : plan.limits[metric]
-                          }`,
-                      )
-                      .join(' · ')}
-                  </td>
-                  <td data-label={t('common.actions')}>
-                    <Button size="sm" variant="subtle" onClick={() => startEdit(plan)}>
-                      {t('plans.edit')}
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <section className="console-section">
+        <div className="console-section__head">
+          <h2>{t('plans.priceList')}</h2>
+          <span className="console-section__meta">{plans.length}</span>
+        </div>
+        {/*
+          A plan is an item, so it is a card — and the card is where its limits belong.
+          The table used to carry all eight limits in one cell, joined with `·`: "Vehicles 1 · Drivers 1 · Team
+          members 1 · Trips per month 5…", which is a paragraph pretending to be a column. Three plans, three cards,
+          each with the same eight rows in the same order, is a comparison you can make by moving your eyes sideways.
+        */}
+        <div className="plan-grid">
+          {plans.map((plan) => (
+            <article className="plan-card" key={plan.code}>
+              <div className="plan-card__head">
+                <h3>{t(`plan.${plan.code}` as TranslationKey)}</h3>
+                <Button size="sm" variant="subtle" onClick={() => startEdit(plan)}>
+                  {t('plans.edit')}
+                </Button>
+              </div>
+              <p className="plan-card__price num">
+                {formatMinor(plan.priceYer, 'YER', { locale })}
+                <small>{t('plans.price')}</small>
+              </p>
+              <dl className="plan-card__list">
+                <div>
+                  <dt>{t('plans.trialDays')}</dt>
+                  <dd className="num">{plan.trialDays}</dd>
+                </div>
+                {METRICS.filter((metric) => plan.limits[metric] !== undefined).map((metric) => (
+                  <div key={metric}>
+                    <dt>{t(`metric.${metric}` as TranslationKey)}</dt>
+                    <dd className="num">
+                      {plan.limits[metric] === null ? t('plans.unlimited') : plan.limits[metric]}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </article>
+          ))}
         </div>
 
         {editing ? (
-          <div className="finance-form">
+          <div className="finance-form plan-editor">
             <h3>{t(`plan.${editing}` as TranslationKey)}</h3>
             <Field
               label={t('plans.price')}
@@ -185,16 +180,22 @@ export function PlansEditor({
         ) : null}
       </section>
 
-      <section>
-        <h2>{t('plans.commissions')}</h2>
+      <section className="console-section">
+        <div className="console-section__head">
+          <h2>{t('plans.commissions')}</h2>
+          <span className="console-section__meta">{rules.length}</span>
+        </div>
         <p className="form-hint">{t('plans.commissionHelp')}</p>
+      </section>
 
+      <section className="console-section">
+        <h2>{t('plans.newRule')}</h2>
         <div className="finance-form">
           <Field
             label={t('subs.orgId')}
             value={ruleOrg}
             onChange={(event) => setRuleOrg(event.target.value.trim())}
-            hint={t('plans.commissionHelp')}
+            hint={t('plans.orgBlank')}
           />
           <Field
             label={t('plans.basisPoints')}
@@ -267,7 +268,7 @@ export function PlansEditor({
                 {rules.map((rule) => (
                   <tr key={rule.id}>
                     <th scope="row" data-label={t('billing.plan')}>
-                      {rule.orgId ?? t('plans.commissions')}
+                      {rule.orgId ?? t('plans.platformWide')}
                     </th>
                     <td data-label={t('plans.basisPoints')}>{rule.basisPoints} bp</td>
                     <td data-label={t('plans.minYer')}>

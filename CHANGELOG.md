@@ -13,6 +13,29 @@ on `main`; the tag is the last step, not the first.
 
 ## [Unreleased] — after the last phase report
 
+### Changed — the staff and admin desks (`docs/polish-plan.md` §23)
+
+- **The skin has a direction.** Warm and human, set once as tokens in `globals.css` §22: cream paper, 10/14/20/28
+  corners, short warm-tinted shadows, fields that sit on white and lift a ring on focus, one loud brand green. Light
+  mode only; the dark theme keeps its own surfaces.
+- **`/staff/trips/[id]`** opens with one identity line (route, code, date, time), both actions beside the status
+  badges, and the verification decision in its own sand-tinted panel below the detail — with *Reject* disabled until
+  the reason is worth reading. The page's hand-rolled nav is gone; it uses `staffNav` again.
+- **`/staff/trips`** names its verification filter group, puts the result count and *Export results* on one toolbar,
+  shows the queue depth in the header band, and draws its route arrow with `DirectionalIcon` instead of `←`.
+- **`/staff/scan`** has an idle state that says what a scan confirms and what it refuses to show, and a verdict panel
+  (`scan-verdict is-ok` / `is-deny`) instead of a neutral card led by a trip code.
+- **`/admin/subscriptions`** answers the run-rate question (live, active, monthly value in the header band), draws each
+  subscription as a card with its end date and pending-change flag, and names whose quota override it is.
+- **`/admin/plans`** draws each plan as a card with the same eight limits in the same order — the joined
+  `Vehicles 1 · Drivers 1 · …` cell is gone — and stops printing the commission explanation three times.
+- **`/admin/notifications`** groups 37 templates into seven named drawers with counts, turns channels into chips, and
+  keeps both sentences side by side.
+- **`/admin/places`** asks for a rejection reason only once *Reject* was pressed, removes two badges that said nothing
+  (`Awaiting review` on the add form, `Search` on the picker), and counts its queue in the section head.
+- **`EmptyState`** keeps its brand disc but gains a title/description weight that reads as a state rather than a
+  placeholder; `ConsoleShell` gained the optional `facts` band used by the pages above.
+
 ### Added
 
 - **Registration** (`/auth/sign-up`, `/api/auth/sign-up`). The sign-in page had always offered *Create account* — the
