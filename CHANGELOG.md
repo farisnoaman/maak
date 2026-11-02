@@ -13,6 +13,16 @@ on `main`; the tag is the last step, not the first.
 
 ## [Unreleased] — after the last phase report
 
+### Changed — the trip page, as cards (`docs/polish-plan.md` §28)
+
+- **The itinerary is a card of stops**: four columns in the same order at every stop — clock time, mark, name, fare
+  from the origin — instead of a rail of dots with the time buried in a sentence under each name. Filled discs at the
+  two ends, numbered rings between them.
+- **The operator and the notes are cards of their own**, beside the crew card and under the route; policy rows moved
+  into their own card as well.
+- **The main column has a rhythm**: it was `.trip-detail__main` with no stylesheet rule at all, so the blocks sat flush
+  against each other.
+
 ### Fixed — there was no navigation and no *Sign in* on a desktop (`docs/polish-plan.md` §27)
 
 - **Both navigations** (the site header's, and the console sidebar's) live inside a `<details>` and were "opened" above

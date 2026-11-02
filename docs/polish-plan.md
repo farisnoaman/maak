@@ -68,6 +68,7 @@ questions in the order they ask them.**
 | 20 | **One job per page** in the console | Regions carried the tree, the editor and the supervisors; places carried the queue, the form and the search; plans carried the price list and the commission desk — every screen a scroll with three jobs in it | `[x]` — §26 |
 | 21 | The direction, applied to the dense half | The warm layer existed as tokens; the console still read as a spreadsheet in grey. The direction is now material: a tinted head band, warm paper, flat matte buttons | `[x]` — §26 |
 | 22 | **The desktop navigation did not exist** | Both navigations lived inside a closed `<details>` and were "opened" with `display: … !important`, which a closed `<details>` ignores — no menu, no links, no *Sign in* above 720px, and no console sidebar above 900px | `[x]` — §27 |
+| 23 | **The trip page**, second pass | The itinerary was a rail of dots between two paragraphs, and the operator and the notes were the last two grey headings of a flat column | `[x]` — §28 |
 
 ## 3–4. Trips list and trip detail — what changed
 
@@ -1063,3 +1064,38 @@ or `.console-nav` above a breakpoint with `display: … !important` and does not
 **Verified.** `/en` and `/ar` render the four links and the *Sign in* button in the markup with the panel `open` set
 client-side; `tsc` ✓, `prettier` ✓, `check:responsive` ✓ (103 media queries), `check:guards` ✓. **Gap:** no browser in
 this sandbox — whether the panel is *painted* at 1280px is inferred from the spec of `::details-content`, not seen.
+
+## 28. The trip page, as cards — the itinerary, the operator, the notes
+
+**The report.** *"Revisit the trips page, the itinerary section — make it look good in a card view, and the operator
+and notes each in a separate card."*
+
+**What was wrong.** Nothing was broken and nothing was findable. The main column was a flat list of blocks with no
+rhythm at all (`trip-detail__main` had no stylesheet rule — the first block sat flush against the second), and five of
+those blocks were a heading and one sentence: *Vehicle and driver*, *The itinerary*, *Policies*, *Notes*, *Operator*.
+The itinerary itself — the route the passenger is buying — was a vertical rail of dots with the clock time buried in a
+sentence under each name, so comparing two stops meant reading two sentences. The notes, which are the operator
+speaking directly to the passenger, were the last grey paragraph before the footer.
+
+**What it is now** (stylesheet §28).
+
+- **One card primitive, four uses.** `.trip-card` is a head (an icon disc, a title, an optional sentence) over a body,
+  on `--paper` with the page's corner — the same material as the console's paper (§26). Cards in a pair (crew and
+  operator, 720px+), one wide card for the route (it is a table of stops and needs the width), then the small ones in
+  an auto-filling row (policies, notes).
+- **The itinerary is a table of stops, not a rail.** Four columns in the same order at every stop — time, mark, name,
+  fare from the origin — so the eye reads down the clock and across the prices. The mark is a filled disc at the two
+  ends and a numbered ring in between; that is the whole legend. The header keeps the hint about estimates.
+- **The operator card** carries the name at `--text-lg` with the verification as a line under it, instead of
+  `Maak Transport [Verified operator]` trailing a heading.
+- **The notes card** is prose at a 60ch measure with `white-space: pre-line`, so the line breaks the operator typed
+  survive, and a paragraph of notes is a thing rather than the last line of a column.
+- **The column has a rhythm**: `.trip-detail__main` is a grid with one gap, from the summary to the action row.
+- The crew card lost its inner frame (the card is the frame now) and stacks driver over vehicle instead of trying two
+  columns inside a half-width card.
+
+**Verified.** `/en/trips/AD-SA-FHFC` and `/ar/trips/AD-SA-FHFC`: crew + operator pair, route card with
+`13:24 Aden · 1 Aden · 2 Taiz 17:24 YER 5,000 · 3 Sanaa · 21:24 Sana'a`, notes card, fare aside unchanged.
+`tsc` ✓, `prettier` ✓, `check:responsive` ✓ (107 media queries), `check:guards` ✓ (32 core / 199 style), build ✓.
+**Gap:** no browser — the four-column route at 360px (where the time column drops to 3.25rem) and the pair breaking at
+720px are read from the CSS, not seen.

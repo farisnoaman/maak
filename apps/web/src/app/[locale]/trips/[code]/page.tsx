@@ -181,196 +181,225 @@ export default async function PublicTripPage({
                   ) : null}
                 </dl>
 
-                {/* Who is driving, and what you are getting into. A passenger asking "who is picking me up" had no
-                    answer on this page: the payload carried the operator and the vehicle but not the driver. First
-                    name and licence status only — see 00046_public_driver.sql for why. */}
-                <section aria-labelledby="crew-title" className="trip-crew">
-                  <h2 id="crew-title">{t('trips.detail.crew')}</h2>
-                  <div className="trip-crew__grid">
-                    <div className="trip-crew__driver">
-                      <span className="trip-crew__avatar" aria-hidden="true">
-                        <Icon name="users" size={20} />
+                {/* Two cards on one row: who is driving, and who is running the trip. Each answers a question a
+                    passenger actually opens this page to ask, so each gets its own surface instead of both being
+                    another grey heading in one long column. */}
+                <div className="trip-cards trip-cards--pair">
+                  <section className="trip-card" aria-labelledby="crew-title">
+                    <header className="trip-card__head">
+                      <span className="trip-card__icon" aria-hidden="true">
+                        <Icon name="users" size={18} />
                       </span>
-                      <div>
-                        <p className="trip-crew__label">{t('trips.detail.driver')}</p>
-                        {trip.driver?.name ? (
-                          <p className="trip-crew__name">
-                            {trip.driver.name}
-                            {trip.driver.verified ? (
-                              <span className="trip-crew__verified">
-                                <Icon name="shield" size={13} />
-                                {t('trips.detail.driverVerified')}
-                              </span>
-                            ) : null}
-                          </p>
-                        ) : (
-                          <p className="trip-crew__name trip-crew__name--empty">
-                            {t('trips.detail.driverUnknown')}
-                          </p>
-                        )}
+                      <h2 id="crew-title">{t('trips.detail.crew')}</h2>
+                    </header>
+                    <div className="trip-crew__grid">
+                      <div className="trip-crew__driver">
+                        <span className="trip-crew__avatar" aria-hidden="true">
+                          <Icon name="users" size={20} />
+                        </span>
+                        <div>
+                          <p className="trip-crew__label">{t('trips.detail.driver')}</p>
+                          {trip.driver?.name ? (
+                            <p className="trip-crew__name">
+                              {trip.driver.name}
+                              {trip.driver.verified ? (
+                                <span className="trip-crew__verified">
+                                  <Icon name="shield" size={13} />
+                                  {t('trips.detail.driverVerified')}
+                                </span>
+                              ) : null}
+                            </p>
+                          ) : (
+                            <p className="trip-crew__name trip-crew__name--empty">
+                              {t('trips.detail.driverUnknown')}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="trip-crew__vehicle">
-                      <p className="trip-crew__label">{t('trips.vehicle')}</p>
-                      <p className="trip-crew__name">
-                        {trip.vehicle?.label ?? '—'}
-                        {trip.vehicle?.seatsTotal ? (
-                          <span className="trip-crew__seats">
-                            <Icon name="seat" size={13} />
-                            {t('trips.detail.seatsOnBoard', { count: trip.vehicle.seatsTotal })}
-                          </span>
-                        ) : null}
-                      </p>
-                      {/* Only the amenities the vehicle actually declares: an un-checked box is not a feature,
-                          and a row of four greyed-out chips says less than no row at all. */}
-                      {trip.vehicle &&
-                      (trip.vehicle.airConditioning ||
-                        trip.vehicle.wifi ||
-                        trip.vehicle.usbCharging) ? (
-                        <ul
-                          className="trip-crew__amenities"
-                          aria-label={t('trips.detail.amenities')}
-                        >
-                          {trip.vehicle.airConditioning ? (
-                            <li>
-                              <Icon name="spark" size={13} />
-                              {t('trips.amenity.ac')}
-                            </li>
-                          ) : null}
-                          {trip.vehicle.wifi ? (
-                            <li>
-                              <Icon name="spark" size={13} />
-                              {t('trips.amenity.wifi')}
-                            </li>
-                          ) : null}
-                          {trip.vehicle.usbCharging ? (
-                            <li>
-                              <Icon name="spark" size={13} />
-                              {t('trips.amenity.usb')}
-                            </li>
-                          ) : null}
-                        </ul>
-                      ) : null}
-                    </div>
-                  </div>
-                </section>
-
-                {/* The route as it is travelled: a start, the stops in order with the time you reach them and the
-                    fare from the start, and an estimated arrival. It used to be the intermediate stops alone — named,
-                    numbered, but with no clock time and no terminal, so "the itinerary" was a list of three places
-                    between two others. */}
-                <section aria-labelledby="itinerary-title" className="trip-itinerary">
-                  <h2 id="itinerary-title">{t('trips.detail.itinerary')}</h2>
-                  <p className="trip-itinerary__hint">{t('trips.detail.itineraryHint')}</p>
-
-                  <ol className="itinerary">
-                    <li className="itinerary__node itinerary__node--start">
-                      <span className="itinerary__marker" aria-hidden="true">
-                        <Icon name="pin" size={13} />
-                      </span>
-                      <div className="itinerary__body">
-                        <p className="itinerary__name">{trip.origin.name}</p>
-                        <p className="itinerary__meta">
-                          {t('trips.detail.departs')}
-                          {when ? (
-                            <>
-                              {' · '}
-                              {when.date} · <bdi className="num">{when.time}</bdi>
-                            </>
+                      <div className="trip-crew__vehicle">
+                        <p className="trip-crew__label">{t('trips.vehicle')}</p>
+                        <p className="trip-crew__name">
+                          {trip.vehicle?.label ?? '—'}
+                          {trip.vehicle?.seatsTotal ? (
+                            <span className="trip-crew__seats">
+                              <Icon name="seat" size={13} />
+                              {t('trips.detail.seatsOnBoard', { count: trip.vehicle.seatsTotal })}
+                            </span>
                           ) : null}
                         </p>
+                        {/* Only the amenities the vehicle actually declares: an un-checked box is not a feature,
+                          and a row of four greyed-out chips says less than no row at all. */}
+                        {trip.vehicle &&
+                        (trip.vehicle.airConditioning ||
+                          trip.vehicle.wifi ||
+                          trip.vehicle.usbCharging) ? (
+                          <ul
+                            className="trip-crew__amenities"
+                            aria-label={t('trips.detail.amenities')}
+                          >
+                            {trip.vehicle.airConditioning ? (
+                              <li>
+                                <Icon name="spark" size={13} />
+                                {t('trips.amenity.ac')}
+                              </li>
+                            ) : null}
+                            {trip.vehicle.wifi ? (
+                              <li>
+                                <Icon name="spark" size={13} />
+                                {t('trips.amenity.wifi')}
+                              </li>
+                            ) : null}
+                            {trip.vehicle.usbCharging ? (
+                              <li>
+                                <Icon name="spark" size={13} />
+                                {t('trips.amenity.usb')}
+                              </li>
+                            ) : null}
+                          </ul>
+                        ) : null}
                       </div>
+                    </div>
+                  </section>
+
+                  <section className="trip-card" aria-labelledby="operator-title">
+                    <header className="trip-card__head">
+                      <span className="trip-card__icon" aria-hidden="true">
+                        <Icon name="bus" size={18} />
+                      </span>
+                      <h2 id="operator-title">{t('trips.detail.operator')}</h2>
+                    </header>
+                    <p className="trip-operator__name">{trip.operator?.name ?? '—'}</p>
+                    {trip.operator?.verified ? (
+                      <p className="trip-operator__meta">
+                        <Icon name="shield" size={14} />
+                        {t('trips.detail.operatorVerified')}
+                      </p>
+                    ) : null}
+                  </section>
+                </div>
+
+                {/*
+                  The itinerary, as a card of stops rather than a list that floats in the column.
+
+                  Each row is one stop with the three things a passenger reads it for in the same three places every
+                  time: the clock time on the leading edge, the name, and the fare from the origin on the trailing
+                  edge. The old list put the time inside a sentence under the name, so comparing two stops meant
+                  reading two sentences; the numbers line up now, in both directions.
+                */}
+                <section className="trip-card" aria-labelledby="itinerary-title">
+                  <header className="trip-card__head">
+                    <span className="trip-card__icon" aria-hidden="true">
+                      <Icon name="route" size={18} />
+                    </span>
+                    <div>
+                      <h2 id="itinerary-title">{t('trips.detail.itinerary')}</h2>
+                      <p className="trip-card__hint">{t('trips.detail.itineraryHint')}</p>
+                    </div>
+                  </header>
+
+                  <ol className="route-list">
+                    <li className="route-stop route-stop--start">
+                      <span className="route-stop__time num">{when ? when.time : '—'}</span>
+                      <span className="route-stop__dot" aria-hidden="true" />
+                      <span className="route-stop__text">
+                        <span className="route-stop__name">{trip.origin.name}</span>
+                        <span className="route-stop__meta">
+                          {t('trips.detail.departs')}
+                          {when ? ` · ${when.date}` : null}
+                        </span>
+                      </span>
                     </li>
 
                     {trip.stops.length === 0 ? (
-                      <li className="itinerary__node itinerary__node--empty">
-                        <span className="itinerary__marker" aria-hidden="true">
-                          <Icon name="route" size={13} />
+                      <li className="route-stop route-stop--empty">
+                        <span className="route-stop__time" aria-hidden="true" />
+                        <span className="route-stop__dot" aria-hidden="true" />
+                        <span className="route-stop__text">
+                          <span className="route-stop__meta">{t('trips.detail.noStops')}</span>
                         </span>
-                        <div className="itinerary__body">
-                          <p className="itinerary__meta">{t('trips.detail.noStops')}</p>
-                        </div>
                       </li>
                     ) : (
                       trip.stops.map((stop) => {
                         const arrives = at(stop.arriveOffsetMinutes);
                         return (
-                          <li className="itinerary__node" key={`${stop.seq}-${stop.name}`}>
-                            <span className="itinerary__marker num" aria-hidden="true">
+                          <li className="route-stop" key={`${stop.seq}-${stop.name}`}>
+                            <span className="route-stop__time num">
+                              {arrives ? arrives.time : '—'}
+                            </span>
+                            <span className="route-stop__dot num" aria-hidden="true">
                               {stop.seq}
                             </span>
-                            <div className="itinerary__body">
-                              <p className="itinerary__name">{stop.name}</p>
-                              <p className="itinerary__meta">
-                                {arrives ? <bdi className="num">{arrives.time}</bdi> : null}
-                                {stop.priceFromOriginYer != null ? (
-                                  <>
-                                    {' · '}
-                                    <span className="itinerary__fare">
-                                      {formatMinor(stop.priceFromOriginYer, 'YER', { locale })}
-                                    </span>
-                                  </>
-                                ) : null}
-                              </p>
-                            </div>
+                            <span className="route-stop__text">
+                              <span className="route-stop__name">{stop.name}</span>
+                            </span>
+                            {stop.priceFromOriginYer != null ? (
+                              <span className="route-stop__fare num">
+                                {formatMinor(stop.priceFromOriginYer, 'YER', { locale })}
+                              </span>
+                            ) : (
+                              <span className="route-stop__fare" aria-hidden="true" />
+                            )}
                           </li>
                         );
                       })
                     )}
 
-                    <li className="itinerary__node itinerary__node--end">
-                      <span className="itinerary__marker" aria-hidden="true">
-                        <Icon name="pin" size={13} />
+                    <li className="route-stop route-stop--end">
+                      <span className="route-stop__time num">
+                        {arrivesAt ? arrivesAt.time : '—'}
                       </span>
-                      <div className="itinerary__body">
-                        <p className="itinerary__name">{trip.destination.name}</p>
-                        <p className="itinerary__meta">
+                      <span className="route-stop__dot" aria-hidden="true" />
+                      <span className="route-stop__text">
+                        <span className="route-stop__name">{trip.destination.name}</span>
+                        <span className="route-stop__meta">
                           {t('trips.detail.arrives')}
-                          {arrivesAt ? (
-                            <>
-                              {' · '}
-                              <bdi className="num">{arrivesAt.time}</bdi>
-                            </>
-                          ) : null}
-                        </p>
-                      </div>
+                          {arrivesAt ? ` · ${arrivesAt.date}` : null}
+                        </span>
+                      </span>
                     </li>
                   </ol>
                 </section>
 
-                {policyRows.length > 0 ? (
-                  <section aria-labelledby="policies-title">
-                    <h2 id="policies-title">{t('trips.detail.policies')}</h2>
-                    {/* Policies are free-form key/value pairs the operator chose; nothing is invented for a
-                    key we do not know, and nothing is hidden for a key we do. */}
-                    <dl className="trip-summary">
-                      {policyRows.map(([key, value]) => (
-                        <div className="trip-summary__row" key={key}>
-                          <dt>{key}</dt>
-                          <dd>{value}</dd>
-                        </div>
-                      ))}
-                    </dl>
-                  </section>
-                ) : null}
-
-                {trip.notes ? (
-                  <section>
-                    <h2>{t('trips.notes')}</h2>
-                    <p>{trip.notes}</p>
-                  </section>
-                ) : null}
-
-                <section aria-labelledby="operator-title">
-                  <h2 id="operator-title">{t('trips.detail.operator')}</h2>
-                  <p>
-                    {trip.operator?.name ?? '—'}{' '}
-                    {trip.operator?.verified ? (
-                      <Badge tone="success">{t('trips.detail.operatorVerified')}</Badge>
+                {/* What the operator promises, and what they want you to know — two small cards under the route,
+                    each with its own edge, so a paragraph of notes is a thing rather than the last grey line of a
+                    long column. */}
+                {policyRows.length > 0 || trip.notes ? (
+                  <div className="trip-cards trip-cards--trio">
+                    {policyRows.length > 0 ? (
+                      <section className="trip-card" aria-labelledby="policies-title">
+                        <header className="trip-card__head">
+                          <span className="trip-card__icon" aria-hidden="true">
+                            <Icon name="shield" size={18} />
+                          </span>
+                          <h2 id="policies-title">{t('trips.detail.policies')}</h2>
+                        </header>
+                        {/* Policies are free-form key/value pairs the operator chose; nothing is invented for a
+                            key we do not know, and nothing is hidden for a key we do. */}
+                        <dl className="trip-facts">
+                          {policyRows.map(([key, value]) => (
+                            <div className="trip-facts__row" key={key}>
+                              <dt>{key}</dt>
+                              <dd>{value}</dd>
+                            </div>
+                          ))}
+                        </dl>
+                      </section>
                     ) : null}
-                  </p>
-                </section>
+
+                    {trip.notes ? (
+                      <section className="trip-card" aria-labelledby="notes-title">
+                        <header className="trip-card__head">
+                          <span className="trip-card__icon" aria-hidden="true">
+                            <Icon name="inbox" size={18} />
+                          </span>
+                          <h2 id="notes-title">{t('trips.notes')}</h2>
+                        </header>
+                        <p className="trip-notes">{trip.notes}</p>
+                      </section>
+                    ) : null}
+                  </div>
+                ) : null}
 
                 <div className="trip-form__actions">
                   <ShareTrip locale={locale} url={`/${locale}/trips/${trip.code}`} />

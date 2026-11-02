@@ -10562,3 +10562,264 @@ h3,
     color: var(--ink-600);
   }
 }
+
+/* ====================================================================================================================
+ * 28. THE TRIP PAGE, AS CARDS — the itinerary, the operator and the notes
+ *
+ * The page was one flat column: a summary list, then "Vehicle and driver", "The itinerary", "Policies", "Notes",
+ * "Operator" as five headings in a row, three of them a single sentence wide. Nothing was wrong and nothing was
+ * findable: the itinerary — the actual route the passenger is buying — was a rail of dots between two paragraphs, and
+ * the notes were the last grey line before the footer.
+ *
+ * One primitive, four uses. `.trip-card` is a head (an icon disc, a title, an optional sentence) over a body, on
+ * `--paper` with the page's corner. Cards in a pair above the fold, one wide card for the route (it is a table of
+ * stops and needs the width), then the small ones in a row that fills with as many columns as the screen allows.
+ * ================================================================================================================== */
+
+/* The column itself had no rhythm at all — the blocks sat flush against each other and the only space came from a
+   section's own heading margin. One gap, from the summary down to the action row. */
+.trip-detail__main {
+  display: grid;
+  align-content: start;
+  gap: var(--space-4);
+}
+
+.trip-cards {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 720px) {
+  .trip-cards--pair {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 960px) {
+  .trip-cards--trio {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  }
+}
+
+.trip-card {
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+  min-inline-size: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--paper-edge);
+  border-radius: var(--radius-lg);
+  background: var(--paper);
+}
+
+@media (min-width: 720px) {
+  .trip-card {
+    padding: var(--space-5);
+  }
+}
+
+/* The page's section rhythm (`.trip-detail section > * + *`) must not double the card's own gap. */
+.trip-card > * + * {
+  margin-block-start: 0;
+}
+
+.trip-card__head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.trip-card__head h2 {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: 800;
+  letter-spacing: -0.008em;
+}
+
+.trip-card__icon {
+  display: grid;
+  place-items: center;
+  inline-size: 34px;
+  block-size: 34px;
+  flex: none;
+  border-radius: var(--radius-pill);
+  background: var(--paper-wash);
+  color: var(--brand-700);
+}
+
+.trip-card__hint {
+  margin-block-start: 2px;
+  color: var(--ink-500);
+  font-size: var(--text-xs);
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+
+/* The crew grid loses its own frame inside a card: the card is the frame now, and a second one is a box in a box. */
+.trip-card .trip-crew__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  gap: var(--space-3);
+}
+
+.trip-card .trip-crew__driver,
+.trip-card .trip-crew__vehicle {
+  padding: 0;
+}
+
+.trip-card .trip-crew__vehicle {
+  padding-block-start: var(--space-3);
+  border-block-start: 1px dashed color-mix(in srgb, var(--ink-900) 12%, transparent);
+  border-inline-start: 0;
+}
+
+/* The operator: a name you can read across the card, and the verification as a line under it. */
+.trip-operator__name {
+  font-size: var(--text-lg);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--ink-900);
+  text-wrap: balance;
+}
+
+.trip-operator__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--brand-700);
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+/* Notes are prose, at a measure that ends a line where a line should end. Line breaks the operator typed survive. */
+.trip-notes {
+  color: var(--ink-700);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  max-inline-size: 60ch;
+  white-space: pre-line;
+  text-wrap: pretty;
+}
+
+/* Policies: label and value on one row, a dashed hairline between rows. */
+.trip-facts {
+  display: grid;
+  gap: 0;
+  margin: 0;
+}
+
+.trip-facts__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding-block: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.trip-facts__row + .trip-facts__row {
+  border-block-start: 1px dashed color-mix(in srgb, var(--ink-900) 12%, transparent);
+}
+
+.trip-facts__row dt {
+  color: var(--ink-600);
+}
+
+.trip-facts__row dd {
+  margin: 0;
+  color: var(--ink-900);
+  font-weight: 600;
+  text-align: end;
+}
+
+/*
+ * The route.
+ *
+ * Four columns in the same order at every stop — time, mark, name, fare — so the eye reads down the clock and across
+ * the prices instead of parsing a sentence per stop. The mark is a filled disc at the two ends and a numbered ring in
+ * between, which is the whole legend: the ends are where you get on and off.
+ */
+.route-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.route-stop {
+  display: grid;
+  grid-template-columns: 4rem auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding-block: var(--space-3);
+  min-inline-size: 0;
+}
+
+@media (max-width: 479px) {
+  .route-stop {
+    grid-template-columns: 3.25rem auto minmax(0, 1fr) auto;
+    gap: var(--space-2);
+  }
+}
+
+.route-stop + .route-stop {
+  border-block-start: 1px dashed color-mix(in srgb, var(--ink-900) 12%, transparent);
+}
+
+.route-stop__time {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-800);
+}
+
+.route-stop__dot {
+  display: grid;
+  place-items: center;
+  inline-size: 22px;
+  block-size: 22px;
+  flex: none;
+  border: 2px solid var(--paper-edge);
+  border-radius: var(--radius-pill);
+  background: var(--paper);
+  color: var(--ink-500);
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 0;
+}
+
+.route-stop--start .route-stop__dot,
+.route-stop--end .route-stop__dot {
+  border-color: var(--brand-600);
+  background: var(--brand-600);
+}
+
+.route-stop__text {
+  display: grid;
+  gap: 1px;
+  min-inline-size: 0;
+}
+
+.route-stop__name {
+  font-weight: 700;
+  color: var(--ink-900);
+  overflow-wrap: anywhere;
+}
+
+.route-stop__meta {
+  font-size: var(--text-xs);
+  color: var(--ink-500);
+}
+
+.route-stop__fare {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-700);
+  text-align: end;
+}
