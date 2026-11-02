@@ -58,10 +58,11 @@ export default async function OperatorPayoutsPage({
     <>
       <SiteHeader locale={locale} pathname="/operator/payouts" />
       <ConsoleShell
+        consoleTitle="console.operator"
+        pathname="/operator/payouts"
         locale={locale}
         title="payouts.title"
         subtitle="payouts.subtitle"
-        phase="9"
         items={nav}
       >
         <section>

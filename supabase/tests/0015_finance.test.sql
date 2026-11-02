@@ -18,7 +18,7 @@ begin;
 
 create extension if not exists pgtap;
 
-select plan(104);
+select plan(105);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -731,6 +731,18 @@ select is(
       and (snapshot ->> 'proration') is null),
   1,
   'with the next period billed in advance'
+);
+
+-- The property behind the assertion above, stated so it cannot regress quietly: renewal bills a *period*, and two
+-- periods are two invoices even when they fall due on the same day. The unique key used to be
+-- `(subscription_id, due_on)` (00045), which collapsed a same-day renewal into the invoice already paid — this test
+-- only caught it in runs that began just after midnight in Asia/Aden.
+select ok(
+  (select count(distinct period_start) from public.invoices
+    where kind = 'subscription' and period_start is not null and status <> 'void'
+      and subscription_id = (select id from public.subscriptions
+                              where owner_org_id = '1061aa00-0000-4000-8000-00000000000a')) > 1,
+  'a renewal on the day the subscription started bills a second period'
 );
 
 select is(

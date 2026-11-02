@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { can, isLocale, translate, type Locale, type Role, type TranslationKey } from '@maak/core';
 import { SiteHeader } from '@/components/SiteHeader';
@@ -5,6 +6,7 @@ import { PreviewBanner } from '@/components/PreviewBanner';
 import { ConsoleShell } from '@/components/ConsoleShell';
 import { EmptyState } from '@/components/ui/Feedback';
 import { VerificationQueue } from '@/components/staff/VerificationQueue';
+import { staffNav } from '@/components/staff/StaffNav';
 import { loadAccountContext } from '@/lib/account';
 import { callGateway } from '@/lib/gateway';
 import { previewAccount, previewQueue } from '@/lib/preview-data';
@@ -38,10 +40,16 @@ export default async function StaffVerificationsPage({
     return (
       <>
         <SiteHeader locale={locale} pathname="/staff/verifications" />
-        <main id="main" className="shell section">
-          <h1>{t('staff.title')}</h1>
-          <EmptyState title={t('errors.FORBIDDEN')} description={t('staff.subtitle')} />
-        </main>
+        <ConsoleShell
+          locale={locale}
+          title="console.navVerifications"
+          consoleTitle="console.staff"
+          subtitle="console.subtitle.verifications"
+          pathname="/staff/verifications"
+          groups={staffNav(locale)}
+        >
+          <EmptyState title={t('errors.FORBIDDEN')} description={t('ops.noSummaryBody')} />
+        </ConsoleShell>
       </>
     );
   }
@@ -62,17 +70,25 @@ export default async function StaffVerificationsPage({
       <SiteHeader locale={locale} pathname="/staff/verifications" />
       <ConsoleShell
         locale={locale}
-        title="staff.title"
-        subtitle="staff.subtitle"
-        phase="1"
-        items={[
-          { key: 'staff.title', href: `/${locale}/staff/verifications` },
-          { key: 'nav.account', href: `/${locale}/account` },
-        ]}
+        title="console.navVerifications"
+        consoleTitle="console.staff"
+        subtitle="console.subtitle.verifications"
+        pathname="/staff/verifications"
+        groups={staffNav(locale)}
       >
         {preview ? <PreviewBanner locale={locale} /> : null}
         {items.length === 0 ? (
-          <EmptyState title={t('staff.empty')} description={t('staff.subtitle')} />
+          /* The subtitle above already says what this queue is for; an empty state repeats nothing and offers
+             the two things a supervisor might do instead of staring at it. */
+          <EmptyState
+            title={t('console.emptyVerifications')}
+            description={t('console.emptyVerificationsBody')}
+            action={
+              <Link className="btn btn--ghost" href={`/${locale}/staff/dashboard`}>
+                {t('ops.dashboardTitle')}
+              </Link>
+            }
+          />
         ) : (
           <VerificationQueue
             locale={locale}

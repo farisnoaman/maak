@@ -133,6 +133,35 @@ if (!useApi) {
       viaToken.text.includes('href="/ar/admin/places"'),
     );
 
+    // The marketplace under a URL token: this is the shape that produced a hydration mismatch in the
+    // preview — every sort tab and filter chip rendered a link carrying `st`, and the token keeper's repair
+    // then turned `?st=…&sort=cheapest` into `&sort=cheapest`. A rendered page must never carry the session
+    // in a link, and every link it renders must be a well-formed URL.
+    const filtered = await call(
+      `/ar/trips?st=${encodeURIComponent(token)}&sort=cheapest&direct=1`,
+      { headers: { accept: 'text/html' } },
+    );
+    const hrefs = [...filtered.text.matchAll(/href="([^"]*)"/g)].map((match) => match[1]);
+    check(
+      'a filtered marketplace renders with the token',
+      filtered.status === 200 && hrefs.length > 0,
+      `status ${filtered.status}, ${hrefs.length} links`,
+    );
+    check(
+      'and no link carries the session token',
+      hrefs.every((href) => !/[?&]st=/.test(href)),
+      hrefs.find((href) => /[?&]st=/.test(href)),
+    );
+    check(
+      'and no link has a doubled or missing `?`',
+      hrefs.every((href) => !href.includes('??') && !/^[^?#]*&/.test(href)),
+      hrefs.find((href) => href.includes('??') || /^[^?#]*&/.test(href)),
+    );
+    check(
+      'and the sort tabs keep the filters',
+      hrefs.some((href) => href.includes('sort=soonest') && href.includes('direct=1')),
+    );
+
     const meViaToken = await call(`/api/data/functions/v1/me?st=${encodeURIComponent(token)}`, {
       method: 'POST',
       body: {},

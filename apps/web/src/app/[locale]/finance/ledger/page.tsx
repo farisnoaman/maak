@@ -61,10 +61,11 @@ export default async function FinanceLedgerPage({
     <>
       <SiteHeader locale={locale} pathname="/finance/ledger" />
       <ConsoleShell
+        consoleTitle="console.finance"
+        pathname="/finance/ledger"
         locale={locale}
         title="ledger.title"
         subtitle="ledger.subtitle"
-        phase="10"
         items={financeNav(locale)}
       >
         <section>

@@ -44,6 +44,8 @@ export interface SubscriptionView {
   readonly cancelAtPeriodEnd: boolean;
   readonly ownerOrgId: string | null;
   readonly ownerUserId: string | null;
+  /** The company or person paying, when the row could be resolved. Never the raw id — see `loadSubscriptions`. */
+  readonly ownerName: string | null;
 }
 
 export interface DashboardView {
@@ -122,6 +124,7 @@ function toSubscription(row: Record<string, unknown>): SubscriptionView {
     cancelAtPeriodEnd: Boolean(row.cancel_at_period_end),
     ownerOrgId: (row.owner_org_id as string | null) ?? null,
     ownerUserId: (row.owner_user_id as string | null) ?? null,
+    ownerName: null,
   };
 }
 
@@ -236,6 +239,14 @@ const SUBSCRIPTION_COLUMNS =
   'id, owner_user_id, owner_org_id, plan_code, pending_plan_code, status, price_yer, trial_ends_at, ' +
   'current_period_start, current_period_end, cancel_at_period_end';
 
+/**
+ * Every subscription, with the name of who pays it.
+ *
+ * The table used to print `owner_org_id` — `aaaaaaaa-0000-4000-8000-000000000001` in the operator column, which
+ * names nobody and is not even the identifier a person would search for. The names come from two extra reads
+ * (organisations and profiles), both already readable by staff; when either is unavailable the caller falls back to
+ * a short id instead of a UUID with nowhere to go.
+ */
 export async function loadSubscriptions(limit = 200): Promise<SubscriptionView[]> {
   const client = await getServerClient();
   if (!client) return [];
@@ -244,7 +255,39 @@ export async function loadSubscriptions(limit = 200): Promise<SubscriptionView[]
     .select(SUBSCRIPTION_COLUMNS)
     .order('current_period_end', { ascending: true })
     .limit(limit);
-  return (data ?? []).map((row) => toSubscription(row as unknown as Record<string, unknown>));
+  const subscriptions = (data ?? []).map((row) =>
+    toSubscription(row as unknown as Record<string, unknown>),
+  );
+  if (subscriptions.length === 0) return subscriptions;
+
+  const orgIds = [...new Set(subscriptions.map((s) => s.ownerOrgId).filter(Boolean))] as string[];
+  const userIds = [...new Set(subscriptions.map((s) => s.ownerUserId).filter(Boolean))] as string[];
+
+  const [orgs, profiles] = await Promise.all([
+    orgIds.length > 0
+      ? client.from('organizations').select('id, name, name_en').in('id', orgIds)
+      : Promise.resolve({
+          data: [] as { id: string; name: string | null; name_en: string | null }[],
+        }),
+    userIds.length > 0
+      ? client.from('profiles').select('id, full_name').in('id', userIds)
+      : Promise.resolve({ data: [] as { id: string; full_name: string | null }[] }),
+  ]);
+
+  const names = new Map<string, string>();
+  for (const org of orgs.data ?? []) {
+    const name = (org as { name?: string | null; name_en?: string | null }).name;
+    if (org.id && name) names.set(org.id, name);
+  }
+  for (const profile of profiles.data ?? []) {
+    const name = (profile as { full_name?: string | null }).full_name;
+    if (profile.id && name) names.set(profile.id, name);
+  }
+
+  return subscriptions.map((subscription) => ({
+    ...subscription,
+    ownerName: names.get(subscription.ownerOrgId ?? subscription.ownerUserId ?? '') ?? null,
+  }));
 }
 
 /** The live subscription for one owner, or nothing. RLS already narrows the rows to theirs. */

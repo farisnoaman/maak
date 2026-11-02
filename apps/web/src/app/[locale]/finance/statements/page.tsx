@@ -65,10 +65,11 @@ export default async function FinanceStatementsPage({
     <>
       <SiteHeader locale={locale} pathname="/finance/statements" />
       <ConsoleShell
+        consoleTitle="console.finance"
+        pathname="/finance/statements"
         locale={locale}
         title="statement.title"
         subtitle="statement.subtitle"
-        phase="10"
         items={financeNav(locale)}
       >
         <section>

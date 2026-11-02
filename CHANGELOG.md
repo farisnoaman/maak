@@ -23,6 +23,28 @@ on `main`; the tag is the last step, not the first.
 
 ### Changed
 
+- **A console page is a page, not a card.** The console shell used to render `card console-panel` and every screen put
+  its own cards inside it — two borders, two paddings and two shadows around one piece of content. It is now a header
+  band (title, one sentence, the page's action), a hairline, and one flat content column with sections divided by rules.
+  `/admin` was rebuilt on it as an index of destinations instead of two tiles, one of which apologised for a phase that
+  no longer exists; its six screens share one grouped navigation (`components/admin/AdminNav.ts`) instead of five
+  different lists, two of which pointed into the finance console. Table styling applies the small-caps header to
+  `thead` only — `<th scope="row">` was being shrunk and greyed — and subscriptions and the places queue show names
+  instead of raw UUIDs. `docs/polish-plan.md` §9c has the accounting.
+- **The staff console is one console, not five.** All six staff screens share one navigation
+  (`components/staff/StaffNav.ts`), grouped *Work / Review queues / Reference*; the shell marks the current page with
+  `aria-current="page"` (styled since the first console, never set until now); the sidebar names the console and the
+  `<h1>` names the page instead of both printing the same string; and the `<phase N>` badge — `7` on the dashboard,
+  `4` on trip review, `3` on vehicles, `1` on verifications — is gone from all 41 console pages. The dashboard's four
+  zeroes are now four doors into the queues behind them, with a real verification count, the patch named rather than
+  counted, an "updated HH:MM" stamp and a clear-state line when nothing is waiting; every empty state names its queue
+  and offers the next step. `docs/polish-plan.md` §9a has the full accounting.
+- **The marketplace list shows what is filtering it.** Applied filters are chips you can remove one at a time;
+  sort is a visible row above the results instead of a control buried in the collapsed panel; the card's route is
+  the link; a sold-out trip says so before it shows a price.
+- **The trip page leads with the fare.** A panel — first on a phone, sticky beside the facts on desktop — with the
+  price, the breakdown, seats left and one *reserve* button. It used to be the twelfth row of a table, under the
+  luggage allowance.
 - **The home page sells the trip instead of the build.** It showed a phase number, a unit-test count, three
   architecture cards and seven console cards of which five said "coming soon" — while `/trips` served real
   departures it never mentioned. Now: a search-first hero with the next three real departures beside it, trips you
@@ -38,6 +60,38 @@ on `main`; the tag is the last step, not the first.
 
 ### Fixed
 
+- **The admin screens were cards inside a card, with UUIDs where names belong.** `/admin/subscriptions` printed
+  `owner_org_id` in the operator column and the places queue printed `created_by` beside each place; both now resolve
+  the company or person, and fall back to an 8-character id. A button that opened the plan editor said *Save*, and
+  three section headings repeated their page title. `.data-table thead th` no longer styles row headers.
+- **The staff console scrolled sideways on a phone.** `/staff/scan` was wider than a 390px screen because
+  `.console-layout` had no `grid-template-columns`: the implicit `auto` column sized itself to the *content minimum* of
+  a row of `nowrap` nav chips, and the panel beside it was laid out at that width. The track is now
+  `minmax(0, 1fr)`; the console nav wraps its chips on a phone instead of scrolling in a row that was pushed 32px
+  past its container; and the audit that followed removed 57 bare `<n>fr` tracks, two `100vw` widths, a
+  `calc(100% + …)` row and four uncapped horizontal scrollers across the stylesheet. `npm run check:responsive` gained
+  five rules so a page cannot be made wider than the screen again.
+- **A renewal could bill nothing at all.** `invoice_subscription_period_uq` was a unique index on
+  `(subscription_id, due_on)`; because `due_on` is derived from the period start, a renewal on the day a subscription
+  started produced the same key, and `app.issue_subscription_invoice` returned the invoice for the previous,
+  already-paid period instead of issuing a new one — a live subscription with no charge and no error. The key is now
+  a real `period_start` column, backfilled from the invoice snapshot (`00045`), with a pgTAP assertion stating the
+  property. The 0015 suite had been failing only in runs that began just after midnight in Asia/Aden.
+- **The sort tabs in the marketplace broke hydration, and every link carried the session token.** The page built
+  its own URLs from `searchParams`, which included `?st=` — the cookie-less session token. So every chip and sort
+  tab rendered a link containing the visitor's session, and the preview's token keeper then "repaired" those hrefs
+  with a regex that turned `?st=…&sort=cheapest` into `&sort=cheapest`: a link with no `?`, whose sort parameter had
+  become part of the path. React reported the difference as a hydration mismatch. URL building now goes through
+  `filterHref()` in `@maak/core`, which always drops `st` and `cursor`; the repair parses the URL instead of
+  regexing it; and `npm run dev:check` fails if any rendered link carries a token or a malformed query.
+- **The header rendered `/en/trips??sort=soonest`.** `searchSuffix()` returns a string that already starts with `?`
+  and `SiteHeader` prefixed another one, so clicking *Trips* from a filtered list dropped the filters it meant to
+  keep. It also no longer pastes trip filters onto `/account` and `/auth/sign-in`.
+- **The preview banner appeared over real data.** `/trips` and `/trips/[code]` rendered "no database connected, the
+  data below is illustrative" unconditionally — a live marketplace calling its own listings fictional.
+  `loadPublicTrips` now reports `configured`, and the banner asks first.
+- **`.sr-only` was used but never defined** (the operator calendar caption rendered as visible text); it is now an
+  alias of the existing `.visually-hidden`.
 - **A finance assertion that had been counting all subscription invoices** — `0015` test 68 failed on a clean
   checkout, and it was the test that was wrong: an upgrade three screens earlier legitimately leaves a prorated
   invoice open, so "issued subscription invoices = 1" was really asserting "nothing else has been billed yet".

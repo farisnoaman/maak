@@ -38,7 +38,6 @@ export const ar = {
 
   // The hero aside: real departures, not a promise.
   'home.nextDepartures': 'أقرب الانطلاقات',
-  'home.soldOut': 'مكتملة',
 
   'home.sectionFeatured': 'رحلات يمكنك حجزها الآن',
   'home.sectionFeaturedBody': 'مقاعد متاحة من مشغّلين موثّقين، تتحدّث مع كل حجز.',
@@ -155,9 +154,38 @@ export const ar = {
   'auth.storageAccessEnable': 'السماح بالوصول داخل هذه النافذة',
 
   'console.subtitle.operator': 'إدارة المركبات والسائقين والرحلات والحجوزات.',
+  'console.subtitle.dashboard':
+    'ما يحتاجك الآن في نطاقك: الطوابير، الرحلات الجارية، وآخر عمليات المسح.',
+  'console.subtitle.verifications': 'طلبات توثيق الحسابات والشركات، بالترتيب الذي وصلت به.',
+  'console.subtitle.vehicles': 'المركبات والسائقون الذين ينتظرون قراراً قبل أن ينزلوا إلى السوق.',
+  'console.emptyVerifications': 'لا طلبات توثيق بانتظارك',
+  'console.emptyVerificationsBody':
+    'يظهر الطلب هنا فور رفعه للمراجعة. تسجيل الرحلة يوقفه حتى يُقرَّر فيه.',
+  'console.emptyVehicles': 'لا مركبات بانتظار المراجعة',
+  'console.emptyVehiclesBody':
+    'كل مركبة مرفوعة تمّ النظر فيها. المركبة الجديدة تظهر هنا لحظة تسجيلها.',
+  'console.emptyTrips': 'لا رحلات تطابق هذا التصفية',
+  'console.emptyTripsBody': 'جرّب حالة أخرى أو أزل التصفية. تظهر الرحلات المرفوعة هنا فور إرسالها.',
+  'ops.bulkClear': 'لا رحلة بانتظار موافقتك — الطابور فارغ.',
+  'ops.bulkClearAction': 'عرض كل الرحلات',
   'console.subtitle.staff': 'التحقق من الحسابات والمركبات والرحلات، ومسح رموز QR.',
   'console.subtitle.admin': 'الجغرافيا والمناطق والمشرفون والخطط والإعدادات.',
   'console.placeholder': 'هذه الشاشة قيد الإنشاء. ستراها تعمل في المرحلة المذكورة أعلاه.',
+  'console.groupWorkspace': 'المنصة',
+  'console.groupGeography': 'الجغرافيا',
+  'console.groupPeople': 'الأشخاص',
+  'console.groupMoney': 'المال',
+  'console.groupPlatform': 'التشغيل',
+  'console.navTemplates': 'قوالب التنبيهات',
+  'console.navUsers': 'المستخدمون والأدوار',
+  'admin.hubTitle': 'مركز إدارة المنصة',
+  'admin.hubSubtitle':
+    'كل ما يحكم المنصة: التغطية الجغرافية، الحسابات والصلاحيات، الأسعار، والقوالب التي يراها الناس.',
+  'admin.openSection': 'فتح',
+  'console.groupWork': 'العمل',
+  'console.groupReview': 'قوائم المراجعة',
+  'console.groupReference': 'مراجع',
+  'console.tileDashboard': 'ما يحتاجك الآن: طوابير المراجعة، الرحلات الجارية، وآخر عمليات المسح.',
   'console.navOverview': 'نظرة عامة',
   'console.navVehicles': 'المركبات',
   'console.navDrivers': 'السائقون',
@@ -754,6 +782,7 @@ export const ar = {
   'nav.places': 'الأماكن',
 
   'geo.title': 'الأقاليم والتغطية',
+  'geo.treeHeading': 'الأقاليم القائمة',
   'geo.subtitle':
     'أنشئ أقاليم وأقاليم فرعية من محافظات كاملة أو مديريات مختارة، وحدّد من يشرف عليها.',
   'geo.newRegion': 'إقليم جديد',
@@ -1360,6 +1389,7 @@ export const ar = {
   'trips.payment.transfer': 'تحويل',
   'trips.payment.deposit': 'عربون',
   'trips.badgeFeatured': 'مميزة',
+  'trips.badgeSoldOut': 'مكتملة',
   'trips.badgeLastSeats': 'آخر المقاعد',
   'trips.sameRoute': 'نقطة الانطلاق والوصول لا يمكن أن تكونا نفس المحافظة.',
   'trips.departureInPast': 'موعد الانطلاق يجب أن يكون في المستقبل.',
@@ -1382,18 +1412,28 @@ export const ar = {
   'trips.search.dateTo': 'إلى تاريخ',
   'trips.search.q': 'ابحث باسم المحافظة أو المحطة',
   'trips.search.results': '{count} رحلة',
-  'trips.search.noResults': 'لا توجد رحلات مطابقة. وسّع نطاق البحث.',
+  'trips.search.noResults': 'لا توجد رحلات مطابقة.',
+  'trips.search.noResultsBody':
+    'جرّب توسيع نطاق التاريخ، أو إزالة أحد الفلاتر — الرحلات الجديدة تُنشر يوميًا.',
+  'trips.search.applied': 'الفلاتر المطبّقة',
+  'trips.search.removeFilter': 'إزالة الفلتر {name}',
+  'trips.search.clearAll': 'إزالة كل الفلاتر',
   'trips.search.submit': 'ابحث',
   'trips.sort.soonest': 'الأقرب موعدًا',
   'trips.sort.cheapest': 'الأرخص',
   'trips.sort.featured': 'المميزة',
   'trips.detail.operator': 'المنظّم',
+  'trips.detail.fare': 'السعر',
+  'trips.detail.fareUnavailable': 'السعر يُحتسب عند الحجز.',
+  'trips.detail.fareNote':
+    'السعر النهائي يُحسب ويُتحقق منه على الخادم عند الحجز — بما فيه الخصومات.',
   'trips.detail.policies': 'السياسات',
   'trips.detail.notFound': 'لم نجد هذه الرحلة، أو أنها لم تُنشر بعد.',
   'trips.detail.hasDeparted': 'انطلقت هذه الرحلة بالفعل.',
   'trips.detail.operatorVerified': 'منظّم موثّق',
   'staff.trips.title': 'مراجعة الرحلات',
   'staff.trips.subtitle': 'الرحلات المرسلة للمراجعة، مع سبب القرار.',
+  'staff.trips.find': 'ابحث في الرحلات',
   'staff.trips.approve': 'اعتماد',
   'staff.trips.reject': 'رفض',
   'staff.trips.reason': 'سبب القرار',
@@ -1466,6 +1506,8 @@ export const ar = {
   // Phase 7 — staff operations: scan, bulk verify, manifest.
   'ops.scan': 'مسح رمز الرحلة',
   'ops.scanTitle': 'تحقق من رحلة',
+  'ops.scanSubtitle':
+    'تحقق من صلاحية رحلة قبل الصعود: صوّر رمزها بكاميرا الجهاز أو أدخل رمزها يدوياً.',
   'ops.scanHint': 'امسح رمز الرحلة أو أدخل رمزه المكوّن من 24 حرفاً.',
   'ops.scanToken': 'رمز الرحلة',
   'ops.scanSubmit': 'تحقق',
@@ -1490,6 +1532,11 @@ export const ar = {
   'ops.verification': 'التوثيق',
   'ops.manifest': 'كشف الركاب',
   'ops.csv': 'تنزيل CSV',
+  'ops.dashboardSubtitle': 'طوابير المراجعة ورحلات اليوم في نطاقك، مع آخر عمليات المسح.',
+  'ops.verificationPending': 'طلبات توثيق بانتظارك',
+  'ops.allClear': 'لا شيء بانتظارك الآن — الطوابير فارغة والرحلات في وقتها.',
+  'ops.asOf': 'محدّث {time}',
+  'ops.bulkReview': 'مراجعة جماعية',
   'ops.dashboard': 'لوحة المشرف',
   'ops.dashboardTitle': 'لوحة المشرف',
   'ops.scope': 'نطاقك',
@@ -1499,7 +1546,9 @@ export const ar = {
   'ops.live': 'رحلات جارية',
   'ops.stale': 'رحلات بلا موقع',
   'ops.recentScans': 'أحدث عمليات المسح',
-  'ops.noScans': 'لا عمليات مسح بعد.',
+  'ops.noSummaryBody':
+    'هذه اللوحة لموظفي المنصة ومشرفي المحافظات. سجّل الدخول بحساب موظف لعرض طوابير المراجعة.',
+  'ops.noScans': 'لا عمليات مسح بعد. سيظهر هنا كل رمز تمسحه، بالوقت والنتيجة.',
   'ops.bulkTitle': 'مراجعة جماعية',
   'ops.bulkHint': 'اختر الرحلات ثم وافق أو ارفض. تُعالج كل رحلة على حدة ويظهر سبب كل رفض.',
   'ops.bulkSelect': 'اختر',
@@ -1857,11 +1906,13 @@ export const ar = {
   'cat.other': 'أخرى',
 
   'plans.title': 'الخطط والحدود',
+  'plans.priceList': 'الخطط والأسعار',
   'plans.subtitle': 'الأسعار والحدود بيانات يحرّرها المسؤول، والتطبيق يقرؤها في كل طلب.',
   'plans.price': 'السعر الشهري',
   'plans.trialDays': 'أيام التجربة',
   'plans.softLimit': 'تحذير بدل الحجب',
   'plans.save': 'حفظ',
+  'plans.edit': 'تعديل',
   'plans.saved': 'تم حفظ {plan}.',
   'plans.metric': 'المقياس',
   'plans.unlimited': 'بلا حد',
@@ -1878,6 +1929,7 @@ export const ar = {
   'plans.ruleSaved': 'تم حفظ القاعدة.',
   'plans.noRules': 'لا قواعد خاصة: الجميع على نسبة المنصة.',
 
+  'subs.liveHeading': 'الاشتراكات القائمة',
   'subs.title': 'الاشتراكات',
   'subs.subtitle': 'من يدفع، ومن تأخّر، ومن عاد إلى الأساسية.',
   'subs.owner': 'المشغّل',
@@ -1954,7 +2006,6 @@ export const en: Record<TranslationKey, string> = {
   'home.trustTrack': 'Live trip tracking',
 
   'home.nextDepartures': 'Next departures',
-  'home.soldOut': 'Sold out',
 
   'home.sectionFeatured': 'Trips you can book now',
   'home.sectionFeaturedBody':
@@ -2075,9 +2126,41 @@ export const en: Record<TranslationKey, string> = {
   'auth.storageAccessEnable': 'Allow access in this window',
 
   'console.subtitle.operator': 'Manage vehicles, drivers, trips and bookings.',
+  'console.subtitle.dashboard':
+    'What needs you now in your patch: the queues, the trips running, your latest scans.',
+  'console.subtitle.verifications': 'Account and company verification requests, oldest first.',
+  'console.subtitle.vehicles':
+    'The vehicles and drivers waiting on a decision before they reach the market.',
+  'console.emptyVerifications': 'No verification requests waiting',
+  'console.emptyVerificationsBody':
+    'A request appears here the moment it is filed. Trips stay paused until it is decided.',
+  'console.emptyVehicles': 'No vehicles waiting for review',
+  'console.emptyVehiclesBody':
+    'Everything submitted has been decided. A new vehicle appears here as it is registered.',
+  'console.emptyTrips': 'No trips match this filter',
+  'console.emptyTripsBody':
+    'Try another status, or clear the filter. Submitted trips appear here as soon as they are sent.',
+  'ops.bulkClear': 'No trip is waiting on your approval — the queue is clear.',
+  'ops.bulkClearAction': 'See all trips',
   'console.subtitle.staff': 'Verify accounts, vehicles and trips; scan QR codes.',
   'console.subtitle.admin': 'Geography, regions, supervisors, plans and settings.',
   'console.placeholder': 'This screen is under construction. It ships in the phase shown above.',
+  'console.groupWorkspace': 'Platform',
+  'console.groupGeography': 'Geography',
+  'console.groupPeople': 'People',
+  'console.groupMoney': 'Money',
+  'console.groupPlatform': 'Operations',
+  'console.navTemplates': 'Alert templates',
+  'console.navUsers': 'Users & roles',
+  'admin.hubTitle': 'Platform administration',
+  'admin.hubSubtitle':
+    'Everything that governs the platform: coverage, accounts and roles, prices, and the templates people see.',
+  'admin.openSection': 'Open',
+  'console.groupWork': 'Work',
+  'console.groupReview': 'Review queues',
+  'console.groupReference': 'Reference',
+  'console.tileDashboard':
+    'What needs you now: the review queues, the trips running, your recent scans.',
   'console.navOverview': 'Overview',
   'console.navVehicles': 'Vehicles',
   'console.navDrivers': 'Drivers',
@@ -2682,6 +2765,7 @@ export const en: Record<TranslationKey, string> = {
   'nav.regions': 'Regions',
   'nav.places': 'Places',
 
+  'geo.treeHeading': 'The region tree',
   'geo.title': 'Regions and coverage',
   'geo.subtitle':
     'Build regions and sub-regions from whole governorates or hand-picked districts, and decide who supervises them.',
@@ -3306,6 +3390,7 @@ export const en: Record<TranslationKey, string> = {
   'trips.payment.transfer': 'Transfer',
   'trips.payment.deposit': 'Deposit',
   'trips.badgeFeatured': 'Featured',
+  'trips.badgeSoldOut': 'Sold out',
   'trips.badgeLastSeats': 'Last seats',
   'trips.sameRoute': 'Origin and destination cannot be the same governorate.',
   'trips.departureInPast': 'The departure has to be in the future.',
@@ -3328,18 +3413,28 @@ export const en: Record<TranslationKey, string> = {
   'trips.search.dateTo': 'To date',
   'trips.search.q': 'Search a governorate or a stop',
   'trips.search.results': '{count} trips',
-  'trips.search.noResults': 'No trips match. Widen the search.',
+  'trips.search.noResults': 'No trips match.',
+  'trips.search.noResultsBody':
+    'Try widening the dates, or removing one of the filters — new trips are published daily.',
+  'trips.search.applied': 'Applied filters',
+  'trips.search.removeFilter': 'Remove the {name} filter',
+  'trips.search.clearAll': 'Remove all filters',
   'trips.search.submit': 'Search',
   'trips.sort.soonest': 'Soonest',
   'trips.sort.cheapest': 'Cheapest',
   'trips.sort.featured': 'Featured',
   'trips.detail.operator': 'Operator',
+  'trips.detail.fare': 'Fare',
+  'trips.detail.fareUnavailable': 'The fare is calculated when you book.',
+  'trips.detail.fareNote':
+    'The final price is computed and verified on the server at booking — discounts included.',
   'trips.detail.policies': 'Policies',
   'trips.detail.notFound': 'We could not find this trip, or it is not published yet.',
   'trips.detail.hasDeparted': 'This trip has already departed.',
   'trips.detail.operatorVerified': 'Verified operator',
   'staff.trips.title': 'Trip review',
   'staff.trips.subtitle': 'Trips submitted for review, with the reason for each decision.',
+  'staff.trips.find': 'Find a trip',
   'staff.trips.approve': 'Approve',
   'staff.trips.reject': 'Reject',
   'staff.trips.reason': 'Reason',
@@ -3416,6 +3511,8 @@ export const en: Record<TranslationKey, string> = {
   // Phase 7 — staff operations: scan, bulk verify, manifest.
   'ops.scan': 'Scan a trip',
   'ops.scanTitle': 'Check a trip',
+  'ops.scanSubtitle':
+    'Check a trip is valid before boarding: photograph its code, or type the code in by hand.',
   'ops.scanHint': 'Scan the trip code, or type its 24-character token.',
   'ops.scanToken': 'Trip token',
   'ops.scanSubmit': 'Check',
@@ -3442,6 +3539,12 @@ export const en: Record<TranslationKey, string> = {
   'ops.verification': 'Verification',
   'ops.manifest': 'Passenger manifest',
   'ops.csv': 'Download CSV',
+  'ops.dashboardSubtitle':
+    'The review queues and today’s trips in your patch, with your latest scans.',
+  'ops.verificationPending': 'Verification requests waiting',
+  'ops.allClear': 'Nothing is waiting on you — the queues are clear and the trips are on time.',
+  'ops.asOf': 'Updated {time}',
+  'ops.bulkReview': 'Bulk review',
   'ops.dashboard': 'Supervisor dashboard',
   'ops.dashboardTitle': 'Supervisor dashboard',
   'ops.scope': 'Your scope',
@@ -3451,7 +3554,9 @@ export const en: Record<TranslationKey, string> = {
   'ops.live': 'Trips running',
   'ops.stale': 'Trips with no position',
   'ops.recentScans': 'Recent scans',
-  'ops.noScans': 'No scans yet.',
+  'ops.noSummaryBody':
+    'This dashboard is for platform staff and governorate supervisors. Sign in with a staff account to see the review queues.',
+  'ops.noScans': 'No scans yet. Every code you scan appears here with its time and result.',
   'ops.bulkTitle': 'Bulk review',
   'ops.bulkHint':
     'Select trips, then approve or reject. Each trip is decided on its own and every refusal shows its reason.',
@@ -3815,6 +3920,7 @@ export const en: Record<TranslationKey, string> = {
   'cat.fine': 'Fines',
   'cat.other': 'Other',
 
+  'plans.priceList': 'Plans and prices',
   'plans.title': 'Plans and limits',
   'plans.subtitle':
     'Prices and limits are data an admin edits; the app reads them on every request.',
@@ -3822,6 +3928,7 @@ export const en: Record<TranslationKey, string> = {
   'plans.trialDays': 'Trial days',
   'plans.softLimit': 'Warn instead of blocking',
   'plans.save': 'Save',
+  'plans.edit': 'Edit',
   'plans.saved': '{plan} saved.',
   'plans.metric': 'Metric',
   'plans.unlimited': 'Unlimited',
@@ -3838,6 +3945,7 @@ export const en: Record<TranslationKey, string> = {
   'plans.ruleSaved': 'Rule saved.',
   'plans.noRules': 'No negotiated rates: everybody is on the platform rate.',
 
+  'subs.liveHeading': 'Live subscriptions',
   'subs.title': 'Subscriptions',
   'subs.subtitle': 'Who pays, who is late, and who fell back to Basic.',
   'subs.owner': 'Operator',

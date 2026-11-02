@@ -366,6 +366,67 @@ export function searchSuffix(
 }
 
 /**
+ * Query keys that belong to one render and must never be copied into a link.
+ *
+ * `st` is the cookie-less session token: a link carrying it hands the visitor's session to the next page's
+ * history entry, its Referer header and anything they paste into a chat. `cursor` is a position in *this*
+ * result set — a sort link that kept it would jump back to a page the visitor had scrolled past.
+ */
+export const EPHEMERAL_QUERY_KEYS = ['st', 'cursor'] as const;
+
+/**
+ * A page's own URL with filters changed — the one function behind every chip, sort tab and pager link.
+ *
+ * It exists because building hrefs ad hoc on a page is how a session token ended up in every link: each
+ * hand-rolled `new URLSearchParams(query)` copied `st` along with the filters, and the preview's token
+ * keeper then "repaired" those hrefs by regex, turning `?st=…&sort=cheapest` into `&sort=cheapest` — a
+ * link with no `?` at all — and React reported the difference as a hydration mismatch.
+ *
+ * Rules, in order:
+ *   - `EPHEMERAL_QUERY_KEYS` are dropped always, whatever the caller asks for;
+ *   - `drop` removes a key entirely (all its values);
+ *   - `dropValue` removes one value of a repeatable key, so one chip can come off a multi-select;
+ *   - `set` replaces a key's value, once, at the end (`sort`, `cursor`).
+ */
+export function filterHref(
+  base: string,
+  params: URLSearchParams | Record<string, string | string[] | undefined>,
+  options: {
+    drop?: readonly string[];
+    dropValue?: { readonly key: string; readonly value: string };
+    set?: Readonly<Record<string, string | null | undefined>>;
+  } = {},
+): string {
+  const drop = new Set<string>([...EPHEMERAL_QUERY_KEYS, ...(options.drop ?? [])]);
+  const replaced = new Set(Object.keys(options.set ?? {}));
+  const serialised = new URLSearchParams();
+
+  const append = (key: string, value: string | null | undefined) => {
+    if (!value) return;
+    if (drop.has(key) || replaced.has(key)) return;
+    if (options.dropValue?.key === key && options.dropValue.value === value) return;
+    serialised.append(key, value);
+  };
+
+  if (params instanceof URLSearchParams) {
+    for (const key of new Set(params.keys())) {
+      for (const value of params.getAll(key)) append(key, value);
+    }
+  } else {
+    for (const [key, value] of Object.entries(params)) {
+      for (const item of Array.isArray(value) ? value : [value]) append(key, item);
+    }
+  }
+
+  for (const [key, value] of Object.entries(options.set ?? {})) {
+    if (value) serialised.set(key, value);
+  }
+
+  const query = serialised.toString();
+  return query ? `${base}?${query}` : base;
+}
+
+/**
  * The cheapest fare a card can advertise — the TypeScript side of `app.trip_price_from()`.
  *
  * A per-stop trip has no flat fare, so reading `pricePerSeatYer` for the card would show "—" for a

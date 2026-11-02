@@ -268,9 +268,9 @@ export function RegionConsole({
 
   return (
     <div className="geo-console">
-      <section className="card" aria-labelledby="geo-region-list">
+      <section className="console-section" aria-labelledby="geo-region-list">
         <div className="panel-head">
-          <h2 id="geo-region-list">{t('geo.title')}</h2>
+          <h2 id="geo-region-list">{t('geo.treeHeading')}</h2>
           <Badge tone="info">{t('geo.depthWarning')}</Badge>
         </div>
 
@@ -291,11 +291,11 @@ export function RegionConsole({
               return (
                 <li key={region.id} className="queue-card">
                   <div>
-                    <p style={{ fontWeight: 700, margin: 0 }}>
+                    <p className="unit-title">
                       {nameOf(region)}
                       {parent ? <span className="form-hint"> · {nameOf(parent)}</span> : null}
                     </p>
-                    <p className="form-hint" style={{ margin: 0 }}>
+                    <p className="unit-meta">
                       {t('geo.districtCount', { count: districts.length })} ·{' '}
                       {t('geo.governorateCount', { count: region.governorateIds.length })}
                       {extra.length > 0 ? ` · ${t('geo.extraCount', { count: extra.length })}` : ''}
@@ -326,16 +326,14 @@ export function RegionConsole({
         {retiredRegions.length > 0 ? (
           <>
             <div className="panel-head">
-              <h3 style={{ fontSize: '1rem', margin: 0 }}>{t('geo.retired')}</h3>
+              <h3 className="console-subhead">{t('geo.retired')}</h3>
             </div>
             <ul className="queue-list" aria-label={t('geo.retired')}>
               {retiredRegions.map((region) => (
                 <li key={region.id} className="queue-card">
                   <div>
-                    <p style={{ fontWeight: 700, margin: 0 }}>{nameOf(region)}</p>
-                    <p className="form-hint" style={{ margin: 0 }}>
-                      {t('geo.retiredHint')}
-                    </p>
+                    <p className="unit-title">{nameOf(region)}</p>
+                    <p className="unit-meta">{t('geo.retiredHint')}</p>
                   </div>
                   <div className="geo-row-actions">
                     <Badge tone="neutral">{t('geo.retired')}</Badge>
@@ -350,7 +348,7 @@ export function RegionConsole({
         ) : null}
       </section>
 
-      <section className="card" aria-labelledby="geo-region-form">
+      <section className="console-section" aria-labelledby="geo-region-form">
         <div className="panel-head">
           <h2 id="geo-region-form">{draft.id ? t('geo.editRegion') : t('geo.newRegion')}</h2>
           <Button variant="ghost" size="sm" onClick={() => setDraft(EMPTY_DRAFT)}>

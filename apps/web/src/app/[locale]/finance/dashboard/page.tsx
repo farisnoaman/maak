@@ -56,10 +56,11 @@ export default async function FinanceDashboardPage({
     <>
       <SiteHeader locale={locale} pathname="/finance/dashboard" />
       <ConsoleShell
+        consoleTitle="console.finance"
+        pathname="/finance/dashboard"
         locale={locale}
         title="financeDash.title"
         subtitle="financeDash.subtitle"
-        phase="10"
         items={financeNav(locale)}
       >
         {dashboard === null ? (

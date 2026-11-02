@@ -8,6 +8,7 @@ import {
   describePolicies,
   readTripFilters,
   searchSuffix,
+  filterHref,
   tripBadges,
   tripFilterQuery,
   tripPriceFrom,
@@ -242,6 +243,66 @@ describe('marketplace filter URLs', () => {
   it('counts the active filters for the badge on the filter button', () => {
     expect(activeFilterCount({})).toBe(0);
     expect(activeFilterCount({ q: 'عدن', origin: ['g1'], direct: true, priceMax: 5000 })).toBe(4);
+  });
+});
+
+describe('page URLs (filterHref)', () => {
+  const base = '/en/trips';
+
+  it('never carries the session token, whatever the caller asks for', () => {
+    // The bug this exists for: the trips page built hrefs by hand from `searchParams`, so every chip and
+    // sort tab rendered a link containing the visitor's session. It also broke hydration, because the
+    // preview's token keeper then repaired the rendered href after the server had produced it.
+    const query = { st: 'eyJhbGciOi.token', sort: 'soonest', destination: 'gov-1' };
+    expect(filterHref(base, query, { set: { sort: 'cheapest' } })).toBe(
+      '/en/trips?destination=gov-1&sort=cheapest',
+    );
+    expect(
+      new URL(filterHref(base, query, { drop: ['st'] }), 'http://x').searchParams.has('st'),
+    ).toBe(false);
+  });
+
+  it('drops the paging cursor, which belongs to one result set', () => {
+    expect(filterHref(base, { cursor: 'abc123', direct: '1' }, { set: { sort: 'featured' } })).toBe(
+      '/en/trips?direct=1&sort=featured',
+    );
+  });
+
+  it('removes one value of a repeatable key and keeps the rest', () => {
+    const query = { origin: ['gov-1', 'gov-2'], destination: ['gov-3'] };
+    expect(filterHref(base, query, { dropValue: { key: 'origin', value: 'gov-2' } })).toBe(
+      '/en/trips?origin=gov-1&destination=gov-3',
+    );
+  });
+
+  it('drops a whole key without touching the others', () => {
+    expect(filterHref(base, { q: 'sanaa', direct: '1' }, { drop: ['q'] })).toBe(
+      '/en/trips?direct=1',
+    );
+  });
+
+  it('returns the bare path when nothing is left', () => {
+    expect(filterHref(base, { st: 'x' })).toBe(base);
+    expect(filterHref(base, {}, { set: { cursor: null } })).toBe(base);
+  });
+
+  it('keeps a key it was not told about', () => {
+    // Dropping an unknown key silently is how a filter nobody thought of disappears on a locale switch.
+    expect(filterHref(base, { priceMax: '5000', sort: 'cheapest' })).toBe(
+      '/en/trips?priceMax=5000&sort=cheapest',
+    );
+  });
+
+  it('always produces a URL with a `?` when it has a query', () => {
+    // The other half of the bug: a repair regex turned `?st=…&sort=cheapest` into `&sort=cheapest`, a link
+    // whose sort parameter had become part of the path. Every href this function returns is well formed.
+    for (const href of [
+      filterHref(base, { st: 'x' }, { set: { sort: 'soonest' } }),
+      filterHref(base, { q: 'a', st: 'x' }, { drop: ['q'] }),
+      filterHref(base, { origin: ['a'], st: 'x' }),
+    ]) {
+      expect(href).not.toMatch(/^[^?]*&/);
+    }
   });
 });
 

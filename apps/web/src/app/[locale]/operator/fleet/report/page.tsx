@@ -74,10 +74,11 @@ export default async function FleetReportPage({
       <>
         <SiteHeader locale={locale} pathname="/operator/fleet" />
         <ConsoleShell
+          consoleTitle="console.operator"
+          pathname="/operator/fleet"
           locale={locale}
           title="fleetOps.report"
           subtitle="fleetOps.fleetSubtitle"
-          phase="8"
           items={nav}
         >
           <EmptyState
@@ -103,7 +104,6 @@ export default async function FleetReportPage({
         locale={locale}
         title="fleetOps.report"
         subtitle="fleetOps.reportHint"
-        phase="8"
         items={nav}
       >
         {!loaded.configured ? <PreviewBanner locale={locale} /> : null}

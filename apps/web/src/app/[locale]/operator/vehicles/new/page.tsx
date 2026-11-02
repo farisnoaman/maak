@@ -33,10 +33,11 @@ export default async function NewVehiclePage({
     <>
       <SiteHeader locale={locale} pathname="/operator/vehicles" />
       <ConsoleShell
+        consoleTitle="console.operator"
+        pathname="/operator/vehicles"
         locale={locale}
         title="fleet.addVehicle"
         subtitle="console.subtitle.operator"
-        phase="3"
         items={[
           { key: 'console.navOverview', href: `/${locale}/operator` },
           { key: 'console.navVehicles', href: `/${locale}/operator/vehicles` },

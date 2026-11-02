@@ -34,10 +34,11 @@ export default async function OperatorSettingsPage({
     <>
       <SiteHeader locale={locale} pathname="/operator/settings" />
       <ConsoleShell
+        consoleTitle="console.operator"
+        pathname="/operator/settings"
         locale={locale}
         title="org.settings"
         subtitle="console.subtitle.operator"
-        phase="1"
         items={[
           { key: 'console.navOverview', href: `/${locale}/operator` },
           { key: 'org.settings', href: `/${locale}/operator/settings` },

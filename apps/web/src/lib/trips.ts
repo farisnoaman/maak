@@ -449,6 +449,14 @@ export interface PublicTripsPage {
   readonly facets: PublicFacets;
   readonly nextCursor: string | null;
   readonly cached: boolean;
+  /**
+   * Whether a backend answered at all.
+   *
+   * `items: []` means two very different things — "nothing matches your filters" and "there is no database" — and
+   * the page used to print the preview banner for both. A live marketplace telling a visitor its data is
+   * illustrative is worse than saying nothing.
+   */
+  readonly configured: boolean;
 }
 
 /** A boarding stop, as the public detail returns it — with its own computed fare. */
@@ -598,14 +606,29 @@ export async function loadPublicTrips(
 ): Promise<PublicTripsPage> {
   const client = await getServerClient();
   if (!client) {
-    return { items: [], total: 0, facets: EMPTY_FACETS, nextCursor: null, cached: false };
+    return {
+      items: [],
+      total: 0,
+      facets: EMPTY_FACETS,
+      nextCursor: null,
+      cached: false,
+      configured: false,
+    };
   }
 
   const { fn, args } = publicTripsArgs(locale, filters, options);
   const result = await client.rpc(fn, args as never);
   const payload = (result.data ?? {}) as Record<string, unknown>;
   if (result.error) {
-    return { items: [], total: 0, facets: EMPTY_FACETS, nextCursor: null, cached: false };
+    // Configured but failing: an empty result, not a claim that the data is fictional.
+    return {
+      items: [],
+      total: 0,
+      facets: EMPTY_FACETS,
+      nextCursor: null,
+      cached: false,
+      configured: true,
+    };
   }
 
   const facets = (payload.facets ?? {}) as Record<string, unknown>;
@@ -622,6 +645,7 @@ export async function loadPublicTrips(
     },
     nextCursor: str(payload.nextCursor),
     cached: payload.cached === true,
+    configured: true,
   };
 }
 

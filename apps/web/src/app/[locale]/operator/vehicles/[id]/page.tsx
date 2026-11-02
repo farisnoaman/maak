@@ -44,10 +44,11 @@ export default async function VehicleDetailPage({
       <>
         <SiteHeader locale={locale} pathname="/operator/vehicles" />
         <ConsoleShell
+          consoleTitle="console.operator"
+          pathname="/operator/vehicles"
           locale={locale}
           title="fleet.vehicles"
           subtitle="console.subtitle.operator"
-          phase="3"
           items={[{ key: 'console.navVehicles', href: `/${locale}/operator/vehicles` }]}
         >
           <EmptyState title={t('errors.NOT_FOUND')} />
@@ -66,7 +67,6 @@ export default async function VehicleDetailPage({
         locale={locale}
         title="fleet.vehicles"
         subtitle="console.subtitle.operator"
-        phase="3"
         items={[
           { key: 'console.navOverview', href: `/${locale}/operator` },
           { key: 'console.navVehicles', href: `/${locale}/operator/vehicles` },

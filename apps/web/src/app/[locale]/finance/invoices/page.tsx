@@ -42,10 +42,11 @@ export default async function FinanceInvoicesPage({
     <>
       <SiteHeader locale={locale} pathname="/finance/invoices" />
       <ConsoleShell
+        consoleTitle="console.finance"
+        pathname="/finance/invoices"
         locale={locale}
         title="invoices.title"
         subtitle="invoices.subtitle"
-        phase="10"
         items={financeNav(locale)}
       >
         <section>

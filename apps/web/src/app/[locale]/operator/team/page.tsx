@@ -35,10 +35,11 @@ export default async function OperatorTeamPage({
     <>
       <SiteHeader locale={locale} pathname="/operator/team" />
       <ConsoleShell
+        consoleTitle="console.operator"
+        pathname="/operator/team"
         locale={locale}
         title="org.team"
         subtitle="console.subtitle.operator"
-        phase="1"
         items={[
           { key: 'console.navOverview', href: `/${locale}/operator` },
           { key: 'org.settings', href: `/${locale}/operator/settings` },

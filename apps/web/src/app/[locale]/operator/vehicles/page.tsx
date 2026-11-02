@@ -58,10 +58,11 @@ export default async function OperatorVehiclesPage({
     <>
       <SiteHeader locale={locale} pathname="/operator/vehicles" />
       <ConsoleShell
+        consoleTitle="console.operator"
+        pathname="/operator/vehicles"
         locale={locale}
         title="fleet.vehicles"
         subtitle="console.subtitle.operator"
-        phase="3"
         items={nav}
       >
         {!loaded.configured ? <PreviewBanner locale={locale} /> : null}

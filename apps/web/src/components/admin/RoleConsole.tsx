@@ -96,8 +96,8 @@ export function RoleConsole({
   }
 
   return (
-    <div className="card console-panel">
-      <h2 style={{ fontSize: '1.05rem' }}>{t('admin.roles')}</h2>
+    <div className="console-section">
+      <h2>{t('admin.users')}</h2>
       <p className="form-hint">{truncated ? t('admin.usersCap') : t('admin.usersRecent')}</p>
 
       <div className="table-scroll" tabIndex={0}>
@@ -122,7 +122,7 @@ export function RoleConsole({
               <tr key={user.id}>
                 <td>
                   <span>{user.name ?? t('admin.deletionUnnamed')}</span>
-                  <span className="form-hint" dir="ltr" style={{ display: 'block' }}>
+                  <span className="form-hint block" dir="ltr">
                     {user.email ?? user.phone ?? user.id}
                   </span>
                   {user.deletionPending ? (
@@ -138,7 +138,7 @@ export function RoleConsole({
                   {user.roles.length === 0 ? (
                     <span className="form-hint">{t('admin.noRoles')}</span>
                   ) : (
-                    <span style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+                    <span className="row-actions">
                       {user.roles.map((existing) => (
                         <Badge key={existing} tone="info">
                           {ROLE_LABEL[existing] ? t(ROLE_LABEL[existing]!) : existing}

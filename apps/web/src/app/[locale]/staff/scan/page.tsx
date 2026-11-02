@@ -1,8 +1,10 @@
+import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
-import { isLocale, translate, type Locale } from '@maak/core';
+import { isLocale, translate, type Locale, type TranslationKey } from '@maak/core';
 import { SiteHeader } from '@/components/SiteHeader';
 import { ConsoleShell } from '@/components/ConsoleShell';
 import { ScanPanel } from '@/components/staff/ScanPanel';
+import { staffNav } from '@/components/staff/StaffNav';
 import { loadAccountContext } from '@/lib/account';
 
 /**
@@ -11,6 +13,11 @@ import { loadAccountContext } from '@/lib/account';
  * Thin by design: the page resolves the locale and the session, and everything that needs a browser —
  * camera, token, result — is in `ScanPanel`. The permission check is not here, and that is the point:
  * `staff_scan` decides who may look, so a wrong turn in the UI cannot widen anything.
+ *
+ * Two things were removed here. A `visually-hidden` `<h2>` repeated the `<h1>` three lines above it, so the page
+ * announced its own title twice. And the title said "Check a trip" while the nav that led here said "Scan" — the
+ * same screen under two names; the page now takes the scanner's name and keeps the sentence for the subtitle,
+ * where it explains what to do instead of restating where you are.
  */
 export const dynamic = 'force-dynamic';
 
@@ -18,7 +25,7 @@ export default async function StaffScanPage({ params }: { params: Promise<{ loca
   const { locale: raw } = await params;
   if (!isLocale(raw)) notFound();
   const locale: Locale = raw;
-  const t = (key: Parameters<typeof translate>[1]) => translate(locale, key);
+  const t = (key: TranslationKey) => translate(locale, key);
 
   const account = await loadAccountContext();
   if (account.configured && !account.user) {
@@ -27,20 +34,20 @@ export default async function StaffScanPage({ params }: { params: Promise<{ loca
 
   return (
     <>
-      <SiteHeader locale={locale} pathname="/staff" />
+      <SiteHeader locale={locale} pathname="/staff/scan" />
       <ConsoleShell
         locale={locale}
-        title="ops.scanTitle"
-        subtitle="console.subtitle.staff"
-        phase="7"
-        items={[
-          { key: 'console.navOverview', href: `/${locale}/staff` },
-          { key: 'ops.dashboard', href: `/${locale}/staff/dashboard` },
-          { key: 'ops.scan', href: `/${locale}/staff/scan` },
-          { key: 'staff.trips.title', href: `/${locale}/staff/trips` },
-        ]}
+        title="ops.scan"
+        consoleTitle="console.staff"
+        subtitle="ops.scanSubtitle"
+        pathname="/staff/scan"
+        groups={staffNav(locale)}
+        actions={
+          <Link className="btn btn--ghost" href={`/${locale}/staff/trips`}>
+            {t('staff.trips.title')}
+          </Link>
+        }
       >
-        <h2 className="visually-hidden">{t('ops.scanTitle')}</h2>
         <ScanPanel locale={locale} />
       </ConsoleShell>
     </>

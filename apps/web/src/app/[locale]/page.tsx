@@ -156,7 +156,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
                             >
                               {trip.seatsAvailable > 0
                                 ? t('trips.seatsAvailable', { count: trip.seatsAvailable })
-                                : t('home.soldOut')}
+                                : t('trips.badgeSoldOut')}
                             </span>
                           </span>
                         </Link>

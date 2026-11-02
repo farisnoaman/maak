@@ -49,10 +49,11 @@ export default async function OperatorBillingPage({
     <>
       <SiteHeader locale={locale} pathname="/operator/billing" />
       <ConsoleShell
+        consoleTitle="console.operator"
+        pathname="/operator/billing"
         locale={locale}
         title="billing.title"
         subtitle="billing.subtitle"
-        phase="10"
         items={operatorMoneyNav(locale)}
       >
         {dashboard === null ? (

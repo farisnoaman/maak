@@ -43,6 +43,8 @@ export interface GeoPendingPlace {
   readonly governorateName: string | null;
   readonly districtName: string | null;
   readonly submittedBy: string | null;
+  /** The submitter's name when it could be resolved; the page falls back to a short id, never a raw UUID. */
+  readonly submittedByName: string | null;
   readonly createdAt: string;
   readonly lat: number | null;
   readonly lng: number | null;

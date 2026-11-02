@@ -54,10 +54,11 @@ export default async function StaffTripPage({
       <>
         <SiteHeader locale={locale} pathname="/staff/trips" />
         <ConsoleShell
+          consoleTitle="console.staff"
+          pathname="/staff/trips"
           locale={locale}
           title="staff.trips.title"
           subtitle="staff.trips.subtitle"
-          phase="4"
           items={nav}
         >
           <EmptyState title={t('errors.FORBIDDEN')} />
@@ -76,7 +77,6 @@ export default async function StaffTripPage({
           locale={locale}
           title="staff.trips.title"
           subtitle="staff.trips.subtitle"
-          phase="4"
           items={nav}
         >
           <EmptyState title={t('errors.NOT_FOUND')} />
@@ -94,7 +94,6 @@ export default async function StaffTripPage({
         locale={locale}
         title="staff.trips.title"
         subtitle="staff.trips.subtitle"
-        phase="4"
         items={nav}
       >
         {!loaded.configured ? <PreviewBanner locale={locale} /> : null}
