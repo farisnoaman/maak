@@ -10225,3 +10225,282 @@ h3,
   font-size: var(--text-2xs);
   font-weight: 700;
 }
+
+/* The two verbs a section head can carry, kept on one line and wrapping only when the head is narrow. */
+.console-section__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  margin-inline-start: auto;
+}
+
+/* ====================================================================================================================
+ * 26. WARM AND HUMAN, IN THE CONSOLE — the chosen direction, applied to the dense half of the product
+ *
+ * The console was flattened on purpose (§13): one frame per screen, sections divided by rules, no card inside a card.
+ * That structure stays. What changes is the material. A console is still paper, and paper is not a spreadsheet:
+ *
+ *   1. The top of the page is a band, not a header line: the title, the sentence and the numbers sit in one sand
+ *      wash with the page's own corner. It is a strip of colour, not a frame around the screen.
+ *   2. Bands are tinted, not boxed: the facts sit on paper inside that wash, the section count in a pill.
+ *   3. The active destination is a paper pill — a place you are standing, not a highlight.
+ *   4. Corners stay generous and the same at every level of the page (10 / 14 / 20 / 26), never 6px beside 22px.
+ *   5. Nothing glows. The primary button is flat ink-green with a short warm shadow; there is no gradient anywhere
+ *      in the console, because a surface that reflects light is the one thing paper never does.
+ *
+ * Everything below is a token or an override of a rule defined earlier, so no page needs to know this section exists.
+ * ================================================================================================================== */
+
+:root {
+  --paper: var(--surface-base);
+  --paper-edge: color-mix(in srgb, var(--ink-900) 9%, var(--surface-sunken));
+  --paper-wash: var(--surface-muted);
+}
+
+/* Paper is a material, so it is defined per scheme rather than derived once: cream under a cream page, and a
+   lifted slate under the dark theme, where a cream band behind light text would be unreadable. */
+@media (prefers-color-scheme: light) {
+  :root {
+    --paper: #fffefb;
+    --paper-edge: #ece5d6;
+    --paper-wash: #faf5e9;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #131c29;
+    --paper-edge: #22303f;
+    --paper-wash: #17222f;
+  }
+}
+
+/* 1. No sheet, no page-wide card — the page stays flat (§13). The warmth is in the band at the top: one tinted
+   block holding the title, the sentence and the numbers, with the same corner as everything else. A page-wide
+   bordered box would put a frame around the whole screen, which is the thing this console was flattened to avoid. */
+.console-main {
+  gap: var(--space-4);
+}
+
+.console-head {
+  padding: var(--space-4) var(--space-5);
+  border-block-end: 0;
+  border-radius: var(--radius-lg);
+  background: var(--paper-wash);
+}
+
+@media (min-width: 720px) {
+  .console-head {
+    padding: var(--space-5) var(--space-6);
+  }
+}
+
+/* The sidebar sits on the paper, so it needs no surface of its own — only air. */
+.console-side {
+  padding-block-start: var(--space-1);
+}
+
+/* 2. The head band: a title with room around it, and the numbers in their own wash instead of floating in a margin. */
+.console-head h1 {
+  font-size: clamp(1.45rem, 1.15rem + 1vw, 2rem);
+  font-weight: 800;
+  letter-spacing: -0.018em;
+  line-height: 1.1;
+}
+
+.console-head__sub {
+  margin-block-start: var(--space-2);
+  color: var(--ink-600);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.console-facts {
+  gap: var(--space-2);
+}
+
+.console-facts > div {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--paper);
+}
+
+.console-facts dt {
+  color: var(--ink-600);
+  letter-spacing: 0.04em;
+}
+
+.console-facts dd {
+  font-size: 1.125rem;
+}
+
+/* 3. Navigation: a place you are standing. */
+.console-nav a {
+  border-radius: var(--radius-md);
+  color: var(--ink-600);
+}
+
+.console-nav a[aria-current='page'] {
+  background: var(--paper);
+  color: var(--ink-900);
+  font-weight: 700;
+  box-shadow: var(--shadow-sm);
+}
+
+.console-nav a[aria-current='page']:hover {
+  background: var(--paper);
+  color: var(--ink-900);
+}
+
+.console-nav a:hover {
+  background: color-mix(in srgb, var(--paper-wash) 80%, transparent);
+  color: var(--ink-900);
+}
+
+.console-nav__label {
+  color: var(--ink-500);
+}
+
+/* 4. Section heads: the count is a pill, the rule above the section is warm. */
+.console-section:not(:first-child),
+.console-body > section:not(:first-child),
+.console-body > .card + .card,
+.console-body > section + section,
+.console-body > .card + section,
+.console-body > section + .card {
+  border-block-start-color: var(--paper-edge);
+}
+
+.console-section__head h2,
+.console-section h2,
+.console-body > section h2,
+.console-body > section > h2,
+.console-body > .card > h2 {
+  font-size: 1.0625rem;
+  font-weight: 750;
+  letter-spacing: -0.012em;
+}
+
+.console-section__head .console-section__meta {
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--paper-wash);
+  color: var(--ink-600);
+}
+
+.console-subhead {
+  margin-block-start: var(--space-2);
+  color: var(--ink-800);
+}
+
+/* 5. Items that are genuinely cards keep their edge; the edge is warm and the corner is the page's corner. */
+.card,
+.queue-card,
+.plan-card,
+.sub-card,
+.geo-region-card,
+.ui-empty {
+  border-color: var(--paper-edge);
+  border-radius: var(--radius-lg);
+  background: var(--paper);
+}
+
+/* 6. Empty states stop being blank space: a tinted plate, an icon in a circle, and the sentence that says what to do. */
+.ui-empty {
+  padding: var(--space-6) var(--space-4);
+  border: 1px dashed color-mix(in srgb, var(--ink-900) 14%, transparent);
+  background: var(--paper-wash);
+  text-align: center;
+}
+
+.ui-empty__icon {
+  display: grid;
+  place-items: center;
+  inline-size: 44px;
+  block-size: 44px;
+  margin-inline: auto;
+  margin-block-end: var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--paper);
+  color: var(--brand-700);
+  box-shadow: var(--shadow-sm);
+}
+
+.ui-empty__title {
+  font-size: 1rem;
+  font-weight: 750;
+}
+
+.ui-empty__desc {
+  margin-inline: auto;
+  max-inline-size: 46ch;
+  color: var(--ink-600);
+  font-size: var(--text-sm);
+}
+
+/* 7. Tables: a warm header band and a rounded scroll frame, so a table reads as a block of paper, not a grid. */
+.table-scroll {
+  border: 1px solid var(--paper-edge);
+  border-radius: var(--radius-md);
+  background: var(--paper);
+}
+
+.data-table th,
+.data-table td {
+  border-block-end-color: var(--paper-edge);
+}
+
+.data-table thead th {
+  background: var(--paper-wash);
+  color: var(--ink-700);
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.data-table tbody tr:last-child > * {
+  border-block-end: 0;
+}
+
+/* 8. Buttons: flat, matte, and warm. No gradient, no glass — the direction's one hard rule. */
+.ui-btn--primary {
+  background: var(--brand-600);
+  border-color: var(--brand-700);
+  color: #fff;
+  box-shadow:
+    0 1px 0 color-mix(in srgb, #000 12%, transparent),
+    var(--shadow-sm);
+}
+
+.ui-btn--primary:hover {
+  background: var(--brand-700);
+  box-shadow: var(--shadow-sm);
+}
+
+.ui-btn--ghost {
+  border-color: var(--paper-edge);
+  background: transparent;
+}
+
+.ui-btn--ghost:hover {
+  background: var(--paper-wash);
+  border-color: color-mix(in srgb, var(--ink-900) 18%, transparent);
+}
+
+/* 9. Fields: white paper on warm paper, so a field is visibly a place to write. */
+.ui-input,
+.ui-select,
+.ui-textarea {
+  border-color: color-mix(in srgb, var(--ink-900) 14%, var(--paper-edge));
+  background: var(--paper);
+}
+
+/* 10. A disclosure — filters, a form behind a button — gets the same paper as everything else. */
+.panel-disclosure,
+.filter-panel,
+.catalogue-group,
+[class*='disclosure'] > summary {
+  border-color: var(--paper-edge);
+}

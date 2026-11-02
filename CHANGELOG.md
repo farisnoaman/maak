@@ -13,6 +13,26 @@ on `main`; the tag is the last step, not the first.
 
 ## [Unreleased] — after the last phase report
 
+### Changed — one job per page in the console (`docs/polish-plan.md` §26)
+
+- **`/admin/regions` keeps the tree.** Editing is `/admin/regions/[id]`, a new region is `/admin/regions/new`, and the
+  roster is `/admin/regions/supervisors`. Saving returns to the tree, which is re-fetched rather than shown stale.
+- **`/admin/places` keeps the queue.** The submit form is `/admin/places/new` and the lookup is `/admin/places/find`;
+  a verified account that cannot review is redirected straight to the form, because it has one job there.
+- **`/admin/plans` keeps the prices.** The rules table and the new-rule form are `/admin/plans/commissions`, and the
+  rule table's *platform-wide* row now says platform-wide instead of printing the section title in the plan column.
+
+### Changed — the console, in warm paper (`docs/polish-plan.md` §26, stylesheet §26)
+
+- **The page header is a band**: title, sentence and facts in one sand wash with the page's corner; the facts are paper
+  chips inside it.
+- **Paper tokens** (`--paper`, `--paper-edge`, `--paper-wash`) defined per colour scheme, so warmth does not break the
+  dark theme.
+- **Empty states are plates** — a dashed warm edge and the icon in a circle; **section counts are pills**; **tables sit
+  in a rounded frame** with a wash header.
+- **The primary button is flat**: no gradient, no hover glow.
+
+
 ### Changed — `/admin/regions`, re-cut (`docs/polish-plan.md` §25)
 
 - **The region tree is a wall of cards**: name, kind, status badge, and the coverage as counted chips (`10 districts`,

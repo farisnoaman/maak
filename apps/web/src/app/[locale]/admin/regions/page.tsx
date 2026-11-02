@@ -6,7 +6,6 @@ import { ConsoleShell } from '@/components/ConsoleShell';
 import { adminNav } from '@/components/admin/AdminNav';
 import { EmptyState } from '@/components/ui/Feedback';
 import { RegionConsole } from '@/components/geo/RegionConsole';
-import { SupervisorPanel } from '@/components/geo/SupervisorPanel';
 import { loadAccountContext } from '@/lib/account';
 import { loadGeoDirectory } from '@/lib/geo';
 
@@ -74,7 +73,6 @@ export default async function AdminRegionsPage({
       >
         {directory.configured ? null : <PreviewBanner locale={locale} />}
         <RegionConsole locale={locale} directory={directory} />
-        <SupervisorPanel locale={locale} directory={directory} />
       </ConsoleShell>
     </>
   );

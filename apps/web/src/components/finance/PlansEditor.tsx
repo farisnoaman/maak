@@ -39,10 +39,13 @@ export function PlansEditor({
   locale,
   plans,
   rules,
+  mode = 'plans',
 }: {
   readonly locale: Locale;
   readonly plans: readonly PlanRow[];
   readonly rules: readonly CommissionRuleRow[];
+  /** One job per page: prices are `/admin/plans`, the commission rules are `/admin/plans/commissions`. */
+  readonly mode?: 'plans' | 'commissions';
 }) {
   const t = (key: TranslationKey, vars?: Record<string, string | number>) =>
     translate(locale, key, vars);
@@ -82,212 +85,214 @@ export function PlansEditor({
         </p>
       ) : null}
 
-      <section className="console-section">
-        <div className="console-section__head">
-          <h2>{t('plans.priceList')}</h2>
-          <span className="console-section__meta">{plans.length}</span>
-        </div>
-        {/*
+      {mode === 'plans' ? (
+        <section className="console-section">
+          <div className="console-section__head">
+            <h2>{t('plans.priceList')}</h2>
+            <span className="console-section__meta">{plans.length}</span>
+          </div>
+          {/*
           A plan is an item, so it is a card — and the card is where its limits belong.
           The table used to carry all eight limits in one cell, joined with `·`: "Vehicles 1 · Drivers 1 · Team
           members 1 · Trips per month 5…", which is a paragraph pretending to be a column. Three plans, three cards,
           each with the same eight rows in the same order, is a comparison you can make by moving your eyes sideways.
         */}
-        <div className="plan-grid">
-          {plans.map((plan) => (
-            <article className="plan-card" key={plan.code}>
-              <div className="plan-card__head">
-                <h3>{t(`plan.${plan.code}` as TranslationKey)}</h3>
-                <Button size="sm" variant="subtle" onClick={() => startEdit(plan)}>
-                  {t('plans.edit')}
+          <div className="plan-grid">
+            {plans.map((plan) => (
+              <article className="plan-card" key={plan.code}>
+                <div className="plan-card__head">
+                  <h3>{t(`plan.${plan.code}` as TranslationKey)}</h3>
+                  <Button size="sm" variant="subtle" onClick={() => startEdit(plan)}>
+                    {t('plans.edit')}
+                  </Button>
+                </div>
+                <p className="plan-card__price num">
+                  {formatMinor(plan.priceYer, 'YER', { locale })}
+                  <small>{t('plans.price')}</small>
+                </p>
+                <dl className="plan-card__list">
+                  <div>
+                    <dt>{t('plans.trialDays')}</dt>
+                    <dd className="num">{plan.trialDays}</dd>
+                  </div>
+                  {METRICS.filter((metric) => plan.limits[metric] !== undefined).map((metric) => (
+                    <div key={metric}>
+                      <dt>{t(`metric.${metric}` as TranslationKey)}</dt>
+                      <dd className="num">
+                        {plan.limits[metric] === null ? t('plans.unlimited') : plan.limits[metric]}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </article>
+            ))}
+          </div>
+
+          {editing ? (
+            <div className="finance-form plan-editor">
+              <h3>{t(`plan.${editing}` as TranslationKey)}</h3>
+              <Field
+                label={t('plans.price')}
+                inputMode="numeric"
+                value={price}
+                onChange={(event) => setPrice(event.target.value.replace(/[^0-9]/g, ''))}
+                hint={`${price === '' ? '0' : price} YER`}
+              />
+              <Field
+                label={t('plans.trialDays')}
+                inputMode="numeric"
+                value={trial}
+                onChange={(event) => setTrial(event.target.value.replace(/[^0-9]/g, ''))}
+              />
+              {METRICS.map((metric) => (
+                <Field
+                  key={metric}
+                  label={t(`metric.${metric}` as TranslationKey)}
+                  inputMode="numeric"
+                  value={limits[metric] ?? ''}
+                  placeholder={t('plans.unlimited')}
+                  onChange={(event) =>
+                    setLimits((current) => ({
+                      ...current,
+                      [metric]: event.target.value.replace(/[^0-9]/g, ''),
+                    }))
+                  }
+                />
+              ))}
+              <div className="finance-desk__actions">
+                <Button
+                  loading={busy}
+                  onClick={() =>
+                    void run({
+                      action: 'plan.update',
+                      code: editing as never,
+                      priceYer: Number(price || '0'),
+                      trialDays: Number(trial || '0'),
+                      limits: Object.fromEntries(
+                        METRICS.map((metric) => [metric, parseLimit(limits[metric] ?? '')]),
+                      ),
+                    })
+                  }
+                >
+                  {t('plans.save')}
+                </Button>
+                <Button variant="ghost" onClick={() => setEditing(null)}>
+                  {t('common.cancel')}
                 </Button>
               </div>
-              <p className="plan-card__price num">
-                {formatMinor(plan.priceYer, 'YER', { locale })}
-                <small>{t('plans.price')}</small>
-              </p>
-              <dl className="plan-card__list">
-                <div>
-                  <dt>{t('plans.trialDays')}</dt>
-                  <dd className="num">{plan.trialDays}</dd>
-                </div>
-                {METRICS.filter((metric) => plan.limits[metric] !== undefined).map((metric) => (
-                  <div key={metric}>
-                    <dt>{t(`metric.${metric}` as TranslationKey)}</dt>
-                    <dd className="num">
-                      {plan.limits[metric] === null ? t('plans.unlimited') : plan.limits[metric]}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            </article>
-          ))}
-        </div>
-
-        {editing ? (
-          <div className="finance-form plan-editor">
-            <h3>{t(`plan.${editing}` as TranslationKey)}</h3>
-            <Field
-              label={t('plans.price')}
-              inputMode="numeric"
-              value={price}
-              onChange={(event) => setPrice(event.target.value.replace(/[^0-9]/g, ''))}
-              hint={`${price === '' ? '0' : price} YER`}
-            />
-            <Field
-              label={t('plans.trialDays')}
-              inputMode="numeric"
-              value={trial}
-              onChange={(event) => setTrial(event.target.value.replace(/[^0-9]/g, ''))}
-            />
-            {METRICS.map((metric) => (
-              <Field
-                key={metric}
-                label={t(`metric.${metric}` as TranslationKey)}
-                inputMode="numeric"
-                value={limits[metric] ?? ''}
-                placeholder={t('plans.unlimited')}
-                onChange={(event) =>
-                  setLimits((current) => ({
-                    ...current,
-                    [metric]: event.target.value.replace(/[^0-9]/g, ''),
-                  }))
-                }
-              />
-            ))}
-            <div className="finance-desk__actions">
-              <Button
-                loading={busy}
-                onClick={() =>
-                  void run({
-                    action: 'plan.update',
-                    code: editing as never,
-                    priceYer: Number(price || '0'),
-                    trialDays: Number(trial || '0'),
-                    limits: Object.fromEntries(
-                      METRICS.map((metric) => [metric, parseLimit(limits[metric] ?? '')]),
-                    ),
-                  })
-                }
-              >
-                {t('plans.save')}
-              </Button>
-              <Button variant="ghost" onClick={() => setEditing(null)}>
-                {t('common.cancel')}
-              </Button>
             </div>
+          ) : null}
+        </section>
+      ) : null}
+
+      {mode === 'commissions' ? (
+        <section className="console-section">
+          <div className="console-section__head">
+            <h2>{t('plans.commissions')}</h2>
+            <span className="console-section__meta">{rules.length}</span>
           </div>
-        ) : null}
-      </section>
+          <p className="form-hint">{t('plans.commissionHelp')}</p>
 
-      <section className="console-section">
-        <div className="console-section__head">
-          <h2>{t('plans.commissions')}</h2>
-          <span className="console-section__meta">{rules.length}</span>
-        </div>
-        <p className="form-hint">{t('plans.commissionHelp')}</p>
-      </section>
-
-      <section className="console-section">
-        <h2>{t('plans.newRule')}</h2>
-        <div className="finance-form">
-          <Field
-            label={t('subs.orgId')}
-            value={ruleOrg}
-            onChange={(event) => setRuleOrg(event.target.value.trim())}
-            hint={t('plans.orgBlank')}
-          />
-          <Field
-            label={t('plans.basisPoints')}
-            inputMode="numeric"
-            value={basisPoints}
-            onChange={(event) => setBasisPoints(event.target.value.replace(/[^0-9]/g, ''))}
-            hint={`${basisPoints === '' ? '0' : basisPoints} bp`}
-          />
-          <Field
-            label={t('plans.minYer')}
-            inputMode="numeric"
-            value={minYer}
-            onChange={(event) => setMinYer(event.target.value.replace(/[^0-9]/g, ''))}
-          />
-          <Field
-            label={t('plans.maxYer')}
-            inputMode="numeric"
-            value={maxYer}
-            onChange={(event) => setMaxYer(event.target.value.replace(/[^0-9]/g, ''))}
-          />
-          <Field
-            label={t('plans.effectiveFrom')}
-            type="date"
-            value={effectiveFrom}
-            onChange={(event) => setEffectiveFrom(event.target.value)}
-          />
-          <Field
-            label={t('plans.note')}
-            value={note}
-            onChange={(event) => setNote(event.target.value)}
-          />
-          <Button
-            loading={busy}
-            disabled={effectiveFrom === '' || basisPoints === ''}
-            onClick={() =>
-              void run({
-                action: 'commission.rule.save',
-                orgId: ruleOrg === '' ? null : ruleOrg,
-                ownerUserId: null,
-                effectiveTo: null,
-                basisPoints: Number(basisPoints),
-                minYer: minYer === '' ? null : Number(minYer),
-                maxYer: maxYer === '' ? null : Number(maxYer),
-                effectiveFrom,
-                note: note.trim() === '' ? null : note.trim(),
-              })
-            }
-          >
-            {t('plans.addRule')}
-          </Button>
-        </div>
-
-        {rules.length === 0 ? (
-          <p className="form-hint">{t('plans.noRules')}</p>
-        ) : (
-          <div className="table-scroll">
-            <table className="data-table table-cards">
-              <caption className="visually-hidden">{t('plans.commissions')}</caption>
-              <thead>
-                <tr>
-                  <th scope="col">{t('billing.plan')}</th>
-                  <th scope="col">{t('plans.basisPoints')}</th>
-                  <th scope="col">{t('plans.minYer')}</th>
-                  <th scope="col">{t('plans.maxYer')}</th>
-                  <th scope="col">{t('plans.effectiveFrom')}</th>
-                  <th scope="col">{t('plans.note')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rules.map((rule) => (
-                  <tr key={rule.id}>
-                    <th scope="row" data-label={t('billing.plan')}>
-                      {rule.orgId ?? t('plans.platformWide')}
-                    </th>
-                    <td data-label={t('plans.basisPoints')}>{rule.basisPoints} bp</td>
-                    <td data-label={t('plans.minYer')}>
-                      {rule.minYer === null ? '—' : formatMinor(rule.minYer, 'YER', { locale })}
-                    </td>
-                    <td data-label={t('plans.maxYer')}>
-                      {rule.maxYer === null ? '—' : formatMinor(rule.maxYer, 'YER', { locale })}
-                    </td>
-                    <td data-label={t('plans.effectiveFrom')}>
-                      {formatDate(rule.effectiveFrom, { locale })}
-                    </td>
-                    <td data-label={t('plans.note')}>{rule.note ?? '—'}</td>
+          {rules.length === 0 ? (
+            <p className="form-hint">{t('plans.noRules')}</p>
+          ) : (
+            <div className="table-scroll">
+              <table className="data-table table-cards">
+                <caption className="visually-hidden">{t('plans.commissions')}</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">{t('billing.plan')}</th>
+                    <th scope="col">{t('plans.basisPoints')}</th>
+                    <th scope="col">{t('plans.minYer')}</th>
+                    <th scope="col">{t('plans.maxYer')}</th>
+                    <th scope="col">{t('plans.effectiveFrom')}</th>
+                    <th scope="col">{t('plans.note')}</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {rules.map((rule) => (
+                    <tr key={rule.id}>
+                      <th scope="row" data-label={t('billing.plan')}>
+                        {rule.orgId ?? t('plans.platformWide')}
+                      </th>
+                      <td data-label={t('plans.basisPoints')}>{rule.basisPoints} bp</td>
+                      <td data-label={t('plans.minYer')}>
+                        {rule.minYer === null ? '—' : formatMinor(rule.minYer, 'YER', { locale })}
+                      </td>
+                      <td data-label={t('plans.maxYer')}>
+                        {rule.maxYer === null ? '—' : formatMinor(rule.maxYer, 'YER', { locale })}
+                      </td>
+                      <td data-label={t('plans.effectiveFrom')}>
+                        {formatDate(rule.effectiveFrom, { locale })}
+                      </td>
+                      <td data-label={t('plans.note')}>{rule.note ?? '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          <h2 className="console-subhead">{t('plans.newRuleTitle')}</h2>
+          <div className="finance-form">
+            <Field
+              label={t('subs.orgId')}
+              value={ruleOrg}
+              onChange={(event) => setRuleOrg(event.target.value.trim())}
+              hint={t('plans.orgBlank')}
+            />
+            <Field
+              label={t('plans.basisPoints')}
+              inputMode="numeric"
+              value={basisPoints}
+              onChange={(event) => setBasisPoints(event.target.value.replace(/[^0-9]/g, ''))}
+              hint={`${basisPoints === '' ? '0' : basisPoints} bp`}
+            />
+            <Field
+              label={t('plans.minYer')}
+              inputMode="numeric"
+              value={minYer}
+              onChange={(event) => setMinYer(event.target.value.replace(/[^0-9]/g, ''))}
+            />
+            <Field
+              label={t('plans.maxYer')}
+              inputMode="numeric"
+              value={maxYer}
+              onChange={(event) => setMaxYer(event.target.value.replace(/[^0-9]/g, ''))}
+            />
+            <Field
+              label={t('plans.effectiveFrom')}
+              type="date"
+              value={effectiveFrom}
+              onChange={(event) => setEffectiveFrom(event.target.value)}
+            />
+            <Field
+              label={t('plans.note')}
+              value={note}
+              onChange={(event) => setNote(event.target.value)}
+            />
+            <Button
+              loading={busy}
+              disabled={effectiveFrom === '' || basisPoints === ''}
+              onClick={() =>
+                void run({
+                  action: 'commission.rule.save',
+                  orgId: ruleOrg === '' ? null : ruleOrg,
+                  ownerUserId: null,
+                  effectiveTo: null,
+                  basisPoints: Number(basisPoints),
+                  minYer: minYer === '' ? null : Number(minYer),
+                  maxYer: maxYer === '' ? null : Number(maxYer),
+                  effectiveFrom,
+                  note: note.trim() === '' ? null : note.trim(),
+                })
+              }
+            >
+              {t('plans.addRule')}
+            </Button>
           </div>
-        )}
-      </section>
+        </section>
+      ) : null}
     </div>
   );
 }

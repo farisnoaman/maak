@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   PLACE_KIND_KEY,
   USER_CREATABLE_KINDS,
@@ -16,7 +18,6 @@ import {
 import { EmptyState } from '@/components/ui/Feedback';
 import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
-import { Icon } from '@/components/ui/Icon';
 import { DirectionalIcon } from '@/components/ui/DirectionalIcon';
 import { Select } from '@/components/ui/Select';
 import { getApiClient } from '@/lib/api';
@@ -34,13 +35,17 @@ export function PlaceConsole({
   locale,
   directory,
   canDecide,
+  mode = 'queue',
 }: {
   readonly locale: Locale;
   readonly directory: GeoDirectory;
   readonly canDecide: boolean;
+  /** One job per page: the queue is `/admin/places`, the form `/admin/places/new`, the search `/admin/places/find`. */
+  readonly mode?: 'queue' | 'new' | 'find';
 }) {
   const t = (key: TranslationKey, vars?: Record<string, string | number>) =>
     translate(locale, key, vars);
+  const router = useRouter();
 
   const [queue, setQueue] = useState<readonly GeoPendingPlace[]>(directory.pendingPlaces);
   const [reasons, setReasons] = useState<Record<string, string>>({});
@@ -181,28 +186,13 @@ export function PlaceConsole({
     }
     setDraft((current) => ({ ...current, nameAr: '', nameEn: '', lat: '', lng: '' }));
     setMessage(t('places.created'));
+    if (mode === 'new') {
+      router.push(`/${locale}/admin/places`);
+      router.refresh();
+    }
   }
 
-  const addSummary = (
-    <summary className="panel-disclosure__summary">
-      <span className="panel-disclosure__icon" aria-hidden="true">
-        <Icon name="plus" size={16} />
-      </span>
-      <span className="panel-disclosure__text">
-        <span className="panel-disclosure__title">{t('places.addPlace')}</span>
-        <span className="panel-disclosure__hint">{t('places.gatheringPointNote')}</span>
-      </span>
-      <span className="panel-disclosure__chevron" aria-hidden="true">
-        <DirectionalIcon direction="down" size={16} />
-      </span>
-    </summary>
-  );
-
-  /*
-   * The form body is written once. It is either the page (an operator adding a gathering point, where there is no queue
-   * above it) or a row you press (staff, whose job here is the queue). `open` is never set on <details>: the attribute
-   * belongs to the user, and a controlled one is a hydration mismatch waiting for a fast tap.
-   */
+  /* The form body, rendered on its own page (`/admin/places/new`). */
   const addForm = (
     <>
       <fieldset className="place-group">
@@ -303,6 +293,37 @@ export function PlaceConsole({
       ) : null}
     </>
   );
+
+  /* ── the form, on its own page ─────────────────────────────────────────────────────────────────────────── */
+  if (mode === 'new') {
+    return (
+      <section className="console-section" aria-labelledby="places-create">
+        <Link className="detail-back" href={`/${locale}/admin/places`}>
+          <span className="detail-back__icon" aria-hidden="true">
+            <DirectionalIcon direction="back" size={16} />
+          </span>
+          {t('places.title')}
+        </Link>
+        <p className="form-hint">{t('places.gatheringPointNote')}</p>
+        {addForm}
+      </section>
+    );
+  }
+
+  /* ── the search, on its own page ───────────────────────────────────────────────────────────────────────── */
+  if (mode === 'find') {
+    return (
+      <section className="console-section" aria-labelledby="places-find">
+        <Link className="detail-back" href={`/${locale}/admin/places`}>
+          <span className="detail-back__icon" aria-hidden="true">
+            <DirectionalIcon direction="back" size={16} />
+          </span>
+          {t('places.title')}
+        </Link>
+        <PlacePicker locale={locale} directory={directory} label="picker.place" />
+      </section>
+    );
+  }
 
   return (
     <div className="geo-console">
@@ -439,45 +460,6 @@ export function PlaceConsole({
           )}
         </section>
       ) : null}
-
-      {/*
-        Eleven fields were standing open under the queue on every visit, whether or not anyone was adding a place. The
-        form is one row you press — a native <details>, so it opens without JavaScript and never traps the keyboard —
-        and on a page with no queue (an operator adding a gathering point) it starts open, because there it is the page.
-      */}
-      {canDecide ? (
-        <details className="panel-disclosure" id="places-create" suppressHydrationWarning>
-          {addSummary}
-          <div className="panel-disclosure__body">{addForm}</div>
-        </details>
-      ) : (
-        <section className="console-section" aria-labelledby="places-create">
-          <div className="console-section__head">
-            <h2 id="places-create">{t('places.addPlace')}</h2>
-          </div>
-          <p className="form-hint">{t('places.gatheringPointNote')}</p>
-          {addForm}
-        </section>
-      )}
-
-      {/* The picker is a tool you reach for, not a section you read: same disclosure, same row. */}
-      <details className="panel-disclosure" suppressHydrationWarning>
-        <summary className="panel-disclosure__summary">
-          <span className="panel-disclosure__icon" aria-hidden="true">
-            <Icon name="search" size={16} />
-          </span>
-          <span className="panel-disclosure__text">
-            <span className="panel-disclosure__title">{t('places.findPlace')}</span>
-            <span className="panel-disclosure__hint">{t('places.browseHint')}</span>
-          </span>
-          <span className="panel-disclosure__chevron" aria-hidden="true">
-            <DirectionalIcon direction="down" size={16} />
-          </span>
-        </summary>
-        <div className="panel-disclosure__body">
-          <PlacePicker locale={locale} directory={directory} label="picker.place" />
-        </div>
-      </details>
     </div>
   );
 }

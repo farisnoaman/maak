@@ -2091,6 +2091,9 @@ export const ar = {
   'plans.commissions': 'قواعد العمولة',
   'plans.commissionHelp':
     'النسبة الأساسية للمنصة 500 نقطة أساس (5%). قاعدة المشغّل تتقدّم عليها، وخصم الخطة يُطبَّق بعدها.',
+  'plans.commissionsSubtitle': 'نسب متفاوض عليها لكل منشأة، ومن تسري عليها، ومن أي تاريخ.',
+  'plans.newRuleTitle': 'قاعدة عمولة جديدة',
+  'plans.backToPlans': 'العودة إلى الخطط',
   'plans.basisPoints': 'نقاط الأساس',
   'plans.minYer': 'أدنى عمولة',
   'plans.maxYer': 'أعلى عمولة',
@@ -4289,6 +4292,10 @@ export const en: Record<TranslationKey, string> = {
   'plans.commissions': 'Commission rules',
   'plans.commissionHelp':
     'The platform takes 500 basis points (5%) by default. An operator rule wins over it, and the plan discount applies after that.',
+  'plans.commissionsSubtitle':
+    'A negotiated rate per organisation, who it applies to, and from when.',
+  'plans.newRuleTitle': 'New commission rule',
+  'plans.backToPlans': 'Back to plans',
   'plans.basisPoints': 'Basis points',
   'plans.minYer': 'Minimum commission',
   'plans.maxYer': 'Maximum commission',

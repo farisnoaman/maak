@@ -65,6 +65,8 @@ questions in the order they ask them.**
 | 17 | The skin itself | Warm direction chosen and applied once, as tokens and control rules, rather than page by page | `[x]` — §22 of the stylesheet |
 | 18 | `/admin/places`, again | Eleven fields standing open under the queue on every visit, a submission rendered as two runs of text glued with `·`, and two badges that said nothing | `[x]` — §24 |
 | 19 | `/admin/regions` | A table of names with the coverage as one dotted sentence, an editor that replaced the list, and supervisors in a second table with an always-open assignment block | `[x]` — §25 |
+| 20 | **One job per page** in the console | Regions carried the tree, the editor and the supervisors; places carried the queue, the form and the search; plans carried the price list and the commission desk — every screen a scroll with three jobs in it | `[x]` — §26 |
+| 21 | The direction, applied to the dense half | The warm layer existed as tokens; the console still read as a spreadsheet in grey. The direction is now material: a tinted head band, warm paper, flat matte buttons | `[x]` — §26 |
 
 ## 3–4. Trips list and trip detail — what changed
 
@@ -968,3 +970,48 @@ card with its three chips, the *New region* row, the *Identity*/*Coverage* group
 *Assign or change* row. `check:all` ✓, `check:responsive` ✓ (97 media queries), `check:guards` ✓, `check:a11y` ✓ over
 **113 routes** (run against a production build, because the dev server in this sandbox is killed mid-run). **Gaps:** no
 browser, so the grid at 375/768/1280 and the disclosure's open/close are read from markup and CSS.
+
+## 26. One job per page, and warm paper — the console, finished
+
+**Two problems, one pass.** The console had grown screens that each answered three questions — `/admin/regions` held
+the tree, the editor and the supervisor roster; `/admin/places` held the queue, the submit form and the search tool;
+`/admin/plans` held the price list and the commission desk — so a reader who came to do one thing scrolled past two.
+And the warm layer (§22) had only reached the tokens: the console still behaved like a spreadsheet, with a grey header
+line, gradient buttons and empty states the colour of the wall.
+
+**One job per page.** Every console screen that carried several jobs is now an index route plus siblings, each reached
+from the index header (never from a menu of its own):
+
+| Index | Siblings | What stayed where |
+| --- | --- | --- |
+| `/admin/regions` | `/new`, `/[id]`, `/supervisors` | The tree, the counts and the one new-region door. Editing a region opens its own page, seeded from the same loader; saving returns to the tree. |
+| `/admin/places` | `/new`, `/find` | The review queue. A verified account that cannot review is redirected straight to the form — it has exactly one job there. |
+| `/admin/plans` | `/commissions` | The price list and its editor. The rules table and its form moved to the commission desk. |
+
+The pattern is the same in all three: a server page (locale → session → role gate → loader → `ConsoleShell` with
+`title`, `subtitle`, `actions`) over a client console that takes a `mode` prop. `PlacesEditor`'s three sections became
+`mode: 'queue' | 'new' | 'find'`; `PlansEditor`'s two became `mode: 'plans' | 'commissions'`; `RegionConsole` lost its
+inline editor and takes `mode: 'list' | 'editor'` plus the region id. A sibling route always ends with
+`router.push(index); router.refresh()` — the list must not show a stale row after a save.
+
+**Warm paper (stylesheet §26).** The console's structure is unchanged on purpose — one frame per screen, sections
+divided by rules, no card inside a card (§13). What changed is the material:
+
+- **The head is a band.** Title, subtitle and facts sit in one sand wash with the page's corner, instead of a grey line
+  with a hairline under it. The facts became paper chips inside it, so three numbers read as three things.
+- **Paper tokens.** `--paper`, `--paper-edge`, `--paper-wash` are defined per colour scheme (cream under the light
+  theme, lifted slate under the dark one), so a page can be warm without any rule knowing which theme is running.
+- **The active destination is a paper pill** on the sidebar rather than a brand tint, and the count on a section head
+  is a pill rather than floating text.
+- **Empty states are plates**, not blank space: a dashed warm edge, the icon in a circle, and the sentence that says
+  what happens next.
+- **Tables sit in a rounded scroll frame** with a wash header in tracked micro-caps, so a table reads as a block of
+  paper rather than a grid.
+- **Buttons are flat.** The primary action lost its gradient and its hover glow — matte ink-green with a short warm
+  shadow. Nothing in the console reflects light.
+
+**Verified.** `/en` and `/ar` for `/admin/regions` (+`/new`, `/[id]`, `/supervisors`), `/admin/places` (+`/new`,
+`/find`), `/admin/plans` (+`/commissions`): all 200 and rendered by the same guard suite. `tsc` ✓, `prettier` ✓,
+`check:responsive` ✓ (100 media queries), `check:guards` ✓ (32 core files, 198 style files), `check:all` ✓.
+**Gaps:** there is still no browser in this sandbox, so the band's geometry at 375/768/1280, the focus ring on the pill
+nav and the dark-theme paper are read from CSS and markup, not seen.
