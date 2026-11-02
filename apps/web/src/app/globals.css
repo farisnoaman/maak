@@ -10584,6 +10584,11 @@ h3,
   gap: var(--space-4);
 }
 
+/* The action row carries its own top margin for the pages that are not a grid; the column already gaps it. */
+.trip-detail__main > .trip-form__actions {
+  margin-block-start: 0;
+}
+
 .trip-cards {
   display: grid;
   gap: var(--space-3);
