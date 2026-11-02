@@ -11,7 +11,6 @@ import {
   type RegionNode,
   type TranslationKey,
 } from '@maak/core';
-import { Badge } from '@/components/ui/Feedback';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
 import { getApiClient } from '@/lib/api';
@@ -131,45 +130,55 @@ export function SupervisorPanel({
   const current = supervisors.find((row) => row.userId === userId);
 
   return (
-    <section className="geo-card geo-supervisors" aria-labelledby="geo-supervisors">
-      <div className="geo-card__head">
+    <section className="console-section geo-supervisors" aria-labelledby="geo-supervisors">
+      <div className="geo-section-head">
         <div>
           <h2 id="geo-supervisors">{t('supervisors.title')}</h2>
           <p className="form-hint">{t('supervisors.subtitle')}</p>
         </div>
       </div>
 
-      <div className="geo-supervisors__grid">
-        <div className="geo-group">
-          <p className="geo-group__label">{t('supervisors.groupAssigned')}</p>
-          {supervisors.length === 0 ? (
-            <p className="form-hint">{t('supervisors.none')}</p>
-          ) : (
-            <ul className="geo-tree">
+      {supervisors.length === 0 ? (
+        <p className="form-hint">{t('supervisors.none')}</p>
+      ) : (
+        <div className="table-scroll">
+          <table className="data-table table-cards">
+            <caption className="visually-hidden">{t('supervisors.title')}</caption>
+            <thead>
+              <tr>
+                <th scope="col">{t('supervisors.user')}</th>
+                <th scope="col">{t('supervisors.regions')}</th>
+                <th scope="col">{t('supervisors.scope')}</th>
+              </tr>
+            </thead>
+            <tbody>
               {supervisors.map((row) => (
-                <li key={row.userId} className="geo-tree__row">
-                  <div className="geo-tree__main">
-                    <p className="geo-tree__name">{row.name ?? row.userId}</p>
-                    <p className="geo-tree__meta">
-                      {row.regionIds
-                        .map((id) => {
-                          const region = directory.regions.find((candidate) => candidate.id === id);
-                          return region ? (locale === 'ar' ? region.nameAr : region.nameEn) : id;
-                        })
-                        .join(' · ')}
-                    </p>
-                  </div>
-                  <Badge tone="success">
+                <tr key={row.userId}>
+                  <td data-label={t('supervisors.user')}>
+                    <span className="geo-name">{row.name ?? row.userId}</span>
+                  </td>
+                  <td data-label={t('supervisors.regions')}>
+                    {row.regionIds
+                      .map((id) => {
+                        const region = directory.regions.find((candidate) => candidate.id === id);
+                        return region ? (locale === 'ar' ? region.nameAr : region.nameEn) : id;
+                      })
+                      .join(' · ')}
+                  </td>
+                  <td data-label={t('supervisors.scope')}>
                     {translateCount(locale, 'geo.districtCount', row.districtCount)}
-                  </Badge>
-                </li>
+                  </td>
+                </tr>
               ))}
-            </ul>
-          )}
+            </tbody>
+          </table>
         </div>
+      )}
 
-        <div className="geo-group">
-          <p className="geo-group__label">{t('supervisors.groupAssign')}</p>
+      {/* Assignment is a form, not an item: a labelled band with the fields on one line, no frame of its own. */}
+      <div className="geo-assign">
+        <p className="geo-group__label">{t('supervisors.groupAssign')}</p>
+        <div className="geo-assign__grid">
           <Select
             label={t('supervisors.user')}
             value={userId}
@@ -183,58 +192,59 @@ export function SupervisorPanel({
                   }))
             }
           />
-
-          <p className="geo-group__label geo-group__label--sub">{t('supervisors.regions')}</p>
-          <div className="geo-check-grid">
-            {directory.regions.map((region) => (
-              <label key={region.id} className="geo-check">
-                <input
-                  type="checkbox"
-                  checked={regionIds.includes(region.id)}
-                  onChange={() => toggle(region.id)}
-                />
-                <span className="geo-check__name">
-                  {locale === 'ar' ? region.nameAr : region.nameEn}
-                </span>
-              </label>
-            ))}
-          </div>
-
-          <div className="geo-editor__foot">
-            <p className="geo-editor__recap" aria-live="polite">
-              {t('supervisors.scope')}: <strong className="num">{projected}</strong>
+          <div className="geo-group">
+            <p className="geo-group__label geo-group__label--sub">
+              {t('supervisors.regions')}
+              <span className="geo-group__count" aria-live="polite">
+                {translateCount(locale, 'geo.districtCount', projected)}
+              </span>
             </p>
-            <div className="form-actions">
-              <Button
-                variant="primary"
-                onClick={() => submit('assign')}
-                disabled={busy !== null || !userId}
-                loading={busy === 'assign'}
-              >
-                {t('supervisors.assign')}
-              </Button>
-              <Button
-                variant="danger"
-                onClick={() => submit('revoke')}
-                disabled={busy !== null || !userId || !current}
-                loading={busy === 'revoke'}
-              >
-                {t('supervisors.revoke')}
-              </Button>
+            <div className="geo-check-grid">
+              {directory.regions.map((region) => (
+                <label key={region.id} className="geo-check">
+                  <input
+                    type="checkbox"
+                    checked={regionIds.includes(region.id)}
+                    onChange={() => toggle(region.id)}
+                  />
+                  <span className="geo-check__name">
+                    {locale === 'ar' ? region.nameAr : region.nameEn}
+                  </span>
+                </label>
+              ))}
             </div>
           </div>
-
-          {message ? (
-            <p className="form-success" role="status">
-              {message}
-            </p>
-          ) : null}
-          {error ? (
-            <p className="form-error" role="alert">
-              {error}
-            </p>
-          ) : null}
         </div>
+
+        <div className="form-actions">
+          <Button
+            variant="primary"
+            onClick={() => submit('assign')}
+            disabled={busy !== null || !userId}
+            loading={busy === 'assign'}
+          >
+            {t('supervisors.assign')}
+          </Button>
+          <Button
+            variant="danger"
+            onClick={() => submit('revoke')}
+            disabled={busy !== null || !userId || !current}
+            loading={busy === 'revoke'}
+          >
+            {t('supervisors.revoke')}
+          </Button>
+        </div>
+
+        {message ? (
+          <p className="form-success" role="status">
+            {message}
+          </p>
+        ) : null}
+        {error ? (
+          <p className="form-error" role="alert">
+            {error}
+          </p>
+        ) : null}
       </div>
     </section>
   );

@@ -47,14 +47,14 @@ on `main`; the tag is the last step, not the first.
 
 ### Changed
 
-- **The coverage screen (`/admin/regions`) is a tree and an editor, not a form dump.** A card per region (with the
-  hierarchy written out as a sentence), a bare editor below it, 22 governorate chips at field width, and a caption
-  reading "1 extra districts". It now opens with the facts (regions · governorates · districts · supervisors), then two
-  cards: the tree as a list inside one frame — sub-regions *indented* under their parent, the kind a badge on the name,
-  actions on the row, retired regions a muted block in the same card — and the editor with labelled *Identity* and
-  *Coverage* groups, a count on each (`0 of 22`), and a foot that says what the choices add up to beside the Save
-  button. Supervisors is the same shape, list and form read together. Counts are grammatical in both languages now
-  (Arabic dual and broken plural included), which is where "1 extra districts" went.
+- **The coverage screen (`/admin/regions`) is a flat page, with editing as a view.** It used to be a card per region
+  (hierarchy written out as a sentence), a bare editor below it, 22 governorate chips at field width and a caption
+  reading "1 extra districts". It is now a heading, a table and a section: *Region* (sub-regions indented), *Coverage*,
+  *Status* (retired rows muted in the same table) and the row's actions, with **New region** in the section head — and
+  `Edit` swaps the table for the editor (identity left, coverage right, *← Regions* to come back) instead of leaving a
+  form in a card beside it. Supervisors follows the same shape: a table, then the assignment form under a rule. Counts
+  are grammatical in both languages through `translateCount()` — Arabic dual, broken plural and plural zero included,
+  which is where "1 extra districts" went.
 - **The finance console opens with the answer.** `/finance/dashboard` led with ten equal figures, so profit — the
   number the desk exists for — had no weight, and the balances below it printed journal codes (`operator_payable`) and
   a `Difference` column. It now leads with profit at display size (red when negative) beside the period it covers,

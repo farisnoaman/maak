@@ -98,7 +98,7 @@ describe('every key the product can render exists', () => {
     // how «1 extra districts» shipped once.
     const counts = ['geo.districtCount', 'geo.governorateCount', 'geo.extraCount'];
     for (const base of counts) {
-      for (const form of ['one', 'two', 'few']) {
+      for (const form of ['zero', 'one', 'two', 'few']) {
         expect(ar, `ar is missing ${base}.${form}`).toHaveProperty([`${base}.${form}`]);
         expect(en, `en is missing ${base}.${form}`).toHaveProperty([`${base}.${form}`]);
       }
@@ -111,6 +111,9 @@ describe('every key the product can render exists', () => {
     expect(translateCount('ar', 'geo.districtCount', 2)).toBe('مديريتان');
     expect(translateCount('ar', 'geo.districtCount', 10)).toBe('10 مديريات');
     expect(translateCount('ar', 'geo.governorateCount', 22)).toBe('22 محافظة');
+    // Zero takes the plural in Arabic, not the singular: «٠ مديريات», never «0 مديرية».
+    expect(translateCount('ar', 'geo.districtCount', 0)).toBe('0 مديريات');
+    expect(translateCount('en', 'geo.districtCount', 0)).toBe('0 districts');
   });
 
   it('has a label for every notification the database can create', () => {
