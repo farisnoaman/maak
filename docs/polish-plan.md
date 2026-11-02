@@ -54,6 +54,7 @@ questions in the order they ask them.**
 | 9a | **Staff console** (`/staff`, dashboard, scan, verifications, vehicles, trips) | The same five screens under five different sidebars; a phase number above every title; four zeroes and two empty boxes as the dashboard | `[x]` |
 | 9b | Finance console | Same: correct, unranked | `[x]` — §19 |
 | 9c | **Admin console** (`/admin` + 6 screens) | Two frames around every screen (a card inside a card), five different sidebars, a hub whose second tile apologised for a phase that no longer exists, and UUIDs printed where names belong | `[x]` |
+| 9d | Admin — coverage (`/admin/regions`) | A card per region, the hierarchy written out as a sentence, an editor that starts below its own heading, and 22 governorate chips at field width | `[x]` — §20 |
 | 10 | Mobile shell (`apps/mobile`) | Mirrors the same problem: the home screen is a list of links, one of them labelled *المرحلة* | `[ ]` |
 | 11 | Empty / error / loading states | The states a demo never shows and a launch always hits | `[ ]` |
 
@@ -635,3 +636,58 @@ checked to confirm it. A `platform_staff` account still sees the finance desk's 
 ledger writes are refused to it (`finance.viewAll` is finance officers and admins) — the pages now render, the actions
 answer `FORBIDDEN`; making the navigation capability-aware is its own slice, because it means deciding what the staff
 desk *does* with money rather than hiding buttons from it.
+
+## 20. The coverage screen
+
+Asked for by the owner, while looking at `/admin/regions` on a phone: *"check how it looks unorganized … user friendly
+and informative screen with less spaces, do cards when possible, do groups when possible."*
+
+**What it was.** Four loose blocks of equal weight down one column: the page heading, a section called *The region
+tree* with a hint written as a badge, then a **card per region** whose parent was appended to the name as a sentence
+(`Aden & the Coast · Aden`), then — below a gap of a full section break — a bare *New region* heading followed by
+fields, two fieldsets and a Save button, with a `Cancel` in its head that did nothing when there was nothing to
+cancel. On the narrow screen in the screenshot the editor started below the fold of its own heading, so the first
+thing a person saw after the tree was whitespace. The governorate picker laid 22 chips out at `minmax(190px, 1fr)` —
+two to a row on a phone, eleven rows of them — and the caption under each region read **"1 extra districts"**.
+
+**What it is now.** A header that states the facts (regions · governorates · districts · supervisors, four figures,
+micro-labelled), then **two cards side by side**: the tree on the left, the editor on the right.
+
+- **The tree is a list inside one card**, not a card per region. Rows share the frame and a hairline, a sub-region is
+  *indented* under its parent with a guide rule instead of naming it in a sentence, the kind is a badge on the name,
+  and the actions sit on the row. The edit target is highlighted, and the retired regions are a muted block at the foot
+  of the same card instead of a second list with its own heading.
+- **The editor is one card with labelled groups**: *Identity* (Arabic name, English name, kind and parent two across,
+  description across the width) and *Coverage* (whole governorates, then hand-picked districts with their browsing
+  filter), each with its own count (`0 of 22`, `0 chosen`) so the scale of the job is visible before you start.
+- **The foot of the editor says what the choices add up to** — `10 districts · 2 governorates · 1 extra district` —
+  beside the single Save button, instead of a stray hint paragraph above it.
+- **Supervisors is the same shape**: a card with *Current supervisors* and *Assign or change* as two groups, side by
+  side from 900px, so the list and the form are read together rather than one above the other.
+- **Counts are sentences in both languages.** The three counts go through the platform's existing
+  `pluralCategory()` / `translateCount()` (`geo.districtCount.one`, `.two`, `.few`, with the base key as the 11+ form),
+  so Arabic gets its dual and its broken plural — `محافظتان` rather than «2 محافظة», `10 مديريات` rather than
+  «10 مديرية» — and English stops printing "1 extra districts". The supervisor badge, which prints the same noun,
+  uses it too; `i18n.test.ts` now asserts every form exists in both locales.
+
+**Two decisions.**
+
+- **Cards, after a slice that removed them.** §9c took nested cards out of the admin console and the shell is still
+  flat — but flat is not the same as undifferentiated. These two cards are siblings on a page with no other frame:
+  one subject each, no card inside a card, and the labels inside them are text, not boxes.
+- **Two columns, not one.** The screen is a structure and a thing being built in that structure. Stacking them was
+  what made the screenshot look like a form dump: on a phone the editor now starts immediately under the tree, and on
+  a desktop they are read at the same time. Below 1080px they stack in that order, unchanged.
+
+**Verified** — rendered both locales as `admin@` and read the markup back: `Regions 1 · Governorates 22 · Districts
+29 · Supervisors 1` in the header, `Aden & the Coast | Region | 10 districts · 2 governorates · 1 extra district`,
+`Identity`, `Coverage 0 of 22`, `Hand-picked districts 0 chosen`, the foot recap, then `Regional supervisors` with both
+groups. Arabic reads `محافظتان` and `10 مديريات`. `check:all` ✓ (692 tests: 677 core ×2 + 15 web, 46 migrations, pgTAP, guards 32/190/46/135),
+`check:responsive` ✓ (80 media queries — the two cards, the field pair and the supervisor split added four),
+`check:a11y` ✓ (113 routes, both directions).
+
+**Gaps, stated plainly.** No browser here, so the phone layout is read back from the emitted markup and CSS, not seen.
+The tree has one region in the seed, so the **indentation is exercised by code, not by data** — a sub-region row has
+never been rendered; the same is true of the editing highlight. The counts are covered by `i18n.test.ts`; the layout is
+not, because these are client islands and the repo has no browser harness. The interactive states (edit, retire,
+assign) are unchanged logic behind new markup.

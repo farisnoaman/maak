@@ -2894,6 +2894,289 @@ a {
   border-block-start: 1px solid var(--surface-sunken);
 }
 
+/* --- the coverage screen: a tree card beside an editor card ----------------- */
+
+/*
+ * Facts in the header band. Four numbers on one line, each with a micro-label above it: the page is about coverage,
+ * so it opens with the coverage instead of with a form.
+ */
+.console-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+  margin: 0;
+}
+.console-facts > div {
+  display: grid;
+  gap: 1px;
+}
+.console-facts dt {
+  color: var(--ink-500);
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.console-facts dd {
+  margin: 0;
+  color: var(--ink-900);
+  font-size: 1.05rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * The page: structure on the left, the thing being built on the right.
+ *
+ * Both columns are `minmax(0, …)`: a bare `fr` track cannot shrink below its content, and a chip grid inside a card
+ * is exactly the content that then pushes the page sideways.
+ */
+.geo-page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+  grid-column: 1 / -1;
+}
+@media (min-width: 1080px) {
+  .geo-page {
+    /* The editor is the taller column and the tree is the wider one: indentation and coverage sentences need room. */
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+    gap: var(--space-5);
+  }
+}
+
+/* A card on this screen: one frame, its own head, labelled groups inside it. */
+.geo-card {
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+  min-inline-size: 0;
+  padding: var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--ink-900) 9%, transparent);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+  /* One soft shadow, on a page of two cards. On a page of eight this is what makes a screen look like a mockup. */
+  box-shadow: var(--shadow-sm);
+}
+.geo-supervisors {
+  grid-column: 1 / -1;
+}
+/*
+ * A direct child of the console column would otherwise inherit the column's "separate the sections" rule — an extra
+ * 24px of top padding and a rule above a card that already has its own border.
+ */
+.console-body > section.geo-card {
+  padding-block-start: var(--space-4);
+  border-block-start: 1px solid var(--surface-sunken);
+}
+.geo-card__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  align-items: start;
+  justify-content: space-between;
+  padding-block-end: var(--space-3);
+  border-block-end: 1px solid var(--surface-sunken);
+}
+/* Scoped through the column so it outranks `.console-body > section h2`, which sets a lighter weight. */
+.console-body .geo-card__head h2 {
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: -0.005em;
+  margin: 0;
+}
+.geo-card__head .form-hint {
+  margin-block-start: 2px;
+  margin-block-end: 0;
+}
+/*
+ * The tree: rows in one frame, indented by depth, with the actions on the row.
+ *
+ * Each region used to be a card of its own with its parent appended as a sentence — one card per row, and the
+ * hierarchy spelled out in words instead of shown. A row with an indent says the same thing with no chrome, and the
+ * hairlines between rows are what make it read as a list.
+ */
+.geo-tree {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.geo-tree__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+  padding-block: var(--space-3);
+  padding-inline-start: calc(var(--depth, 0) * 1.1rem);
+  border-block-start: 1px solid var(--surface-sunken);
+  min-block-size: var(--tap-target);
+}
+.geo-tree__row:first-child {
+  border-block-start: 0;
+}
+.geo-tree__row[data-depth='1'] {
+  --depth: 1;
+}
+.geo-tree__row[data-depth='2'] {
+  --depth: 2;
+}
+/* The indent gets a guide rule, so a sub-region reads as belonging to the row above it. */
+.geo-tree__row[data-depth='1'],
+.geo-tree__row[data-depth='2'] {
+  position: relative;
+}
+.geo-tree__row[data-depth='1']::before,
+.geo-tree__row[data-depth='2']::before {
+  content: '';
+  position: absolute;
+  inset-block: 0.55rem;
+  inset-inline-start: calc(var(--depth, 1) * 1.1rem - 0.7rem);
+  border-inline-start: 1px solid var(--surface-sunken);
+}
+.geo-tree__row[data-editing='true'] {
+  background: var(--surface-muted);
+  border-radius: var(--radius-sm);
+}
+.geo-tree__main {
+  flex: 1 1 12rem;
+  min-inline-size: 0;
+}
+.geo-tree__name {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  margin: 0;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+.geo-tree__meta {
+  margin: 2px 0 0;
+  color: var(--ink-500);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+.geo-tree__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  align-items: center;
+}
+.geo-tree--retired .geo-tree__name {
+  font-weight: 600;
+  color: var(--ink-600);
+}
+.geo-tree__retired {
+  display: grid;
+  gap: var(--space-1);
+  margin-block-start: var(--space-2);
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--surface-sunken);
+}
+
+/* A labelled group inside a card: a micro-label, an optional count, then the controls. */
+.geo-group {
+  display: grid;
+  gap: var(--space-2);
+  align-content: start;
+  min-inline-size: 0;
+}
+.geo-group + .geo-group {
+  padding-block-start: var(--space-4);
+  border-block-start: 1px solid var(--surface-sunken);
+}
+.geo-group__label {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--ink-700);
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.geo-group__label--sub {
+  margin-block-start: var(--space-2);
+}
+.geo-group__count {
+  color: var(--ink-500);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.geo-group .form-hint {
+  margin: 0;
+}
+.geo-group .ui-field + .ui-field,
+.geo-group .ui-field + .geo-check-grid {
+  margin-block-start: var(--space-2);
+}
+
+/* The editor's fields: two across on anything wider than a phone, one description across the whole width. */
+.geo-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+}
+.geo-fields__wide {
+  min-inline-size: 0;
+}
+@media (min-width: 560px) {
+  .geo-fields {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .geo-fields__wide {
+    grid-column: 1 / -1;
+  }
+}
+
+/* The foot of a card: what the choices add up to, and the one button that commits them. */
+.geo-editor__foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  align-items: center;
+  justify-content: space-between;
+  margin-block-start: var(--space-2);
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--surface-sunken);
+}
+.geo-editor__recap {
+  margin: 0;
+  color: var(--ink-600);
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+}
+.geo-editor__foot .form-actions {
+  margin-block-start: 0;
+}
+.geo-supervisors__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+}
+.geo-supervisors__grid .geo-group + .geo-group {
+  padding-block-start: var(--space-4);
+  border-block-start: 1px solid var(--surface-sunken);
+}
+@media (min-width: 900px) {
+  .geo-supervisors__grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--space-6);
+  }
+  .geo-supervisors__grid .geo-group + .geo-group {
+    padding-block-start: 0;
+    border-block-start: 0;
+    padding-inline-start: var(--space-6);
+    border-inline-start: 1px solid var(--surface-sunken);
+  }
+}
+
 /* --- geography (Phase 2) --------------------------------------------------- */
 .geo-console {
   display: grid;
@@ -2919,19 +3202,40 @@ a {
 .geo-check-grid {
   display: grid;
   gap: var(--space-2);
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr));
+  /* 140px, not 190: these are chips, not fields — three fit across a phone-width card instead of two, which is
+     fourteen rows of governorates saved on the narrow screen this screen is used from. */
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 140px), 1fr));
   margin-block-end: var(--space-3);
 }
 .geo-check {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: 0.4rem 0.55rem;
-  border: 1px solid var(--border, #d8dde6);
-  border-radius: 0.5rem;
-  background: var(--surface, #fff);
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
   cursor: pointer;
-  font-size: 0.92rem;
+  font-size: 0.86rem;
+  min-inline-size: 0;
+}
+.geo-check:hover {
+  background: var(--surface-base);
+}
+.geo-check:has(input:checked) {
+  border-color: var(--brand-500);
+  background: var(--surface-base);
+}
+.geo-check__name {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+.geo-check__code {
+  margin-inline-start: auto;
+  color: var(--ink-500);
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 .geo-check input {
   accent-color: var(--accent, #0b7a5a);

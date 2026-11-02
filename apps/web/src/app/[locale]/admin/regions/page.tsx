@@ -51,6 +51,29 @@ export default async function AdminRegionsPage({
         title="geo.title"
         subtitle="geo.subtitle"
         groups={adminNav(locale)}
+        actions={
+          /* What the page is about, in four numbers: a coverage screen should open with its coverage, not with the
+             words "regions and coverage" and a form. */
+          <dl className="console-facts">
+            {[
+              {
+                key: 'geo.factRegions' as TranslationKey,
+                value: directory.regions.filter((region) => region.isActive).length,
+              },
+              {
+                key: 'geo.factGovernorates' as TranslationKey,
+                value: directory.governorates.length,
+              },
+              { key: 'geo.factDistricts' as TranslationKey, value: directory.districts.length },
+              { key: 'geo.factSupervisors' as TranslationKey, value: directory.supervisors.length },
+            ].map((fact) => (
+              <div key={fact.key}>
+                <dt>{t(fact.key)}</dt>
+                <dd className="num">{fact.value}</dd>
+              </div>
+            ))}
+          </dl>
+        }
       >
         {directory.configured ? null : <PreviewBanner locale={locale} />}
         <RegionConsole locale={locale} directory={directory} />
