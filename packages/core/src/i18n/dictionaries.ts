@@ -1557,6 +1557,7 @@ export const ar = {
   'trips.sort.featured': 'المميزة',
   'trips.detail.operator': 'المنظّم',
   'trips.detail.fare': 'السعر',
+  'trips.detail.summary': 'تفاصيل الرحلة',
   'trips.detail.fareUnavailable': 'السعر يُحتسب عند الحجز.',
   'trips.detail.fareNote':
     'السعر النهائي يُحسب ويُتحقق منه على الخادم عند الحجز — بما فيه الخصومات.',
@@ -3743,6 +3744,7 @@ export const en: Record<TranslationKey, string> = {
   'trips.sort.featured': 'Featured',
   'trips.detail.operator': 'Operator',
   'trips.detail.fare': 'Fare',
+  'trips.detail.summary': 'The trip',
   'trips.detail.fareUnavailable': 'The fare is calculated when you book.',
   'trips.detail.fareNote':
     'The final price is computed and verified on the server at booking — discounts included.',

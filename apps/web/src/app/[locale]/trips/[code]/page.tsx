@@ -139,47 +139,57 @@ export default async function PublicTripPage({
                 and the payment policy — the one number a passenger came for, last. */}
             <div className="trip-detail__body">
               <div className="trip-detail__main">
-                <dl className="trip-summary">
-                  <div className="trip-summary__row">
-                    <dt>{t('trips.seats')}</dt>
-                    <dd>{t('trips.seatsAvailable', { count: trip.seatsAvailable })}</dd>
-                  </div>
-                  <div className="trip-summary__row">
-                    <dt>{t('trips.bookingMode')}</dt>
-                    <dd>{t(TRIP_BOOKING_KEY[trip.bookingMode] ?? 'trips.booking.per_seat')}</dd>
-                  </div>
-                  <div className="trip-summary__row">
-                    <dt>{t('trips.genderPolicy')}</dt>
-                    <dd>{t(TRIP_GENDER_KEY[trip.genderPolicy] ?? 'trips.gender.any')}</dd>
-                  </div>
-                  <div className="trip-summary__row">
-                    <dt>{t('trips.paymentPolicy')}</dt>
-                    <dd>{t(TRIP_PAYMENT_KEY[trip.paymentPolicy] ?? 'trips.payment.cash')}</dd>
-                  </div>
-                  {trip.luggageAllowanceKg != null ? (
-                    <div className="trip-summary__row">
-                      <dt>{t('trips.luggage')}</dt>
-                      <dd>{trip.luggageAllowanceKg}</dd>
+                <section className="trip-card" aria-labelledby="summary-title">
+                  <header className="trip-card__head">
+                    <span className="trip-card__icon" aria-hidden="true">
+                      <Icon name="ticket" size={18} />
+                    </span>
+                    <h2 id="summary-title">{t('trips.detail.summary')}</h2>
+                  </header>
+                  <dl className="trip-facts">
+                    <div className="trip-facts__row">
+                      <dt>{t('trips.seats')}</dt>
+                      <dd>{t('trips.seatsAvailable', { count: trip.seatsAvailable })}</dd>
                     </div>
-                  ) : null}
-                  {trip.arriveEstimateMinutes > 0 ? (
-                    <div className="trip-summary__row">
-                      <dt>{t('trips.arriveEstimate')}</dt>
-                      <dd>{t('trips.minutes', { count: trip.arriveEstimateMinutes })}</dd>
+                    <div className="trip-facts__row">
+                      <dt>{t('trips.bookingMode')}</dt>
+                      <dd>{t(TRIP_BOOKING_KEY[trip.bookingMode] ?? 'trips.booking.per_seat')}</dd>
                     </div>
-                  ) : null}
-                  {trip.discount.kind !== 'none' ? (
-                    <div className="trip-summary__row">
-                      <dt>{t('trips.discount')}</dt>
-                      <dd>
-                        {t(TRIP_DISCOUNT_KIND_KEY[trip.discount.kind] ?? 'trips.discountKind.none')}
-                        {trip.discount.kind === 'percent'
-                          ? ` · ${trip.discount.value / 100}%`
-                          : ` · ${formatMinor(trip.discount.value, 'YER', { locale })}`}
-                      </dd>
+                    <div className="trip-facts__row">
+                      <dt>{t('trips.genderPolicy')}</dt>
+                      <dd>{t(TRIP_GENDER_KEY[trip.genderPolicy] ?? 'trips.gender.any')}</dd>
                     </div>
-                  ) : null}
-                </dl>
+                    <div className="trip-facts__row">
+                      <dt>{t('trips.paymentPolicy')}</dt>
+                      <dd>{t(TRIP_PAYMENT_KEY[trip.paymentPolicy] ?? 'trips.payment.cash')}</dd>
+                    </div>
+                    {trip.luggageAllowanceKg != null ? (
+                      <div className="trip-facts__row">
+                        <dt>{t('trips.luggage')}</dt>
+                        <dd>{trip.luggageAllowanceKg}</dd>
+                      </div>
+                    ) : null}
+                    {trip.arriveEstimateMinutes > 0 ? (
+                      <div className="trip-facts__row">
+                        <dt>{t('trips.arriveEstimate')}</dt>
+                        <dd>{t('trips.minutes', { count: trip.arriveEstimateMinutes })}</dd>
+                      </div>
+                    ) : null}
+                    {trip.discount.kind !== 'none' ? (
+                      <div className="trip-facts__row">
+                        <dt>{t('trips.discount')}</dt>
+                        <dd>
+                          {t(
+                            TRIP_DISCOUNT_KIND_KEY[trip.discount.kind] ?? 'trips.discountKind.none',
+                          )}
+                          {trip.discount.kind === 'percent'
+                            ? ` · ${trip.discount.value / 100}%`
+                            : ` · ${formatMinor(trip.discount.value, 'YER', { locale })}`}
+                        </dd>
+                      </div>
+                    ) : null}
+                  </dl>
+                </section>
 
                 {/* Two cards on one row: who is driving, and who is running the trip. Each answers a question a
                     passenger actually opens this page to ask, so each gets its own surface instead of both being
@@ -412,8 +422,13 @@ export default async function PublicTripPage({
                 </div>
               </div>
 
-              <aside className="trip-book" aria-labelledby="trip-book-title">
-                <h2 id="trip-book-title">{t('trips.detail.fare')}</h2>
+              <aside className="trip-book trip-card" aria-labelledby="trip-book-title">
+                <header className="trip-card__head">
+                  <span className="trip-card__icon" aria-hidden="true">
+                    <Icon name="price" size={18} />
+                  </span>
+                  <h2 id="trip-book-title">{t('trips.detail.fare')}</h2>
+                </header>
                 {trip.fare ? (
                   <>
                     <p className="trip-book__price num">

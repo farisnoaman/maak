@@ -10828,3 +10828,57 @@ h3,
   color: var(--ink-700);
   text-align: end;
 }
+
+/* ====================================================================================================================
+ * 29. EVERY CARD ON THE TRIP PAGE IS THE SAME CARD
+ *
+ * §28 gave the route, the crew, the operator, the policies and the notes one primitive. Two blocks were left outside it,
+ * and they were the two the eye landed on first: the facts list at the top (`.trip-summary`, a bordered `<dl>` of its
+ * own) and the fare panel in the aside (`.trip-book`, a shadowed box with its own micro-caps title). Three materials on
+ * one page is what makes a screen read as assembled rather than designed — so the shell is now one rule, applied by
+ * class, not a look each block invented:
+ *
+ *   the same paper, the same 1px edge, the same 20px corner, the same head (an icon disc, a title at `--text-md`), and
+ *   the same rhythm inside.
+ *
+ * The fare panel keeps what is *its* — the price at `--text-2xl`, the primary button, the sticky position in the
+ * aside — because that is hierarchy, not style. Emphasis comes from the number and the button, not from a shadow.
+ * ================================================================================================================== */
+
+.trip-card,
+.trip-book {
+  border: 1px solid var(--paper-edge);
+  border-radius: var(--radius-lg);
+  background: var(--paper);
+}
+
+/* Every card head is a title, not a label: the fare panel's micro-caps heading was the only one in the page. */
+.trip-card__head h2 {
+  color: var(--ink-900);
+  text-transform: none;
+  letter-spacing: -0.008em;
+}
+
+/* The fare card is the conversion card, and it earns that from the price and the button, not from an elevation. */
+.trip-book.trip-card {
+  box-shadow: none;
+}
+
+/* Its head sits directly over the big number, so it takes the card's own gap rather than a second margin. */
+.trip-book .trip-card__head {
+  margin-block-end: 0;
+}
+
+.trip-book__price {
+  margin-block-start: var(--space-1);
+}
+
+/* The seats line divides like every other row on the page. */
+.trip-book__seats {
+  border-block-start: 1px dashed color-mix(in srgb, var(--ink-900) 12%, transparent);
+}
+
+/* The facts card and the policies card are the same list of rows; the label column keeps its measure. */
+.trip-card .trip-facts__row {
+  padding-block: var(--space-2);
+}

@@ -69,6 +69,7 @@ questions in the order they ask them.**
 | 21 | The direction, applied to the dense half | The warm layer existed as tokens; the console still read as a spreadsheet in grey. The direction is now material: a tinted head band, warm paper, flat matte buttons | `[x]` — §26 |
 | 22 | **The desktop navigation did not exist** | Both navigations lived inside a closed `<details>` and were "opened" with `display: … !important`, which a closed `<details>` ignores — no menu, no links, no *Sign in* above 720px, and no console sidebar above 900px | `[x]` — §27 |
 | 23 | **The trip page**, second pass | The itinerary was a rail of dots between two paragraphs, and the operator and the notes were the last two grey headings of a flat column | `[x]` — §28 |
+| 24 | The trip page, one material | §28 left the facts list and the fare panel wearing two older shells — three kinds of card on one screen | `[x]` — §29 |
 
 ## 3–4. Trips list and trip detail — what changed
 
@@ -1099,3 +1100,34 @@ speaking directly to the passenger, were the last grey paragraph before the foot
 `tsc` ✓, `prettier` ✓, `check:responsive` ✓ (107 media queries), `check:guards` ✓ (32 core / 199 style), build ✓.
 **Gap:** no browser — the four-column route at 360px (where the time column drops to 3.25rem) and the pair breaking at
 720px are read from the CSS, not seen.
+
+## 29. Every card on the trip page is the same card
+
+**The report.** *"The other two cards look different — make all the cards in the whole page consistent."* Exactly right:
+§28 converted the route, the crew, the operator, the policies and the notes to one primitive and left the two blocks the
+eye lands on first outside it.
+
+**What was inconsistent.** Three materials on one screen:
+
+| Block | What it was | Why it read as a different thing |
+| --- | --- | --- |
+| The facts list | `.trip-summary`, a bordered `<dl>` with a solid hairline per row | no head, no corner, solid rules |
+| The fare panel | `.trip-book`, `--shadow-md`, its heading in micro-caps with tracking | it floated; no other card did |
+| The new cards (§28) | `.trip-card` | paper, `--paper-edge`, an icon disc and an `--text-md` title |
+
+**What it is now** (stylesheet §29).
+
+- **One shell, named once.** `.trip-card, .trip-book` share the border, the corner and the paper; the facts card is the
+  same `.trip-card` as the rest, with a head (`The trip`, ticket glyph) and the same dashed row rhythm the policy card
+  uses — its rows are `.trip-facts__row` now, not a second table style.
+- **The fare panel keeps its hierarchy, not its costume**: the price at `--text-2xl`, the primary button, the sticky
+  position in the aside — and it loses the shadow and the micro-caps heading that made it the only floating box on the
+  page. Emphasis is the number and the button; a shadow is decoration.
+- **Every head is a title**, at `--text-md` with an icon disc, in both directions; the seats line above the button
+  divides with the same dashed hairline as every other row.
+- New key `trips.detail.summary` (`The trip` / `تفاصيل الرحلة`) for the facts card's head.
+
+**Verified.** `/en/trips/AD-SA-FHFC` and `/ar/trips/AD-SA-FHFC`: six `.trip-card` blocks (facts, crew, operator, route,
+notes, fare), six `.trip-card__head`s, the fare aside carrying `trip-book trip-card`. `tsc` ✓, `prettier` ✓,
+`check:responsive` ✓, `check:guards` ✓, `check:all` ✓. **Gap:** no browser — the equal padding and corner at 360px, and
+the fare card in the phone's first position (`order: -1`), are read from the CSS.

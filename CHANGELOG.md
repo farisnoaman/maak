@@ -13,6 +13,15 @@ on `main`; the tag is the last step, not the first.
 
 ## [Unreleased] — after the last phase report
 
+### Changed — one material for every card on the trip page (`docs/polish-plan.md` §29)
+
+- **The facts list is a card** with the same head as the rest (`The trip`, ticket glyph) and the same dashed rows the
+  policy card uses, instead of a separately styled `<dl>` with solid rules and no title.
+- **The fare panel wears the same shell** — same paper, edge and corner — and loses its shadow and its micro-caps
+  heading. It keeps the price at `--text-2xl`, the primary button and its sticky position: hierarchy from the number,
+  not from an elevation.
+- New key `trips.detail.summary` (`The trip` / `تفاصيل الرحلة`).
+
 ### Changed — the trip page, as cards (`docs/polish-plan.md` §28)
 
 - **The itinerary is a card of stops**: four columns in the same order at every stop — clock time, mark, name, fare
