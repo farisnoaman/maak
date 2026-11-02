@@ -35,8 +35,9 @@ body {
   background: var(--surface-base);
   color: var(--ink-900);
   font-family: var(--font-ui);
-  font-size: 16px;
-  line-height: 1.7;
+  font-size: var(--text-md);
+  /* Set per direction in tokens.css: Arabic needs 1.8 where Latin is comfortable at 1.65. */
+  line-height: var(--leading-ui);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
@@ -46,6 +47,30 @@ h2,
 h3,
 p {
   margin: 0;
+}
+
+/* Headings land on the scale by default instead of inheriting the body size and being fixed up page by page.
+   Display sizes tighten their leading; a 3rem line at 1.65 is a paragraph, not a title. */
+h1,
+h2,
+h3 {
+  line-height: var(--leading-snug);
+  letter-spacing: -0.012em;
+  font-weight: 800;
+}
+
+h1 {
+  font-size: var(--text-2xl);
+}
+
+h2 {
+  font-size: var(--text-xl);
+}
+
+h3 {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  letter-spacing: -0.005em;
 }
 
 a {
@@ -85,6 +110,39 @@ a {
   .shell {
     padding-inline: var(--space-5);
   }
+}
+
+/* ---------- icons ----------
+ * One grid (24), one stroke (1.7), one colour (`currentColor`). `vertical-align` aligns the icon's optical centre
+ * with the text's x-height rather than its box, which is the difference between a tick beside a sentence and a
+ * tick floating above it. Directional marks rotate, and the two that point "forward" also mirror in RTL.
+ * ------------------------------------------------------------------------- */
+
+.ui-icon,
+.ui-directional-icon {
+  display: inline-block;
+  flex: none;
+  vertical-align: -0.16em;
+}
+
+.ui-directional-icon--up {
+  transform: rotate(180deg);
+}
+
+.ui-directional-icon--forward {
+  transform: rotate(-90deg);
+}
+
+.ui-directional-icon--back {
+  transform: rotate(90deg);
+}
+
+.ui-directional-icon--flip-forward {
+  transform: scaleX(var(--icon-flip, 1)) rotate(-90deg);
+}
+
+.ui-directional-icon--flip-back {
+  transform: scaleX(var(--icon-flip, 1)) rotate(90deg);
 }
 
 /* ---------- header ---------- */
@@ -220,10 +278,37 @@ a {
 
 .hero h1 {
   margin-block-start: var(--space-5);
-  font-size: clamp(1.9rem, 4.2vw, 3rem);
-  line-height: 1.25;
-  letter-spacing: -0.01em;
+  font-size: var(--text-3xl);
+  line-height: var(--leading-tight);
+  letter-spacing: -0.02em;
   font-weight: 800;
+}
+
+/* The contour drawing. It sits behind the hero's right-hand column, is decoration (`aria-hidden` in the
+   component), and disappears on a phone where it would be three strokes behind the search form. */
+.hero__art {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-end: max(-60px, -4vw);
+  inline-size: min(520px, 52vw);
+  block-size: auto;
+  max-block-size: 108%;
+  translate: 0 -50%;
+  color: var(--brand-300);
+  opacity: 0.5;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.hero > .shell {
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 719px) {
+  .hero__art {
+    display: none;
+  }
 }
 
 .hero p.lead {
@@ -409,9 +494,9 @@ a {
 }
 
 .section__head h2 {
-  font-size: clamp(1.35rem, 2.6vw, 1.75rem);
+  font-size: var(--text-xl);
   font-weight: 800;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.014em;
 }
 
 .section__head p {
@@ -906,6 +991,30 @@ a {
 }
 
 /* ---------- styleguide layout ---------- */
+.sg-icons {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 104px), 1fr));
+  gap: var(--space-3);
+  margin-block-start: var(--space-6);
+  padding: 0;
+  list-style: none;
+}
+
+.sg-icons li {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-2);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-md);
+  color: var(--ink-700);
+}
+
+.sg-icons code {
+  font-size: var(--text-2xs);
+  color: var(--ink-500);
+}
+
 .sg-row {
   display: flex;
   flex-wrap: wrap;
@@ -1575,6 +1684,25 @@ a {
 
 .site-menu__toggle::-webkit-details-marker {
   display: none;
+}
+
+.site-menu__glyphs {
+  display: inline-grid;
+  place-items: center;
+  line-height: 0;
+}
+
+.site-menu__glyph--close {
+  display: none;
+}
+
+/* One glyph swaps for the other when the disclosure opens — no JavaScript, no second state to keep in sync. */
+.site-menu[open] .site-menu__glyph--open {
+  display: none;
+}
+
+.site-menu[open] .site-menu__glyph--close {
+  display: inline-block;
 }
 
 /* 320px: the brand loses its subtitle and the menu button loses its word, but nothing is hidden
@@ -2754,10 +2882,11 @@ input[type='file']::file-selector-button {
 .trip-card__route {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   gap: var(--space-2);
-  font-size: 1.05rem;
+  font-size: var(--text-lg);
   font-weight: 800;
+  letter-spacing: -0.01em;
 }
 
 /* One glyph for "and then, over there". The arrow has to point along the reading direction, which in
@@ -2768,6 +2897,19 @@ input[type='file']::file-selector-button {
 .back-arrow {
   display: inline-block;
   transform: scaleX(var(--icon-flip, 1));
+}
+
+/* Between two city names, the arrow is the only thing saying "and then". It gets a disc so it reads as a
+   direction rather than as punctuation that drifted in from the heading. */
+.trip-card__arrow {
+  display: grid;
+  place-items: center;
+  inline-size: 26px;
+  block-size: 26px;
+  border-radius: var(--radius-pill);
+  background: var(--brand-50);
+  color: var(--brand-600);
+  line-height: 0;
 }
 
 .trip-card__arrow,
@@ -5489,13 +5631,11 @@ a.booking-card__code:hover {
 .trust-row__tick {
   display: grid;
   place-items: center;
-  inline-size: 18px;
-  block-size: 18px;
+  inline-size: 20px;
+  block-size: 20px;
   border-radius: var(--radius-pill);
   background: var(--brand-100);
   color: var(--brand-700);
-  font-size: 0.7rem;
-  font-weight: 800;
 }
 
 /* A section head with its "all trips" link on the far end. */
@@ -5584,6 +5724,13 @@ a.booking-card__code:hover {
   background: var(--brand-50);
 }
 
+.destination-chip__pin {
+  display: inline-grid;
+  place-items: center;
+  color: var(--brand-600);
+  line-height: 0;
+}
+
 .destination-chip__name {
   font-weight: 700;
   font-size: 0.9rem;
@@ -5610,36 +5757,46 @@ a.booking-card__code:hover {
   }
 }
 
+/* Three steps are a sequence, not three products: a rule above each and the number beside the title reads as
+   one list that continues, where three bordered boxes read as three things to choose between. */
 .step {
   position: relative;
-  padding: var(--space-6);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--surface-sunken);
-  background: var(--surface-base);
+  padding-block-start: var(--space-5);
+  border-block-start: 2px solid var(--ink-900);
 }
 
 .step__num {
-  display: grid;
+  display: inline-grid;
   place-items: center;
-  inline-size: 30px;
-  block-size: 30px;
+  inline-size: 26px;
+  block-size: 26px;
   border-radius: var(--radius-pill);
-  background: var(--brand-600);
-  color: #fff;
-  font-size: 0.85rem;
+  background: var(--brand-50);
+  color: var(--brand-700);
+  font-size: var(--text-xs);
   font-weight: 800;
+  vertical-align: middle;
+  margin-inline-end: var(--space-2);
 }
 
 .step h3 {
-  margin-block-start: var(--space-3);
-  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-block-start: var(--space-2);
+  font-size: var(--text-md);
   font-weight: 700;
+}
+
+.step h3 .step__num {
+  margin-inline-end: 0;
 }
 
 .step p {
   margin-block-start: var(--space-2);
   color: var(--ink-600);
-  font-size: 0.9rem;
+  font-size: var(--text-sm);
+  max-inline-size: 34ch;
 }
 
 /* Calculator beside its explanation, rather than floating in the hero. */

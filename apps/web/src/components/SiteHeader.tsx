@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { translate, type Locale, type TranslationKey } from '@maak/core';
+import { Icon } from './ui/Icon';
 import { LocaleSwitch } from './LocaleSwitch';
 import { OpenInTab } from './OpenInTab';
 
@@ -77,7 +78,12 @@ export function SiteHeader({
           */}
           <details className="site-menu" suppressHydrationWarning>
             <summary className="site-menu__toggle" aria-label={t('nav.menu')}>
-              <span aria-hidden="true">☰</span>
+              {/* Two draws, one visible: the toggle says "menu" closed and "close" open. It used to be the
+                  character `☰`, which stayed `☰` while the menu was open. */}
+              <span className="site-menu__glyphs" aria-hidden="true">
+                <Icon name="menu" size={20} className="site-menu__glyph site-menu__glyph--open" />
+                <Icon name="close" size={20} className="site-menu__glyph site-menu__glyph--close" />
+              </span>
               <span className="site-menu__label">{t('nav.menu')}</span>
             </summary>
             <div className="site-menu__links">

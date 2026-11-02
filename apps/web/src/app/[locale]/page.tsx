@@ -9,6 +9,8 @@ import {
   type Locale,
   type TranslationKey,
 } from '@maak/core';
+import { HeroField } from '@/components/HeroField';
+import { Icon, type IconName } from '@/components/ui/Icon';
 import { SiteHeader } from '@/components/SiteHeader';
 import { SiteFooter } from '@/components/SiteFooter';
 import { FareCalculator } from '@/components/FareCalculator';
@@ -41,10 +43,14 @@ export const metadata: Metadata = {
  * Every number on this page comes from the database or is not shown. A home page cannot be "polished" into saying
  * something true; it can only be arranged so the true things come first.
  */
-const TRUST: { icon: string; key: TranslationKey }[] = [
-  { icon: '✓', key: 'home.trustVerified' },
-  { icon: '✓', key: 'home.trustPrice' },
-  { icon: '✓', key: 'home.trustTrack' },
+/**
+ * Three promises, three marks. They used to be the character `✓` three times, which says "yes" three times and
+ * distinguishes nothing; the icon says which promise it is before the words do.
+ */
+const TRUST: { icon: IconName; key: TranslationKey }[] = [
+  { icon: 'shield', key: 'home.trustVerified' },
+  { icon: 'price', key: 'home.trustPrice' },
+  { icon: 'route', key: 'home.trustTrack' },
 ];
 
 const STEPS: { title: TranslationKey; body: TranslationKey }[] = [
@@ -91,10 +97,11 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
 
       <main id="main">
         <section className="hero">
+          <HeroField />
           <div className="shell hero__grid">
             <div>
               <span className="eyebrow">
-                <span aria-hidden="true">◆</span>
+                <Icon name="spark" size={13} />
                 {t('home.eyebrow')}
               </span>
               <h1>{t('home.heroTitle')}</h1>
@@ -108,7 +115,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
                 {TRUST.map((item) => (
                   <li key={item.key}>
                     <span className="trust-row__tick" aria-hidden="true">
-                      {item.icon}
+                      <Icon name={item.icon} size={13} />
                     </span>
                     {t(item.key)}
                   </li>
@@ -135,7 +142,10 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
                       <li key={trip.id}>
                         <Link className="departure" href={`/${locale}/trips/${trip.code}`}>
                           <span className="departure__route">
-                            {trip.origin.name} <span aria-hidden="true">→</span>{' '}
+                            {trip.origin.name}{' '}
+                            <span className="route-arrow" aria-hidden="true">
+                              <Icon name="arrow" size={14} />
+                            </span>{' '}
                             {trip.destination.name}
                           </span>
                           <span className="departure__meta">
@@ -222,6 +232,9 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
                       className="destination-chip"
                       href={`/${locale}/trips?destination=${destination.id}`}
                     >
+                      <span className="destination-chip__pin" aria-hidden="true">
+                        <Icon name="pin" size={15} />
+                      </span>
                       <span className="destination-chip__name">{destination.name}</span>
                       <span className="destination-chip__count num">
                         {t('home.tripsToDestination', { count: destination.count })}

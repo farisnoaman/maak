@@ -3,6 +3,10 @@ import { notFound } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { DIRECTION, LOCALES, isLocale, type Locale } from '@maak/core';
 import '@maak/design-tokens/tokens.css';
+// Self-hosted, subset by the browser via `unicode-range`: no third-party request on first paint, and no
+// dependency on whatever Arabic face the visitor's OS happens to ship. Tahoma is what the app used to be.
+import '@fontsource-variable/cairo';
+import '@fontsource-variable/inter';
 import '../globals.css';
 import { ToastProvider } from '@/components/ui/Toast';
 import { MobileTabBar } from '@/components/MobileTabBar';

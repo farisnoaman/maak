@@ -7,6 +7,7 @@ import {
   type TranslationKey,
 } from '@maak/core';
 import { Badge } from '@/components/ui/Feedback';
+import { Icon } from '@/components/ui/Icon';
 import type { PublicTripSummary } from '@/lib/trips';
 
 /**
@@ -57,8 +58,10 @@ export function PublicTripCard({
           <span className={highlighted.has(trip.origin.code) ? 'trip-match' : undefined}>
             {trip.origin.name}
           </span>
+          {/* An arrow drawn as an arrow. The character `→` took the font's weight, sat on the text baseline and
+              changed shape with the fallback face; this one is stroked, centred, and flips with the document. */}
           <span className="trip-card__arrow" aria-hidden="true">
-            →
+            <Icon name="arrow" size={16} />
           </span>
           <span className={highlighted.has(trip.destination.code) ? 'trip-match' : undefined}>
             {trip.destination.name}

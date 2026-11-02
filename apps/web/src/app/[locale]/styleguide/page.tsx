@@ -5,6 +5,7 @@ import { Field } from '@/components/ui/Field';
 import { Select } from '@/components/ui/Select';
 import { Badge, EmptyState, Skeleton } from '@/components/ui/Feedback';
 import { DirectionalIcon } from '@/components/ui/DirectionalIcon';
+import { Icon, ICON_NAMES } from '@/components/ui/Icon';
 import { StyleguideInteractive } from '@/components/ui/StyleguideInteractive';
 import { SiteHeader } from '@/components/SiteHeader';
 
@@ -63,6 +64,19 @@ export default async function StyleguidePage({
             </Button>
             <span className="sg-label">{t('styleguide.direction')}</span>
           </div>
+        </section>
+
+        {/* The set is enumerated from the component, so a mark cannot be added to the app and missing from here. */}
+        <section aria-labelledby="sg-icons" className="section">
+          <h2 id="sg-icons">{t('styleguide.icons')}</h2>
+          <ul className="sg-icons">
+            {ICON_NAMES.map((name) => (
+              <li key={name}>
+                <Icon name={name} size={22} />
+                <code>{name}</code>
+              </li>
+            ))}
+          </ul>
         </section>
 
         <section aria-labelledby="sg-inputs" className="section">

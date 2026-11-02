@@ -47,7 +47,7 @@ questions in the order they ask them.**
 | 2 | Header + footer | 8 nav links including *المركبات* and *دليل المكوّنات*; no footer anywhere but home | `[x]` trimmed nav, shared `SiteFooter` |
 | 3 | Trips list (`/trips`) | Strong already (filters, keyset paging, facets) — but nothing showed *what* was filtering, sort was hidden in the panel, and the "no database" banner appeared over real data | `[x]` |
 | 4 | Trip detail (`/trips/[code]`) | The fare was the twelfth row of a table, below the luggage allowance; the reserve button was at the very bottom | `[x]` |
-| 5 | Booking + pay (`/book`, `/pay`) | Two flows that work; the pay screen is the one people screenshot when it goes wrong | `[ ]` |
+| 5 | Booking + pay (`/book`, `/pay`) | Two flows that work; the pay screen is the one people screenshot when it goes wrong | `[ ]` — next |
 | 6 | Account (`/account`) | Lists are correct, hierarchy is flat — "next departure" should be the first thing | `[ ]` |
 | 7 | Auth (`/auth/*`) | Fine, but the sign-in form is the last place a person should meet jargon | `[ ]` |
 | 8 | Operator console | Dense tables are right for the job; the **overview** answers nothing at a glance | `[ ]` |
@@ -248,3 +248,43 @@ so this is HTML-and-CSS-level verification, not a screenshot.
   offset measured against the sticky site header — a layout change to make with a browser open.
 - `[~]` **Dark-mode audit of the new surfaces.** The tokens flip, but the new hairlines and the muted table header were
   chosen against the light theme.
+
+## 12. The visual layer — the foundation pass
+
+The queue above fixed *what* each screen says. This pass is about *how it looks while saying it*, which the product had
+never decided at all: there was no icon set, no type scale, and no typeface.
+
+| What it was | Why it is wrong |
+| --- | --- |
+| Marks were characters: `◆` as a bullet, `✓` as a tick, `→` as a route, `⌄` as a chevron, `☰` as the menu | A character takes the body font's weight and sidebearings, sits on the text baseline instead of the optical centre, changes shape with the fallback face, and cannot say "close" when the menu is open |
+| Every font-size was written where it was used: `clamp(1.35rem, 2.6vw, 1.75rem)` here, `1.05rem` there | No scale, so nothing was consistently bigger than anything else; a section title and a card title could swap ranks |
+| `--font-arabic` named Cairo first, but Cairo was never loaded | Every Arabic screen rendered in the operating system's fallback — Tahoma on Windows — at a `line-height` chosen for Latin |
+| Three "how it works" steps were three bordered boxes | Three boxes read as three things to choose between; a sequence reads as a rule and a number |
+| The hero had a radial gradient and one typographic line of defence | The product sells a line between two points and had none of that on its front page |
+
+**What changed**
+
+- **Self-hosted variable fonts.** `@fontsource-variable/cairo` and `@fontsource-variable/inter`, imported once in the
+  locale layout, subset by `unicode-range`. No third-party request on first paint, no `next/font` build step, and the
+  fallback chain still ends somewhere sane. `--leading-ui` is set per direction: 1.8 for Arabic, 1.65 for Latin.
+- **A named type scale** (`--text-2xs … --text-3xl`, `--leading-tight … --leading-ui`) in `tokens.css`, with `h1`–`h3`
+  landing on it by default rather than inheriting 16px and being fixed up per page.
+- **`Icon`** — 20 paths, one grid, one stroke, `currentColor`, no dependency. `DirectionalIcon` now draws a chevron
+  instead of writing `›`, and still flips through `--icon-flip`. The styleguide enumerates the set from the component.
+- **`HeroField`** — contour rings and one dashed route with two stops, drawn in SVG and `aria-hidden`. Decoration that
+  is honest: it is the shape of the product's subject, not a photograph of a place the trip does not visit.
+- Home: trust marks differentiated by icon rather than three identical ticks, destination chips carry a pin, the trip
+  card's `→` became a stroked arrow in a disc, the departure rows in the hero aside match it, and the menu button draws
+  its own glyphs and changes to *close* when open.
+
+**Why no photography.** A marketplace with no real photos of its own routes cannot borrow stock: an image of a
+coastline that is not the one the trip crosses is a small lie told on every page load. The drawing costs bytes and
+tells the truth.
+
+**Verified** — `tsc`, `check:responsive` (66 media queries), `check:guards`, and the a11y sweep in slices over
+`/trips`, `/ar`, `/admin`, `/staff`, `/styleguide` (all pass). Fonts and icons were confirmed in the served CSS and
+markup rather than by eye: 4 Cairo and 8 Inter `@font-face` rules in the stylesheet, 12 `ui-icon` nodes on the home
+page. **Still HTML-and-CSS-level verification** — this sandbox has no browser, so nobody has looked at the result.
+
+**Next in this layer** — the screens whose layout has not been revisited for looks at all: `/trips` (the card grid and
+filter rail), `/trips/[code]` (the itinerary and the fare panel), then §5 booking and pay.

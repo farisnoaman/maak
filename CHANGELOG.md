@@ -15,6 +15,26 @@ on `main`; the tag is the last step, not the first.
 
 ### Added
 
+- **The product ships its own typefaces** (`@fontsource-variable/cairo`, `@fontsource-variable/inter`): Arabic was
+  rendering in whatever the operating system supplied — Tahoma on Windows, never Cairo — which is why the same screen
+  looked different on every machine and why Arabic text sat badly in its line box. Both are variable, self-hosted, and
+  subset by `unicode-range`, so the browser downloads only the script it draws: no third-party request, no layout
+  shift, and `--leading-ui` gives Arabic the 1.8 it needs where Latin is comfortable at 1.65.
+- **An icon set** (`components/ui/Icon.tsx`): 20 hand-authored paths on one 24px grid at one stroke weight, drawn in
+  `currentColor`. The interface had been using characters (`◆`, `✓`, `→`, `⌄`) as marks — they take the body font's
+  weight and sidebearings, change shape with the fallback face, and cannot be centred against text. The styleguide
+  enumerates the set from the component, so a mark cannot exist in the app and be missing from the documentation.
+- **`HeroField`**: a contour-and-route drawing behind the home hero — the topology the product actually sells, not a
+  stock photograph of a coastline it does not cross.
+
+### Changed
+
+- **A type scale, named.** `--text-2xs … --text-3xl` and `--leading-tight … --leading-ui` replace sizes written by
+  hand at the point of use. Headings land on it by default, display sizes tighten their leading, and the home hero,
+  section titles and step cards all read from the same three numbers.
+- **The home page's steps are a sequence, not three boxes**: a rule above each and the number beside its title,
+  instead of three bordered cards that read as three things to choose between.
+- **The menu button is drawn, not typed**, and says *close* while the menu is open (`[open]` swaps the glyph in CSS).
 - **Install paths, written down** (`docs/apps.md` §"How to install it on a phone"): the web app as a PWA (works
   today, no account), Expo Go for the inner loop, `eas build --profile preview` for an APK a tester keeps, and the
   store route that waits on accounts. `apps/mobile/.env.example` lists the four variables the app reads.

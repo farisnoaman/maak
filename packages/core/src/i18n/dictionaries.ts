@@ -122,6 +122,7 @@ export const ar = {
   'styleguide.emptyDesc': 'عندما ينشر المنظّمون رحلات، ستظهر هنا.',
   'styleguide.emptyAction': 'استكشف الرحلات',
   'styleguide.loading': 'جارٍ تحميل الرحلات',
+  'styleguide.icons': 'الأيقونات',
   'styleguide.direction': 'اتجاه الأيقونات',
   'styleguide.dialogBody':
     'هذا نص توضيحي داخل النافذة. يُستخدم للتأكيد قبل الإجراءات الحساسة مثل الإلغاء أو الاسترداد.',
@@ -2094,6 +2095,7 @@ export const en: Record<TranslationKey, string> = {
   'styleguide.emptyDesc': 'When operators publish trips, they will appear here.',
   'styleguide.emptyAction': 'Explore trips',
   'styleguide.loading': 'Loading trips',
+  'styleguide.icons': 'Icons',
   'styleguide.direction': 'Icon direction',
   'styleguide.dialogBody':
     'This is placeholder copy inside the dialog. It is used to confirm sensitive actions such as cancellation or refunds.',
