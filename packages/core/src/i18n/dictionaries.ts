@@ -260,6 +260,11 @@ export const ar = {
   'errors.DUPLICATE_REFERENCE':
     'يوجد عنصر بالاسم نفسه مسبقًا. اختر اسمًا آخر أو استخدم العنصر الموجود.',
   'errors.INTERNAL': 'حدث خطأ غير متوقع. حاول مرة أخرى.',
+  // The two whole-page states: what happened, and the two doors out of it.
+  'page.notFoundBody':
+    'قد يكون الرابط قديمًا أو تحرّكت الرحلة. ابدأ من الصفحة الرئيسية، أو ابحث عن رحلة.',
+  'page.errorBody':
+    'لم يضِع شيء. أعد المحاولة، وإن تكرّر الخطأ فأرسل رقم التتبّع الظاهر هنا إلى الدعم.',
   'errors.NETWORK': 'تعذّر الاتصال بالخادم. تحقّق من الشبكة.',
   'errors.UNBALANCED_JOURNAL': 'القيد غير متوازن: مجموع المدين يجب أن يساوي مجموع الدائن.',
   'errors.IMMUTABLE': 'لا يمكن تعديل قيد مرحّل. أنشئ قيدًا عكسيًا بسبب مكتوب.',
@@ -2371,6 +2376,10 @@ export const en: Record<TranslationKey, string> = {
   'errors.DUPLICATE_REFERENCE':
     'An entry with this name already exists. Pick another name or use the existing one.',
   'errors.INTERNAL': 'Something went wrong. Please try again.',
+  'page.notFoundBody':
+    'This link is old, or the trip has moved. Start from the home page, or search for a trip.',
+  'page.errorBody':
+    'Nothing was lost. Try again — and if it happens twice, send the reference shown here to support.',
   'errors.NETWORK': 'Could not reach the server. Check your connection.',
   'errors.UNBALANCED_JOURNAL': 'The journal does not balance: debits must equal credits.',
   'errors.IMMUTABLE': 'A posted journal cannot be edited. Post a reversing entry with a reason.',

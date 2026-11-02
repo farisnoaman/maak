@@ -56,7 +56,9 @@ questions in the order they ask them.**
 | 9c | **Admin console** (`/admin` + 6 screens) | Two frames around every screen (a card inside a card), five different sidebars, a hub whose second tile apologised for a phase that no longer exists, and UUIDs printed where names belong | `[x]` |
 | 9d | Admin — coverage (`/admin/regions`) | A card per region, the hierarchy written out as a sentence, an editor that starts below its own heading, and 22 governorate chips at field width | `[x]` — §20 (flat: table + editor view) |
 | 10 | Mobile shell (`apps/mobile`) | Mirrors the same problem: the home screen is a list of links, one of them labelled *المرحلة* | `[ ]` |
-| 11 | Empty / error / loading states | The states a demo never shows and a launch always hits | `[ ]` |
+| 11 | Empty / error / loading states | The states a demo never shows and a launch always hits | `[x]` — §21 |
+| 12 | Console navigation on a phone | Nine destinations wrapped three rows deep above every page title; no way home on a desktop | `[x]` — §21 |
+| 13 | **The design layer** — type, accent, header, states | Four identical grey links, no current page, 404s that were not pages, Latin tracking in Arabic | `[x]` — §21 |
 
 ## 3–4. Trips list and trip detail — what changed
 
@@ -700,3 +702,59 @@ across) is read back from the emitted markup and CSS plus `check:responsive`, no
 tree's **indentation and the retired state are exercised by code, not by data**. The counts are covered by
 `i18n.test.ts`; the layout is not — these are client islands and the repo has no browser harness — and the editor's
 open/close transitions were verified by pinning state, not by clicking.
+
+## 21. The design pass — one skin over the front door, and a menu on a phone
+
+Asked for by the owner, with a screenshot of `/admin/regions` on a phone: *"make the admin page look professional … less
+spaces, do cards when possible, do groups when possible, informative, user friendly"* — the same brief as §20, which
+means §20 answered the layout and left the *look* unanswered.
+
+**What was actually wrong, once the layout was no longer the complaint.** The screens had a layout rule each and the
+browser's idea of everything else: four identical grey words in the header, with no sign of which page you were on; a
+console whose nine destinations wrapped three rows deep above every page title, so the first thing on a phone was a tag
+cloud; 404s that were not pages at all; forty empty states all showing the character `◇`; Latin micro-caps tracking
+applied to Arabic, which prises the joins of a cursive script apart; and an auth form floating on bare paper.
+
+**The direction, in one line:** *one accent, one measure, one way of opening a section, one way of lifting a card.*
+
+- **The accent is the product's own green.** Sand stays reserved for "featured"/premium, because a colour that marks a
+  paid placement cannot also mark an action. The signature device is a 32px brand rule above a section title: it costs
+  no markup, is identical in both directions, and is the one repeating mark that makes separate screens read as one site.
+- **Type**: display lines balance (`text-wrap: balance`), the hero measures 22ch instead of the whole window, and body
+  copy gets a readable measure. In RTL, heading tracking is switched off entirely — negative tracking closes Arabic's
+  joins — and every capitalised caption now reads its tracking from `--tracking-caps`, which is `0` in Arabic and
+  `0.05em` in Latin (`packages/design-tokens/tokens.css`).
+- **The header says where you are and what to do.** The current destination carries `aria-current="page"` and a 2px
+  rule; *Sign in* is the only filled button in the row (and a full-width one in the phone sheet), so the loudest thing
+  in the header is the thing a stranger came for.
+- **The console is a place with a door.** On a phone the nine destinations collapse into one 44px row that names where
+  you are — "Administration · Regions" — opened by tap into the same grouped list (a native `<details>`, no JavaScript,
+  keyboard-operable, and `display: contents` above 900px so the sidebar is the *same* list rather than a second copy).
+  On a desktop the sidebar is sticky and begins with the product lockup, because the console had no way home that did
+  not involve editing the address bar.
+- **States are designed.** `not-found.tsx` is a page — mark, 404, what happened, two ways out — and the error boundary
+  offers *retry* **and** home, since a boundary that only retries traps anyone whose failure is deterministic. Both read
+  the language from an `x-maak-locale` header the proxy forwards, because `notFound()` passes no route params: an
+  English operator opening a deleted trip used to be apologised to in Arabic. `EmptyState` draws the new `inbox` glyph
+  in a brand disc instead of a typed diamond. Loading skeletons now have the shape of the page they precede.
+- **Cards are still items, not containers.** The owner's standing rule — *"do cards when it should be cards, maximum
+  nested cards 2, do not make main cards for the whole page, flattened pages"* — is why §20's coverage screen keeps its
+  shape (a heading, a table, a section, and editing as a view). This pass did not re-card it; it removed the chrome
+  around it (the console menu), tightened the chips to three across a phone, gave the table's rows a hover, and let the
+  section title carry the hierarchy.
+
+**A bug this found.** `app/[locale]/loading.tsx` put a streaming boundary at the locale root, so `notFound()` could no
+longer set a status: every 404 under a language answered **200 with a skeleton in it**. The boundary moved to
+`/trips` (the one list that actually streams) and the catch-all `[locale]/[...rest]` keeps misses inside the locale, so
+`/en/nope` is a real 404 with the real not-found page, in the right language.
+
+**Verified** — `check:all` ✓ (692 tests: 677 core ×2 + 15 web, 46 migrations, pgTAP, guards 32/190/46/135),
+`check:responsive` ✓ (85 media queries), `check:a11y` ✓ over **all 113 routes** in both directions (12 discovered detail
+pages), and rendered both locales of `/`, `/trips`, `/admin/regions`, `/auth/sign-in`, plus `/en/nope` and `/ar/nope`
+(404 + the right language) and the console sidebar/menu markup.
+
+**Gaps, stated plainly.** There is still no browser in this sandbox: the lift on hover, the hero's gradient and the
+motion are read back from the CSS, not seen, and `prefers-reduced-motion` is honoured in code rather than observed. The
+design layer is appended to `globals.css` as one commented block (§1–§11) so it can be reviewed — or lifted into
+`packages/design-tokens` — as a unit. The sand/brand split is asserted by convention and a single `:has()` selector,
+not by a lint rule.

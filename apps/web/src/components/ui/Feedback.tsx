@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Icon, type IconName } from './Icon';
 
 /** Loading placeholder with a fixed aspect so content does not jump (CLS). */
 export function Skeleton({
@@ -28,18 +29,18 @@ export function EmptyState({
   title,
   description,
   action,
-  icon = '◇',
+  icon = 'inbox',
 }: {
   readonly title: string;
   readonly description?: string;
   readonly action?: ReactNode;
-  readonly icon?: string;
+  readonly icon?: IconName;
 }) {
   return (
     <div className="ui-empty">
-      <div className="ui-empty__icon" aria-hidden="true">
-        {icon}
-      </div>
+      <span className="ui-empty__icon" aria-hidden="true">
+        <Icon name={icon} size={20} />
+      </span>
       <h3 className="ui-empty__title">{title}</h3>
       {description ? <p className="ui-empty__desc">{description}</p> : null}
       {action ? <div className="ui-empty__action">{action}</div> : null}

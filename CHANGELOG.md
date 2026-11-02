@@ -23,9 +23,21 @@ on `main`; the tag is the last step, not the first.
 - **A password reveal** on every password field (`ui/PasswordField.tsx`, `aria-pressed`, label flips with the state).
 - **`@maak/web` runs its tests.** The workspace had no `test` script, so `src/lib/__tests__/legal.test.ts` had never
   been executed by `npm test`; `origin.test.ts` covers the CSRF cases below.
+- **An `inbox` mark, and empty states that use it.** `EmptyState` defaulted to the character `◇`, so forty screens said
+  "nothing here" with the same typed diamond. The set has a drawing for it now, in a brand-tinted disc.
+- **A real 404, in the visitor's language.** `app/[locale]/not-found.tsx` is a page — mark, `404`, what happened, and a
+  way back to the home page and to the marketplace — and the proxy forwards `x-maak-locale` so it speaks the language
+  of the miss (`notFound()` gives a not-found page no route params). `app/not-found.tsx` covers addresses with no
+  language at all and carries its own stylesheet, because the root layout renders no `<html>` by design.
 
 ### Fixed
 
+- **Every 404 under a language answered `200`, with a skeleton in it.** A streaming boundary at the locale root meant
+  `notFound()` could no longer set a status. The boundary moved to `/trips` — the one list that streams — and a
+  `[locale]/[...rest]` catch-all keeps a miss inside the locale, where the styled 404 lives. `/en/nope` is a real 404
+  in English now; a typo used to reach a bare Next error document with no navigation at all.
+- **The error boundary trapped anyone whose failure repeats.** It offered only *retry*; it now offers *retry* and the
+  home page, and keeps the digest as the reference to quote to support.
 - **Every gateway-backed screen was blank for URL-token sessions.** The server-side gateway client read the access
   token from `client.auth.getSession()`, which is `null` whenever the session arrives as the proxy's `x-maak-token`
   header (`?st=`, the embedded preview, `persistSession: false`). The finance dashboard and statement answered *"The
@@ -46,6 +58,23 @@ on `main`; the tag is the last step, not the first.
   they could do nothing about.
 
 ### Changed
+
+- **The frontend got a design layer.** One accent (the product's green; sand stays for *featured*), a 32px rule above
+  every public section title, balanced display type, a hero with a wash and a raised search card, buttons with depth
+  and a press state, cards that lift only when they are links, and motion that stops when `prefers-reduced-motion`
+  asks. It is appended to `globals.css` as one commented block, so it is reviewable as a unit (`docs/polish-plan.md`
+  §21).
+- **The header marks the page you are on, and the way in is a button.** Four identical grey links became three quiet
+  destinations with `aria-current` and a 2px rule, plus *Sign in* as the only filled control — a full-width one inside
+  the phone sheet.
+- **A console's navigation is one list in two presentations.** On a phone it is a single row that names where you are
+  ("Administration · Regions") and opens into the same grouped list — a native `<details>`, no JavaScript, keyboard for
+  free. Above 900px that row disappears and the list is a sticky sidebar beginning with the product lockup, which is
+  also the console's only way back to the public site on a desktop.
+- **Arabic stops being typeset as Latin.** Captions read their tracking from a new `--tracking-caps` token, which is
+  `0.05em` in Latin and `0` in RTL: letter-spacing on a cursive script prises the joins apart. Display headings lose
+  their negative tracking in Arabic for the same reason.
+- **The sign-in form is one card**, on a wash, instead of fields floating on bare paper.
 
 - **The coverage screen (`/admin/regions`) is a flat page, with editing as a view.** It used to be a card per region
   (hierarchy written out as a sentence), a bare editor below it, 22 governorate chips at field width and a caption

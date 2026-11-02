@@ -18,6 +18,9 @@ import { resolveRequest } from './lib/origin';
 
 const PROTECTED_PREFIXES = ['/account', '/operator', '/staff', '/admin', '/finance', '/driver'];
 
+/** Read by `[locale]/not-found.tsx`, which cannot otherwise know the language of the miss. */
+const LOCALE_HEADER = 'x-maak-locale';
+
 export default async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
@@ -28,6 +31,18 @@ export default async function proxy(request: NextRequest) {
 
   const segments = pathname.split('/').filter(Boolean);
   const first = segments[0];
+
+  /**
+   * The locale, forwarded to the render as a request header.
+   *
+   * `notFound()` gives a `not-found.tsx` no route params, so the 404 could only ever speak the default language:
+   * an operator working in English who opened a deleted trip was apologised to in Arabic. The proxy has already
+   * parsed the segment — forwarding it costs one header and makes the error state obey the same language rule as
+   * every other screen.
+   */
+  if (first !== undefined && (LOCALES as readonly string[]).includes(first)) {
+    request.headers.set(LOCALE_HEADER, first);
+  }
 
   /**
    * Locale-less public paths. `/` was negotiated but `/trips` was not, so the marketplace — the one URL

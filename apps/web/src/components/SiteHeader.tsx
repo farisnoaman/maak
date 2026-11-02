@@ -36,6 +36,15 @@ export function SiteHeader({
    * would then see in their history. Only the link that stays on this list carries them.
    */
   const withQuery = (path: string) => `/${locale}${path}${path === pathname ? suffix : ''}`;
+  /**
+   * Where the visitor is standing, marked in the navigation itself.
+   *
+   * The header was four identical links on every page: the way to tell you were on the marketplace was to read
+   * the page you had just landed on. `aria-current="page"` is the same fact for a screen reader, and it is what
+   * the underline is drawn from — one attribute, two audiences.
+   */
+  const isCurrent = (path: string) =>
+    path === '/' ? pathname === '/' : pathname === path || pathname.startsWith(`${path}/`);
 
   /**
    * Four links, and the language switch.
@@ -87,11 +96,30 @@ export function SiteHeader({
               <span className="site-menu__label">{t('nav.menu')}</span>
             </summary>
             <div className="site-menu__links">
-              {links.map((link) => (
-                <Link className="nav-link" key={link.href} href={link.href}>
-                  {t(link.key)}
-                </Link>
-              ))}
+              {links.map((link) => {
+                const path = link.href.slice(locale.length + 1).split('?')[0] || '/';
+                const current = isCurrent(path);
+                /* The last link is the one a stranger is here to take: it is a button, not another item in a row
+                   of the same grey words. Everything else stays quiet so the button is the only loud thing. */
+                const cta = path === '/auth/sign-in';
+                const className = [
+                  'nav-link',
+                  cta ? 'nav-link--cta' : '',
+                  current ? 'nav-link--current' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ');
+                return (
+                  <Link
+                    className={className}
+                    key={link.href}
+                    href={link.href}
+                    aria-current={current ? 'page' : undefined}
+                  >
+                    {t(link.key)}
+                  </Link>
+                );
+              })}
               {/* Only renders inside an iframe: a first-party tab if the browser blocks the session here. */}
               <OpenInTab locale={locale} path={`/${locale}/auth/sign-in`} />
             </div>

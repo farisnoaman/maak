@@ -637,7 +637,7 @@ a {
 .site-footer__group h2 {
   font-size: 0.78rem;
   font-weight: 700;
-  letter-spacing: 0.02em;
+  letter-spacing: var(--tracking-caps);
   color: var(--ink-700);
   text-transform: uppercase;
 }
@@ -1151,7 +1151,7 @@ a {
   color: var(--ink-500);
   font-size: var(--text-2xs);
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
 }
 
@@ -1262,48 +1262,193 @@ a {
 }
 @media (min-width: 900px) {
   .console-layout {
-    grid-template-columns: 240px minmax(0, 1fr);
+    grid-template-columns: 236px minmax(0, 1fr);
     gap: var(--space-8);
-    padding-block: var(--space-10);
+    padding-block: var(--space-8);
+  }
+  /* The sidebar stays with you: a console is a place you move around in, not a page you scroll past a menu on. */
+  .console-side {
+    position: sticky;
+    inset-block-start: calc(68px + var(--space-6));
+    align-self: start;
+    max-block-size: calc(100dvh - 68px - var(--space-8));
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 }
+
+/*
+ * The navigation: one vertical list, presented two ways.
+ *
+ * Above 900px it sits under the console's name (`.console-side__brand`) and wraps nothing. Below it, the list lives
+ * inside a native disclosure whose summary says where you are, so a phone spends one 44px row on its navigation
+ * instead of three rows of wrapped chips above every page title.
+ */
 .console-nav {
-  /*
-   * A phone gets wrapped chips, not a horizontal scroller. The scroller was the other half of the bug: it was
-   * widened to the screen edges with `margin-inline: -16px`, so its box stuck out of a container that has no
-   * padding of its own, and it cut the last destination off at the edge with no hint that it scrolled. Wrapping
-   * shows every destination, needs no gesture to discover, and cannot scroll the page sideways.
-   */
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
+  display: grid;
+  align-content: start;
+  gap: 2px;
   max-inline-size: 100%;
 }
-@media (min-width: 900px) {
-  .console-nav {
-    display: grid;
-    align-content: start;
-    gap: var(--space-1);
-  }
-}
 .console-nav a {
-  white-space: nowrap;
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-md);
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--ink-600);
-  min-block-size: var(--tap-target);
   display: flex;
   align-items: center;
+  min-block-size: var(--tap-target);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--ink-600);
+  text-wrap: balance;
+  transition:
+    background 120ms ease,
+    color 120ms ease;
 }
+/* The active destination is a tint plus weight, not a grey box: one accent on the page, and it is the tint of the
+   product's own brand rather than an arbitrary highlight. */
 .console-nav a[aria-current='page'] {
-  background: var(--surface-muted);
-  color: var(--ink-900);
+  background: color-mix(in srgb, var(--brand-500) 12%, transparent);
+  color: var(--brand-700);
+  font-weight: 700;
 }
 .console-nav a:hover {
   background: var(--surface-muted);
+  color: var(--ink-900);
 }
+.console-nav a[aria-current='page']:hover {
+  background: color-mix(in srgb, var(--brand-500) 18%, transparent);
+  color: var(--brand-700);
+}
+
+/* ---------- the phone's menu ---------- */
+
+.console-menu__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  inline-size: 100%;
+  min-block-size: var(--tap-target);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+  cursor: pointer;
+  list-style: none;
+}
+.console-menu__toggle::-webkit-details-marker {
+  display: none;
+}
+.console-menu__text {
+  display: grid;
+  gap: 1px;
+  min-inline-size: 0;
+  text-align: start;
+}
+.console-menu__brand {
+  color: var(--ink-500);
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+.console-menu__current {
+  color: var(--ink-900);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+.console-menu__glyphs {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  line-height: 0;
+  color: var(--ink-500);
+}
+.console-menu__glyph--close {
+  display: none;
+}
+.console-menu[open] .console-menu__glyph--open {
+  display: none;
+}
+.console-menu[open] .console-menu__glyph--close {
+  display: inline-block;
+}
+.console-menu[open] > .console-menu__toggle {
+  border-color: var(--brand-500);
+}
+.console-menu[open] > .console-menu__toggle .console-menu__glyphs {
+  color: var(--brand-700);
+}
+
+@media (max-width: 899.98px) {
+  /* The panel pushes the page down rather than floating over it: a console's destinations are a list to read, and an
+     overlay over a form is a dialog nobody asked for. */
+  .console-menu[open] > .console-nav {
+    margin-block-start: var(--space-2);
+    padding: var(--space-2);
+    border: 1px solid var(--surface-sunken);
+    border-radius: var(--radius-md);
+    background: var(--surface-base);
+    box-shadow: var(--shadow-md);
+  }
+  /* Inside a menu the group captions earn their line: they are what makes nine destinations scannable. */
+  .console-menu .console-nav__label {
+    display: block;
+    padding-inline: var(--space-3);
+    padding-block: var(--space-2) var(--space-1);
+  }
+  .console-menu .console-nav__group + .console-nav__group {
+    margin-block-start: var(--space-1);
+    padding-block-start: var(--space-1);
+    border-block-start: 1px solid var(--surface-sunken);
+  }
+}
+
+/* On a phone the menu row already says the console's name, so printing it again above the row is a duplicate — the
+   exact bit of chrome (an ADMIN label over the title) this pass set out to remove. */
+.console-side__brand {
+  display: none;
+}
+
+/* The product lockup in the sidebar: a door home, and the one place the console wears the brand. */
+.console-side__home {
+  display: none;
+}
+@media (min-width: 900px) {
+  /* The console's name, above its list, is the sidebar's heading — the menu row has no job here. */
+  .console-side__brand {
+    display: block;
+  }
+  .console-side__home {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-block-end: var(--space-4);
+    padding-block-end: var(--space-4);
+    border-block-end: 1px solid var(--surface-sunken);
+    color: var(--ink-900);
+    font-size: 1.02rem;
+    font-weight: 800;
+  }
+  .console-side__home .brand__mark {
+    inline-size: 30px;
+    block-size: 30px;
+    font-size: 0.95rem;
+  }
+  .console-menu {
+    display: contents;
+  }
+  .console-menu__toggle {
+    display: none;
+  }
+  .console-nav {
+    /* Author styles beat the UA rule that hides a closed <details>' children — the same mechanism the site header
+       uses, so the sidebar needs no JavaScript to be a sidebar. */
+    display: grid !important;
+  }
+}
+
 /*
  * `.console-panel` stays for the account screens, where it is a real card on a page of cards. The console shell no
  * longer uses it: see `.console-head` / `.console-body` below.
@@ -1381,7 +1526,7 @@ a {
   color: var(--ink-500);
   font-size: var(--text-2xs);
   font-weight: 800;
-  letter-spacing: 0.06em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
 }
 
@@ -1487,7 +1632,7 @@ a {
 .admin-index__group h2 {
   font-size: 0.72rem;
   font-weight: 800;
-  letter-spacing: 0.06em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
   color: var(--ink-500);
   margin-block-end: var(--space-1);
@@ -1598,7 +1743,7 @@ a {
 .console-side__brand {
   font-size: 0.78rem;
   font-weight: 800;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
   color: var(--ink-500);
   margin-block-end: var(--space-3);
@@ -1814,19 +1959,59 @@ a {
 }
 
 .nav-link {
+  position: relative;
   display: inline-flex;
   align-items: center;
   min-block-size: var(--tap-target);
   padding-inline: var(--space-3);
   border-radius: var(--radius-sm);
-  font-size: 0.85rem;
+  font-size: 0.87rem;
   font-weight: 600;
   color: var(--ink-600);
+  transition:
+    background 120ms ease,
+    color 120ms ease;
 }
 .nav-link:hover {
   background: var(--surface-muted);
   color: var(--ink-900);
 }
+
+/*
+ * Two roles in one row of links.
+ *
+ * The page you are on is marked (a 2px rule under the word, the same green as every other action), and the one
+ * link a visitor with no account came for is a button. Before this, four identical grey words sat in a row and the
+ * only way to know which page you were on was to read the page.
+ */
+.nav-link--current {
+  color: var(--ink-900);
+}
+.nav-link--current::after {
+  content: '';
+  position: absolute;
+  inset-inline: var(--space-3);
+  inset-block-end: 6px;
+  block-size: 2px;
+  border-radius: var(--radius-pill);
+  background: var(--brand-600);
+}
+.nav-link--cta {
+  margin-inline-start: var(--space-2);
+  padding-inline: var(--space-5);
+  background: var(--brand-600);
+  color: #fff;
+  font-weight: 700;
+  box-shadow: var(--shadow-sm);
+}
+.nav-link--cta:hover {
+  background: var(--brand-700);
+  color: #fff;
+}
+.nav-link--cta.nav-link--current::after {
+  display: none;
+}
+
 /* ---------- mobile menu (no JavaScript) ----------
  * Below 720px the links are a disclosure: `<summary>` is the button, the panel is the menu. Above
  * 720px the summary disappears and the very same links sit inline. Nothing is duplicated and no
@@ -2185,7 +2370,7 @@ a {
   font-size: 0.74rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--tracking-caps);
   color: var(--ink-500);
   background: var(--surface-muted);
   border-block-end: 1px solid var(--surface-sunken);
@@ -2331,7 +2516,7 @@ a {
   color: var(--brand-700);
   font-size: var(--text-2xs);
   font-weight: 800;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
 }
 
@@ -2499,7 +2684,7 @@ a {
 .journey__facts dt {
   font-size: var(--text-2xs);
   font-weight: 800;
-  letter-spacing: 0.06em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
   color: var(--ink-500);
 }
@@ -2640,7 +2825,7 @@ a {
   color: var(--ink-500);
   font-size: var(--text-2xs);
   font-weight: 800;
-  letter-spacing: 0.06em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
 }
 
@@ -3031,7 +3216,7 @@ a {
   color: var(--ink-700);
   font-size: var(--text-2xs);
   font-weight: 800;
-  letter-spacing: 0.06em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
 }
 .geo-group__label--sub {
@@ -4079,7 +4264,7 @@ input[type='file']::file-selector-button {
 .trip-crew__label {
   font-size: var(--text-2xs);
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
   color: var(--ink-500);
 }
@@ -4394,7 +4579,7 @@ input[type='file']::file-selector-button {
   margin-block-end: var(--space-3);
   font-size: var(--text-2xs);
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
   color: var(--ink-500);
 }
@@ -5321,7 +5506,7 @@ a.booking-card__code:hover {
 .booking-group__title {
   font-size: var(--text-2xs);
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
   color: var(--ink-500);
 }
@@ -5473,7 +5658,7 @@ a.booking-card__code:hover {
 .booking-summary__title {
   font-size: var(--text-2xs);
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
   color: var(--ink-500);
 }
@@ -5906,7 +6091,7 @@ a.booking-card__code:hover {
 .manifest__eyebrow {
   margin: 0 0 1mm;
   font-size: 8pt;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
   color: #444444;
 }
@@ -5965,7 +6150,7 @@ a.booking-card__code:hover {
 
 .manifest__blocks dt {
   font-size: 7.5pt;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
   color: #555555;
 }
@@ -6004,7 +6189,7 @@ a.booking-card__code:hover {
 .manifest__table th {
   text-align: start;
   font-size: 7.5pt;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
   color: #555555;
   border-block-end: 1px solid #111111;
@@ -6727,7 +6912,7 @@ a.booking-card__code:hover {
 .pay-due__label {
   font-size: var(--text-2xs);
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
   color: var(--ink-500);
 }
@@ -6784,7 +6969,7 @@ a.booking-card__code:hover {
 .pay-account__title {
   font-size: var(--text-2xs);
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
   color: var(--brand-700);
 }
@@ -6816,7 +7001,7 @@ a.booking-card__code:hover {
 
 .pay-account__meta dt {
   opacity: 0.7;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
   font-size: var(--text-2xs);
   font-weight: 700;
@@ -6836,7 +7021,7 @@ a.booking-card__code:hover {
 .pay-side__title {
   font-size: var(--text-2xs);
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
   color: var(--ink-500);
 }
@@ -7070,7 +7255,7 @@ a.booking-card__code:hover {
   color: var(--ink-500);
   font-size: var(--text-2xs);
   font-weight: 800;
-  letter-spacing: 0.07em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
 }
 
@@ -8028,7 +8213,7 @@ a.booking-card__code:hover {
 .trip-book h2 {
   font-size: 0.8rem;
   font-weight: 700;
-  letter-spacing: 0.02em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
   color: var(--ink-500);
 }
@@ -8085,4 +8270,454 @@ a.booking-card__code:hover {
   font-size: 0.75rem;
   color: var(--ink-500);
   line-height: 1.5;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   The design layer — one skin over the whole front door
+
+   The screens were each built to a layout rule and then left with the browser's idea of a heading, a
+   link and a surface. This block is the pass that gives them a *look*: one accent, one measure, one
+   way of opening a section, one way of lifting a card. It is deliberately additive — every rule
+   here either overrides a value further up (`--tracking-*`, a shadow, a size) or styles a pattern
+   that did not exist — so nothing above it had to be rewritten to be part of the same product.
+
+   Three constraints, because decoration on a booking form is a cost, not a feature:
+
+     1. The accent is the brand's own green. Sand is for "featured", never for an action.
+     2. The signature device is a 32px rule above a section title. It costs no markup, is the same in
+        both directions, and is the one repeating mark that makes the pages read as one site.
+     3. Everything animated stops when `prefers-reduced-motion` says so.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+/* ---------- 1. typography: display lines balance, body lines do not strand a word ---------- */
+
+h1,
+h2,
+.section__head h2,
+.trips-hero h1,
+.hero h1 {
+  text-wrap: balance;
+}
+
+p,
+li {
+  /* Progressive: browsers without it lay the text out exactly as before. */
+  text-wrap: pretty;
+}
+
+/* A hero line that runs the full width of a 1440px window is a headline you read by turning your head. */
+.hero h1 {
+  max-inline-size: 22ch;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+
+:root[dir='rtl'] :is(.hero h1, h1, h2, h3) {
+  /* Arabic joins its letters; negative tracking closes the joins and the word stops breathing. */
+  letter-spacing: normal;
+}
+
+.hero p.lead {
+  color: var(--ink-700);
+  font-size: 1.06rem;
+  line-height: 1.6;
+}
+
+/* ---------- 2. the section rule: the public site's one repeating mark ---------- */
+
+.section__head h2::before,
+.trips-hero h1::before {
+  content: '';
+  display: block;
+  inline-size: 32px;
+  block-size: 3px;
+  margin-block-end: var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--brand-600);
+}
+
+/* A muted section sits on a tinted band; the rule keeps its contrast because it is the full brand tone. */
+.section--muted .section__head h2::before {
+  background: var(--brand-600);
+}
+
+.section__head h2 {
+  font-size: var(--text-2xl);
+  letter-spacing: -0.018em;
+}
+
+.section__head p {
+  font-size: 1.02rem;
+  line-height: 1.6;
+}
+
+/* ---------- 3. the hero: a wash, a card that sits on it, and a way out ---------- */
+
+.hero {
+  border-block-end: 1px solid var(--surface-sunken);
+  background:
+    radial-gradient(
+      70% 110% at 12% -10%,
+      color-mix(in srgb, var(--brand-100) 85%, transparent) 0%,
+      transparent 62%
+    ),
+    radial-gradient(
+      55% 90% at 92% 0%,
+      color-mix(in srgb, var(--sand-100) 80%, transparent) 0%,
+      transparent 58%
+    ),
+    linear-gradient(180deg, var(--surface-base) 0%, var(--surface-muted) 100%);
+}
+
+/* The search is the first thing anyone uses on this page, so it is the one raised surface in the hero. */
+.hero-search {
+  padding: var(--space-4);
+  border-color: color-mix(in srgb, var(--brand-500) 16%, var(--surface-sunken));
+  box-shadow: var(--shadow-lg);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.hero-search:focus-within {
+  border-color: var(--brand-500);
+  box-shadow:
+    var(--shadow-lg),
+    0 0 0 4px color-mix(in srgb, var(--brand-500) 12%, transparent);
+}
+
+.hero-search__submit {
+  inline-size: 100%;
+}
+
+@media (min-width: 640px) {
+  .hero-search {
+    padding: var(--space-3);
+  }
+
+  .hero-search__field {
+    padding-inline: var(--space-2);
+  }
+
+  .hero-search__submit {
+    inline-size: auto;
+    padding-inline: var(--space-8);
+  }
+}
+
+.hero__aside {
+  /* Warm instead of white: it is the one panel that is *not* the search, so it reads as a second
+     column rather than as a second card of the same kind. */
+  background: linear-gradient(
+    180deg,
+    var(--surface-base),
+    color-mix(in srgb, var(--sand-50) 65%, var(--surface-base))
+  );
+}
+
+.hero__aside-head h2 {
+  font-size: 1rem;
+  letter-spacing: -0.01em;
+}
+
+/* ---------- 4. buttons: one loud one, a quiet partner, and a press you can feel ---------- */
+
+.btn {
+  border-radius: var(--radius-md);
+  transition:
+    transform 0.12s ease,
+    background 0.15s ease,
+    box-shadow 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.btn--primary {
+  background: linear-gradient(180deg, var(--brand-500), var(--brand-600));
+  border-color: var(--brand-700);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn--primary:hover {
+  background: linear-gradient(180deg, var(--brand-600), var(--brand-700));
+  box-shadow: var(--shadow-md);
+}
+
+.btn--ghost {
+  background: var(--surface-base);
+}
+
+.btn--ghost:hover {
+  border-color: var(--ink-400);
+}
+
+.btn:active {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+
+.btn:disabled,
+.btn[aria-disabled='true'] {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* ---------- 5. cards lift, and only the clickable ones do ---------- */
+
+.card {
+  border-color: color-mix(in srgb, var(--ink-900) 9%, var(--surface-sunken));
+}
+
+a.card:hover,
+a.card:focus-visible,
+button.card:hover {
+  border-color: var(--brand-300);
+  box-shadow: var(--shadow-md);
+  translate: 0 -2px;
+}
+
+/* The marketplace row: the hairline does the work at rest, and the whole ticket lifts under the pointer. */
+.card.trip-card:hover,
+.card.trip-card:focus-within {
+  translate: 0 -2px;
+  box-shadow: var(--shadow-md);
+}
+
+.trip-card__route {
+  letter-spacing: -0.014em;
+}
+
+.trip-price {
+  font-size: 1.24rem;
+}
+
+/* A featured departure is a paid placement, so it is marked in the sand the product already uses for
+   "premium" — one edge, not a badge rush. */
+.trip-card:has(.ui-badge--info) {
+  border-inline-start: 3px solid var(--sand-500);
+}
+
+/* ---------- 6. links that mean "go on" ---------- */
+
+.link-more {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-weight: 700;
+  color: var(--brand-700);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.22em;
+  text-decoration-color: color-mix(in srgb, var(--brand-600) 45%, transparent);
+}
+
+.link-more:hover {
+  text-decoration-color: var(--brand-600);
+}
+
+/* ---------- 7. motion: short, and gone when asked ---------- */
+
+@media (prefers-reduced-motion: no-preference) {
+  .section__head h2 {
+    animation: rise 0.4s ease-out both;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---------- 8. empty states: a mark in a disc, not a typed diamond ---------- */
+
+.ui-empty {
+  padding: var(--space-8) var(--space-5);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, var(--surface-base), var(--surface-muted));
+}
+
+.ui-empty__icon {
+  display: grid;
+  place-items: center;
+  inline-size: 44px;
+  block-size: 44px;
+  border-radius: var(--radius-pill);
+  background: var(--brand-50);
+  color: var(--brand-700);
+  font-size: 0;
+}
+
+.ui-empty__title {
+  font-size: 1.05rem;
+  letter-spacing: -0.01em;
+}
+
+.ui-empty__desc {
+  color: var(--ink-600);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
+
+/* ---------- 9. whole-page states: 404 and the error boundary ---------- */
+
+.state-screen {
+  display: grid;
+  place-items: center;
+  min-block-size: 60dvh;
+  padding-block: var(--space-12);
+}
+
+.state-screen__panel {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  max-inline-size: 34rem;
+  padding: var(--space-8) var(--space-6);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-xl);
+  background:
+    radial-gradient(
+      90% 120% at 50% 0%,
+      color-mix(in srgb, var(--brand-50) 70%, transparent),
+      transparent 70%
+    ),
+    var(--surface-base);
+  box-shadow: var(--shadow-md);
+  text-align: center;
+}
+
+.state-screen__mark {
+  display: grid;
+  place-items: center;
+  inline-size: 52px;
+  block-size: 52px;
+  border-radius: var(--radius-pill);
+  background: var(--brand-100);
+  color: var(--brand-700);
+}
+
+.state-screen__mark--alert {
+  background: var(--sand-100);
+  color: var(--state-warning);
+}
+
+.state-screen__code {
+  color: var(--ink-500);
+  font-size: var(--text-xs);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.state-screen__panel h1 {
+  font-size: var(--text-xl);
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+.state-screen__body {
+  max-inline-size: 40ch;
+  color: var(--ink-600);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
+
+.state-screen__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  justify-content: center;
+  margin-block-start: var(--space-2);
+}
+
+.state-screen__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-sm);
+}
+
+.state-screen__links a {
+  color: var(--brand-700);
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.22em;
+}
+
+/* ---------- 10. the sign-in screen: one card for the task, a wash behind it ---------- */
+
+.auth-page {
+  background: radial-gradient(
+    60% 70% at 50% -10%,
+    color-mix(in srgb, var(--brand-50) 80%, transparent),
+    transparent 70%
+  );
+}
+
+.auth-panel {
+  padding: var(--space-5);
+  border: 1px solid color-mix(in srgb, var(--ink-900) 8%, var(--surface-sunken));
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-md);
+}
+
+@media (min-width: 720px) {
+  .auth-panel {
+    padding: var(--space-6);
+  }
+}
+
+.auth-title {
+  font-size: var(--text-2xl);
+  letter-spacing: -0.022em;
+  text-wrap: balance;
+}
+
+/* ---------- 11. the phone's tab bar: current destination in the brand ---------- */
+
+.tabbar__link {
+  position: relative;
+}
+
+.tabbar__link[aria-current='page'] {
+  color: var(--brand-700);
+}
+
+.tabbar__link[aria-current='page']::before {
+  content: '';
+  position: absolute;
+  inset-block-start: 0;
+  inline-size: 20px;
+  block-size: 2px;
+  border-radius: var(--radius-pill);
+  background: var(--brand-600);
+}
+
+/* The streaming fallback's row of placeholders, in the shape of a result list. */
+.skeleton-stack {
+  display: grid;
+  gap: var(--space-3);
 }
