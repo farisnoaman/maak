@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { translate, type Locale, type TranslationKey } from '@maak/core';
+import { Icon } from './ui/Icon';
+import { DetailsForDesktop } from './ui/DetailsForDesktop';
 
 export interface ConsoleNavItem {
   readonly key: TranslationKey;
@@ -24,6 +26,14 @@ export interface ConsoleNavGroup {
  * The sections inside keep their own `h2`s so the page still has an outline — a screen reader lands on "Awaiting
  * review" instead of one undifferentiated block — but the boxes those headings used to sit in are flat
  * (`.console-body > .card`), so there is exactly one frame on the screen: the browser window.
+ *
+ * **The navigation is one list, presented two ways.** Above 900px it is a sticky sidebar: the console's name,
+ * then its groups, then one row per destination. On a phone it is a single row that says *where you are* —
+ * "Administration · Regions" — opened by tap into the same list. It used to be nine chips wrapped three rows deep
+ * above every page title, which cost the top third of a phone screen and read as a tag cloud rather than a console.
+ * The mechanism is the one the site header already uses: a native `<details>`, so it opens without a line of
+ * JavaScript and is keyboard-operable for free; above the breakpoint the summary is hidden and the list is forced
+ * visible, because authored `display` beats the UA rule that hides a closed disclosure's children.
  */
 export function ConsoleShell({
   locale,
@@ -34,6 +44,7 @@ export function ConsoleShell({
   items,
   groups,
   actions,
+  facts,
   layout = 'content',
   children,
 }: {
@@ -49,6 +60,14 @@ export function ConsoleShell({
   /** The page's primary verb — beside the title, where a console puts its action, not buried in the content. */
   readonly actions?: ReactNode;
   /**
+   * Two or three numbers from this screen's own data, in the header band.
+   *
+   * A console page should answer "how much" before it is read: three live subscriptions, 37 events, one region.
+   * They are text and a figure, not KPI cards — the band already exists, and a row of tiles above a table is the
+   * dashboard costume a console does not need.
+   */
+  readonly facts?: readonly { readonly label: string; readonly value: string }[];
+  /**
    * `content` is one full-width column: the right shape for a table, a form or a list. `tiles` is the auto-filling
    * grid the overview screens use.
    */
@@ -60,27 +79,74 @@ export function ConsoleShell({
   const sections: readonly ConsoleNavGroup[] = groups ?? (items ? [{ key: title, items }] : []);
   const current = pathname ? `/${locale}${pathname}` : null;
   const brand = consoleTitle ?? title;
+  /* The menu's second line: the destination you are standing on, named. Falls back to the console's own name. */
+  const currentKey =
+    sections.flatMap((section) => section.items).find((item) => item.href === current)?.key ??
+    brand;
 
   return (
     <main id="main" className="shell console-layout">
       <aside className="console-side">
-        {/* Not an <h1>: the page has exactly one, in the header band. */}
+        {/*
+          The way out, for a desktop.
+          A console used to be a room with no door: the sidebar named the console and nothing named the product, so
+          the only route back to the public site was to edit the address bar (a phone at least has the tab bar). The
+          lockup is the same one the site header uses, so the two halves of the product share an identity — and it
+          is hidden on a phone, where the header row above already says where you are.
+        */}
+        <Link className="console-side__home" href={`/${locale}`}>
+          <span className="brand__mark" aria-hidden="true">
+            {t('common.brandMark')}
+          </span>
+          <span>{t('common.appName')}</span>
+        </Link>
+        {/* Not an <h1>: the page has exactly one, in the header band. Shown beside the sidebar, not in the menu. */}
         <p className="console-side__brand">{t(brand)}</p>
-        <nav className="console-nav" aria-label={t(brand)}>
-          {sections.map((section) => (
-            <div className="console-nav__group" key={section.key}>
-              {groups ? <p className="console-nav__label">{t(section.key)}</p> : null}
-              {section.items.map((item) => {
-                const active = current !== null && item.href === current;
-                return (
-                  <Link key={item.href} href={item.href} aria-current={active ? 'page' : undefined}>
-                    {t(item.key)}
-                  </Link>
-                );
-              })}
-            </div>
-          ))}
-        </nav>
+
+        <details className="console-menu" id="console-menu" suppressHydrationWarning>
+          <summary className="console-menu__toggle">
+            <span className="console-menu__text">
+              <span className="console-menu__brand">{t(brand)}</span>
+              <span className="console-menu__current">{t(currentKey)}</span>
+            </span>
+            <span className="console-menu__glyphs" aria-hidden="true">
+              <Icon
+                name="menu"
+                size={18}
+                className="console-menu__glyph console-menu__glyph--open"
+              />
+              <Icon
+                name="close"
+                size={18}
+                className="console-menu__glyph console-menu__glyph--close"
+              />
+            </span>
+          </summary>
+
+          <nav className="console-nav" aria-label={t(brand)}>
+            {sections.map((section) => (
+              <div className="console-nav__group" key={section.key}>
+                {groups ? <p className="console-nav__label">{t(section.key)}</p> : null}
+                {section.items.map((item) => {
+                  const active = current !== null && item.href === current;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      aria-current={active ? 'page' : undefined}
+                    >
+                      {t(item.key)}
+                    </Link>
+                  );
+                })}
+              </div>
+            ))}
+          </nav>
+        </details>
+        {/* The sidebar above 900px is the same panel, open. Without this the console had no navigation at all on a
+            desktop: the summary is hidden there, and a closed `<details>` hides its own children in the UA shadow
+            tree. */}
+        <DetailsForDesktop id="console-menu" breakpoint={900} />
       </aside>
 
       <div className="console-main">
@@ -89,7 +155,19 @@ export function ConsoleShell({
             <h1>{t(title)}</h1>
             <p className="console-head__sub">{t(subtitle)}</p>
           </div>
-          {actions ? <div className="console-head__actions">{actions}</div> : null}
+          <div className="console-head__end">
+            {facts && facts.length > 0 ? (
+              <dl className="console-facts">
+                {facts.map((fact) => (
+                  <div key={fact.label}>
+                    <dt>{fact.label}</dt>
+                    <dd className="num">{fact.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            ) : null}
+            {actions ? <div className="console-head__actions">{actions}</div> : null}
+          </div>
         </header>
         <div className={layout === 'tiles' ? 'console-body console-body--tiles' : 'console-body'}>
           {children}

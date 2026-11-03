@@ -25,9 +25,16 @@ import type { TripRow } from '@/lib/trips';
 export function StaffTripReview({
   locale,
   trips,
+  variant = 'queue',
 }: {
   readonly locale: Locale;
   readonly trips: readonly TripRow[];
+  /**
+   * `queue` is a list of trips to decide on, one card each; `panel` is the same decision made on a single trip's
+   * page — one callout with the reason field already open, because there the decision *is* the task and a
+   * disclosure to reach a two-field form is a tap for nothing.
+   */
+  readonly variant?: 'queue' | 'panel';
 }) {
   const router = useRouter();
   const t = (key: TranslationKey, vars?: Record<string, string | number>) =>
@@ -91,6 +98,54 @@ export function StaffTripReview({
           {t('ops.bulkClear')}
         </p>
         <p className="form-hint">{t('console.emptyTripsBody')}</p>
+      </div>
+    );
+  }
+
+  /* The single-trip page: one decision, stated plainly, with both buttons in reach. */
+  if (variant === 'panel' && trips.length === 1) {
+    const trip = trips[0]!;
+    return (
+      <div className="review-panel">
+        <p className="review-panel__title">{t('staff.trips.awaiting')}</p>
+        <p className="form-hint">{t('staff.trips.decisionHint')}</p>
+        <Field
+          label={t('staff.trips.reason')}
+          value={reason}
+          hint={t('staff.trips.reasonRequired')}
+          onChange={(event) => setReason(event.target.value)}
+        />
+        {error ? (
+          <p className="fleet-error" role="alert">
+            {error}
+          </p>
+        ) : null}
+        {message ? (
+          <p className="fleet-success" role="status">
+            {message}
+          </p>
+        ) : null}
+        <div className="form-actions">
+          <Button
+            variant="primary"
+            loading={busyId === trip.id}
+            onClick={() => {
+              void decide(trip, 'approve');
+            }}
+          >
+            {t('staff.trips.approve')}
+          </Button>
+          <Button
+            variant="danger"
+            disabled={reason.trim().length < 10}
+            loading={busyId === trip.id}
+            onClick={() => {
+              void decide(trip, 'reject');
+            }}
+          >
+            {t('staff.trips.reject')}
+          </Button>
+        </div>
       </div>
     );
   }

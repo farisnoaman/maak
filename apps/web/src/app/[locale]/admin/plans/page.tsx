@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { isLocale, translate, type Locale, type TranslationKey } from '@maak/core';
 import { SiteHeader } from '@/components/SiteHeader';
@@ -8,10 +9,11 @@ import { loadAccountContext } from '@/lib/account';
 import { loadCommissionRules, loadPlans } from '@/lib/finance';
 
 /**
- * `/admin/plans` — prices, limits and the commission rules.
+ * `/admin/plans` — the price list.
  *
- * Admin-only, because these are the two levers that decide what the platform earns. Everything editable here
+ * Admin-only, because this is one of the two levers that decide what the platform earns. Everything editable here
  * is a row: a price change is an update, not a deploy, which is the point of putting plans in the database.
+ * The other lever — negotiated commission rates — is its own page at `/admin/plans/commissions`.
  */
 export const dynamic = 'force-dynamic';
 
@@ -39,9 +41,17 @@ export default async function AdminPlansPage({ params }: { params: Promise<{ loc
         title="plans.title"
         subtitle="plans.subtitle"
         groups={adminNav(locale)}
+        actions={
+          <Link
+            className="ui-btn ui-btn--ghost ui-btn--sm"
+            href={`/${locale}/admin/plans/commissions`}
+          >
+            {t('plans.commissions')}
+          </Link>
+        }
       >
         {allowed ? (
-          <PlansEditor locale={locale} plans={plans} rules={rules} />
+          <PlansEditor locale={locale} plans={plans} rules={rules} mode="plans" />
         ) : (
           <p className="form-hint">{t('errors.FORBIDDEN')}</p>
         )}

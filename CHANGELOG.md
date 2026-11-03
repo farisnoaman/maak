@@ -13,6 +13,164 @@ on `main`; the tag is the last step, not the first.
 
 ## [Unreleased] — after the last phase report
 
+### Changed — the trips toolbar: Filters and the sort tabs, one row (`docs/polish-plan.md` §35)
+
+- **`3 trips` · [Filters ②] [Soonest · Cheapest · Featured]`** — the two controls that act on the same list shared
+  opposite ends of the page before: the filters in a 16–18rem column (a disclosure up to 900px, a sticky sidebar above),
+  the sort tabs in the results toolbar. One row now, both 44px.
+- **The panel drops below the row** instead of living in a column: the same three fieldsets, three columns from 720px
+  (*Route* / *Ride conditions* / *Date and fare*), scrolling itself at `min(70dvh, 36rem)`. It closes on *Apply*, on
+  `Escape` and on a press outside — writing the DOM attribute only, never React state.
+- **The list takes the page back**: `.trips-layout` is one shrinking column, so the cards fill two or three columns.
+- The panel's duplicate title and its redundant *Reset* link are gone (*Clear* in the actions row does the same thing).
+- `FilterDisclosure` is replaced by `FiltersMenu`.
+
+### Changed — the public front door, in warm paper (`docs/polish-plan.md` §33)
+
+- **One card for the whole site**: `.card` (trip results, fare calculator, account panels) takes the warm paper, the warm
+  hairline and the light shadow the console already used — the last cold surface in the product.
+- **Bands are washes**: `.section--muted` loses its top and bottom rules; the page separates with tint, not borders.
+- **Less air between sections, more inside them**: 40→32px on a phone, 64→48px on a desktop, plus a 24px hand-off from
+  the hero.
+- **The three steps are plates** (paper card, number in a brand disc) instead of a black rule over a paragraph; the
+  **operator banner is flat deep green** instead of a diagonal gradient; destinations and console doors are 44px targets;
+  the reassurance ticks are 22px discs.
+
+### Changed — the marketplace list on the same paper (`docs/polish-plan.md` §34)
+
+- The filter panel and the toolbar take warm hairlines; an **applied filter chip is a 36px target** with a brand wash
+  instead of a 32px label; the sort links are 44px targets with the current one as a pill.
+- The marketplace heading band gets its spacing from the page rather than from a card.
+
+### Changed — one card shell and one action row (`docs/polish-plan.md` §31)
+
+- **Four card classes became one look**: `.trip-card`, `.place-card`, `.geo-region-card`, `.supervisor-card` (plus
+  `.sub-card`, `.plan-card`) now share the paper, the 1px warm edge, the 20px corner, the 16→20px padding and the
+  `--space-3` rhythm — no shadows, no per-screen hairlines. A retired region is the same card with a wash.
+- **Dividers inside a card are one dashed warm hairline** everywhere.
+- **Action rows are one row**: same gap and wrap, one filled button each, and the legacy `.btn` is brought onto the
+  `.ui-btn` scale (inherited font, 20px padding, flat primary, transparent ghost) — the trip page's footer row and its
+  fare button now use `.ui-btn` directly, which removes the product's last gradient button.
+
+### Changed — two more console pages split (`docs/polish-plan.md` §32)
+
+- **`/admin/subscriptions`** keeps the payer list; the quota grants moved to **`/admin/subscriptions/overrides`**, with
+  its own facts (`Grants`, `Platform-wide`) and empty state. New keys `subs.overridesSubtitle`, `subs.factGrants`.
+- **`/admin/users`** keeps the directory and roles; the account-deletion queue moved to **`/admin/users/deletions`**
+  with a waiting count in the band. New key `admin.deletionWaiting`.
+- Both new routes are in the a11y sweep (117 routes).
+
+### Changed — `/admin/regions`, re-cut (`docs/polish-plan.md` §30)
+
+- **A card per region** instead of a table row: name, kind, status, then the coverage as **counted chips**
+  (`10 districts`, `2 governorates`, `1 extra district`) on a hairline, with *Edit* and *Retire* under it. A sub-region's
+  card is indented with a brand rule; retired regions are their own muted group with a count.
+- **The editor and the supervisor assignment are disclosure rows** (`New region`, `Assign or change`), so the list stays
+  on screen while a region is edited; *Edit* opens the same row prefilled, and closing it by hand is a cancel.
+- **The coverage picker counts what is covered as you tick it**, using `expandCoverage` — the same call the command
+  stores — and the governorate chips spell out how many districts each one brings.
+- **Facts in the header band**: live regions, districts covered (the union across the active ones, computed with
+  `expandCoverage`), and supervisors — the existing `geo.fact*` keys.
+
+### Changed — one material for every card on the trip page (`docs/polish-plan.md` §29)
+
+- **The facts list is a card** with the same head as the rest (`The trip`, ticket glyph) and the same dashed rows the
+  policy card uses, instead of a separately styled `<dl>` with solid rules and no title.
+- **The fare panel wears the same shell** — same paper, edge and corner — and loses its shadow and its micro-caps
+  heading. It keeps the price at `--text-2xl`, the primary button and its sticky position: hierarchy from the number,
+  not from an elevation.
+- New key `trips.detail.summary` (`The trip` / `تفاصيل الرحلة`).
+
+### Changed — the trip page, as cards (`docs/polish-plan.md` §28)
+
+- **The itinerary is a card of stops**: four columns in the same order at every stop — clock time, mark, name, fare
+  from the origin — instead of a rail of dots with the time buried in a sentence under each name. Filled discs at the
+  two ends, numbered rings between them.
+- **The operator and the notes are cards of their own**, beside the crew card and under the route; policy rows moved
+  into their own card as well.
+- **The main column has a rhythm**: it was `.trip-detail__main` with no stylesheet rule at all, so the blocks sat flush
+  against each other.
+
+### Fixed — there was no navigation and no *Sign in* on a desktop (`docs/polish-plan.md` §27)
+
+- **Both navigations** (the site header's, and the console sidebar's) live inside a `<details>` and were "opened" above
+  the breakpoint with `display: flex/grid !important`. A closed `<details>` hides its children in the user-agent shadow
+  DOM, so that rule styled an element the browser had already refused to render: above 720px the header showed the
+  brand and the language switch and nothing else — no menu button (hidden by the same media query), no links, no way to
+  sign in — and above 900px the console had no sidebar at all.
+- `::details-content { content-visibility: visible }` above each breakpoint makes the inline navigation real, and
+  `DetailsForDesktop` sets `open` so the links also reach the accessibility tree (skipped `content-visibility` content is
+  invisible to screen readers even when painted). An engine without the pseudo-element gets the *Menu* button back
+  instead of an invisible nav.
+- `check-responsive` now fails a stylesheet that reveals a `<details>` navigation panel with `display: … !important`
+  without that declaration — the check that was green while the bug shipped.
+
+### Changed — one job per page in the console (`docs/polish-plan.md` §26)
+
+- **`/admin/regions` keeps the tree.** Editing is `/admin/regions/[id]`, a new region is `/admin/regions/new`, and the
+  roster is `/admin/regions/supervisors`. Saving returns to the tree, which is re-fetched rather than shown stale.
+- **`/admin/places` keeps the queue.** The submit form is `/admin/places/new` and the lookup is `/admin/places/find`;
+  a verified account that cannot review is redirected straight to the form, because it has one job there.
+- **`/admin/plans` keeps the prices.** The rules table and the new-rule form are `/admin/plans/commissions`, and the
+  rule table's *platform-wide* row now says platform-wide instead of printing the section title in the plan column.
+
+### Changed — the console, in warm paper (`docs/polish-plan.md` §26, stylesheet §26)
+
+- **The page header is a band**: title, sentence and facts in one sand wash with the page's corner; the facts are paper
+  chips inside it.
+- **Paper tokens** (`--paper`, `--paper-edge`, `--paper-wash`) defined per colour scheme, so warmth does not break the
+  dark theme.
+- **Empty states are plates** — a dashed warm edge and the icon in a circle; **section counts are pills**; **tables sit
+  in a rounded frame** with a wash header.
+- **The primary button is flat**: no gradient, no hover glow.
+
+
+### Changed — `/admin/regions`, re-cut (`docs/polish-plan.md` §25)
+
+- **The region tree is a wall of cards**: name, kind, status badge, and the coverage as counted chips (`10 districts`,
+  `2 governorates`, `1 extra district`) instead of one dotted sentence; a sub-region's card is indented with a brand
+  rule, and retired regions are their own muted group with a count.
+- **The editor and the supervisor assignment are disclosure rows** (`New region`, `Assign or change`), so the list stays
+  on screen while a region is edited — *Edit* opens the same row, prefilled, and closing it by hand cancels.
+- **Supervisors are cards**: the person, the districts that follow from their regions, and the regions as chips.
+- **Three facts in the header band**: live regions, districts covered (computed with the same `expandCoverage` the
+  command stores), and supervisors.
+
+### Changed — `/admin/places`, re-cut (`docs/polish-plan.md` §24)
+
+- **The add-a-place form is a row you press.** Eleven fields used to stand open under the queue on every visit; they
+  are a `<details>` with a plus, a title and the one line that explains the consequence — opened by `Enter`, working
+  with JavaScript off — and inside, two fieldsets (*The place*, *Location*) instead of eleven loose inputs. An
+  operator with no queue gets the form as the page, not as a disclosure.
+- **A submitted place is a card**: name as a heading, kind as a chip, Latin name beneath, then labelled rows for
+  governorate, district, coordinates and submitter, the submission date, and the two decisions — with *Reject*
+  opening its reason in sand, *Cancel* beside it, and the confirm disabled under ten characters.
+- **The location picker is the same disclosure row**, and two badges that said nothing (`Awaiting review` on the add
+  form, `Search` on the picker) are gone.
+
+### Changed — the staff and admin desks (`docs/polish-plan.md` §23)
+
+- **The skin has a direction.** Warm and human, set once as tokens in `globals.css` §22: cream paper, 10/14/20/28
+  corners, short warm-tinted shadows, fields that sit on white and lift a ring on focus, one loud brand green. Light
+  mode only; the dark theme keeps its own surfaces.
+- **`/staff/trips/[id]`** opens with one identity line (route, code, date, time), both actions beside the status
+  badges, and the verification decision in its own sand-tinted panel below the detail — with *Reject* disabled until
+  the reason is worth reading. The page's hand-rolled nav is gone; it uses `staffNav` again.
+- **`/staff/trips`** names its verification filter group, puts the result count and *Export results* on one toolbar,
+  shows the queue depth in the header band, and draws its route arrow with `DirectionalIcon` instead of `←`.
+- **`/staff/scan`** has an idle state that says what a scan confirms and what it refuses to show, and a verdict panel
+  (`scan-verdict is-ok` / `is-deny`) instead of a neutral card led by a trip code.
+- **`/admin/subscriptions`** answers the run-rate question (live, active, monthly value in the header band), draws each
+  subscription as a card with its end date and pending-change flag, and names whose quota override it is.
+- **`/admin/plans`** draws each plan as a card with the same eight limits in the same order — the joined
+  `Vehicles 1 · Drivers 1 · …` cell is gone — and stops printing the commission explanation three times.
+- **`/admin/notifications`** groups 37 templates into seven named drawers with counts, turns channels into chips, and
+  keeps both sentences side by side.
+- **`/admin/places`** asks for a rejection reason only once *Reject* was pressed, removes two badges that said nothing
+  (`Awaiting review` on the add form, `Search` on the picker), and counts its queue in the section head.
+- **`EmptyState`** keeps its brand disc but gains a title/description weight that reads as a state rather than a
+  placeholder; `ConsoleShell` gained the optional `facts` band used by the pages above.
+
 ### Added
 
 - **Registration** (`/auth/sign-up`, `/api/auth/sign-up`). The sign-in page had always offered *Create account* — the
@@ -23,9 +181,21 @@ on `main`; the tag is the last step, not the first.
 - **A password reveal** on every password field (`ui/PasswordField.tsx`, `aria-pressed`, label flips with the state).
 - **`@maak/web` runs its tests.** The workspace had no `test` script, so `src/lib/__tests__/legal.test.ts` had never
   been executed by `npm test`; `origin.test.ts` covers the CSRF cases below.
+- **An `inbox` mark, and empty states that use it.** `EmptyState` defaulted to the character `◇`, so forty screens said
+  "nothing here" with the same typed diamond. The set has a drawing for it now, in a brand-tinted disc.
+- **A real 404, in the visitor's language.** `app/[locale]/not-found.tsx` is a page — mark, `404`, what happened, and a
+  way back to the home page and to the marketplace — and the proxy forwards `x-maak-locale` so it speaks the language
+  of the miss (`notFound()` gives a not-found page no route params). `app/not-found.tsx` covers addresses with no
+  language at all and carries its own stylesheet, because the root layout renders no `<html>` by design.
 
 ### Fixed
 
+- **Every 404 under a language answered `200`, with a skeleton in it.** A streaming boundary at the locale root meant
+  `notFound()` could no longer set a status. The boundary moved to `/trips` — the one list that streams — and a
+  `[locale]/[...rest]` catch-all keeps a miss inside the locale, where the styled 404 lives. `/en/nope` is a real 404
+  in English now; a typo used to reach a bare Next error document with no navigation at all.
+- **The error boundary trapped anyone whose failure repeats.** It offered only *retry*; it now offers *retry* and the
+  home page, and keeps the digest as the reference to quote to support.
 - **Every gateway-backed screen was blank for URL-token sessions.** The server-side gateway client read the access
   token from `client.auth.getSession()`, which is `null` whenever the session arrives as the proxy's `x-maak-token`
   header (`?st=`, the embedded preview, `persistSession: false`). The finance dashboard and statement answered *"The
@@ -46,6 +216,29 @@ on `main`; the tag is the last step, not the first.
   they could do nothing about.
 
 ### Changed
+
+- **The frontend got a design layer.** One accent (the product's green; sand stays for *featured*), a 32px rule above
+  every public section title, balanced display type, a hero with a wash and a raised search card, buttons with depth
+  and a press state, cards that lift only when they are links, and motion that stops when `prefers-reduced-motion`
+  asks. It is appended to `globals.css` as one commented block, so it is reviewable as a unit (`docs/polish-plan.md`
+  §21).
+- **The header marks the page you are on, and the way in is a button.** Four identical grey links became three quiet
+  destinations with `aria-current` and a 2px rule, plus *Sign in* as the only filled control — a full-width one inside
+  the phone sheet.
+- **A console's navigation is one list in two presentations.** On a phone it is a single row that names where you are
+  ("Administration · Regions") and opens into the same grouped list — a native `<details>`, no JavaScript, keyboard for
+  free. Above 900px that row disappears and the list is a sticky sidebar beginning with the product lockup, which is
+  also the console's only way back to the public site on a desktop.
+- **Arabic stops being typeset as Latin.** Captions read their tracking from a new `--tracking-caps` token, which is
+  `0.05em` in Latin and `0` in RTL: letter-spacing on a cursive script prises the joins apart. Display headings lose
+  their negative tracking in Arabic for the same reason.
+- **The sign-in form is one card**, on a wash, instead of fields floating on bare paper.
+- **The marketplace filter panel is designed, not just functional.** On a laptop it begins with a real heading and a
+  *Reset* link (it used to open straight into a micro-caps `ROUTE` with no title) and sticks beside the results instead
+  of scrolling away from them; on a phone the row is a funnel, the word *Filters* and a count, tinted when filters are
+  in force, and **applying closes the panel** so the results are not behind the form that produced them. The button
+  says *Apply filters*; *Clear* appears only when there is something to clear; zero-count facets stay, dashed and
+  muted. New `trips.search.filtersTitle` / `.apply` / `.reset` keys and a `filter` glyph (`docs/polish-plan.md` §22).
 
 - **The coverage screen (`/admin/regions`) is a flat page, with editing as a view.** It used to be a card per region
   (hierarchy written out as a sentence), a bare editor below it, 22 governorate chips at field width and a caption

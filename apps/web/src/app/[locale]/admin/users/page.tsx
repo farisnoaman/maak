@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { isLocale, translate, type Locale, type TranslationKey } from '@maak/core';
 import { SiteHeader } from '@/components/SiteHeader';
@@ -5,11 +6,10 @@ import { PreviewBanner } from '@/components/PreviewBanner';
 import { ConsoleShell } from '@/components/ConsoleShell';
 import { adminNav } from '@/components/admin/AdminNav';
 import { EmptyState } from '@/components/ui/Feedback';
-import { DeletionRequests } from '@/components/admin/DeletionRequests';
 import { RoleConsole } from '@/components/admin/RoleConsole';
 import { loadAccountContext } from '@/lib/account';
-import { loadAdminUsers, loadDeletionRequests } from '@/lib/admin';
-import { previewAccount, previewDeletionRequests, previewUsers } from '@/lib/preview-data';
+import { loadAdminUsers } from '@/lib/admin';
+import { previewAccount, previewUsers } from '@/lib/preview-data';
 
 export default async function AdminUsersPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale: raw } = await params;
@@ -38,12 +38,6 @@ export default async function AdminUsersPage({ params }: { params: Promise<{ loc
     );
   }
 
-  // The queue `cmd_delete_account` was always able to act on, and nobody could find: a read through RLS
-  // (`profiles_select_staff`), so a passenger who reaches this page reads nothing.
-  const deletion = preview
-    ? { configured: false, requests: previewDeletionRequests }
-    : await loadDeletionRequests();
-
   // The directory itself, not just the operator looking at it: `profiles_select_staff` and
   // `user_roles_select_staff` have always allowed this read, and until now nothing made it.
   const directory = preview
@@ -70,6 +64,14 @@ export default async function AdminUsersPage({ params }: { params: Promise<{ loc
         title="console.navUsers"
         subtitle="admin.subtitle"
         groups={adminNav(locale)}
+        actions={
+          <Link
+            className="ui-btn ui-btn--ghost ui-btn--sm"
+            href={`/${locale}/admin/users/deletions`}
+          >
+            {t('admin.deletionTitle')}
+          </Link>
+        }
       >
         {preview ? <PreviewBanner locale={locale} /> : null}
         <RoleConsole
@@ -78,14 +80,6 @@ export default async function AdminUsersPage({ params }: { params: Promise<{ loc
           configured={!preview}
           truncated={directory.truncated}
         />
-        <section>
-          <h2>{t('admin.deletionTitle')}</h2>
-          <DeletionRequests
-            locale={locale}
-            requests={deletion.requests}
-            configured={deletion.configured}
-          />
-        </section>
       </ConsoleShell>
     </>
   );

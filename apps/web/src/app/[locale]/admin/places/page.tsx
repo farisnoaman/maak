@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { isLocale, translate, type Locale, type TranslationKey } from '@maak/core';
 import { SiteHeader } from '@/components/SiteHeader';
@@ -29,6 +30,14 @@ export default async function AdminPlacesPage({ params }: { params: Promise<{ lo
     loaded.profile?.verificationStatus === 'verified' ||
     loaded.organizations.some((organization) => organization.verificationStatus === 'verified');
 
+  /*
+   * One job per page: a verified account that cannot review has exactly one thing to do here — submit a gathering
+   * point — so it is sent to the form rather than shown an empty queue it may not act on.
+   */
+  if (!isStaff && verified) {
+    redirect(`/${locale}/admin/places/new`);
+  }
+
   if (!isStaff && !verified) {
     return (
       <>
@@ -53,6 +62,19 @@ export default async function AdminPlacesPage({ params }: { params: Promise<{ lo
         title="places.title"
         subtitle="places.subtitle"
         groups={adminNav(locale)}
+        actions={
+          <>
+            <Link className="ui-btn ui-btn--ghost ui-btn--sm" href={`/${locale}/admin/places/find`}>
+              {t('places.findPlace')}
+            </Link>
+            <Link
+              className="ui-btn ui-btn--primary ui-btn--sm"
+              href={`/${locale}/admin/places/new`}
+            >
+              {t('places.addPlace')}
+            </Link>
+          </>
+        }
       >
         {directory.configured ? null : <PreviewBanner locale={locale} />}
         <PlaceConsole locale={locale} directory={directory} canDecide={isStaff} />

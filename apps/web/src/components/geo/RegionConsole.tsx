@@ -1,6 +1,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   descendantRegionIds,
   errorKey,
@@ -13,7 +15,7 @@ import {
   type RegionNode,
   type TranslationKey,
 } from '@maak/core';
-import { Badge } from '@/components/ui/Feedback';
+import { Badge, EmptyState } from '@/components/ui/Feedback';
 import { Button } from '@/components/ui/Button';
 import { DirectionalIcon } from '@/components/ui/DirectionalIcon';
 import { Icon } from '@/components/ui/Icon';
@@ -79,9 +81,14 @@ function toNodes(regions: readonly GeoRegion[]): RegionNode[] {
 export function RegionConsole({
   locale,
   directory,
+  mode = 'list',
+  regionId,
 }: {
   readonly locale: Locale;
   readonly directory: GeoDirectory;
+  /** One job per page: the tree is `/admin/regions`, the form is `/admin/regions/new` or `/admin/regions/[id]`. */
+  readonly mode?: 'list' | 'editor';
+  readonly regionId?: string;
 }) {
   const t = (key: TranslationKey, vars?: Record<string, string | number>) =>
     translate(locale, key, vars);
@@ -95,10 +102,25 @@ export function RegionConsole({
     translateCount(locale, 'geo.governorateCount', count);
   const extraLabel = (count: number) => translateCount(locale, 'geo.extraCount', count);
 
+  const router = useRouter();
   const [regions, setRegions] = useState<readonly GeoRegion[]>(directory.regions);
-  /* The list is the screen; the editor is a view over it. `open` closes with Save or Cancel and never lingers. */
-  const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
+  const document = regionId
+    ? directory.regions.find((region) => region.id === regionId)
+    : undefined;
+  const [draft, setDraft] = useState<Draft>(() =>
+    document
+      ? {
+          id: document.id,
+          nameAr: document.nameAr,
+          nameEn: document.nameEn,
+          description: '',
+          kind: document.kind,
+          parentId: document.parentId,
+          governorateIds: document.governorateIds,
+          districtIds: document.districtIds,
+        }
+      : EMPTY_DRAFT,
+  );
   const [districtFilter, setDistrictFilter] = useState<string>('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -186,37 +208,10 @@ export function RegionConsole({
     return list.includes(id) ? list.filter((value) => value !== id) : [...list, id];
   }
 
-  /** Open the editor and put the reader in it: the heading takes focus, so a keyboard or a screen reader lands there. */
-  function openEditor(next: Draft) {
-    setDraft(next);
-    setOpen(true);
-    setMessage(null);
-    setError(null);
-    if (typeof document !== 'undefined') {
-      requestAnimationFrame(() => {
-        const section = document.getElementById('geo-region-form');
-        section?.scrollIntoView({ block: 'start' });
-        section?.focus();
-      });
-    }
-  }
-
-  function closeEditor() {
-    setOpen(false);
-    setDraft(EMPTY_DRAFT);
-  }
-
-  function startEdit(region: GeoRegion) {
-    openEditor({
-      id: region.id,
-      nameAr: region.nameAr,
-      nameEn: region.nameEn,
-      description: '',
-      kind: region.kind,
-      parentId: region.parentId,
-      governorateIds: region.governorateIds,
-      districtIds: region.districtIds,
-    });
+  /** Back to the tree, from either the save or the cancel. */
+  function backToList() {
+    router.push(`/${locale}/admin/regions`);
+    router.refresh();
   }
 
   async function setActive(region: GeoRegion, active: boolean) {
@@ -259,7 +254,6 @@ export function RegionConsole({
     setRegions((current) =>
       current.map((row) => (row.id === region.id ? { ...row, isActive: active } : row)),
     );
-    if (!active && draft.id === region.id) closeEditor();
     setMessage(active ? t('geo.reactivated') : t('geo.deactivated'));
   }
 
@@ -293,8 +287,8 @@ export function RegionConsole({
           ? current.map((region) => (region.id === draft.id ? nextRegion : region))
           : [...current, nextRegion],
       );
-      closeEditor();
       setMessage(t('geo.previewNotice'));
+      if (mode === 'editor') backToList();
       return;
     }
 
@@ -327,33 +321,118 @@ export function RegionConsole({
         ? current.map((region) => (region.id === draft.id ? nextRegion : region))
         : [...current, nextRegion],
     );
-    closeEditor();
     setMessage(t('geo.saved'));
+    if (mode === 'editor') backToList();
   }
 
-  /* ── the editor: the list steps aside for it ─────────────────────────────────────────────────────────────── */
-  if (open) {
+  /*
+   * One job per page.
+   *
+   * This screen used to do three: the tree, the editor, and (through `SupervisorPanel`) the supervisors — and before
+   * that the editor *replaced* the list, so the thing being edited left the screen while it was being edited. It is
+   * three routes now:
+   *
+   *   /admin/regions            the tree, and the way into everything else
+   *   /admin/regions/new        the form, empty
+   *   /admin/regions/[id]       the same form, filled, for one region
+   *   /admin/regions/supervisors  who answers for which patch
+   *
+   * Each of them is a page with a heading, one job and a way back — which is also why the delete/reactivate actions
+   * stayed here: they are decisions about the list, not about a form.
+   */
+  const regionCard = (region: GeoRegion, depth: number, retired: boolean) => {
+    const districts = expandCoverage(
+      { governorateIds: region.governorateIds, districtIds: region.districtIds },
+      directory.districts,
+    );
+    const extra = region.districtIds.filter((id) => {
+      const district = districtById.get(id);
+      return district ? !region.governorateIds.includes(district.governorateId) : false;
+    });
+
     return (
-      <section
-        className="console-section geo-editor"
-        id="geo-region-form"
-        aria-labelledby="geo-region-form-title"
-        tabIndex={-1}
+      <li
+        key={region.id}
+        className="geo-region-card"
+        data-depth={depth}
+        data-retired={retired ? 'true' : undefined}
       >
-        <div className="geo-section-head">
-          <div>
-            <Button variant="ghost" size="sm" onClick={closeEditor}>
-              <span className="geo-back">
-                <DirectionalIcon direction="back" size={16} />
-                {t('geo.backToList')}
-              </span>
-            </Button>
-            <h2 id="geo-region-form-title">
-              {draft.id ? t('geo.editRegion') : t('geo.newRegion')}
-            </h2>
-            <p className="form-hint">{editing ? nameOf(editing) : t('geo.newRegionHint')}</p>
+        <div className="geo-region-card__head">
+          <div className="geo-region-card__identity">
+            <h3 className="geo-region-card__name">{nameOf(region)}</h3>
+            <span className="geo-region-card__kind">
+              {region.kind === 'region' ? t('geo.kindRegion') : t('geo.kindSubRegion')}
+            </span>
           </div>
+          <Badge tone={retired ? 'neutral' : 'success'}>
+            {retired ? t('geo.statusRetired') : t('geo.statusActive')}
+          </Badge>
         </div>
+
+        {/* Counts, not a sentence with two interpuncts in it: what a region covers is the one thing this card is for. */}
+        <ul className="geo-region-card__facts">
+          <li>{districtsLabel(districts.length)}</li>
+          <li>{governoratesLabel(region.governorateIds.length)}</li>
+          {extra.length > 0 ? <li>{extraLabel(extra.length)}</li> : null}
+        </ul>
+
+        <div className="geo-region-card__actions">
+          {retired ? (
+            <Button
+              variant="subtle"
+              size="sm"
+              disabled={busy}
+              onClick={() => setActive(region, true)}
+            >
+              {t('geo.reactivate')}
+            </Button>
+          ) : (
+            <>
+              <Link
+                className="ui-btn ui-btn--subtle ui-btn--sm"
+                href={`/${locale}/admin/regions/${region.id}`}
+              >
+                {t('geo.editRegion')}
+              </Link>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={busy}
+                onClick={() => setActive(region, false)}
+              >
+                {t('geo.deactivate')}
+              </Button>
+            </>
+          )}
+        </div>
+      </li>
+    );
+  };
+
+  /* ── the form, on its own page ─────────────────────────────────────────────────────────────────────────── */
+  if (mode === 'editor') {
+    return (
+      <section className="console-section geo-editor">
+        <Link className="detail-back" href={`/${locale}/admin/regions`}>
+          <span className="detail-back__icon" aria-hidden="true">
+            <DirectionalIcon direction="back" size={16} />
+          </span>
+          {t('geo.backToList')}
+        </Link>
+
+        {/* The page's h1 already names the job; the line under it names the region, when there is one. */}
+        <p className="form-hint">{editing ? nameOf(editing) : t('geo.newRegionHint')}</p>
+
+        {message ? (
+          <p className="form-success" role="status">
+            {message}
+          </p>
+        ) : null}
+        {error ? (
+          <p className="form-error" role="alert">
+            {error}
+          </p>
+        ) : null}
 
         <div className="geo-editor__grid">
           <div className="geo-group">
@@ -491,37 +570,36 @@ export function RegionConsole({
             <Button variant="primary" onClick={save} disabled={busy} loading={busy}>
               {t('common.save')}
             </Button>
+            <Button variant="ghost" onClick={backToList}>
+              {t('common.cancel')}
+            </Button>
           </div>
         </div>
-
-        {error ? (
-          <p className="form-error" role="alert">
-            {error}
-          </p>
-        ) : null}
       </section>
     );
   }
 
-  /* ── the list: a table, and nothing boxed ────────────────────────────────────────────────────────────────── */
+  /* ── the tree ─────────────────────────────────────────────────────────────────────────────────────────── */
   return (
     <section className="console-section geo-regions" aria-labelledby="geo-region-list">
-      <div className="geo-section-head">
+      <div className="console-section__head">
         <div>
-          <h2 id="geo-region-list">
-            {t('geo.treeHeading')}
-            {/* Every row in the table, retired ones included: the count sits beside the list it counts. */}
-            <span className="geo-count">{regions.length}</span>
-          </h2>
+          <h2 id="geo-region-list">{t('geo.treeHeading')}</h2>
           <p className="form-hint">{t('geo.depthWarning')}</p>
         </div>
-        <Button
-          size="sm"
-          iconStart={<Icon name="plus" size={16} />}
-          onClick={() => openEditor(EMPTY_DRAFT)}
-        >
-          {t('geo.newRegion')}
-        </Button>
+        <div className="console-section__actions">
+          <Link
+            className="ui-btn ui-btn--ghost ui-btn--sm"
+            href={`/${locale}/admin/regions/supervisors`}
+          >
+            <Icon name="users" size={16} />
+            {t('supervisors.title')}
+          </Link>
+          <Link className="ui-btn ui-btn--primary ui-btn--sm" href={`/${locale}/admin/regions/new`}>
+            <Icon name="plus" size={16} />
+            {t('geo.newRegion')}
+          </Link>
+        </div>
       </div>
 
       {message ? (
@@ -536,89 +614,25 @@ export function RegionConsole({
       ) : null}
 
       {regions.length === 0 ? (
-        <p className="form-hint">{t('geo.noRegions')}</p>
+        <EmptyState title={t('geo.noRegions')} description={t('geo.coverageHint')} icon="route" />
       ) : (
-        <div className="table-scroll">
-          <table className="data-table table-cards">
-            <caption className="visually-hidden">{t('geo.title')}</caption>
-            <thead>
-              <tr>
-                <th scope="col">{t('geo.colRegion')}</th>
-                <th scope="col">{t('geo.coverage')}</th>
-                <th scope="col">{t('geo.colStatus')}</th>
-                <th scope="col">
-                  <span className="visually-hidden">{t('common.actions')}</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {[
-                ...treeRows.map((row) => ({ ...row, retired: false })),
-                ...retiredRegions.map((region) => ({ region, depth: 0, retired: true })),
-              ].map(({ region, depth, retired }) => {
-                const districts = expandCoverage(
-                  { governorateIds: region.governorateIds, districtIds: region.districtIds },
-                  directory.districts,
-                );
-                const extra = region.districtIds.filter((id) => {
-                  const district = districtById.get(id);
-                  return district ? !region.governorateIds.includes(district.governorateId) : false;
-                });
-                return (
-                  <tr key={region.id} data-retired={retired ? 'true' : undefined}>
-                    <td data-label={t('geo.colRegion')}>
-                      <span className="geo-name" data-depth={depth}>
-                        {nameOf(region)}
-                      </span>
-                      <span className="geo-kind">
-                        {region.kind === 'region' ? t('geo.kindRegion') : t('geo.kindSubRegion')}
-                      </span>
-                    </td>
-                    <td data-label={t('geo.coverage')} className="geo-coverage-cell">
-                      {districtsLabel(districts.length)}
-                      {' · '}
-                      {governoratesLabel(region.governorateIds.length)}
-                      {extra.length > 0 ? ` · ${extraLabel(extra.length)}` : ''}
-                    </td>
-                    <td data-label={t('geo.colStatus')}>
-                      <Badge tone={retired ? 'neutral' : 'success'}>
-                        {retired ? t('geo.statusRetired') : t('geo.statusActive')}
-                      </Badge>
-                    </td>
-                    <td data-label={t('common.actions')}>
-                      <div className="geo-row-actions">
-                        {retired ? (
-                          <Button
-                            variant="subtle"
-                            size="sm"
-                            disabled={busy}
-                            onClick={() => setActive(region, true)}
-                          >
-                            {t('geo.reactivate')}
-                          </Button>
-                        ) : (
-                          <>
-                            <Button variant="subtle" size="sm" onClick={() => startEdit(region)}>
-                              {t('geo.editRegion')}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              disabled={busy}
-                              onClick={() => setActive(region, false)}
-                            >
-                              {t('geo.deactivate')}
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <ul className="geo-region-grid">
+            {treeRows.map((row) => regionCard(row.region, row.depth, false))}
+          </ul>
+
+          {retiredRegions.length > 0 ? (
+            <div className="geo-retired">
+              <h3 className="geo-retired__title">
+                {t('geo.statusRetired')}
+                <span className="console-section__meta">{retiredRegions.length}</span>
+              </h3>
+              <ul className="geo-region-grid">
+                {retiredRegions.map((region) => regionCard(region, 0, true))}
+              </ul>
+            </div>
+          ) : null}
+        </>
       )}
     </section>
   );

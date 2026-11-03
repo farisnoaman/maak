@@ -637,7 +637,7 @@ a {
 .site-footer__group h2 {
   font-size: 0.78rem;
   font-weight: 700;
-  letter-spacing: 0.02em;
+  letter-spacing: var(--tracking-caps);
   color: var(--ink-700);
   text-transform: uppercase;
 }
@@ -1151,7 +1151,7 @@ a {
   color: var(--ink-500);
   font-size: var(--text-2xs);
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
 }
 
@@ -1262,48 +1262,193 @@ a {
 }
 @media (min-width: 900px) {
   .console-layout {
-    grid-template-columns: 240px minmax(0, 1fr);
+    grid-template-columns: 236px minmax(0, 1fr);
     gap: var(--space-8);
-    padding-block: var(--space-10);
+    padding-block: var(--space-8);
+  }
+  /* The sidebar stays with you: a console is a place you move around in, not a page you scroll past a menu on. */
+  .console-side {
+    position: sticky;
+    inset-block-start: calc(68px + var(--space-6));
+    align-self: start;
+    max-block-size: calc(100dvh - 68px - var(--space-8));
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 }
+
+/*
+ * The navigation: one vertical list, presented two ways.
+ *
+ * Above 900px it sits under the console's name (`.console-side__brand`) and wraps nothing. Below it, the list lives
+ * inside a native disclosure whose summary says where you are, so a phone spends one 44px row on its navigation
+ * instead of three rows of wrapped chips above every page title.
+ */
 .console-nav {
-  /*
-   * A phone gets wrapped chips, not a horizontal scroller. The scroller was the other half of the bug: it was
-   * widened to the screen edges with `margin-inline: -16px`, so its box stuck out of a container that has no
-   * padding of its own, and it cut the last destination off at the edge with no hint that it scrolled. Wrapping
-   * shows every destination, needs no gesture to discover, and cannot scroll the page sideways.
-   */
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
+  display: grid;
+  align-content: start;
+  gap: 2px;
   max-inline-size: 100%;
 }
-@media (min-width: 900px) {
-  .console-nav {
-    display: grid;
-    align-content: start;
-    gap: var(--space-1);
-  }
-}
 .console-nav a {
-  white-space: nowrap;
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-md);
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--ink-600);
-  min-block-size: var(--tap-target);
   display: flex;
   align-items: center;
+  min-block-size: var(--tap-target);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--ink-600);
+  text-wrap: balance;
+  transition:
+    background 120ms ease,
+    color 120ms ease;
 }
+/* The active destination is a tint plus weight, not a grey box: one accent on the page, and it is the tint of the
+   product's own brand rather than an arbitrary highlight. */
 .console-nav a[aria-current='page'] {
-  background: var(--surface-muted);
-  color: var(--ink-900);
+  background: color-mix(in srgb, var(--brand-500) 12%, transparent);
+  color: var(--brand-700);
+  font-weight: 700;
 }
 .console-nav a:hover {
   background: var(--surface-muted);
+  color: var(--ink-900);
 }
+.console-nav a[aria-current='page']:hover {
+  background: color-mix(in srgb, var(--brand-500) 18%, transparent);
+  color: var(--brand-700);
+}
+
+/* ---------- the phone's menu ---------- */
+
+.console-menu__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  inline-size: 100%;
+  min-block-size: var(--tap-target);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+  cursor: pointer;
+  list-style: none;
+}
+.console-menu__toggle::-webkit-details-marker {
+  display: none;
+}
+.console-menu__text {
+  display: grid;
+  gap: 1px;
+  min-inline-size: 0;
+  text-align: start;
+}
+.console-menu__brand {
+  color: var(--ink-500);
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+.console-menu__current {
+  color: var(--ink-900);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+.console-menu__glyphs {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  line-height: 0;
+  color: var(--ink-500);
+}
+.console-menu__glyph--close {
+  display: none;
+}
+.console-menu[open] .console-menu__glyph--open {
+  display: none;
+}
+.console-menu[open] .console-menu__glyph--close {
+  display: inline-block;
+}
+.console-menu[open] > .console-menu__toggle {
+  border-color: var(--brand-500);
+}
+.console-menu[open] > .console-menu__toggle .console-menu__glyphs {
+  color: var(--brand-700);
+}
+
+@media (max-width: 899.98px) {
+  /* The panel pushes the page down rather than floating over it: a console's destinations are a list to read, and an
+     overlay over a form is a dialog nobody asked for. */
+  .console-menu[open] > .console-nav {
+    margin-block-start: var(--space-2);
+    padding: var(--space-2);
+    border: 1px solid var(--surface-sunken);
+    border-radius: var(--radius-md);
+    background: var(--surface-base);
+    box-shadow: var(--shadow-md);
+  }
+  /* Inside a menu the group captions earn their line: they are what makes nine destinations scannable. */
+  .console-menu .console-nav__label {
+    display: block;
+    padding-inline: var(--space-3);
+    padding-block: var(--space-2) var(--space-1);
+  }
+  .console-menu .console-nav__group + .console-nav__group {
+    margin-block-start: var(--space-1);
+    padding-block-start: var(--space-1);
+    border-block-start: 1px solid var(--surface-sunken);
+  }
+}
+
+/* On a phone the menu row already says the console's name, so printing it again above the row is a duplicate — the
+   exact bit of chrome (an ADMIN label over the title) this pass set out to remove. */
+.console-side__brand {
+  display: none;
+}
+
+/* The product lockup in the sidebar: a door home, and the one place the console wears the brand. */
+.console-side__home {
+  display: none;
+}
+@media (min-width: 900px) {
+  /* The console's name, above its list, is the sidebar's heading — the menu row has no job here. */
+  .console-side__brand {
+    display: block;
+  }
+  .console-side__home {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-block-end: var(--space-4);
+    padding-block-end: var(--space-4);
+    border-block-end: 1px solid var(--surface-sunken);
+    color: var(--ink-900);
+    font-size: 1.02rem;
+    font-weight: 800;
+  }
+  .console-side__home .brand__mark {
+    inline-size: 30px;
+    block-size: 30px;
+    font-size: 0.95rem;
+  }
+  .console-menu {
+    display: contents;
+  }
+  .console-menu__toggle {
+    display: none;
+  }
+  .console-nav {
+    /* Author styles beat the UA rule that hides a closed <details>' children — the same mechanism the site header
+       uses, so the sidebar needs no JavaScript to be a sidebar. */
+    display: grid !important;
+  }
+}
+
 /*
  * `.console-panel` stays for the account screens, where it is a real card on a page of cards. The console shell no
  * longer uses it: see `.console-head` / `.console-body` below.
@@ -1381,7 +1526,7 @@ a {
   color: var(--ink-500);
   font-size: var(--text-2xs);
   font-weight: 800;
-  letter-spacing: 0.06em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
 }
 
@@ -1487,7 +1632,7 @@ a {
 .admin-index__group h2 {
   font-size: 0.72rem;
   font-weight: 800;
-  letter-spacing: 0.06em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
   color: var(--ink-500);
   margin-block-end: var(--space-1);
@@ -1598,7 +1743,7 @@ a {
 .console-side__brand {
   font-size: 0.78rem;
   font-weight: 800;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
   color: var(--ink-500);
   margin-block-end: var(--space-3);
@@ -1814,19 +1959,59 @@ a {
 }
 
 .nav-link {
+  position: relative;
   display: inline-flex;
   align-items: center;
   min-block-size: var(--tap-target);
   padding-inline: var(--space-3);
   border-radius: var(--radius-sm);
-  font-size: 0.85rem;
+  font-size: 0.87rem;
   font-weight: 600;
   color: var(--ink-600);
+  transition:
+    background 120ms ease,
+    color 120ms ease;
 }
 .nav-link:hover {
   background: var(--surface-muted);
   color: var(--ink-900);
 }
+
+/*
+ * Two roles in one row of links.
+ *
+ * The page you are on is marked (a 2px rule under the word, the same green as every other action), and the one
+ * link a visitor with no account came for is a button. Before this, four identical grey words sat in a row and the
+ * only way to know which page you were on was to read the page.
+ */
+.nav-link--current {
+  color: var(--ink-900);
+}
+.nav-link--current::after {
+  content: '';
+  position: absolute;
+  inset-inline: var(--space-3);
+  inset-block-end: 6px;
+  block-size: 2px;
+  border-radius: var(--radius-pill);
+  background: var(--brand-600);
+}
+.nav-link--cta {
+  margin-inline-start: var(--space-2);
+  padding-inline: var(--space-5);
+  background: var(--brand-600);
+  color: #fff;
+  font-weight: 700;
+  box-shadow: var(--shadow-sm);
+}
+.nav-link--cta:hover {
+  background: var(--brand-700);
+  color: #fff;
+}
+.nav-link--cta.nav-link--current::after {
+  display: none;
+}
+
 /* ---------- mobile menu (no JavaScript) ----------
  * Below 720px the links are a disclosure: `<summary>` is the button, the panel is the menu. Above
  * 720px the summary disappears and the very same links sit inline. Nothing is duplicated and no
@@ -2185,7 +2370,7 @@ a {
   font-size: 0.74rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--tracking-caps);
   color: var(--ink-500);
   background: var(--surface-muted);
   border-block-end: 1px solid var(--surface-sunken);
@@ -2331,7 +2516,7 @@ a {
   color: var(--brand-700);
   font-size: var(--text-2xs);
   font-weight: 800;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
 }
 
@@ -2499,7 +2684,7 @@ a {
 .journey__facts dt {
   font-size: var(--text-2xs);
   font-weight: 800;
-  letter-spacing: 0.06em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
   color: var(--ink-500);
 }
@@ -2640,7 +2825,7 @@ a {
   color: var(--ink-500);
   font-size: var(--text-2xs);
   font-weight: 800;
-  letter-spacing: 0.06em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
 }
 
@@ -3031,7 +3216,7 @@ a {
   color: var(--ink-700);
   font-size: var(--text-2xs);
   font-weight: 800;
-  letter-spacing: 0.06em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
 }
 .geo-group__label--sub {
@@ -4079,7 +4264,7 @@ input[type='file']::file-selector-button {
 .trip-crew__label {
   font-size: var(--text-2xs);
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
   color: var(--ink-500);
 }
@@ -4312,58 +4497,18 @@ input[type='file']::file-selector-button {
 
 /* ---------- the marketplace filters ---------- */
 
+/* The disclosure is only a wrapper now: the button is its `<summary>`, the panel is absolutely placed below the
+   toolbar row (§35). It carries no surface of its own. */
 .trip-filters {
-  display: grid;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  border: 1px solid var(--surface-sunken);
-  border-radius: var(--radius-lg);
-  background: var(--surface-base);
+  display: block;
 }
 
 .trip-filters > summary {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-block-size: var(--tap-target);
-  font-weight: 800;
-  cursor: pointer;
-  /* `display: flex` removes the built-in triangle, and `list-style` alone does not put it back in every
-     engine, so the disclosure draws its own chevron below. Without one the row reads as a heading and
-     nothing says the panel opens. */
   list-style: none;
 }
 
 .trip-filters > summary::-webkit-details-marker {
   display: none;
-}
-
-.trip-filters > summary::after {
-  content: '';
-  inline-size: 8px;
-  block-size: 8px;
-  margin-inline-start: auto;
-  margin-block-start: -4px;
-  border-inline-end: 2px solid var(--ink-500);
-  border-block-end: 2px solid var(--ink-500);
-  transform: rotate(45deg);
-  transition: transform 120ms ease;
-}
-
-.trip-filters[open] > summary::after {
-  margin-block-start: 0;
-  transform: rotate(225deg);
-}
-
-@media (min-width: 900px) {
-  /* From a laptop up the filters are a sidebar, not a disclosure. That only works once the panel is
-     *actually open*: a closed `<details>` hides its own content and no stylesheet can bring it back, so
-     the client component that opens it also marks it `data-enhanced`. Until that attribute is there —
-     no JavaScript, or a hydration that never ran — the summary stays visible and the panel can always
-     be opened by hand. */
-  .trip-filters[data-enhanced='true'] > summary {
-    display: none;
-  }
 }
 
 /* Every group zeroes its own margins (a `<fieldset>` needs that), so the form supplies the rhythm between
@@ -4394,7 +4539,7 @@ input[type='file']::file-selector-button {
   margin-block-end: var(--space-3);
   font-size: var(--text-2xs);
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
   color: var(--ink-500);
 }
@@ -4798,14 +4943,9 @@ input[type='file']::file-selector-button {
 .trips-layout {
   display: grid;
   gap: var(--space-4);
-}
-
-@media (min-width: 900px) {
-  .trips-layout {
-    grid-template-columns: minmax(min(100%, 16rem), 18rem) minmax(0, 1fr);
-    align-items: start;
-    gap: var(--space-5);
-  }
+  /* One column, and shrinking: the results are the page. The filters are a button in the toolbar (§35), not a
+     16rem column that took a third of the width from the very list it filters. */
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .trips-results {
@@ -5321,7 +5461,7 @@ a.booking-card__code:hover {
 .booking-group__title {
   font-size: var(--text-2xs);
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
   color: var(--ink-500);
 }
@@ -5473,7 +5613,7 @@ a.booking-card__code:hover {
 .booking-summary__title {
   font-size: var(--text-2xs);
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
   color: var(--ink-500);
 }
@@ -5906,7 +6046,7 @@ a.booking-card__code:hover {
 .manifest__eyebrow {
   margin: 0 0 1mm;
   font-size: 8pt;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
   color: #444444;
 }
@@ -5965,7 +6105,7 @@ a.booking-card__code:hover {
 
 .manifest__blocks dt {
   font-size: 7.5pt;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
   color: #555555;
 }
@@ -6004,7 +6144,7 @@ a.booking-card__code:hover {
 .manifest__table th {
   text-align: start;
   font-size: 7.5pt;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
   color: #555555;
   border-block-end: 1px solid #111111;
@@ -6727,7 +6867,7 @@ a.booking-card__code:hover {
 .pay-due__label {
   font-size: var(--text-2xs);
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
   color: var(--ink-500);
 }
@@ -6784,7 +6924,7 @@ a.booking-card__code:hover {
 .pay-account__title {
   font-size: var(--text-2xs);
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
   color: var(--brand-700);
 }
@@ -6816,7 +6956,7 @@ a.booking-card__code:hover {
 
 .pay-account__meta dt {
   opacity: 0.7;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
   font-size: var(--text-2xs);
   font-weight: 700;
@@ -6836,7 +6976,7 @@ a.booking-card__code:hover {
 .pay-side__title {
   font-size: var(--text-2xs);
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
   color: var(--ink-500);
 }
@@ -7070,7 +7210,7 @@ a.booking-card__code:hover {
   color: var(--ink-500);
   font-size: var(--text-2xs);
   font-weight: 800;
-  letter-spacing: 0.07em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
 }
 
@@ -8028,7 +8168,7 @@ a.booking-card__code:hover {
 .trip-book h2 {
   font-size: 0.8rem;
   font-weight: 700;
-  letter-spacing: 0.02em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
   color: var(--ink-500);
 }
@@ -8085,4 +8225,3114 @@ a.booking-card__code:hover {
   font-size: 0.75rem;
   color: var(--ink-500);
   line-height: 1.5;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   The design layer — one skin over the whole front door
+
+   The screens were each built to a layout rule and then left with the browser's idea of a heading, a
+   link and a surface. This block is the pass that gives them a *look*: one accent, one measure, one
+   way of opening a section, one way of lifting a card. It is deliberately additive — every rule
+   here either overrides a value further up (`--tracking-*`, a shadow, a size) or styles a pattern
+   that did not exist — so nothing above it had to be rewritten to be part of the same product.
+
+   Three constraints, because decoration on a booking form is a cost, not a feature:
+
+     1. The accent is the brand's own green. Sand is for "featured", never for an action.
+     2. The signature device is a 32px rule above a section title. It costs no markup, is the same in
+        both directions, and is the one repeating mark that makes the pages read as one site.
+     3. Everything animated stops when `prefers-reduced-motion` says so.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+/* ---------- 1. typography: display lines balance, body lines do not strand a word ---------- */
+
+h1,
+h2,
+.section__head h2,
+.trips-hero h1,
+.hero h1 {
+  text-wrap: balance;
+}
+
+p,
+li {
+  /* Progressive: browsers without it lay the text out exactly as before. */
+  text-wrap: pretty;
+}
+
+/* A hero line that runs the full width of a 1440px window is a headline you read by turning your head. */
+.hero h1 {
+  max-inline-size: 22ch;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+
+:root[dir='rtl'] :is(.hero h1, h1, h2, h3) {
+  /* Arabic joins its letters; negative tracking closes the joins and the word stops breathing. */
+  letter-spacing: normal;
+}
+
+.hero p.lead {
+  color: var(--ink-700);
+  font-size: 1.06rem;
+  line-height: 1.6;
+}
+
+/* ---------- 2. the section rule: the public site's one repeating mark ---------- */
+
+.section__head h2::before,
+.trips-hero h1::before {
+  content: '';
+  display: block;
+  inline-size: 32px;
+  block-size: 3px;
+  margin-block-end: var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--brand-600);
+}
+
+/* A muted section sits on a tinted band; the rule keeps its contrast because it is the full brand tone. */
+.section--muted .section__head h2::before {
+  background: var(--brand-600);
+}
+
+.section__head h2 {
+  font-size: var(--text-2xl);
+  letter-spacing: -0.018em;
+}
+
+.section__head p {
+  font-size: 1.02rem;
+  line-height: 1.6;
+}
+
+/* ---------- 3. the hero: a wash, a card that sits on it, and a way out ---------- */
+
+.hero {
+  border-block-end: 1px solid var(--surface-sunken);
+  background:
+    radial-gradient(
+      70% 110% at 12% -10%,
+      color-mix(in srgb, var(--brand-100) 85%, transparent) 0%,
+      transparent 62%
+    ),
+    radial-gradient(
+      55% 90% at 92% 0%,
+      color-mix(in srgb, var(--sand-100) 80%, transparent) 0%,
+      transparent 58%
+    ),
+    linear-gradient(180deg, var(--surface-base) 0%, var(--surface-muted) 100%);
+}
+
+/* The search is the first thing anyone uses on this page, so it is the one raised surface in the hero. */
+.hero-search {
+  padding: var(--space-4);
+  border-color: color-mix(in srgb, var(--brand-500) 16%, var(--surface-sunken));
+  box-shadow: var(--shadow-lg);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.hero-search:focus-within {
+  border-color: var(--brand-500);
+  box-shadow:
+    var(--shadow-lg),
+    0 0 0 4px color-mix(in srgb, var(--brand-500) 12%, transparent);
+}
+
+.hero-search__submit {
+  inline-size: 100%;
+}
+
+@media (min-width: 640px) {
+  .hero-search {
+    padding: var(--space-3);
+  }
+
+  .hero-search__field {
+    padding-inline: var(--space-2);
+  }
+
+  .hero-search__submit {
+    inline-size: auto;
+    padding-inline: var(--space-8);
+  }
+}
+
+.hero__aside {
+  /* Warm instead of white: it is the one panel that is *not* the search, so it reads as a second
+     column rather than as a second card of the same kind. */
+  background: linear-gradient(
+    180deg,
+    var(--surface-base),
+    color-mix(in srgb, var(--sand-50) 65%, var(--surface-base))
+  );
+}
+
+.hero__aside-head h2 {
+  font-size: 1rem;
+  letter-spacing: -0.01em;
+}
+
+/* ---------- 4. buttons: one loud one, a quiet partner, and a press you can feel ---------- */
+
+.btn {
+  border-radius: var(--radius-md);
+  transition:
+    transform 0.12s ease,
+    background 0.15s ease,
+    box-shadow 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.btn--primary {
+  background: linear-gradient(180deg, var(--brand-500), var(--brand-600));
+  border-color: var(--brand-700);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn--primary:hover {
+  background: linear-gradient(180deg, var(--brand-600), var(--brand-700));
+  box-shadow: var(--shadow-md);
+}
+
+.btn--ghost {
+  background: var(--surface-base);
+}
+
+.btn--ghost:hover {
+  border-color: var(--ink-400);
+}
+
+.btn:active {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+
+.btn:disabled,
+.btn[aria-disabled='true'] {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* ---------- 5. cards lift, and only the clickable ones do ---------- */
+
+.card {
+  border-color: color-mix(in srgb, var(--ink-900) 9%, var(--surface-sunken));
+}
+
+a.card:hover,
+a.card:focus-visible,
+button.card:hover {
+  border-color: var(--brand-300);
+  box-shadow: var(--shadow-md);
+  translate: 0 -2px;
+}
+
+/* The marketplace row: the hairline does the work at rest, and the whole ticket lifts under the pointer. */
+.card.trip-card:hover,
+.card.trip-card:focus-within {
+  translate: 0 -2px;
+  box-shadow: var(--shadow-md);
+}
+
+.trip-card__route {
+  letter-spacing: -0.014em;
+}
+
+.trip-price {
+  font-size: 1.24rem;
+}
+
+/* A featured departure is a paid placement, so it is marked in the sand the product already uses for
+   "premium" — one edge, not a badge rush. */
+.trip-card:has(.ui-badge--info) {
+  border-inline-start: 3px solid var(--sand-500);
+}
+
+/* ---------- 6. links that mean "go on" ---------- */
+
+.link-more {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-weight: 700;
+  color: var(--brand-700);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.22em;
+  text-decoration-color: color-mix(in srgb, var(--brand-600) 45%, transparent);
+}
+
+.link-more:hover {
+  text-decoration-color: var(--brand-600);
+}
+
+/* ---------- 7. motion: short, and gone when asked ---------- */
+
+@media (prefers-reduced-motion: no-preference) {
+  .section__head h2 {
+    animation: rise 0.4s ease-out both;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---------- 8. empty states: a mark in a disc, not a typed diamond ---------- */
+
+.ui-empty {
+  padding: var(--space-8) var(--space-5);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, var(--surface-base), var(--surface-muted));
+}
+
+.ui-empty__icon {
+  display: grid;
+  place-items: center;
+  inline-size: 44px;
+  block-size: 44px;
+  border-radius: var(--radius-pill);
+  background: var(--brand-50);
+  color: var(--brand-700);
+  font-size: 0;
+}
+
+.ui-empty__title {
+  font-size: 1.05rem;
+  letter-spacing: -0.01em;
+}
+
+.ui-empty__desc {
+  color: var(--ink-600);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
+
+/* ---------- 9. whole-page states: 404 and the error boundary ---------- */
+
+.state-screen {
+  display: grid;
+  place-items: center;
+  min-block-size: 60dvh;
+  padding-block: var(--space-12);
+}
+
+.state-screen__panel {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  max-inline-size: 34rem;
+  padding: var(--space-8) var(--space-6);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-xl);
+  background:
+    radial-gradient(
+      90% 120% at 50% 0%,
+      color-mix(in srgb, var(--brand-50) 70%, transparent),
+      transparent 70%
+    ),
+    var(--surface-base);
+  box-shadow: var(--shadow-md);
+  text-align: center;
+}
+
+.state-screen__mark {
+  display: grid;
+  place-items: center;
+  inline-size: 52px;
+  block-size: 52px;
+  border-radius: var(--radius-pill);
+  background: var(--brand-100);
+  color: var(--brand-700);
+}
+
+.state-screen__mark--alert {
+  background: var(--sand-100);
+  color: var(--state-warning);
+}
+
+.state-screen__code {
+  color: var(--ink-500);
+  font-size: var(--text-xs);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.state-screen__panel h1 {
+  font-size: var(--text-xl);
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+.state-screen__body {
+  max-inline-size: 40ch;
+  color: var(--ink-600);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
+
+.state-screen__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  justify-content: center;
+  margin-block-start: var(--space-2);
+}
+
+.state-screen__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-sm);
+}
+
+.state-screen__links a {
+  color: var(--brand-700);
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.22em;
+}
+
+/* ---------- 10. the sign-in screen: one card for the task, a wash behind it ---------- */
+
+.auth-page {
+  background: radial-gradient(
+    60% 70% at 50% -10%,
+    color-mix(in srgb, var(--brand-50) 80%, transparent),
+    transparent 70%
+  );
+}
+
+.auth-panel {
+  padding: var(--space-5);
+  border: 1px solid color-mix(in srgb, var(--ink-900) 8%, var(--surface-sunken));
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-md);
+}
+
+@media (min-width: 720px) {
+  .auth-panel {
+    padding: var(--space-6);
+  }
+}
+
+.auth-title {
+  font-size: var(--text-2xl);
+  letter-spacing: -0.022em;
+  text-wrap: balance;
+}
+
+/* ---------- 11. the phone's tab bar: current destination in the brand ---------- */
+
+.tabbar__link {
+  position: relative;
+}
+
+.tabbar__link[aria-current='page'] {
+  color: var(--brand-700);
+}
+
+.tabbar__link[aria-current='page']::before {
+  content: '';
+  position: absolute;
+  inset-block-start: 0;
+  inline-size: 20px;
+  block-size: 2px;
+  border-radius: var(--radius-pill);
+  background: var(--brand-600);
+}
+
+/* The streaming fallback's row of placeholders, in the shape of a result list. */
+.skeleton-stack {
+  display: grid;
+  gap: var(--space-3);
+}
+
+/* ---------- 12. the marketplace filter panel: a titled sidebar, and a panel that puts itself away ---------- */
+
+/*
+ * The panel was already a disclosure on a phone and a sidebar on a laptop; what it was not was designed. On a
+ * laptop the summary is hidden, so the column began with a micro-caps "ROUTE" and no title at all — a stack of
+ * unlabelled controls beside a page with a heading. On a phone the summary was the word "Filter" and a chevron.
+ *
+ * Both ends are the same panel now: a funnel, the word *Filters*, a count when something is in force. Above 900px
+ * that row is replaced by a real heading and a *Reset* link, the panel sticks beside the results (a list can be long;
+ * the filters should not scroll away from it), and *Clear* only exists once there is something to clear.
+ */
+
+.trip-filters > summary {
+  gap: var(--space-3);
+  color: var(--ink-900);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.trip-filters__summary-icon {
+  display: grid;
+  place-items: center;
+  inline-size: 30px;
+  block-size: 30px;
+  border-radius: var(--radius-sm);
+  background: var(--brand-50);
+  color: var(--brand-700);
+  transition:
+    background 120ms ease,
+    color 120ms ease;
+}
+
+/* With filters in force the row itself says so, in the same green as every other action on the page. */
+.trip-filters[data-active='true'] > summary .trip-filters__summary-icon {
+  background: var(--brand-600);
+  color: #fff;
+}
+
+/* A sidebar does not need the summary, so the head below it is the title there and nothing here. */
+/* Field labels name a control; they are not captions. They now match every other form label in the product
+   (12px, 700, no tracking) instead of borrowing the panel's micro-caps. */
+.trip-filters__group > label:not(.trip-filters__option),
+.trip-filters__label {
+  color: var(--ink-700);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.trip-filters__legend {
+  color: var(--ink-700);
+}
+
+/* A facet with nothing behind it stays visible — its zero is information — and stops competing for the eye. */
+.trip-filters__option[data-empty='true'] {
+  border-style: dashed;
+  color: var(--ink-400);
+}
+
+.trip-filters__option[data-empty='true'] .trip-filters__count {
+  border: 1px solid var(--surface-sunken);
+  background: transparent;
+  color: var(--ink-500);
+}
+
+/* The commit row: a rule above it, and two full-width targets on a phone. */
+.trip-filters__actions {
+  padding-block-start: var(--space-4);
+  border-block-start: 1px solid var(--surface-sunken);
+}
+
+@media (max-width: 559.98px) {
+  .trip-filters__actions .ui-btn {
+    inline-size: 100%;
+  }
+}
+
+/* ---------- 13. console page furniture: the facts in the band, the section head ---------- */
+
+/*
+ * The header band's right-hand end: the numbers this screen exists to report, then its action.
+ *
+ * Two numbers and a button, not a row of KPI tiles. A console page that opens with four equal boxes of grey
+ * numbers makes the reader hunt for which one matters; here they sit in the band beside the title, small label,
+ * tabular figure, separated by the same hairline the rest of the page uses.
+ */
+.console-head__end {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3) var(--space-5);
+  margin-inline-start: auto;
+}
+
+.console-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-5);
+  margin: 0;
+}
+
+.console-facts > div {
+  display: grid;
+  gap: 1px;
+}
+
+.console-facts dt {
+  color: var(--ink-500);
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.console-facts dd {
+  margin: 0;
+  color: var(--ink-900);
+  font-size: 1.05rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+/* The head row of a section inside the body: what it is, how many, and the way to act on it. */
+.console-section__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+}
+
+.console-section__head h2 {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+}
+
+.console-section__head .console-section__meta {
+  color: var(--ink-500);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- 14. a trip, as staff read it: one identity, two doors, one decision ---------- */
+
+.detail-back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-block-size: var(--tap-target);
+  color: var(--ink-500);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.detail-back:hover {
+  color: var(--brand-700);
+}
+
+.trip-detail__identity {
+  display: grid;
+  gap: var(--space-1);
+  min-inline-size: 0;
+}
+
+.trip-detail__identity h2 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xl);
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+/* Between two cities, on a disc: a direction, not punctuation that drifted in from the heading. */
+.trip-detail__arrow {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 24px;
+  block-size: 24px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-muted);
+  color: var(--ink-400);
+  transform: scaleX(var(--icon-flip, 1));
+}
+
+.trip-detail__meta {
+  color: var(--ink-500);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.trip-detail__end {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: end;
+}
+
+.trip-detail__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+
+@media (max-width: 639.98px) {
+  .trip-detail__end {
+    justify-items: start;
+  }
+
+  .trip-detail__actions {
+    justify-content: flex-start;
+  }
+}
+
+/*
+ * The verification decision, on the trip's own page: a callout, not a queue card.
+ *
+ * In the queue a decision is one row among many, so it is a card with two buttons and a reason field that opens on
+ * request. Here the decision *is* the page's task, so the reason is already open (a rejection needs it), the two
+ * outcomes sit together, and the whole thing is marked in sand — the colour this product reserves for "a human has
+ * to decide" — instead of borrowing the neutral card the table rows use.
+ */
+.review-panel {
+  display: grid;
+  gap: var(--space-3);
+  max-inline-size: 44rem;
+  padding: var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--sand-500) 40%, var(--surface-sunken));
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--sand-50) 70%, var(--surface-base));
+}
+
+.review-panel__title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--ink-900);
+}
+
+.review-panel .form-actions {
+  margin-block-start: 0;
+}
+
+/* ---------- 15. the scanner: one column, and a verdict you can read across a doorway ---------- */
+
+.ops-scan {
+  max-inline-size: 44rem;
+}
+
+.ops-scan__manual {
+  padding: var(--space-4);
+  box-shadow: var(--shadow-sm);
+}
+
+.ops-scan__manual .ui-field__label {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--ink-700);
+  letter-spacing: 0;
+}
+
+/*
+ * The answer to a scan.
+ *
+ * It used to be a neutral card whose first line was the trip's 14-character code and whose heading held the route as
+ * grey hint text — the same visual weight as the form that produced it. A checkpoint asks one question, so the answer
+ * gets a tinted panel, a mark in a disc, and one short sentence at display size; the facts below it are the reference
+ * you read only if the answer was no.
+ */
+.scan-verdict {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+}
+
+.scan-verdict.is-ok {
+  border-color: color-mix(in srgb, var(--brand-500) 45%, var(--surface-sunken));
+  background: color-mix(in srgb, var(--brand-50) 55%, var(--surface-base));
+}
+
+.scan-verdict.is-deny {
+  border-color: color-mix(in srgb, var(--state-danger) 40%, var(--surface-sunken));
+  background: color-mix(in srgb, var(--danger-50, #fdecec) 70%, var(--surface-base));
+}
+
+.scan-verdict__mark {
+  display: grid;
+  place-items: center;
+  inline-size: 44px;
+  block-size: 44px;
+  border-radius: var(--radius-pill);
+  line-height: 0;
+}
+
+.scan-verdict.is-ok .scan-verdict__mark {
+  background: var(--brand-600);
+  color: #fff;
+}
+
+.scan-verdict.is-deny .scan-verdict__mark {
+  background: var(--state-danger);
+  color: #fff;
+}
+
+.scan-verdict__title {
+  font-size: var(--text-xl);
+  font-weight: 800;
+  letter-spacing: -0.015em;
+}
+
+.scan-verdict.is-ok .scan-verdict__title {
+  color: var(--brand-700);
+}
+
+.scan-verdict.is-deny .scan-verdict__title {
+  color: var(--state-danger);
+}
+
+.scan-verdict__route {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--ink-700);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.scan-verdict__reason {
+  color: var(--ink-700);
+  font-size: var(--text-sm);
+}
+
+.scan-verdict .ops-facts {
+  margin-block: var(--space-2);
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid color-mix(in srgb, var(--ink-900) 10%, transparent);
+}
+
+.scan-verdict .ui-btn {
+  justify-self: start;
+}
+
+/* ---------- 16. plans: three cards with the same eight rows, not one column of sentences ---------- */
+
+.plan-grid {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 760px) {
+  .plan-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+    align-items: start;
+  }
+}
+
+.plan-card {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--ink-900) 8%, var(--surface-sunken));
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+}
+
+.plan-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.plan-card__head h3 {
+  font-size: var(--text-lg);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.plan-card__price {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  color: var(--ink-900);
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.plan-card__price small {
+  color: var(--ink-500);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.plan-card__list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding-block-start: var(--space-2);
+  border-block-start: 1px solid var(--surface-sunken);
+}
+
+.plan-card__list > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding-block: 4px;
+  font-size: var(--text-sm);
+}
+
+.plan-card__list dt {
+  color: var(--ink-600);
+}
+
+.plan-card__list dd {
+  margin: 0;
+  font-weight: 700;
+  color: var(--ink-900);
+}
+
+/* The editor opens under the cards, where the plan it belongs to is still on screen. */
+.plan-editor {
+  margin-block-start: var(--space-4);
+  padding-block-start: var(--space-4);
+  border-block-start: 1px solid var(--surface-sunken);
+}
+
+.plan-editor h3 {
+  font-size: var(--text-lg);
+  font-weight: 800;
+}
+
+/* ---------- 17. subscriptions: the payer, the plan, the number, and the end date ---------- */
+
+.sub-list {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 900px) {
+  .sub-list {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+    align-items: start;
+  }
+}
+
+.sub-card {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--ink-900) 8%, var(--surface-sunken));
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.sub-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.sub-card__owner {
+  font-size: var(--text-lg);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.sub-card__price {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  color: var(--ink-900);
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.sub-card__price small {
+  color: var(--ink-500);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.sub-card__meta {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--surface-sunken);
+}
+
+.sub-card__meta dt {
+  color: var(--ink-500);
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.sub-card__meta dd {
+  margin: 0;
+  color: var(--ink-800);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+/* A state that changes the answer gets the sand tint — "a human should look at this". */
+.sub-card__flag {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--sand-50);
+  color: color-mix(in srgb, var(--ink-900) 82%, var(--sand-500));
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+/* ---------- 18. the alert catalogue: seven named drawers instead of a 39-row wall ---------- */
+
+.catalogue-groups {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.catalogue-group {
+  border: 1px solid color-mix(in srgb, var(--ink-900) 8%, var(--surface-sunken));
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+  overflow: clip;
+}
+
+.catalogue-group__summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  cursor: pointer;
+  list-style: none;
+  font-size: var(--text-md);
+  font-weight: 700;
+  color: var(--ink-800);
+}
+
+.catalogue-group__summary::-webkit-details-marker {
+  display: none;
+}
+
+.catalogue-group__summary::after {
+  content: '';
+  inline-size: 8px;
+  block-size: 8px;
+  border-inline-end: 2px solid var(--ink-400);
+  border-block-end: 2px solid var(--ink-400);
+  transform: rotate(45deg);
+  transition: transform var(--motion-fast, 140ms) ease-out;
+}
+
+.catalogue-group[open] > .catalogue-group__summary::after {
+  transform: rotate(-135deg);
+}
+
+.catalogue-group__summary:focus-visible {
+  outline: 2px solid var(--brand-600);
+  outline-offset: -2px;
+}
+
+.catalogue-group__count {
+  margin-inline-start: auto;
+  margin-inline-end: var(--space-2);
+  padding-inline: var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--surface-sunken);
+  color: var(--ink-600);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.catalogue-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-block-start: 1px solid var(--surface-sunken);
+}
+
+.catalogue-event {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+}
+
+.catalogue-event + .catalogue-event {
+  border-block-start: 1px solid var(--surface-sunken);
+}
+
+.catalogue-event__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.catalogue-event__name {
+  font-size: var(--text-md);
+  font-weight: 700;
+  color: var(--ink-900);
+}
+
+.catalogue-event__channels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.catalogue-event__channels li {
+  padding: 2px var(--space-2);
+  border: 1px solid color-mix(in srgb, var(--brand-600) 28%, var(--surface-sunken));
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--brand-50) 60%, var(--surface-base));
+  color: var(--brand-700);
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.catalogue-event__says {
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 900px) {
+  .catalogue-event__says {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-4);
+  }
+}
+
+.catalogue-event__sentence {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+  color: var(--ink-800);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}
+
+/* ---------- 20. the scanner's idle state: three sentences instead of a blank half-page ---------- */
+
+.scan-checks {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px dashed color-mix(in srgb, var(--ink-900) 14%, var(--surface-sunken));
+  border-radius: var(--radius-lg);
+  background: var(--surface-muted);
+}
+
+.scan-checks__title {
+  font-size: var(--text-sm);
+  font-weight: 800;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--ink-600);
+}
+
+.scan-checks__list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.scan-checks__list li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-2);
+  align-items: start;
+  color: var(--ink-800);
+  font-size: var(--text-sm);
+}
+
+.scan-checks__mark {
+  display: grid;
+  place-items: center;
+  inline-size: 18px;
+  block-size: 18px;
+  margin-block-start: 1px;
+  border-radius: var(--radius-pill);
+  background: var(--brand-50);
+  color: var(--brand-700);
+  line-height: 0;
+}
+
+.scan-checks__hint {
+  padding-block-start: var(--space-2);
+  border-block-start: 1px solid color-mix(in srgb, var(--ink-900) 8%, transparent);
+  color: var(--ink-500);
+  font-size: var(--text-xs);
+}
+
+/* ---------- 21. state surfaces: a disc you can read as a mark, and toolbars on the right rhythm ---------- */
+
+/*
+ * The empty state's mark was a `◇` character in the brand colour. A character is not an icon: it inherits the body
+ * font's weight and sidebearings and its optical centre never lines up. It is a tinted disc with a drawn glyph now,
+ * which also gives the block the one piece of colour it needed to stop reading as unfinished.
+ */
+.ui-empty {
+  gap: var(--space-3);
+}
+
+.ui-empty__icon {
+  display: grid;
+  place-items: center;
+  inline-size: 46px;
+  block-size: 46px;
+  border-radius: var(--radius-pill);
+  background: var(--brand-50);
+  color: var(--brand-700);
+  line-height: 0;
+}
+
+.ui-empty__title {
+  font-size: var(--text-lg);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--ink-900);
+}
+
+.ui-empty__desc {
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--ink-600);
+  max-inline-size: 46ch;
+  text-wrap: pretty;
+}
+
+/* A toolbar is a count and the one thing you can do with the list it counts. */
+.ops-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding-block-end: var(--space-3);
+  border-block-end: 1px solid var(--surface-sunken);
+}
+
+.ops-toolbar__count {
+  margin: 0;
+  color: var(--ink-700);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.trip-route {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--ink-800);
+  font-weight: 600;
+}
+
+.trip-route .ui-directional-icon {
+  color: var(--ink-400);
+  flex: none;
+}
+
+.trip-filters__legend {
+  margin: 0 0 var(--space-2);
+  color: var(--ink-700);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+/* ====================================================================================================================
+ * 22. THE WARM LAYER — the direction, in one place
+ *
+ * The product's bones were right and its skin was cold: pure-white paper, cool grey hairlines, shadows with a blue cast,
+ * 8px corners on things that are touched. "Warm and human" is a small number of decisions applied everywhere, not a
+ * redesign per page:
+ *
+ *   1. Paper is warm — the muted surface is a cream, not a cool grey, and hairlines are drawn in that same cream.
+ *   2. Corners are rounder than a finger needs and softer than a widget: 10 / 14 / 20 / 28.
+ *   3. Shadows are short and warm-tinted; nothing floats far from the page.
+ *   4. Controls sit on white and lift their border on focus — a field should look like a place to write, not a hole.
+ *   5. Headings balance, prose does not strand a word.
+ *
+ * Everything below either sets a token once or fixes a control that ignored it. Per-page compositions live in the
+ * sections above (12–21) so this file does not become a second stylesheet.
+ * ================================================================================================================== */
+
+:root {
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+}
+
+/* Light paper only: the dark theme sets its own surfaces, and a cream that survives into dark mode is a bug. */
+@media (prefers-color-scheme: light) {
+  :root {
+    --surface-muted: #f8f7f3;
+    --surface-sunken: #eae8e0;
+    --shadow-sm: 0 1px 2px rgba(60, 48, 26, 0.06);
+    --shadow-md: 0 10px 26px -14px rgba(60, 48, 26, 0.28);
+    --shadow-lg: 0 28px 60px -30px rgba(60, 48, 26, 0.34);
+  }
+}
+
+/* 1. type: a display line keeps its shape, a paragraph keeps its last word company. */
+h1,
+h2,
+h3,
+.section__head h2,
+.console-head h1 {
+  text-wrap: balance;
+}
+
+.prose p,
+.ui-empty__desc,
+.form-hint,
+.console-head__sub,
+.hero p.lead {
+  text-wrap: pretty;
+}
+
+/* 2. controls: white paper, a warm hairline, and a ring you cannot miss. */
+.ui-input,
+.ui-select,
+.ui-textarea {
+  border-color: color-mix(in srgb, var(--ink-900) 12%, var(--surface-sunken));
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease;
+}
+
+.ui-input:hover:not(:focus),
+.ui-select:hover:not(:focus),
+.ui-textarea:hover:not(:focus) {
+  border-color: color-mix(in srgb, var(--ink-900) 22%, var(--surface-sunken));
+}
+
+.ui-input:focus,
+.ui-input:focus-visible,
+.ui-select:focus,
+.ui-select:focus-visible,
+.ui-textarea:focus,
+.ui-textarea:focus-visible {
+  border-color: var(--brand-500);
+  background: var(--surface-base);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand-500) 14%, transparent);
+  outline: none;
+}
+
+.ui-btn {
+  border-radius: var(--radius-md);
+  transition:
+    transform 0.12s ease,
+    background 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.ui-btn--primary {
+  background: linear-gradient(180deg, var(--brand-500), var(--brand-600));
+  border-color: var(--brand-700);
+  color: #fff;
+  box-shadow: var(--shadow-sm);
+}
+
+.ui-btn--primary:hover {
+  background: linear-gradient(180deg, var(--brand-600), var(--brand-700));
+  box-shadow: var(--shadow-md);
+}
+
+.ui-btn:active {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+
+/* 3. badges: a pill with room to breathe, so a status never looks like a tag the browser drew. */
+.ui-badge {
+  padding: 3px var(--space-3);
+  border: 1px solid color-mix(in srgb, currentColor 16%, transparent);
+  font-size: var(--text-xs);
+  line-height: 1.4;
+}
+
+/* 4. tables: a warm header band, and the row under the pointer tells you it is a row. */
+.data-table thead th {
+  background: var(--surface-muted);
+  color: var(--ink-600);
+  border-block-end: 1px solid var(--surface-sunken);
+}
+
+.data-table thead th:first-child {
+  border-start-start-radius: var(--radius-md);
+}
+
+.data-table thead th:last-child {
+  border-start-end-radius: var(--radius-md);
+}
+
+.data-table tbody tr {
+  transition: background 0.12s ease;
+}
+
+.data-table tbody tr:hover {
+  background: color-mix(in srgb, var(--brand-50) 45%, var(--surface-base));
+}
+
+/* 5. the console's own chrome: the band under the title is warm, and the sidebar's current item is a pill. */
+.console-head {
+  padding-block: var(--space-4);
+  border-block-end: 1px solid var(--surface-sunken);
+}
+
+.console-section__head h2 {
+  font-size: var(--text-lg);
+  letter-spacing: -0.012em;
+}
+
+.console-section__meta {
+  min-inline-size: 1.6rem;
+  padding-inline: var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--surface-muted);
+  color: var(--ink-600);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+/* 6. one focus ring, everywhere — the browser default is a different width on every engine. */
+:where(a, button, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--brand-600);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* ---------- 23. the sign-in sheet: one card for the task, the wash behind it doing the brand work ---------- */
+
+@media (prefers-color-scheme: light) {
+  .auth-page {
+    background:
+      radial-gradient(
+        70% 60% at 85% 0%,
+        color-mix(in srgb, var(--sand-50) 90%, transparent),
+        transparent 62%
+      ),
+      radial-gradient(
+        60% 55% at 10% 6%,
+        color-mix(in srgb, var(--brand-50) 85%, transparent),
+        transparent 60%
+      );
+  }
+}
+
+.auth-panel {
+  padding: var(--space-5);
+  border: 1px solid color-mix(in srgb, var(--ink-900) 9%, var(--surface-sunken));
+  border-radius: var(--radius-xl);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-md);
+}
+
+@media (min-width: 720px) {
+  .auth-panel {
+    padding: var(--space-6);
+  }
+}
+
+/* The aside is the reassurance column, not a second form — a rule, not a box. */
+.auth-aside {
+  padding-block-start: var(--space-4);
+  border-block-start: 2px solid color-mix(in srgb, var(--sand-500) 55%, transparent);
+}
+
+/* ---------- 19. places: the queue is a wall of cards, the forms are rows you press ---------- */
+
+.place-grid {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 880px) {
+  .place-grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 21rem), 1fr));
+    align-items: start;
+  }
+}
+
+/*
+ * One submission. It used to be a name, then two lines of text glued together with `·` — the kind, the district, the
+ * governorate, the coordinates and who sent it, all in the same grey run. The facts that decide the place are labelled
+ * rows now, so "which governorate" is a glance and not a parse.
+ */
+.place-card {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--ink-900) 8%, var(--surface-sunken));
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.place-card__head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.place-card__name {
+  font-size: var(--text-lg);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--ink-900);
+  text-wrap: balance;
+}
+
+.place-card__kind {
+  flex: none;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--brand-50) 70%, var(--surface-base));
+  color: var(--brand-700);
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.place-card__alt {
+  margin-block-start: calc(var(--space-3) * -1 + 2px);
+  color: var(--ink-500);
+  font-size: var(--text-sm);
+}
+
+.place-card__meta {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--surface-sunken);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.place-card__meta dt {
+  color: var(--ink-500);
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.place-card__meta dd {
+  margin: 0;
+  color: var(--ink-800);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.place-card__when {
+  color: var(--ink-500);
+  font-size: var(--text-xs);
+}
+
+.place-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--surface-sunken);
+}
+
+.place-card__reject {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--sand-50);
+}
+
+.place-card__reject-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/*
+ * A disclosure that reads as a row, not as a heading: the whole strip is the button, the title is one line and the
+ * reason you would open it is the line under. Native <details>, so it works with JavaScript off and the keyboard
+ * reaches it without help.
+ */
+.panel-disclosure {
+  border: 1px solid color-mix(in srgb, var(--ink-900) 9%, var(--surface-sunken));
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+  overflow: clip;
+}
+
+.panel-disclosure[open] {
+  box-shadow: var(--shadow-md);
+}
+
+.panel-disclosure__summary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  cursor: pointer;
+  list-style: none;
+}
+
+.panel-disclosure__summary::-webkit-details-marker {
+  display: none;
+}
+
+.panel-disclosure__summary:hover {
+  background: color-mix(in srgb, var(--brand-50) 35%, var(--surface-base));
+}
+
+.panel-disclosure__summary:focus-visible {
+  outline: 2px solid var(--brand-600);
+  outline-offset: -2px;
+}
+
+.panel-disclosure__icon {
+  display: grid;
+  place-items: center;
+  inline-size: 32px;
+  block-size: 32px;
+  border-radius: var(--radius-pill);
+  background: var(--brand-50);
+  color: var(--brand-700);
+  line-height: 0;
+}
+
+.panel-disclosure__text {
+  display: grid;
+  gap: 2px;
+  min-inline-size: 0;
+}
+
+.panel-disclosure__title {
+  color: var(--ink-900);
+  font-size: var(--text-md);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.panel-disclosure__hint {
+  color: var(--ink-500);
+  font-size: var(--text-xs);
+  line-height: 1.45;
+}
+
+.panel-disclosure__chevron {
+  display: grid;
+  place-items: center;
+  color: var(--ink-400);
+  line-height: 0;
+  transition: transform 0.16s ease;
+}
+
+.panel-disclosure[open] .panel-disclosure__chevron {
+  transform: rotate(180deg);
+}
+
+.panel-disclosure__body {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border-block-start: 1px solid var(--surface-sunken);
+}
+
+.panel-disclosure__note {
+  color: var(--ink-500);
+  font-size: var(--text-xs);
+}
+
+/* Two fieldsets, so eleven fields read as "what it is" and "where it is". */
+.place-group {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.place-group legend {
+  padding: 0;
+  margin-block-end: var(--space-1);
+  color: var(--ink-600);
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.place-group .form-grid {
+  margin-block: 0;
+}
+
+/* ---------- 24. regions: cards for the tree, and two rows you press ---------- */
+
+.geo-regions-page {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.geo-region-grid {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 900px) {
+  .geo-region-grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
+    align-items: start;
+  }
+}
+
+/*
+ * One region. The tree is kept by indenting a sub-region's card and drawing a rule on its inline edge — the hierarchy
+ * is still visible, and the card is still a card rather than a box inside a box.
+ */
+.geo-region-card {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--ink-900) 8%, var(--surface-sunken));
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.geo-region-card[data-depth='1'] {
+  margin-inline-start: var(--space-4);
+  border-inline-start: 3px solid var(--brand-300);
+}
+
+.geo-region-card[data-depth='2'] {
+  margin-inline-start: var(--space-8);
+  border-inline-start: 3px solid var(--brand-100);
+}
+
+.geo-region-card[data-retired='true'] {
+  background: var(--surface-muted);
+  box-shadow: none;
+}
+
+.geo-region-card__head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.geo-region-card__identity {
+  display: grid;
+  gap: 2px;
+  min-inline-size: 0;
+}
+
+.geo-region-card__name {
+  font-size: var(--text-lg);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--ink-900);
+  text-wrap: balance;
+}
+
+.geo-region-card__kind {
+  color: var(--ink-500);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+/* Coverage as counts you can compare across cards, not a sentence with two interpuncts in it. */
+.geo-region-card__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.geo-region-card__facts li {
+  padding: 2px var(--space-2);
+  border: 1px solid color-mix(in srgb, var(--ink-900) 10%, var(--surface-sunken));
+  border-radius: var(--radius-pill);
+  background: var(--surface-muted);
+  color: var(--ink-700);
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.geo-region-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--surface-sunken);
+}
+
+/* Retired regions are reachable, but they are not the list: a heading, a count and a muted card each. */
+.geo-retired {
+  display: grid;
+  gap: var(--space-3);
+  margin-block-start: var(--space-5);
+}
+
+.geo-retired__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--ink-600);
+  font-size: var(--text-xs);
+  font-weight: 800;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+/* The two disclosures on this page are cards, so the old "rule above an open form" treatment has to go. */
+.geo-assign.panel-disclosure {
+  margin-block-start: var(--space-4);
+  padding-block-start: 0;
+  border-block-start: 1px solid color-mix(in srgb, var(--ink-900) 9%, var(--surface-sunken));
+}
+
+.geo-editor.panel-disclosure {
+  scroll-margin-block-start: var(--space-4);
+}
+
+.geo-editor .geo-editor__grid {
+  margin-block-start: 0;
+}
+
+/* Supervisors: a card each — the person, their regions, and the number of districts that follow from them. */
+.supervisor-list {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 900px) {
+  .supervisor-list {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
+    align-items: start;
+  }
+}
+
+.supervisor-card {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--ink-900) 8%, var(--surface-sunken));
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.supervisor-card__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.supervisor-card__name {
+  font-size: var(--text-md);
+  font-weight: 800;
+  color: var(--ink-900);
+}
+
+.supervisor-card__scope {
+  color: var(--ink-500);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.supervisor-card__regions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.supervisor-card__regions li {
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--brand-50) 70%, var(--surface-base));
+  color: var(--brand-700);
+  font-size: var(--text-2xs);
+  font-weight: 700;
+}
+
+/* The two verbs a section head can carry, kept on one line and wrapping only when the head is narrow. */
+.console-section__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  margin-inline-start: auto;
+}
+
+/* ====================================================================================================================
+ * 26. WARM AND HUMAN, IN THE CONSOLE — the chosen direction, applied to the dense half of the product
+ *
+ * The console was flattened on purpose (§13): one frame per screen, sections divided by rules, no card inside a card.
+ * That structure stays. What changes is the material. A console is still paper, and paper is not a spreadsheet:
+ *
+ *   1. The top of the page is a band, not a header line: the title, the sentence and the numbers sit in one sand
+ *      wash with the page's own corner. It is a strip of colour, not a frame around the screen.
+ *   2. Bands are tinted, not boxed: the facts sit on paper inside that wash, the section count in a pill.
+ *   3. The active destination is a paper pill — a place you are standing, not a highlight.
+ *   4. Corners stay generous and the same at every level of the page (10 / 14 / 20 / 26), never 6px beside 22px.
+ *   5. Nothing glows. The primary button is flat ink-green with a short warm shadow; there is no gradient anywhere
+ *      in the console, because a surface that reflects light is the one thing paper never does.
+ *
+ * Everything below is a token or an override of a rule defined earlier, so no page needs to know this section exists.
+ * ================================================================================================================== */
+
+:root {
+  --paper: var(--surface-base);
+  --paper-edge: color-mix(in srgb, var(--ink-900) 9%, var(--surface-sunken));
+  --paper-wash: var(--surface-muted);
+}
+
+/* Paper is a material, so it is defined per scheme rather than derived once: cream under a cream page, and a
+   lifted slate under the dark theme, where a cream band behind light text would be unreadable. */
+@media (prefers-color-scheme: light) {
+  :root {
+    --paper: #fffefb;
+    --paper-edge: #ece5d6;
+    --paper-wash: #faf5e9;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #131c29;
+    --paper-edge: #22303f;
+    --paper-wash: #17222f;
+  }
+}
+
+/* 1. No sheet, no page-wide card — the page stays flat (§13). The warmth is in the band at the top: one tinted
+   block holding the title, the sentence and the numbers, with the same corner as everything else. A page-wide
+   bordered box would put a frame around the whole screen, which is the thing this console was flattened to avoid. */
+.console-main {
+  gap: var(--space-4);
+}
+
+.console-head {
+  padding: var(--space-4) var(--space-5);
+  border-block-end: 0;
+  border-radius: var(--radius-lg);
+  background: var(--paper-wash);
+}
+
+@media (min-width: 720px) {
+  .console-head {
+    padding: var(--space-5) var(--space-6);
+  }
+}
+
+/* The sidebar sits on the paper, so it needs no surface of its own — only air. */
+.console-side {
+  padding-block-start: var(--space-1);
+}
+
+/* 2. The head band: a title with room around it, and the numbers in their own wash instead of floating in a margin. */
+.console-head h1 {
+  font-size: clamp(1.45rem, 1.15rem + 1vw, 2rem);
+  font-weight: 800;
+  letter-spacing: -0.018em;
+  line-height: 1.1;
+}
+
+.console-head__sub {
+  margin-block-start: var(--space-2);
+  color: var(--ink-600);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.console-facts {
+  gap: var(--space-2);
+}
+
+.console-facts > div {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--paper);
+}
+
+.console-facts dt {
+  color: var(--ink-600);
+  letter-spacing: 0.04em;
+}
+
+.console-facts dd {
+  font-size: 1.125rem;
+}
+
+/* 3. Navigation: a place you are standing. */
+.console-nav a {
+  border-radius: var(--radius-md);
+  color: var(--ink-600);
+}
+
+.console-nav a[aria-current='page'] {
+  background: var(--paper);
+  color: var(--ink-900);
+  font-weight: 700;
+  box-shadow: var(--shadow-sm);
+}
+
+.console-nav a[aria-current='page']:hover {
+  background: var(--paper);
+  color: var(--ink-900);
+}
+
+.console-nav a:hover {
+  background: color-mix(in srgb, var(--paper-wash) 80%, transparent);
+  color: var(--ink-900);
+}
+
+.console-nav__label {
+  color: var(--ink-500);
+}
+
+/* 4. Section heads: the count is a pill, the rule above the section is warm. */
+.console-section:not(:first-child),
+.console-body > section:not(:first-child),
+.console-body > .card + .card,
+.console-body > section + section,
+.console-body > .card + section,
+.console-body > section + .card {
+  border-block-start-color: var(--paper-edge);
+}
+
+.console-section__head h2,
+.console-section h2,
+.console-body > section h2,
+.console-body > section > h2,
+.console-body > .card > h2 {
+  font-size: 1.0625rem;
+  font-weight: 750;
+  letter-spacing: -0.012em;
+}
+
+.console-section__head .console-section__meta {
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--paper-wash);
+  color: var(--ink-600);
+}
+
+.console-subhead {
+  margin-block-start: var(--space-2);
+  color: var(--ink-800);
+}
+
+/* 5. Items that are genuinely cards keep their edge; the edge is warm and the corner is the page's corner. */
+.card,
+.queue-card,
+.plan-card,
+.sub-card,
+.geo-region-card,
+.ui-empty {
+  border-color: var(--paper-edge);
+  border-radius: var(--radius-lg);
+  background: var(--paper);
+}
+
+/* 6. Empty states stop being blank space: a tinted plate, an icon in a circle, and the sentence that says what to do. */
+.ui-empty {
+  padding: var(--space-6) var(--space-4);
+  border: 1px dashed color-mix(in srgb, var(--ink-900) 14%, transparent);
+  background: var(--paper-wash);
+  text-align: center;
+}
+
+.ui-empty__icon {
+  display: grid;
+  place-items: center;
+  inline-size: 44px;
+  block-size: 44px;
+  margin-inline: auto;
+  margin-block-end: var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--paper);
+  color: var(--brand-700);
+  box-shadow: var(--shadow-sm);
+}
+
+.ui-empty__title {
+  font-size: 1rem;
+  font-weight: 750;
+}
+
+.ui-empty__desc {
+  margin-inline: auto;
+  max-inline-size: 46ch;
+  color: var(--ink-600);
+  font-size: var(--text-sm);
+}
+
+/* 7. Tables: a warm header band and a rounded scroll frame, so a table reads as a block of paper, not a grid. */
+.table-scroll {
+  border: 1px solid var(--paper-edge);
+  border-radius: var(--radius-md);
+  background: var(--paper);
+}
+
+.data-table th,
+.data-table td {
+  border-block-end-color: var(--paper-edge);
+}
+
+.data-table thead th {
+  background: var(--paper-wash);
+  color: var(--ink-700);
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.data-table tbody tr:last-child > * {
+  border-block-end: 0;
+}
+
+/* 8. Buttons: flat, matte, and warm. No gradient, no glass — the direction's one hard rule. */
+.ui-btn--primary {
+  background: var(--brand-600);
+  border-color: var(--brand-700);
+  color: #fff;
+  box-shadow:
+    0 1px 0 color-mix(in srgb, #000 12%, transparent),
+    var(--shadow-sm);
+}
+
+.ui-btn--primary:hover {
+  background: var(--brand-700);
+  box-shadow: var(--shadow-sm);
+}
+
+.ui-btn--ghost {
+  border-color: var(--paper-edge);
+  background: transparent;
+}
+
+.ui-btn--ghost:hover {
+  background: var(--paper-wash);
+  border-color: color-mix(in srgb, var(--ink-900) 18%, transparent);
+}
+
+/* 9. Fields: white paper on warm paper, so a field is visibly a place to write. */
+.ui-input,
+.ui-select,
+.ui-textarea {
+  border-color: color-mix(in srgb, var(--ink-900) 14%, var(--paper-edge));
+  background: var(--paper);
+}
+
+/* 10. A disclosure — filters, a form behind a button — gets the same paper as everything else. */
+.panel-disclosure,
+.filter-panel,
+.catalogue-group,
+[class*='disclosure'] > summary {
+  border-color: var(--paper-edge);
+}
+
+/* ====================================================================================================================
+ * 27. THE DESKTOP NAVIGATION, WHICH WAS NOT THERE
+ *
+ * Both navigations — the site header's and the console sidebar's — live inside a `<details>`: a disclosure on a phone
+ * that costs no JavaScript and is keyboard-operable for free. Above the breakpoint the summary is hidden and the same
+ * links are laid out inline. That second half never worked, and the stylesheet said it did: `.site-menu__links` and
+ * `.console-nav` were given `display: flex/grid !important` inside the media query, which is a rule about an element
+ * the browser had already refused to render.
+ *
+ * A closed `<details>` hides its children in the user-agent shadow DOM (the content slot carries
+ * `content-visibility: hidden`), so no author rule on the children reaches them. On a desktop the header therefore
+ * showed the brand and the language switch and nothing else: no *Menu* button (hidden by the same media query), no
+ * links, **no way to sign in**. The console had no sidebar at all.
+ *
+ * `::details-content` is that slot, addressable since 2025. `content-visibility: visible` above the breakpoint is the
+ * one declaration that makes the inline navigation real; `DetailsForDesktop` also sets `open`, which is what the
+ * accessibility tree reads. An engine without the pseudo-element falls back to showing the *Menu* button on desktop,
+ * so the links are one press away instead of invisible — a menu, never a missing menu.
+ * ================================================================================================================== */
+
+@media (min-width: 720px) {
+  @supports (selector(::details-content)) {
+    .site-menu::details-content {
+      content-visibility: visible;
+    }
+  }
+
+  @supports not (selector(::details-content)) {
+    .site-menu__toggle {
+      display: inline-flex;
+    }
+  }
+}
+
+@media (min-width: 900px) {
+  @supports (selector(::details-content)) {
+    .console-menu::details-content {
+      content-visibility: visible;
+    }
+  }
+
+  @supports not (selector(::details-content)) {
+    .console-menu__toggle {
+      display: flex;
+    }
+  }
+}
+
+/* The panel is open above the breakpoint, so the toggle's "open" styling must not follow it there — the button is
+   either hidden (modern engines) or a fallback, and in neither case is it showing the closed state of a menu that is
+   laid out inline on the page. */
+@media (min-width: 720px) {
+  .site-menu[open] > .site-menu__toggle {
+    border-color: var(--surface-sunken);
+    color: var(--ink-600);
+  }
+}
+
+/* ====================================================================================================================
+ * 28. THE TRIP PAGE, AS CARDS — the itinerary, the operator and the notes
+ *
+ * The page was one flat column: a summary list, then "Vehicle and driver", "The itinerary", "Policies", "Notes",
+ * "Operator" as five headings in a row, three of them a single sentence wide. Nothing was wrong and nothing was
+ * findable: the itinerary — the actual route the passenger is buying — was a rail of dots between two paragraphs, and
+ * the notes were the last grey line before the footer.
+ *
+ * One primitive, four uses. `.trip-card` is a head (an icon disc, a title, an optional sentence) over a body, on
+ * `--paper` with the page's corner. Cards in a pair above the fold, one wide card for the route (it is a table of
+ * stops and needs the width), then the small ones in a row that fills with as many columns as the screen allows.
+ * ================================================================================================================== */
+
+/* The column itself had no rhythm at all — the blocks sat flush against each other and the only space came from a
+   section's own heading margin. One gap, from the summary down to the action row. */
+.trip-detail__main {
+  display: grid;
+  align-content: start;
+  gap: var(--space-4);
+}
+
+/* The action row carries its own top margin for the pages that are not a grid; the column already gaps it. */
+.trip-detail__main > .trip-form__actions {
+  margin-block-start: 0;
+}
+
+.trip-cards {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 720px) {
+  .trip-cards--pair {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 960px) {
+  .trip-cards--trio {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  }
+}
+
+.trip-card {
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+  min-inline-size: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--paper-edge);
+  border-radius: var(--radius-lg);
+  background: var(--paper);
+}
+
+@media (min-width: 720px) {
+  .trip-card {
+    padding: var(--space-5);
+  }
+}
+
+/* The page's section rhythm (`.trip-detail section > * + *`) must not double the card's own gap. */
+.trip-card > * + * {
+  margin-block-start: 0;
+}
+
+.trip-card__head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.trip-card__head h2 {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: 800;
+  letter-spacing: -0.008em;
+}
+
+.trip-card__icon {
+  display: grid;
+  place-items: center;
+  inline-size: 34px;
+  block-size: 34px;
+  flex: none;
+  border-radius: var(--radius-pill);
+  background: var(--paper-wash);
+  color: var(--brand-700);
+}
+
+.trip-card__hint {
+  margin-block-start: 2px;
+  color: var(--ink-500);
+  font-size: var(--text-xs);
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+
+/* The crew grid loses its own frame inside a card: the card is the frame now, and a second one is a box in a box. */
+.trip-card .trip-crew__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  gap: var(--space-3);
+}
+
+.trip-card .trip-crew__driver,
+.trip-card .trip-crew__vehicle {
+  padding: 0;
+}
+
+.trip-card .trip-crew__vehicle {
+  padding-block-start: var(--space-3);
+  border-block-start: 1px dashed color-mix(in srgb, var(--ink-900) 12%, transparent);
+  border-inline-start: 0;
+}
+
+/* The operator: a name you can read across the card, and the verification as a line under it. */
+.trip-operator__name {
+  font-size: var(--text-lg);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--ink-900);
+  text-wrap: balance;
+}
+
+.trip-operator__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--brand-700);
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+/* Notes are prose, at a measure that ends a line where a line should end. Line breaks the operator typed survive. */
+.trip-notes {
+  color: var(--ink-700);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  max-inline-size: 60ch;
+  white-space: pre-line;
+  text-wrap: pretty;
+}
+
+/* Policies: label and value on one row, a dashed hairline between rows. */
+.trip-facts {
+  display: grid;
+  gap: 0;
+  margin: 0;
+}
+
+.trip-facts__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding-block: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.trip-facts__row + .trip-facts__row {
+  border-block-start: 1px dashed color-mix(in srgb, var(--ink-900) 12%, transparent);
+}
+
+.trip-facts__row dt {
+  color: var(--ink-600);
+}
+
+.trip-facts__row dd {
+  margin: 0;
+  color: var(--ink-900);
+  font-weight: 600;
+  text-align: end;
+}
+
+/*
+ * The route.
+ *
+ * Four columns in the same order at every stop — time, mark, name, fare — so the eye reads down the clock and across
+ * the prices instead of parsing a sentence per stop. The mark is a filled disc at the two ends and a numbered ring in
+ * between, which is the whole legend: the ends are where you get on and off.
+ */
+.route-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.route-stop {
+  display: grid;
+  grid-template-columns: 4rem auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding-block: var(--space-3);
+  min-inline-size: 0;
+}
+
+@media (max-width: 479px) {
+  .route-stop {
+    grid-template-columns: 3.25rem auto minmax(0, 1fr) auto;
+    gap: var(--space-2);
+  }
+}
+
+.route-stop + .route-stop {
+  border-block-start: 1px dashed color-mix(in srgb, var(--ink-900) 12%, transparent);
+}
+
+.route-stop__time {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-800);
+}
+
+.route-stop__dot {
+  display: grid;
+  place-items: center;
+  inline-size: 22px;
+  block-size: 22px;
+  flex: none;
+  border: 2px solid var(--paper-edge);
+  border-radius: var(--radius-pill);
+  background: var(--paper);
+  color: var(--ink-500);
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 0;
+}
+
+.route-stop--start .route-stop__dot,
+.route-stop--end .route-stop__dot {
+  border-color: var(--brand-600);
+  background: var(--brand-600);
+}
+
+.route-stop__text {
+  display: grid;
+  gap: 1px;
+  min-inline-size: 0;
+}
+
+.route-stop__name {
+  font-weight: 700;
+  color: var(--ink-900);
+  overflow-wrap: anywhere;
+}
+
+.route-stop__meta {
+  font-size: var(--text-xs);
+  color: var(--ink-500);
+}
+
+.route-stop__fare {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-700);
+  text-align: end;
+}
+
+/* ====================================================================================================================
+ * 29. EVERY CARD ON THE TRIP PAGE IS THE SAME CARD
+ *
+ * §28 gave the route, the crew, the operator, the policies and the notes one primitive. Two blocks were left outside it,
+ * and they were the two the eye landed on first: the facts list at the top (`.trip-summary`, a bordered `<dl>` of its
+ * own) and the fare panel in the aside (`.trip-book`, a shadowed box with its own micro-caps title). Three materials on
+ * one page is what makes a screen read as assembled rather than designed — so the shell is now one rule, applied by
+ * class, not a look each block invented:
+ *
+ *   the same paper, the same 1px edge, the same 20px corner, the same head (an icon disc, a title at `--text-md`), and
+ *   the same rhythm inside.
+ *
+ * The fare panel keeps what is *its* — the price at `--text-2xl`, the primary button, the sticky position in the
+ * aside — because that is hierarchy, not style. Emphasis comes from the number and the button, not from a shadow.
+ * ================================================================================================================== */
+
+.trip-card,
+.trip-book {
+  border: 1px solid var(--paper-edge);
+  border-radius: var(--radius-lg);
+  background: var(--paper);
+}
+
+/* Every card head is a title, not a label: the fare panel's micro-caps heading was the only one in the page. */
+.trip-card__head h2 {
+  color: var(--ink-900);
+  text-transform: none;
+  letter-spacing: -0.008em;
+}
+
+/* The fare card is the conversion card, and it earns that from the price and the button, not from an elevation. */
+.trip-book.trip-card {
+  box-shadow: none;
+}
+
+/* Its head sits directly over the big number, so it takes the card's own gap rather than a second margin. */
+.trip-book .trip-card__head {
+  margin-block-end: 0;
+}
+
+.trip-book__price {
+  margin-block-start: var(--space-1);
+}
+
+/* The seats line divides like every other row on the page. */
+.trip-book__seats {
+  border-block-start: 1px dashed color-mix(in srgb, var(--ink-900) 12%, transparent);
+}
+
+/* The facts card and the policies card are the same list of rows; the label column keeps its measure. */
+.trip-card .trip-facts__row {
+  padding-block: var(--space-2);
+}
+
+/* ====================================================================================================================
+ * 31. ONE CARD, ONE ACTION ROW — the same object wherever a thing is itemised
+ *
+ * Four card classes had grown up on four screens: the trip page's (§28), the places queue's, the regions tree's and the
+ * supervisor roster's. Each was reasonable on its own and different from the others — a shadow here, a `--surface-sunken`
+ * hairlines there, a 4px radius on the dividers, two of them padded at 16 and one at 20. On one screen that reads as
+ * "unfinished"; on four screens it reads as four products.
+ *
+ * So the shell is stated once, by class, and the dividers inside are the same dashed hairline everywhere. The action
+ * rows are stated once too: same gap, same wrap, one filled button per row — including the legacy `.btn` rows on the
+ * trip page, which were the only buttons in the product still drawing a gradient.
+ * ================================================================================================================== */
+
+.trip-card,
+.place-card,
+.geo-region-card,
+.supervisor-card,
+.sub-card,
+.plan-card {
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--paper-edge);
+  border-radius: var(--radius-lg);
+  background: var(--paper);
+  box-shadow: none;
+}
+
+@media (min-width: 900px) {
+  .trip-card,
+  .place-card,
+  .geo-region-card,
+  .supervisor-card,
+  .sub-card,
+  .plan-card {
+    padding: var(--space-5);
+  }
+}
+
+/* A retired region is still a card; it is muted, not a different object. */
+.geo-region-card[data-retired='true'] {
+  background: var(--paper-wash);
+}
+
+/* Dividers inside a card: one hairline, dashed, warm — the same rule the trip page's rows use. */
+.place-card__meta,
+.geo-region-card__actions,
+.supervisor-card__regions,
+.trip-book__seats {
+  border-block-start-color: color-mix(in srgb, var(--ink-900) 12%, transparent);
+}
+
+/* ---------- the action row ----------
+ * Every row of buttons that sits under a card or at the foot of a form: same gap, same wrap, and the primary last so
+ * the eye lands on the one action that matters. `.btn` is the legacy class still used by the trip page's footer row;
+ * it is brought onto the same scale here rather than left as the product's only gradient button.
+ */
+.trip-form__actions,
+.form-actions,
+.place-card__actions,
+.geo-region-card__actions,
+.trip-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding-inline: var(--space-5);
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-weight: 700;
+}
+
+.btn--primary {
+  background: var(--brand-600);
+  border-color: var(--brand-700);
+  color: #fff;
+  box-shadow: var(--shadow-sm);
+}
+
+.btn--primary:hover {
+  background: var(--brand-700);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn--ghost {
+  background: transparent;
+  border-color: var(--paper-edge);
+  color: var(--ink-800);
+}
+
+.btn--ghost:hover {
+  background: var(--paper-wash);
+  border-color: color-mix(in srgb, var(--ink-900) 18%, transparent);
+}
+
+/* ====================================================================================================================
+ * 33. WARM AND HUMAN, IN PUBLIC — the home page
+ *
+ * The console got the material in §26/§31. The front door had the direction only as tokens: the type and the accent were
+ * right, but the page still wore the older, colder furniture — `.card` with a mid-grey hairline and a blue-cast shadow, a
+ * black 2px rule over each of the three steps, full-bleed grey bands with a border top and bottom, and a gradient green
+ * banner. That is four unrelated surfaces on a screen whose job is to feel like a place to book a seat.
+ *
+ * The rules below are the same decisions as the console, stated for the public half:
+ *
+ *   1. Paper is cream, edges are warm, corners are round — one card look for every card on the site.
+ *   2. A band is a tint, not a box: no border, no shadow, just a wash of colour between two stretches of paper.
+ *   3. Space is spent inside a block, not between blocks — the page had 40–64px between every section and 20px inside
+ *      the things that mattered.
+ *   4. Controls are sized for a thumb and the hover moves a hair, nothing more.
+ * ================================================================================================================== */
+
+/* 1. The card, once. `.card` is the public site's only card class: the trip result, the fare calculator, the account
+      panels. Warm paper, warm hairline, one soft shadow (§26's tokens, so light and dark both hold). */
+.card {
+  border-color: var(--paper-edge);
+  background: var(--paper);
+  box-shadow: var(--shadow-sm);
+}
+
+/* 2. Bands are washes. The old ones were grey with a hairline top and bottom — a stripe of a different material
+      pretending to be a section. */
+.section--muted {
+  border-block: 0;
+  background: var(--paper-wash);
+}
+
+/* 3. The page was 160px of empty air between two sections on a desktop. The blocks are closer now, and the space
+      inside them does the separating. */
+.section {
+  padding-block: var(--space-8);
+}
+
+@media (min-width: 720px) {
+  .section {
+    padding-block: var(--space-12);
+  }
+}
+
+/* The hero sits on its own wash, so its neighbour needs no extra room at the top. */
+.hero + .section {
+  padding-block-start: var(--space-6);
+}
+
+/* 4. The search card: paper, a warm edge, and the ring it already earns on focus. It floated on `--shadow-lg`, which
+      is the one shadow in the product strong enough to look like elevation rather than paper. */
+.hero-search {
+  border-color: var(--paper-edge);
+  background: var(--paper);
+  box-shadow: var(--shadow-md);
+}
+
+/* 5. The departures panel beside the search: the same card as the results below it, not a heavier one. */
+.hero__aside {
+  border-color: var(--paper-edge);
+  background: var(--paper);
+  box-shadow: var(--shadow-sm);
+}
+
+.departure:hover {
+  border-color: var(--paper-edge);
+  background: var(--paper-wash);
+}
+
+/* 6. Reassurance: a disc that reads at 22px and a tick that sits in it, not a 20px chip with a 13px glyph. */
+.trust-row__tick {
+  inline-size: 22px;
+  block-size: 22px;
+  background: color-mix(in srgb, var(--brand-500) 14%, var(--paper));
+  color: var(--brand-700);
+}
+
+.trust-row__tick svg {
+  inline-size: 13px;
+  block-size: 13px;
+}
+
+/* 7. Destinations: thumb-sized targets with a warm edge, and a wash — not a brand tint — on hover. */
+.destination-chip {
+  padding-inline: var(--space-4);
+  min-block-size: var(--tap-target);
+  border-color: var(--paper-edge);
+  background: var(--paper);
+  border-radius: var(--radius-md);
+}
+
+.destination-chip:hover {
+  border-color: var(--brand-300);
+  background: var(--paper-wash);
+}
+
+.destination-chip__pin {
+  color: var(--brand-600);
+}
+
+/* 8. The three steps: plates, not underline-and-sentence. The 2px black rule over each one read as a form divider on a
+      page that has no form; the number is the structure, so the number gets the disc. */
+.steps {
+  gap: var(--space-3);
+  margin-block-start: var(--space-6);
+}
+
+.step {
+  padding: var(--space-4);
+  border-block-start: 0;
+  border: 1px solid var(--paper-edge);
+  border-radius: var(--radius-lg);
+  background: var(--paper);
+}
+
+.step__num {
+  inline-size: 30px;
+  block-size: 30px;
+  background: var(--brand-600);
+  color: #fff;
+  font-size: var(--text-sm);
+}
+
+.step h3 {
+  margin-block-start: var(--space-3);
+  font-size: 1rem;
+}
+
+.step p {
+  margin-block-start: var(--space-1);
+  color: var(--ink-600);
+  font-size: var(--text-sm);
+  line-height: 1.55;
+  max-inline-size: 34ch;
+}
+
+/* 9. The one place the page speaks to supply: flat deep green, warm corners. It was a diagonal gradient of two greens,
+      which is decoration on top of a solid idea. */
+.operator-band {
+  border-radius: var(--radius-xl);
+  background: var(--brand-700);
+}
+
+/* Its button is white paper on the green, and it is the same size as every other primary. */
+.operator-band .btn--primary {
+  min-block-size: var(--tap-target);
+  border-color: #fff;
+  background: var(--paper);
+  color: var(--brand-900);
+}
+
+.operator-band .btn--primary:hover {
+  background: #fff;
+}
+
+/* 10. Console doors: quiet, but 44px and on paper. */
+.teams__link {
+  border-color: var(--paper-edge);
+  background: var(--paper);
+  border-radius: var(--radius-md);
+}
+
+.teams__link:hover {
+  background: var(--paper-wash);
+  border-color: var(--brand-300);
+}
+
+/* 11. "All trips" and the hero's other text links are used with a thumb on a phone: they get a target, not a line. */
+.link-more {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--tap-target);
+  gap: var(--space-1);
+  color: var(--brand-700);
+}
+
+.link-more:hover {
+  color: var(--brand-900);
+}
+
+/* 12. Motion: short, and only where a pointer is. */
+@media (prefers-reduced-motion: reduce) {
+  .destination-chip,
+  .departure,
+  .teams__link,
+  .hero-search {
+    transition: none;
+  }
+}
+
+/* ====================================================================================================================
+ * 34. THE MARKETPLACE LIST, ON THE SAME PAPER
+ *
+ * The results page is the busiest public screen: a filter panel, a toolbar with a count and a sort, a row of applied
+ * chips, and a grid of cards. Each of those was drawn with slightly different furniture — the panel and the toolbar used
+ * `--surface-sunken` hairlines, the chips were a 32px pill at brand-50, and the pager mixed `.ui-btn--ghost` with a
+ * `.btn--ghost`. It is the same set of decisions as §33, applied to the controls:
+ *
+ *   one paper for panels, one warm hairline for dividers, and every chip big enough to hit with a thumb.
+ * ================================================================================================================== */
+
+.trip-filters {
+  border-color: var(--paper-edge);
+  background: var(--paper);
+}
+
+.trips-toolbar {
+  border-block-end-color: var(--paper-edge);
+}
+
+/* An applied filter is a control — you press it to remove it — so it is a 36px target, not a 32px label. */
+.filter-chip {
+  min-block-size: 36px;
+  padding-inline: var(--space-3);
+  border-color: color-mix(in srgb, var(--brand-500) 30%, var(--paper-edge));
+  background: color-mix(in srgb, var(--brand-500) 8%, var(--paper));
+  color: var(--brand-900);
+}
+
+.filter-chip:hover {
+  background: color-mix(in srgb, var(--brand-500) 14%, var(--paper));
+}
+
+.filter-chip--clear {
+  border-color: var(--paper-edge);
+  background: var(--paper);
+  color: var(--ink-700);
+}
+
+/* The sort is a navigation of three links: each gets a real target, and the current one is a pill rather than bold
+   text the reader has to spot. */
+.trips-sort__link {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--tap-target);
+  padding-inline: var(--space-3);
+  border-radius: var(--radius-md);
+  color: var(--ink-600);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.trips-sort__link:hover {
+  background: var(--paper-wash);
+  color: var(--ink-900);
+}
+
+.trips-sort__link[aria-current='true'] {
+  background: color-mix(in srgb, var(--brand-500) 10%, var(--paper));
+  color: var(--brand-700);
+}
+
+/* The marketplace's own heading band sits on the page, so it needs no card — just a little air under the header. */
+.trips-hero {
+  padding-block: var(--space-2) var(--space-4);
+}
+
+/* ====================================================================================================================
+ * 35. THE TRIPS TOOLBAR — a Filters button and the sort tabs, in one row
+ *
+ * The two controls that act on the same list were at opposite ends of the page: the filters in their own 16–18rem column
+ * (a disclosure up to 900px, a sticky sidebar above it), and the sort tabs on the far side of the results. A visitor had
+ * to cross the screen to reorder what they had just filtered, and the list itself paid a third of the width for the
+ * column.
+ *
+ * One row now: `3 trips` · [Filters ②] [Soonest · Cheapest · Featured]. Pressing *Filters* drops a panel below that row,
+ * full width over the list, with the same three fieldsets inside. The button is the `<details>`' own summary, so it stays
+ * keyboard-operable with no JavaScript; the panel is absolutely placed, so it does not shove the list down and back up.
+ * ================================================================================================================== */
+
+.trips-toolbar {
+  /* The panel is measured against the toolbar, so the toolbar is the containing block. */
+  position: relative;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  padding-block-end: var(--space-3);
+  margin-block-end: var(--space-4);
+  border-block-end: 1px solid var(--paper-edge);
+}
+
+.trips-toolbar__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-inline-start: auto;
+}
+
+/* The button. Same height and radius as the sort group beside it, so the row reads as one control strip. */
+.trip-filters__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: var(--tap-target);
+  padding-inline: var(--space-4);
+  border: 1px solid var(--paper-edge);
+  border-radius: var(--radius-md);
+  background: var(--paper);
+  color: var(--ink-800);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.trip-filters__toggle:hover {
+  border-color: color-mix(in srgb, var(--ink-900) 18%, var(--paper-edge));
+  background: var(--paper-wash);
+}
+
+/* The chevron: the same drawn caret the rest of the product uses, on the inline end, turning when the panel opens. */
+.trip-filters__toggle::after {
+  content: '';
+  inline-size: 7px;
+  block-size: 7px;
+  margin-inline-start: var(--space-1);
+  margin-block-start: -3px;
+  border-inline-end: 2px solid currentColor;
+  border-block-end: 2px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform 140ms ease;
+}
+
+.trip-filters[open] > .trip-filters__toggle::after {
+  margin-block-start: 2px;
+  transform: rotate(225deg);
+}
+
+.trip-filters__summary-icon {
+  display: inline-grid;
+  place-items: center;
+  color: var(--ink-500);
+  line-height: 0;
+}
+
+.trip-filters__toggle:hover .trip-filters__summary-icon,
+.trip-filters[open] > .trip-filters__toggle .trip-filters__summary-icon {
+  color: var(--brand-700);
+}
+
+/* Open, or holding filters: the button says so. A control that has something in it must not look idle. */
+.trip-filters[open] > .trip-filters__toggle {
+  border-color: var(--brand-500);
+  background: var(--paper);
+  color: var(--brand-700);
+}
+
+.trip-filters[data-active='true'] > .trip-filters__toggle {
+  border-color: color-mix(in srgb, var(--brand-500) 42%, var(--paper-edge));
+}
+
+.trip-filters[data-active='true'] > .trip-filters__toggle .trip-filters__count {
+  background: var(--brand-600);
+  color: #fff;
+}
+
+/* The panel: below the row, as wide as the toolbar, over the list. Scrolls itself when the form is taller than the
+   screen — a phone holds roughly two of the three groups at once. */
+.trip-filters__panel {
+  position: absolute;
+  inset-block-start: calc(100% + var(--space-2));
+  inset-inline: 0;
+  z-index: 30;
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+  max-block-size: min(70dvh, 36rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--space-4);
+  border: 1px solid var(--paper-edge);
+  border-radius: var(--radius-lg);
+  background: var(--paper);
+  box-shadow: var(--shadow-lg);
+}
+
+@media (min-width: 720px) {
+  .trip-filters__panel {
+    padding: var(--space-5);
+  }
+}
+
+/* The three groups sit side by side once there is room, which is what makes the panel a glance rather than a scroll:
+   where it goes, who it is for, when. */
+@media (min-width: 720px) {
+  .trip-filters__panel > form {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-4);
+    align-items: start;
+  }
+
+  .trip-filters__panel .trip-filters__actions {
+    grid-column: 1 / -1;
+  }
+}
+
+/* The sort group: three tabs in one pill, the current one a paper tab. */
+.trips-sort {
+  /* 4px of padding around 36px tabs is the Filters button's 44px exactly, so the row is one strip at one height. */
+  padding: 4px;
+  border-color: var(--paper-edge);
+  background: var(--paper-wash);
+}
+
+.trips-sort__link {
+  min-block-size: 36px;
+  border-radius: var(--radius-pill);
+}
+
+.trips-sort__link[aria-current='true'] {
+  background: var(--paper);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Below 560px the row is two lines: the count above, the two controls on one line under it — which still puts the
+   button and the tabs beside each other, the thing this row exists for. */
+@media (max-width: 559px) {
+  .trips-toolbar__controls {
+    inline-size: 100%;
+    margin-inline-start: 0;
+  }
+
+  .trip-filters__toggle {
+    flex: 0 0 auto;
+  }
+
+  .trips-sort {
+    flex: 1 1 auto;
+    justify-content: space-between;
+  }
+
+  .trips-sort__link {
+    flex: 1 1 auto;
+    justify-content: center;
+    padding-inline: var(--space-2);
+  }
 }

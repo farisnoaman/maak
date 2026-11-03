@@ -41,6 +41,22 @@ const PRIORITY_TONE: Record<string, 'danger' | 'warning' | 'neutral'> = {
   low: 'neutral',
 };
 
+/**
+ * The catalogue has 39 events in one alphabetical-by-kind list, and kind names are machine words:
+ * `agent_cash_in_settled` sits next to `booking_accepted` only by accident of spelling. Nobody looks for a template by
+ * its prefix — they look for "the payment one" — so the prefixes become seven families with a count each, and the
+ * page that was a 39-row wall becomes seven named drawers you can close.
+ */
+const FAMILIES = [
+  { id: 'trips', match: /^(booking_|trip_|saved_search_|no_show_)/ },
+  { id: 'money', match: /^(payment_|refund_|payout_|invoice_|finance_)/ },
+  { id: 'plan', match: /^(subscription_|quota_)/ },
+  { id: 'verification', match: /^verification_/ },
+  { id: 'people', match: /^(member_|role_)/ },
+  { id: 'fleet', match: /^vehicle_/ },
+  { id: 'platform', match: /^(agent_|ops_)/ },
+] as const;
+
 export default async function NotificationCataloguePage({
   params,
 }: {
@@ -70,6 +86,10 @@ export default async function NotificationCataloguePage({
         title="console.navTemplates"
         subtitle="catalogue.subtitle"
         groups={adminNav(locale)}
+        facts={[
+          { label: t('catalogue.factEvents'), value: String(events.length) },
+          { label: t('catalogue.factTimezone'), value: timezone },
+        ]}
       >
         {!configured ? (
           <p className="form-error" role="alert">
@@ -77,64 +97,69 @@ export default async function NotificationCataloguePage({
           </p>
         ) : (
           <>
-            <p className="form-hint">
-              {`${t('catalogue.count', { count: events.length })} · ${t('catalogue.timezone', {
-                timezone,
-              })}`}
-            </p>
-            <div className="table-scroll">
-              <table className="table catalogue">
-                <caption className="table__caption">{t('catalogue.caption')}</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">{t('notifications.eventColumn')}</th>
-                    <th scope="col">{t('catalogue.priority')}</th>
-                    <th scope="col">{t('notifications.channelsLabel')}</th>
-                    <th scope="col" lang="ar" dir="rtl">
-                      {t('common.arabic')}
-                    </th>
-                    <th scope="col" lang="en" dir="ltr">
-                      {t('common.english')}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {events.map((event) => {
-                    const item = {
-                      kind: event.kind as NotificationKind,
-                      titleKey: event.titleKey,
-                      params: sampleParamsFor(event.kind),
-                    };
-                    return (
-                      <tr key={event.kind}>
-                        <th scope="row">
-                          {t(`notifications.event.${event.kind}` as TranslationKey)}
-                        </th>
-                        <td>
-                          <Badge tone={PRIORITY_TONE[event.priority] ?? 'neutral'}>
-                            {t(`notifications.priority.${event.priority}` as TranslationKey)}
-                          </Badge>
-                        </td>
-                        <td>
-                          <ul className="catalogue__channels">
-                            {event.channels.map((channel) => (
-                              <li key={channel}>
-                                {t(CHANNEL_LABEL[channel] ?? 'notifications.channelsLabel')}
-                              </li>
-                            ))}
-                          </ul>
-                        </td>
-                        <td lang="ar" dir="rtl" className="catalogue__sentence">
-                          {notificationText('ar', item)}
-                        </td>
-                        <td lang="en" dir="ltr" className="catalogue__sentence">
-                          {notificationText('en', item)}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+            <p className="form-hint">{t('catalogue.caption')}</p>
+            <div className="catalogue-groups">
+              {FAMILIES.map((family) => {
+                const rows = events.filter((event) => family.match.test(event.kind));
+                if (rows.length === 0) return null;
+                return (
+                  <details
+                    className="catalogue-group"
+                    key={family.id}
+                    open
+                    suppressHydrationWarning
+                  >
+                    <summary className="catalogue-group__summary">
+                      <span className="catalogue-group__name">
+                        {t(`catalogue.group.${family.id}` as TranslationKey)}
+                      </span>
+                      <span className="catalogue-group__count">{rows.length}</span>
+                    </summary>
+                    <ul className="catalogue-list">
+                      {rows.map((event) => {
+                        const item = {
+                          kind: event.kind as NotificationKind,
+                          titleKey: event.titleKey,
+                          params: sampleParamsFor(event.kind),
+                        };
+                        return (
+                          <li className="catalogue-event" key={event.kind}>
+                            <div className="catalogue-event__head">
+                              <h3 className="catalogue-event__name">
+                                {t(`notifications.event.${event.kind}` as TranslationKey)}
+                              </h3>
+                              <Badge tone={PRIORITY_TONE[event.priority] ?? 'neutral'}>
+                                {t(`notifications.priority.${event.priority}` as TranslationKey)}
+                              </Badge>
+                            </div>
+                            <ul className="catalogue-event__channels">
+                              {event.channels.map((channel) => (
+                                <li key={channel}>
+                                  {t(CHANNEL_LABEL[channel] ?? 'notifications.channelsLabel')}
+                                </li>
+                              ))}
+                            </ul>
+                            {/*
+                              Both sentences, from the same function the sender calls, with the sample payload —
+                              that is the point of the page. They sit in one row because the question is "does the
+                              Arabic still read right, and does the English mean the same thing", which is a
+                              comparison, not two columns of prose.
+                            */}
+                            <div className="catalogue-event__says">
+                              <p lang="ar" dir="rtl" className="catalogue-event__sentence">
+                                {notificationText('ar', item)}
+                              </p>
+                              <p lang="en" dir="ltr" className="catalogue-event__sentence">
+                                {notificationText('en', item)}
+                              </p>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </details>
+                );
+              })}
             </div>
           </>
         )}

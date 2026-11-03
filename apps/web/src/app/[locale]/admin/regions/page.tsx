@@ -1,12 +1,11 @@
 import { notFound, redirect } from 'next/navigation';
-import { isLocale, translate, type Locale, type TranslationKey } from '@maak/core';
+import { expandCoverage, isLocale, translate, type Locale, type TranslationKey } from '@maak/core';
 import { SiteHeader } from '@/components/SiteHeader';
 import { PreviewBanner } from '@/components/PreviewBanner';
 import { ConsoleShell } from '@/components/ConsoleShell';
 import { adminNav } from '@/components/admin/AdminNav';
 import { EmptyState } from '@/components/ui/Feedback';
 import { RegionConsole } from '@/components/geo/RegionConsole';
-import { SupervisorPanel } from '@/components/geo/SupervisorPanel';
 import { loadAccountContext } from '@/lib/account';
 import { loadGeoDirectory } from '@/lib/geo';
 
@@ -41,6 +40,21 @@ export default async function AdminRegionsPage({
 
   const directory = await loadGeoDirectory(loaded);
 
+  /*
+   * Three numbers the page was making the reader work out: how many regions are live, how much of the country they
+   * actually cover, and whether anyone is supervising it. `expandCoverage` is the same union the command stores, so the
+   * figure in the band and the figure under a region can never disagree.
+   */
+  const active = directory.regions.filter((region) => region.isActive);
+  const coveredDistricts = new Set(
+    active.flatMap((region) =>
+      expandCoverage(
+        { governorateIds: region.governorateIds, districtIds: region.districtIds },
+        directory.districts,
+      ),
+    ),
+  ).size;
+
   return (
     <>
       <SiteHeader locale={locale} pathname="/admin/regions" />
@@ -51,10 +65,14 @@ export default async function AdminRegionsPage({
         title="geo.title"
         subtitle="geo.subtitle"
         groups={adminNav(locale)}
+        facts={[
+          { label: t('geo.factRegions'), value: String(active.length) },
+          { label: t('geo.factDistricts'), value: String(coveredDistricts) },
+          { label: t('geo.factSupervisors'), value: String(directory.supervisors.length) },
+        ]}
       >
         {directory.configured ? null : <PreviewBanner locale={locale} />}
         <RegionConsole locale={locale} directory={directory} />
-        <SupervisorPanel locale={locale} directory={directory} />
       </ConsoleShell>
     </>
   );

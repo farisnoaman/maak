@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { formatDateTime, translate, type Locale, type TranslationKey } from '@maak/core';
 import { Button } from '@/components/ui/Button';
+import { Icon } from '@/components/ui/Icon';
 import type { ScanResult } from '@/lib/staff-ops';
 
 type DetectorCtor = new (options?: { formats?: string[] }) => {
@@ -152,16 +153,52 @@ export function ScanPanel({ locale }: { readonly locale: Locale }) {
         ) : null}
       </form>
 
+      {/*
+        The idle state used to be the form and then nothing, which left a first-time staff member guessing what the
+        button would do. Three lines say what a scan checks and, more usefully, what it refuses to show.
+      */}
+      {result ? null : (
+        <section className="scan-checks" aria-labelledby="scan-checks-title">
+          <h2 id="scan-checks-title" className="scan-checks__title">
+            {t('ops.scanChecks')}
+          </h2>
+          <ul className="scan-checks__list">
+            {(['ops.scanCheck1', 'ops.scanCheck2', 'ops.scanCheck3'] as const).map((key) => (
+              <li key={key}>
+                <span className="scan-checks__mark" aria-hidden="true">
+                  <Icon name="check" size={13} />
+                </span>
+                {t(key)}
+              </li>
+            ))}
+          </ul>
+          <p className="scan-checks__hint">{t('ops.scanChecksHint')}</p>
+        </section>
+      )}
+
       {/* `aria-live` is the whole point: a scan happens without a click, so the answer must announce. */}
       <div aria-live="polite" aria-atomic="true">
         {result && result.allowed ? (
-          <section className="card ops-trip">
-            <h2>
-              {result.trip.code}{' '}
-              <span className="form-hint">
-                {result.trip.origin} → {result.trip.destination}
-              </span>
+          <section className="scan-verdict is-ok" aria-labelledby="scan-verdict-title">
+            {/*
+              The answer, not another card.
+              A scan is a yes-or-no question asked at a door, often in sunlight, often by someone holding a phone in
+              one hand. The verdict is a colour, a mark and one short sentence at display size; the facts that follow
+              are reference. Before this the result was a neutral card whose first line was a 14-character code.
+            */}
+            <p className="scan-verdict__mark" aria-hidden="true">
+              <Icon name="check" size={22} />
+            </p>
+            <h2 id="scan-verdict-title" className="scan-verdict__title">
+              {t('ops.scanCleared')}
             </h2>
+            <p className="scan-verdict__route">
+              <bdi className="num">{result.trip.code}</bdi>
+              <span className="trip-detail__arrow" aria-hidden="true">
+                <Icon name="arrow" size={14} />
+              </span>
+              {result.trip.origin} — {result.trip.destination}
+            </p>
             <dl className="ops-facts">
               <div>
                 <dt>{t('ops.departure')}</dt>
@@ -190,7 +227,7 @@ export function ScanPanel({ locale }: { readonly locale: Locale }) {
               </div>
             </dl>
             <Link
-              className="btn btn--primary"
+              className="ui-btn ui-btn--primary"
               href={`/${locale}/staff/trips/${result.trip.id}/manifest`}
             >
               {t('ops.manifest')}
@@ -199,14 +236,18 @@ export function ScanPanel({ locale }: { readonly locale: Locale }) {
         ) : null}
 
         {result && !result.allowed ? (
-          <section className="ui-alert ui-alert--error" role="alert">
-            <h2>
+          <section className="scan-verdict is-deny" role="alert">
+            <p className="scan-verdict__mark" aria-hidden="true">
+              <Icon name="close" size={22} />
+            </p>
+            <h2 className="scan-verdict__title">{t('ops.scanDenied')}</h2>
+            <p className="scan-verdict__reason">
               {result.reason === 'OUT_OF_SCOPE'
                 ? t('ops.outOfScope')
                 : result.reason === 'RATE_LIMITED'
                   ? t('ops.rateLimited')
                   : t('ops.notFound')}
-            </h2>
+            </p>
             <p>
               {result.reason === 'OUT_OF_SCOPE'
                 ? t('ops.outOfScopeBody')
@@ -215,8 +256,9 @@ export function ScanPanel({ locale }: { readonly locale: Locale }) {
                   : t('ops.notFoundBody')}
             </p>
             {result.route ? (
-              <p dir="auto">
-                <bdi>{result.route.code}</bdi> · {result.route.origin} → {result.route.destination}
+              <p className="scan-verdict__route">
+                <bdi className="num">{result.route.code}</bdi> · {result.route.origin} —{' '}
+                {result.route.destination}
               </p>
             ) : null}
           </section>

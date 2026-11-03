@@ -53,6 +53,10 @@
   --leading-normal: 1.55;
   --hairline: 1px;
 
+  /* Tracking for small capitalised captions — the one place Latin letters want to be prised apart. Arabic is a
+     joined script: the same tracking pulls every join open, so in RTL this token is zero (see below). */
+  --tracking-caps: 0.05em;
+
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -92,6 +96,8 @@
   /* Arabic sits differently in its line box: ascenders and descenders both run further, so the same
      line-height that looks airy in Latin crowds the diacritics. One multiplier, set once. */
   --leading-ui: 1.8;
+  /* Arabic letters join; letter-spacing breaks the joins, so every caption that tracks in Latin does not here. */
+  --tracking-caps: 0;
   /* Directional glyphs flip once, here, instead of with rtl: variants in every component. */
   --icon-flip: -1;
 }

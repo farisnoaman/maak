@@ -64,6 +64,8 @@ const ALL_ROUTES = [
   { path: '/en/staff/verifications', lang: 'en', dir: 'ltr', account: 'staff' },
   { path: '/ar/admin/users', lang: 'ar', dir: 'rtl', account: 'staff' },
   { path: '/en/admin/users', lang: 'en', dir: 'ltr', account: 'staff' },
+  { path: '/ar/admin/users/deletions', lang: 'ar', dir: 'rtl', account: 'staff' },
+  { path: '/en/admin/users/deletions', lang: 'en', dir: 'ltr', account: 'staff' },
   // Phase 2 surfaces
   { path: '/ar/admin/regions', lang: 'ar', dir: 'rtl', account: 'staff' },
   { path: '/en/admin/regions', lang: 'en', dir: 'ltr', account: 'staff' },
@@ -156,6 +158,8 @@ const ALL_ROUTES = [
   { path: '/en/admin/plans', lang: 'en', dir: 'ltr', account: 'staff' },
   { path: '/ar/admin/subscriptions', lang: 'ar', dir: 'rtl', account: 'staff' },
   { path: '/en/admin/subscriptions', lang: 'en', dir: 'ltr', account: 'staff' },
+  { path: '/ar/admin/subscriptions/overrides', lang: 'ar', dir: 'rtl', account: 'staff' },
+  { path: '/en/admin/subscriptions/overrides', lang: 'en', dir: 'ltr', account: 'staff' },
 ];
 
 /*

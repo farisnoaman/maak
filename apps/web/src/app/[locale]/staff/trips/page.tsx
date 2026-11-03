@@ -16,6 +16,7 @@ import { PreviewBanner } from '@/components/PreviewBanner';
 import { ConsoleShell } from '@/components/ConsoleShell';
 import { Badge, EmptyState } from '@/components/ui/Feedback';
 import { StaffTripReview } from '@/components/trips/StaffTripReview';
+import { DirectionalIcon } from '@/components/ui/DirectionalIcon';
 import { loadAccountContext } from '@/lib/account';
 import { loadStaffTrips, loadTrips } from '@/lib/trips';
 import { loadGovernorateOptions } from '@/lib/staff-ops';
@@ -160,6 +161,16 @@ export default async function StaffTripsPage({
         subtitle="staff.trips.subtitle"
         pathname="/staff/trips"
         groups={staffNav(locale)}
+        facts={
+          searching
+            ? [{ label: t('ops.results'), value: String(search?.items.length ?? 0) }]
+            : [
+                {
+                  label: t(tripStatusKey('pending')),
+                  value: String(queue?.pending.length ?? 0),
+                },
+              ]
+        }
       >
         {!loaded.configured ? <PreviewBanner locale={locale} /> : null}
 
@@ -223,6 +234,7 @@ export default async function StaffTripsPage({
                   </select>
                 </label>
               </div>
+              <p className="trip-filters__legend">{t('staff.trips.decision')}</p>
               <div className="trip-filters__options">
                 {VERIFICATIONS.map((status) => (
                   <label className="trip-filters__option" key={status}>
@@ -251,25 +263,24 @@ export default async function StaffTripsPage({
 
         {searching ? (
           <section aria-live="polite" aria-atomic="true">
-            <p role="status" className="trip-form__hint">
-              {t('staff.trips.results', { count: search?.items.length ?? 0 })}
-            </p>
-
-            {search?.error ? (
-              <p className="fleet-error" role="alert">
-                {t('errors.FORBIDDEN')}
+            <div className="ops-toolbar">
+              <p role="status" className="ops-toolbar__count">
+                {t('staff.trips.results', { count: search?.items.length ?? 0 })}
               </p>
-            ) : null}
-
-            {(search?.items.length ?? 0) > 0 ? (
-              <p>
+              {(search?.items.length ?? 0) > 0 ? (
                 <a
-                  className="ui-btn ui-btn--ghost"
+                  className="ui-btn ui-btn--ghost ui-btn--sm"
                   href={`/api/staff/trips/export?${exportQuery.toString()}`}
                   download
                 >
                   {t('ops.exportCsv')}
                 </a>
+              ) : null}
+            </div>
+
+            {search?.error ? (
+              <p className="fleet-error" role="alert">
+                {t('errors.FORBIDDEN')}
               </p>
             ) : null}
 
@@ -278,7 +289,7 @@ export default async function StaffTripsPage({
                 title={t('console.emptyTrips')}
                 description={t('console.emptyTripsBody')}
                 action={
-                  <Link className="btn btn--ghost" href={`/${locale}/staff/trips`}>
+                  <Link className="ui-btn ui-btn--ghost" href={`/${locale}/staff/trips`}>
                     {t('trips.search.clear')}
                   </Link>
                 }
@@ -306,7 +317,11 @@ export default async function StaffTripsPage({
                             <Link href={`/${locale}/staff/trips/${row.id}`}>{row.code}</Link>
                           </td>
                           <td data-label={t('trips.route')}>
-                            {row.origin} ← {row.destination}
+                            <span className="trip-route">
+                              {row.origin}
+                              <DirectionalIcon direction="forward" size={13} />
+                              {row.destination}
+                            </span>
                             {row.cancelReason ? (
                               <span className="trip-form__hint"> · {row.cancelReason}</span>
                             ) : null}
