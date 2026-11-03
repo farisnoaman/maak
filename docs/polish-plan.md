@@ -75,6 +75,7 @@ questions in the order they ask them.**
 | 27 | Two admin pages with two jobs each | Subscriptions carried the payer list and the support grants; users carried the directory and the deletion queue | `[x]` — §32 |
 | 28 | **The public front door, in warm paper** | The console got the material; home still wore mid-grey hairlines, a blue-cast shadow, a black rule over each step and a gradient banner | `[x]` — §33 |
 | 29 | The marketplace list | The panel, the toolbar and the chips were three shades of the same grey, and an applied filter was a 32px target | `[x]` — §34 |
+| 30 | The trips toolbar | *Filters* and *Soonest / Cheapest / Featured* acted on the same list from opposite ends of the page, one a 16rem column and one a row; the results paid a third of the width for the column | `[x]` — §35 |
 | 27 | Two more pages with two jobs each | Subscriptions carried the payer list and the support grants; users carried the directory and the deletion queue | `[x]` — §32 |
 
 ## 3–4. Trips list and trip detail — what changed
@@ -1248,3 +1249,37 @@ data (the earlier "no database" banner was a missing `.env.local`, restored with
 `prettier` ✓, `check:responsive` ✓ (110 media queries), `check:guards` ✓, `check:all` ✓, `check:a11y` ✓ over **117
 routes**. **Gap:** no browser — the 32→48px section rhythm at 720px, the step plates at 320px and the hover washes are
 read from the CSS.
+
+## 35. The trips toolbar — a Filters button and the sort tabs, in one row
+
+**The report.** *"In the trips page, show the Filter button with the Soonest / Cheapest / Featured tabs beside it, in one
+row, to make the view more organized."*
+
+**What was wrong.** The two controls that act on the same list were at opposite ends of the page. The filters were their
+own column: a `<details>` up to 900px and a sticky 16–18rem sidebar above it, with the summary hidden by CSS. The sort
+tabs sat in the results toolbar on the other side of the page. So a visitor who wanted "the cheapest direct trip"
+filtered on the left and then crossed the screen to reorder — and the list they were reading had already paid a third of
+its width for the column.
+
+**What it is now** (stylesheet §35).
+
+- **One row**: `3 trips` · **[Filters ②] [Soonest · Cheapest · Featured]**. Same height (44px), same radius, one control
+  strip. The button is the `<details>`' own summary, so it is keyboard-operable and works with no JavaScript; the sort
+  group is a three-tab pill whose current tab is a paper tab.
+- **The panel drops below that row**, as wide as the toolbar, over the list: the same three fieldsets (*Route*,
+  *Ride conditions*, *Date and fare*), now **three columns from 720px** — "where it goes, who it is for, when" at a
+  glance instead of a scroll — with *Apply filters* / *Clear* spanning the row. It scrolls itself at `min(70dvh, 36rem)`.
+- **The list gets the whole page back.** `.trips-layout` is one shrinking column now, so the trip cards fill two or three
+  columns instead of one and a half.
+- **Behaviour a native disclosure does not have** (`FiltersMenu`): the panel closes on submit (so the results are not
+  underneath the form that produced them), on `Escape` (focus returns to the button), and on a press anywhere outside it.
+  All three write the DOM attribute only — `open` is never a React prop, which is the rule the guard enforces.
+- **The panel's own title is gone**: it duplicated the button's word *Filters*, and its *Reset* link pointed at the same
+  URL as the *Clear* button in the actions row.
+
+**Verified.** `/en/trips` and `/ar/trips` server-render
+`<p>3 trips</p> → <div controls> → <details><summary>[icon] Filters</summary><div panel><form>three fieldsets …</form></div></details> → <nav>Soonest · Cheapest · Featured</nav>`,
+and with `?sort=cheapest&direct=1` the button receives `activeCount: 1` (the badge). `tsc` ✓, `prettier` ✓,
+`check:responsive` ✓ (110 media queries), `check:guards` ✓ — including §15, React may not render `<details open>` —
+`check:all` ✓, build ✓, `check:a11y` ✓ over **117 routes**. **Gap:** no browser — the panel's position under the row,
+its three-column form at 720px and the two-line row at 559px are read from the CSS.

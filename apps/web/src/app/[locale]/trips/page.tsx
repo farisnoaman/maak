@@ -16,7 +16,7 @@ import { SiteHeader } from '@/components/SiteHeader';
 import { PreviewBanner } from '@/components/PreviewBanner';
 import { EmptyState } from '@/components/ui/Feedback';
 import { Icon } from '@/components/ui/Icon';
-import { FilterDisclosure } from '@/components/trips/FilterDisclosure';
+import { FiltersMenu } from '@/components/trips/FiltersMenu';
 import { PublicTripCard } from '@/components/trips/PublicTripCard';
 import { SaveSearchControl } from '@/components/trips/SaveSearchControl';
 import { loadPublicGovernorates, loadPublicTrips } from '@/lib/trips';
@@ -34,11 +34,10 @@ const GENDERS = ['any', 'women_only', 'men_only'] as const;
  * The marketplace.
  *
  * Server-rendered from `search_public_trips`, with the filters in the URL — which is what makes a result
- * shareable, cacheable and usable before JavaScript loads. The filter panel is a plain GET form inside a
- * disclosure: one collapsed row with a count on a phone, a sidebar on a desktop. The opening of that
- * disclosure is the one thing that cannot be CSS — a closed disclosure hides its own content and no
- * rule can undo it — so `FilterDisclosure` sets the attribute and the stylesheet hides the summary only
- * once it has (`data-enhanced`).
+ * shareable, cacheable and usable before JavaScript loads. The panel is a plain GET form inside a `<details>`: a
+ * *Filters* button and the three sort tabs share one toolbar row, and the panel drops below that row over the list
+ * (`FiltersMenu`). The list keeps the whole width, which is the point — it was paying a third of the page for a
+ * sidebar.
  */
 export default async function TripsPage({
   params,
@@ -215,271 +214,266 @@ export default async function TripsPage({
         </header>
 
         <div className="trips-layout">
-          <FilterDisclosure activeCount={activeCount}>
+          <div className="trips-results">
             {/*
-              One panel, two presentations. On a phone the summary is the whole visible control: a funnel, the word
-              *Filters*, and — once something is in force — how many. On a laptop the summary is hidden and the head
-              below it takes over, because a sidebar with no title is a column of unlabelled controls.
+              One row for the two controls a visitor reaches for, and the list under it.
+
+              The filters used to be their own column — a disclosure on a phone, a sticky sidebar on a laptop — with the
+              sort tabs on the far side of the page from them. So the two things that narrow and reorder the same list
+              sat at opposite ends of the screen, in two different shapes, and the results paid for the column with a
+              third of the width. The button and the tabs are one row now, and the panel drops below it.
             */}
-            <summary>
-              <span className="trip-filters__summary-icon" aria-hidden="true">
-                <Icon name="filter" size={16} />
-              </span>
-              <span className="trip-filters__summary-label">{t('trips.search.filtersTitle')}</span>
-              {activeCount > 0 ? <span className="trip-filters__count">{activeCount}</span> : null}
-            </summary>
-
-            <div className="trip-filters__head">
-              <h2>{t('trips.search.filtersTitle')}</h2>
-              {activeCount > 0 ? (
-                <Link className="trip-filters__reset" href={base}>
-                  {t('trips.search.reset')}
-                </Link>
-              ) : null}
-            </div>
-
-            <form method="get" action={base}>
-              {/* Three named groups, not nine controls in a column. A filter panel is an argument about the trip:
-                  where it goes, who it is for, when and for how much. Filed any other way it is just a form. */}
-              <fieldset className="trip-filters__section">
-                <legend className="trip-filters__legend">{t('trips.search.groupRoute')}</legend>
-
-                <div className="trip-filters__group">
-                  <label htmlFor="filter-q">{t('trips.search.q')}</label>
-                  <input
-                    id="filter-q"
-                    name="q"
-                    type="search"
-                    defaultValue={state.q ?? ''}
-                    className="ui-input"
-                  />
-                </div>
-
-                <div className="trip-filters__group">
-                  <label htmlFor="filter-origin">{t('trips.origin')}</label>
-                  <select
-                    id="filter-origin"
-                    name="origin"
-                    defaultValue={state.origin?.[0] ?? ''}
-                    className="ui-select"
-                  >
-                    <option value="">{t('trips.search.any')}</option>
-                    {page.facets.origins.map((governorate) => (
-                      <option key={governorate.id} value={governorate.id}>
-                        {governorate.name} ({governorate.count})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="trip-filters__group">
-                  <label htmlFor="filter-destination">{t('trips.destination')}</label>
-                  <select
-                    id="filter-destination"
-                    name="destination"
-                    defaultValue={state.destination?.[0] ?? ''}
-                    className="ui-select"
-                  >
-                    <option value="">{t('trips.search.any')}</option>
-                    {page.facets.destinations.map((governorate) => (
-                      <option key={governorate.id} value={governorate.id}>
-                        {governorate.name} ({governorate.count})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="trip-filters__group">
-                  {/* A count of zero is information — there are no direct departures left — so the pill stays and
-                      dims rather than vanishing, which would look like the option had been removed. */}
-                  <label
-                    className="trip-filters__option"
-                    htmlFor="filter-direct"
-                    data-empty={page.facets.direct.direct === 0 ? 'true' : undefined}
-                  >
-                    <input
-                      id="filter-direct"
-                      type="checkbox"
-                      name="direct"
-                      value="1"
-                      defaultChecked={state.direct === true}
-                    />
-                    <span>{t('trips.search.direct')}</span>
-                    <span className="trip-filters__count">{page.facets.direct.direct}</span>
-                  </label>
-                </div>
-              </fieldset>
-
-              <fieldset className="trip-filters__section">
-                <legend className="trip-filters__legend">{t('trips.search.groupRide')}</legend>
-
-                <div
-                  className="trip-filters__group"
-                  role="group"
-                  aria-label={t('trips.genderPolicy')}
-                >
-                  <span className="trip-filters__label">{t('trips.genderPolicy')}</span>
-                  <div className="trip-filters__options">
-                    {GENDERS.map((value) => {
-                      const facet = page.facets.genders.find((row) => row.value === value);
-                      return (
-                        <label
-                          className="trip-filters__option"
-                          key={value}
-                          data-empty={(facet?.count ?? 0) === 0 ? 'true' : undefined}
-                        >
-                          <input
-                            type="radio"
-                            name="gender"
-                            value={value}
-                            defaultChecked={state.gender?.[0] === value}
-                          />
-                          <span>{t(`trips.gender.${value}` as TranslationKey)}</span>
-                          <span className="trip-filters__count">{facet?.count ?? 0}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                </div>
-              </fieldset>
-
-              <fieldset className="trip-filters__section">
-                <legend className="trip-filters__legend">{t('trips.search.groupTime')}</legend>
-
-                <div className="trip-filters__group">
-                  <label htmlFor="filter-price">{t('trips.search.priceMax')}</label>
-                  <input
-                    id="filter-price"
-                    name="priceMax"
-                    type="number"
-                    inputMode="numeric"
-                    min={0}
-                    defaultValue={state.priceMax ?? ''}
-                    className="ui-input"
-                  />
-                </div>
-
-                <div className="trip-filters__group">
-                  <label htmlFor="filter-from">{t('trips.search.dateFrom')}</label>
-                  <input
-                    id="filter-from"
-                    name="dateFrom"
-                    type="date"
-                    defaultValue={state.dateFrom ?? ''}
-                    className="ui-input"
-                  />
-                </div>
-
-                <div className="trip-filters__group">
-                  <label htmlFor="filter-to">{t('trips.search.dateTo')}</label>
-                  <input
-                    id="filter-to"
-                    name="dateTo"
-                    type="date"
-                    defaultValue={state.dateTo ?? ''}
-                    className="ui-input"
-                  />
-                </div>
-              </fieldset>
-
-              {/* Sort is not a filter: it does not narrow the list, and hiding it in a collapsed panel made the
-                  cheapest trip three taps away. The visible control is the row of links above the results; this
-                  hidden input is what keeps the chosen order when the filters are submitted. */}
-              <input type="hidden" name="sort" value={currentSort} />
-
-              <div className="trip-filters__actions">
-                <button type="submit" className="ui-btn ui-btn--primary">
-                  {t('trips.search.apply')}
-                </button>
-                {/* *Clear* with nothing to clear is a control that cannot do anything. It appears with the first
-                    filter and not before. */}
-                {activeCount > 0 ? (
-                  <Link className="ui-btn ui-btn--ghost" href={base}>
-                    {t('trips.search.clear')}
-                  </Link>
-                ) : null}
-              </div>
-            </form>
-          </FilterDisclosure>
-
-          <section aria-live="polite" aria-atomic="true" className="trips-results">
             <div className="trips-toolbar">
               <p className="trips-count" role="status">
                 {t('trips.search.results', { count: page.total })}
               </p>
-              <nav className="trips-sort" aria-label={t('trips.sortLabel')}>
-                {SORTS.map((sort) => (
-                  <Link
-                    key={sort}
-                    href={hrefWith({ sort })}
-                    className="trips-sort__link"
-                    aria-current={currentSort === sort ? 'true' : undefined}
-                  >
-                    {t(`trips.sort.${sort}` as TranslationKey)}
-                  </Link>
-                ))}
-              </nav>
+              <div className="trips-toolbar__controls">
+                <FiltersMenu label={t('trips.search.filtersTitle')} activeCount={activeCount}>
+                  <form method="get" action={base}>
+                    {/* Three named groups, not nine controls in a column. A filter panel is an argument about the trip:
+                      where it goes, who it is for, when and for how much. Filed any other way it is just a form. */}
+                    <fieldset className="trip-filters__section">
+                      <legend className="trip-filters__legend">
+                        {t('trips.search.groupRoute')}
+                      </legend>
+
+                      <div className="trip-filters__group">
+                        <label htmlFor="filter-q">{t('trips.search.q')}</label>
+                        <input
+                          id="filter-q"
+                          name="q"
+                          type="search"
+                          defaultValue={state.q ?? ''}
+                          className="ui-input"
+                        />
+                      </div>
+
+                      <div className="trip-filters__group">
+                        <label htmlFor="filter-origin">{t('trips.origin')}</label>
+                        <select
+                          id="filter-origin"
+                          name="origin"
+                          defaultValue={state.origin?.[0] ?? ''}
+                          className="ui-select"
+                        >
+                          <option value="">{t('trips.search.any')}</option>
+                          {page.facets.origins.map((governorate) => (
+                            <option key={governorate.id} value={governorate.id}>
+                              {governorate.name} ({governorate.count})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="trip-filters__group">
+                        <label htmlFor="filter-destination">{t('trips.destination')}</label>
+                        <select
+                          id="filter-destination"
+                          name="destination"
+                          defaultValue={state.destination?.[0] ?? ''}
+                          className="ui-select"
+                        >
+                          <option value="">{t('trips.search.any')}</option>
+                          {page.facets.destinations.map((governorate) => (
+                            <option key={governorate.id} value={governorate.id}>
+                              {governorate.name} ({governorate.count})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="trip-filters__group">
+                        {/* A count of zero is information — there are no direct departures left — so the pill stays and
+                          dims rather than vanishing, which would look like the option had been removed. */}
+                        <label
+                          className="trip-filters__option"
+                          htmlFor="filter-direct"
+                          data-empty={page.facets.direct.direct === 0 ? 'true' : undefined}
+                        >
+                          <input
+                            id="filter-direct"
+                            type="checkbox"
+                            name="direct"
+                            value="1"
+                            defaultChecked={state.direct === true}
+                          />
+                          <span>{t('trips.search.direct')}</span>
+                          <span className="trip-filters__count">{page.facets.direct.direct}</span>
+                        </label>
+                      </div>
+                    </fieldset>
+
+                    <fieldset className="trip-filters__section">
+                      <legend className="trip-filters__legend">
+                        {t('trips.search.groupRide')}
+                      </legend>
+
+                      <div
+                        className="trip-filters__group"
+                        role="group"
+                        aria-label={t('trips.genderPolicy')}
+                      >
+                        <span className="trip-filters__label">{t('trips.genderPolicy')}</span>
+                        <div className="trip-filters__options">
+                          {GENDERS.map((value) => {
+                            const facet = page.facets.genders.find((row) => row.value === value);
+                            return (
+                              <label
+                                className="trip-filters__option"
+                                key={value}
+                                data-empty={(facet?.count ?? 0) === 0 ? 'true' : undefined}
+                              >
+                                <input
+                                  type="radio"
+                                  name="gender"
+                                  value={value}
+                                  defaultChecked={state.gender?.[0] === value}
+                                />
+                                <span>{t(`trips.gender.${value}` as TranslationKey)}</span>
+                                <span className="trip-filters__count">{facet?.count ?? 0}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </fieldset>
+
+                    <fieldset className="trip-filters__section">
+                      <legend className="trip-filters__legend">
+                        {t('trips.search.groupTime')}
+                      </legend>
+
+                      <div className="trip-filters__group">
+                        <label htmlFor="filter-price">{t('trips.search.priceMax')}</label>
+                        <input
+                          id="filter-price"
+                          name="priceMax"
+                          type="number"
+                          inputMode="numeric"
+                          min={0}
+                          defaultValue={state.priceMax ?? ''}
+                          className="ui-input"
+                        />
+                      </div>
+
+                      <div className="trip-filters__group">
+                        <label htmlFor="filter-from">{t('trips.search.dateFrom')}</label>
+                        <input
+                          id="filter-from"
+                          name="dateFrom"
+                          type="date"
+                          defaultValue={state.dateFrom ?? ''}
+                          className="ui-input"
+                        />
+                      </div>
+
+                      <div className="trip-filters__group">
+                        <label htmlFor="filter-to">{t('trips.search.dateTo')}</label>
+                        <input
+                          id="filter-to"
+                          name="dateTo"
+                          type="date"
+                          defaultValue={state.dateTo ?? ''}
+                          className="ui-input"
+                        />
+                      </div>
+                    </fieldset>
+
+                    {/* Sort is not a filter: it does not narrow the list, and hiding it in a collapsed panel made the
+                      cheapest trip three taps away. The visible control is the row of links above the results; this
+                      hidden input is what keeps the chosen order when the filters are submitted. */}
+                    <input type="hidden" name="sort" value={currentSort} />
+
+                    <div className="trip-filters__actions">
+                      <button type="submit" className="ui-btn ui-btn--primary">
+                        {t('trips.search.apply')}
+                      </button>
+                      {/* *Clear* with nothing to clear is a control that cannot do anything. It appears with the first
+                        filter and not before. */}
+                      {activeCount > 0 ? (
+                        <Link className="ui-btn ui-btn--ghost" href={base}>
+                          {t('trips.search.clear')}
+                        </Link>
+                      ) : null}
+                    </div>
+                  </form>
+                </FiltersMenu>
+                <nav className="trips-sort" aria-label={t('trips.sortLabel')}>
+                  {SORTS.map((sort) => (
+                    <Link
+                      key={sort}
+                      href={hrefWith({ sort })}
+                      className="trips-sort__link"
+                      aria-current={currentSort === sort ? 'true' : undefined}
+                    >
+                      {t(`trips.sort.${sort}` as TranslationKey)}
+                    </Link>
+                  ))}
+                </nav>
+              </div>
             </div>
 
-            {applied.length > 0 ? (
-              <ul className="filter-chips" aria-label={t('trips.search.applied')}>
-                {applied.map((chip) => (
-                  <li key={chip.key}>
-                    <Link className="filter-chip" href={chip.href}>
-                      <span>{chip.label}</span>
-                      <span className="filter-chip__x" aria-hidden="true">
-                        <Icon name="close" size={12} />
-                      </span>
-                      <span className="sr-only">
-                        {t('trips.search.removeFilter', { name: chip.label })}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-                {applied.length > 1 && page.items.length > 0 ? (
-                  <li>
-                    <Link className="filter-chip filter-chip--clear" href={base}>
-                      {t('trips.search.clearAll')}
-                    </Link>
-                  </li>
-                ) : null}
-              </ul>
-            ) : null}
+            <section aria-live="polite" aria-atomic="true" className="trips-results__body">
+              {applied.length > 0 ? (
+                <ul className="filter-chips" aria-label={t('trips.search.applied')}>
+                  {applied.map((chip) => (
+                    <li key={chip.key}>
+                      <Link className="filter-chip" href={chip.href}>
+                        <span>{chip.label}</span>
+                        <span className="filter-chip__x" aria-hidden="true">
+                          <Icon name="close" size={12} />
+                        </span>
+                        <span className="sr-only">
+                          {t('trips.search.removeFilter', { name: chip.label })}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                  {applied.length > 1 && page.items.length > 0 ? (
+                    <li>
+                      <Link className="filter-chip filter-chip--clear" href={base}>
+                        {t('trips.search.clearAll')}
+                      </Link>
+                    </li>
+                  ) : null}
+                </ul>
+              ) : null}
 
-            {page.items.length === 0 ? (
-              <EmptyState
-                title={t('trips.search.noResults')}
-                description={t('trips.search.noResultsBody')}
-                action={
-                  applied.length > 0 ? (
-                    <Link className="btn btn--ghost" href={base}>
-                      {t('trips.search.clearAll')}
-                    </Link>
-                  ) : null
-                }
-              />
-            ) : (
-              <div className="trips-grid">
-                {page.items.map((trip) => (
-                  <PublicTripCard
-                    key={trip.id}
-                    locale={locale}
-                    trip={trip}
-                    href={`/${locale}/trips/${trip.code}`}
-                    highlight={highlight}
-                  />
-                ))}
-              </div>
-            )}
+              {page.items.length === 0 ? (
+                <EmptyState
+                  title={t('trips.search.noResults')}
+                  description={t('trips.search.noResultsBody')}
+                  action={
+                    applied.length > 0 ? (
+                      <Link className="btn btn--ghost" href={base}>
+                        {t('trips.search.clearAll')}
+                      </Link>
+                    ) : null
+                  }
+                />
+              ) : (
+                <div className="trips-grid">
+                  {page.items.map((trip) => (
+                    <PublicTripCard
+                      key={trip.id}
+                      locale={locale}
+                      trip={trip}
+                      href={`/${locale}/trips/${trip.code}`}
+                      highlight={highlight}
+                    />
+                  ))}
+                </div>
+              )}
 
-            {page.nextCursor ? (
-              <nav className="trips-pager" aria-label={t('trips.search.title')}>
-                <Link className="ui-btn ui-btn--ghost" href={cursorHref}>
-                  {t('trips.search.next')}
-                </Link>
-              </nav>
-            ) : null}
-          </section>
+              {page.nextCursor ? (
+                <nav className="trips-pager" aria-label={t('trips.search.title')}>
+                  <Link className="ui-btn ui-btn--ghost" href={cursorHref}>
+                    {t('trips.search.next')}
+                  </Link>
+                </nav>
+              ) : null}
+            </section>
+          </div>
         </div>
       </main>
     </>

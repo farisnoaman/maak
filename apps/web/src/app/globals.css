@@ -4497,58 +4497,18 @@ input[type='file']::file-selector-button {
 
 /* ---------- the marketplace filters ---------- */
 
+/* The disclosure is only a wrapper now: the button is its `<summary>`, the panel is absolutely placed below the
+   toolbar row (§35). It carries no surface of its own. */
 .trip-filters {
-  display: grid;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  border: 1px solid var(--surface-sunken);
-  border-radius: var(--radius-lg);
-  background: var(--surface-base);
+  display: block;
 }
 
 .trip-filters > summary {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-block-size: var(--tap-target);
-  font-weight: 800;
-  cursor: pointer;
-  /* `display: flex` removes the built-in triangle, and `list-style` alone does not put it back in every
-     engine, so the disclosure draws its own chevron below. Without one the row reads as a heading and
-     nothing says the panel opens. */
   list-style: none;
 }
 
 .trip-filters > summary::-webkit-details-marker {
   display: none;
-}
-
-.trip-filters > summary::after {
-  content: '';
-  inline-size: 8px;
-  block-size: 8px;
-  margin-inline-start: auto;
-  margin-block-start: -4px;
-  border-inline-end: 2px solid var(--ink-500);
-  border-block-end: 2px solid var(--ink-500);
-  transform: rotate(45deg);
-  transition: transform 120ms ease;
-}
-
-.trip-filters[open] > summary::after {
-  margin-block-start: 0;
-  transform: rotate(225deg);
-}
-
-@media (min-width: 900px) {
-  /* From a laptop up the filters are a sidebar, not a disclosure. That only works once the panel is
-     *actually open*: a closed `<details>` hides its own content and no stylesheet can bring it back, so
-     the client component that opens it also marks it `data-enhanced`. Until that attribute is there —
-     no JavaScript, or a hydration that never ran — the summary stays visible and the panel can always
-     be opened by hand. */
-  .trip-filters[data-enhanced='true'] > summary {
-    display: none;
-  }
 }
 
 /* Every group zeroes its own margins (a `<fieldset>` needs that), so the form supplies the rhythm between
@@ -4983,14 +4943,9 @@ input[type='file']::file-selector-button {
 .trips-layout {
   display: grid;
   gap: var(--space-4);
-}
-
-@media (min-width: 900px) {
-  .trips-layout {
-    grid-template-columns: minmax(min(100%, 16rem), 18rem) minmax(0, 1fr);
-    align-items: start;
-    gap: var(--space-5);
-  }
+  /* One column, and shrinking: the results are the page. The filters are a button in the toolbar (§35), not a
+     16rem column that took a third of the width from the very list it filters. */
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .trips-results {
@@ -8761,54 +8716,6 @@ button.card:hover {
 }
 
 /* A sidebar does not need the summary, so the head below it is the title there and nothing here. */
-.trip-filters__head {
-  display: none;
-}
-
-@media (min-width: 900px) {
-  .trip-filters {
-    position: sticky;
-    inset-block-start: calc(68px + var(--space-4));
-    max-block-size: calc(100dvh - 68px - var(--space-8));
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    padding: var(--space-5);
-  }
-
-  .trip-filters__head {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: var(--space-2);
-    padding-block-end: var(--space-3);
-    border-block-end: 1px solid var(--surface-sunken);
-  }
-
-  .trip-filters__head h2 {
-    font-size: var(--text-lg);
-    font-weight: 800;
-    letter-spacing: -0.012em;
-  }
-
-  /* A panel with something in it is not the same panel as one that is idle. */
-  .trip-filters[data-active='true'] {
-    border-color: color-mix(in srgb, var(--brand-500) 38%, var(--surface-sunken));
-  }
-}
-
-.trip-filters__reset {
-  color: var(--brand-700);
-  font-size: var(--text-sm);
-  font-weight: 700;
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 0.22em;
-}
-
-.trip-filters__reset:hover {
-  text-decoration-thickness: 2px;
-}
-
 /* Field labels name a control; they are not captions. They now match every other form label in the product
    (12px, 700, no tracking) instead of borrowing the panel's micro-caps. */
 .trip-filters__group > label:not(.trip-filters__option),
@@ -11239,4 +11146,193 @@ h3,
 /* The marketplace's own heading band sits on the page, so it needs no card — just a little air under the header. */
 .trips-hero {
   padding-block: var(--space-2) var(--space-4);
+}
+
+/* ====================================================================================================================
+ * 35. THE TRIPS TOOLBAR — a Filters button and the sort tabs, in one row
+ *
+ * The two controls that act on the same list were at opposite ends of the page: the filters in their own 16–18rem column
+ * (a disclosure up to 900px, a sticky sidebar above it), and the sort tabs on the far side of the results. A visitor had
+ * to cross the screen to reorder what they had just filtered, and the list itself paid a third of the width for the
+ * column.
+ *
+ * One row now: `3 trips` · [Filters ②] [Soonest · Cheapest · Featured]. Pressing *Filters* drops a panel below that row,
+ * full width over the list, with the same three fieldsets inside. The button is the `<details>`' own summary, so it stays
+ * keyboard-operable with no JavaScript; the panel is absolutely placed, so it does not shove the list down and back up.
+ * ================================================================================================================== */
+
+.trips-toolbar {
+  /* The panel is measured against the toolbar, so the toolbar is the containing block. */
+  position: relative;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  padding-block-end: var(--space-3);
+  margin-block-end: var(--space-4);
+  border-block-end: 1px solid var(--paper-edge);
+}
+
+.trips-toolbar__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-inline-start: auto;
+}
+
+/* The button. Same height and radius as the sort group beside it, so the row reads as one control strip. */
+.trip-filters__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: var(--tap-target);
+  padding-inline: var(--space-4);
+  border: 1px solid var(--paper-edge);
+  border-radius: var(--radius-md);
+  background: var(--paper);
+  color: var(--ink-800);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.trip-filters__toggle:hover {
+  border-color: color-mix(in srgb, var(--ink-900) 18%, var(--paper-edge));
+  background: var(--paper-wash);
+}
+
+/* The chevron: the same drawn caret the rest of the product uses, on the inline end, turning when the panel opens. */
+.trip-filters__toggle::after {
+  content: '';
+  inline-size: 7px;
+  block-size: 7px;
+  margin-inline-start: var(--space-1);
+  margin-block-start: -3px;
+  border-inline-end: 2px solid currentColor;
+  border-block-end: 2px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform 140ms ease;
+}
+
+.trip-filters[open] > .trip-filters__toggle::after {
+  margin-block-start: 2px;
+  transform: rotate(225deg);
+}
+
+.trip-filters__summary-icon {
+  display: inline-grid;
+  place-items: center;
+  color: var(--ink-500);
+  line-height: 0;
+}
+
+.trip-filters__toggle:hover .trip-filters__summary-icon,
+.trip-filters[open] > .trip-filters__toggle .trip-filters__summary-icon {
+  color: var(--brand-700);
+}
+
+/* Open, or holding filters: the button says so. A control that has something in it must not look idle. */
+.trip-filters[open] > .trip-filters__toggle {
+  border-color: var(--brand-500);
+  background: var(--paper);
+  color: var(--brand-700);
+}
+
+.trip-filters[data-active='true'] > .trip-filters__toggle {
+  border-color: color-mix(in srgb, var(--brand-500) 42%, var(--paper-edge));
+}
+
+.trip-filters[data-active='true'] > .trip-filters__toggle .trip-filters__count {
+  background: var(--brand-600);
+  color: #fff;
+}
+
+/* The panel: below the row, as wide as the toolbar, over the list. Scrolls itself when the form is taller than the
+   screen — a phone holds roughly two of the three groups at once. */
+.trip-filters__panel {
+  position: absolute;
+  inset-block-start: calc(100% + var(--space-2));
+  inset-inline: 0;
+  z-index: 30;
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+  max-block-size: min(70dvh, 36rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--space-4);
+  border: 1px solid var(--paper-edge);
+  border-radius: var(--radius-lg);
+  background: var(--paper);
+  box-shadow: var(--shadow-lg);
+}
+
+@media (min-width: 720px) {
+  .trip-filters__panel {
+    padding: var(--space-5);
+  }
+}
+
+/* The three groups sit side by side once there is room, which is what makes the panel a glance rather than a scroll:
+   where it goes, who it is for, when. */
+@media (min-width: 720px) {
+  .trip-filters__panel > form {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-4);
+    align-items: start;
+  }
+
+  .trip-filters__panel .trip-filters__actions {
+    grid-column: 1 / -1;
+  }
+}
+
+/* The sort group: three tabs in one pill, the current one a paper tab. */
+.trips-sort {
+  /* 4px of padding around 36px tabs is the Filters button's 44px exactly, so the row is one strip at one height. */
+  padding: 4px;
+  border-color: var(--paper-edge);
+  background: var(--paper-wash);
+}
+
+.trips-sort__link {
+  min-block-size: 36px;
+  border-radius: var(--radius-pill);
+}
+
+.trips-sort__link[aria-current='true'] {
+  background: var(--paper);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Below 560px the row is two lines: the count above, the two controls on one line under it — which still puts the
+   button and the tabs beside each other, the thing this row exists for. */
+@media (max-width: 559px) {
+  .trips-toolbar__controls {
+    inline-size: 100%;
+    margin-inline-start: 0;
+  }
+
+  .trip-filters__toggle {
+    flex: 0 0 auto;
+  }
+
+  .trips-sort {
+    flex: 1 1 auto;
+    justify-content: space-between;
+  }
+
+  .trips-sort__link {
+    flex: 1 1 auto;
+    justify-content: center;
+    padding-inline: var(--space-2);
+  }
 }

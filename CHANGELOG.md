@@ -13,6 +13,18 @@ on `main`; the tag is the last step, not the first.
 
 ## [Unreleased] — after the last phase report
 
+### Changed — the trips toolbar: Filters and the sort tabs, one row (`docs/polish-plan.md` §35)
+
+- **`3 trips` · [Filters ②] [Soonest · Cheapest · Featured]`** — the two controls that act on the same list shared
+  opposite ends of the page before: the filters in a 16–18rem column (a disclosure up to 900px, a sticky sidebar above),
+  the sort tabs in the results toolbar. One row now, both 44px.
+- **The panel drops below the row** instead of living in a column: the same three fieldsets, three columns from 720px
+  (*Route* / *Ride conditions* / *Date and fare*), scrolling itself at `min(70dvh, 36rem)`. It closes on *Apply*, on
+  `Escape` and on a press outside — writing the DOM attribute only, never React state.
+- **The list takes the page back**: `.trips-layout` is one shrinking column, so the cards fill two or three columns.
+- The panel's duplicate title and its redundant *Reset* link are gone (*Clear* in the actions row does the same thing).
+- `FilterDisclosure` is replaced by `FiltersMenu`.
+
 ### Changed — the public front door, in warm paper (`docs/polish-plan.md` §33)
 
 - **One card for the whole site**: `.card` (trip results, fare calculator, account panels) takes the warm paper, the warm
