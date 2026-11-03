@@ -36,7 +36,7 @@ export default async function AdminPlanCommissionsPage({
   if (!allowed) {
     return (
       <>
-        <SiteHeader locale={locale} pathname="/admin/plans" />
+        <SiteHeader locale={locale} pathname="/admin/plans/commissions" />
         <main id="main" className="shell section">
           <h1>{t('plans.commissions')}</h1>
           <p className="form-hint">{t('errors.FORBIDDEN')}</p>
@@ -49,10 +49,10 @@ export default async function AdminPlanCommissionsPage({
 
   return (
     <>
-      <SiteHeader locale={locale} pathname="/admin/plans" />
+      <SiteHeader locale={locale} pathname="/admin/plans/commissions" />
       <ConsoleShell
         consoleTitle="console.admin"
-        pathname="/admin/plans"
+        pathname="/admin/plans/commissions"
         locale={locale}
         title="plans.commissions"
         subtitle="plans.commissionsSubtitle"

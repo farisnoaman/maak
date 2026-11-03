@@ -11336,3 +11336,460 @@ h3,
     padding-inline: var(--space-2);
   }
 }
+
+/* =====================================================================================
+ * §36 — the console chrome
+ *
+ * A console was a page with a list beside it: the sidebar was the same paper as the content, the header band was a
+ * title and a hairline, and the tables were the browser's. Everything about it said "a document that happens to
+ * have links". An operator working a queue all day needs the opposite — a place with a frame: a rail that is
+ * unmistakably *the console* and not the page, a header that says where you are before it says what you are
+ * looking at, figures that read as one ledger line rather than three loose numbers, and tables you can scan
+ * without chasing a row across the screen.
+ *
+ * The rule stays the one §31 set: **one frame per screen**. The rail is the frame's edge, not a card; the content
+ * column is still flat, divided by hairlines. Nothing here adds a second box around the page.
+ *
+ * The rail is the brand, in both themes. `--brand-900` is a fixed deep forest in light *and* dark mode (unlike
+ * `--surface-*` and `--ink-*`, which flip), so the console keeps one identity at night and the paper beside it can
+ * go dark on its own.
+ * ===================================================================================== */
+:root {
+  --rail: var(--brand-900);
+  --rail-ink: #f2f7f4;
+  --rail-dim: color-mix(in srgb, #ffffff 66%, var(--rail));
+  --rail-edge: color-mix(in srgb, #ffffff 14%, var(--rail));
+  --rail-hover: color-mix(in srgb, #ffffff 9%, var(--rail));
+  --rail-active-bg: #fbf8ee;
+  --rail-active-ink: #06362b;
+}
+
+/* ---------- the rail ---------- */
+
+@media (min-width: 900px) {
+  .console-side {
+    padding: var(--space-4) var(--space-3) var(--space-3);
+    border-radius: var(--radius-lg);
+    background: var(--rail);
+    box-shadow: var(--shadow-md);
+  }
+
+  /* The door home and the console's name: cream on forest, the one place the product's mark sits on its own ground. */
+  .console-side__home {
+    color: var(--rail-ink);
+    border-block-end-color: var(--rail-edge);
+  }
+
+  .console-side__home .brand__mark {
+    background: color-mix(in srgb, #ffffff 15%, transparent);
+    color: var(--rail-ink);
+  }
+
+  .console-side__brand {
+    color: var(--rail-dim);
+    font-size: var(--text-2xs);
+    font-weight: 800;
+    letter-spacing: var(--tracking-caps);
+    text-transform: uppercase;
+  }
+
+  .console-side .console-nav {
+    gap: 1px;
+  }
+
+  .console-side .console-nav a {
+    color: var(--rail-dim);
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+  }
+
+  .console-side .console-nav a:hover {
+    background: var(--rail-hover);
+    color: var(--rail-ink);
+  }
+
+  /* You are here: a cream plate under the pointer's thumb, in the ink of the deep forest. It is the only high-value
+     surface inside the rail, so a glance finds the current screen before it reads a word. */
+  .console-side .console-nav a[aria-current='page'],
+  .console-side .console-nav a[aria-current='page']:hover {
+    background: var(--rail-active-bg);
+    color: var(--rail-active-ink);
+    font-weight: 800;
+  }
+
+  .console-side .console-nav__label {
+    color: color-mix(in srgb, #ffffff 52%, var(--rail));
+    font-size: 0.66rem;
+    letter-spacing: var(--tracking-caps);
+  }
+
+  .console-side .console-nav__group + .console-nav__group {
+    margin-block-start: var(--space-2);
+    padding-block-start: var(--space-2);
+    border-block-start: 1px solid var(--rail-edge);
+  }
+}
+
+/* A phone's console still wears the console's colour — one dark row that names where you are, opened in place. */
+.console-menu__toggle {
+  padding-inline: var(--space-4);
+  border-color: var(--rail);
+  background: var(--rail);
+}
+
+.console-menu__brand {
+  color: color-mix(in srgb, #ffffff 62%, var(--rail));
+}
+
+.console-menu__current {
+  color: var(--rail-ink);
+}
+
+.console-menu__glyphs {
+  color: var(--rail-ink);
+}
+
+.console-menu[open] > .console-menu__toggle {
+  border-color: color-mix(in srgb, #ffffff 34%, var(--rail));
+}
+
+.console-menu[open] > .console-menu__toggle .console-menu__glyphs {
+  color: var(--rail-ink);
+}
+
+@media (max-width: 899.98px) {
+  /* The list it opens is paper: destinations are read, not decorated. */
+  .console-menu[open] > .console-nav {
+    border-color: var(--paper-edge);
+    background: var(--paper);
+  }
+}
+
+/* ---------- the header band ---------- */
+
+.console-main {
+  gap: var(--space-4);
+}
+
+.console-head {
+  padding-block: var(--space-1) var(--space-4);
+  border-block-end-color: var(--paper-edge);
+}
+
+/* Where you are, above what you are looking at: the console, the group, the screen. It is the breadcrumb the sidebar
+   cannot give you once it has scrolled, and it costs one line of 11px capitals. */
+.console-head__eyebrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-block-end: var(--space-2);
+  color: var(--brand-700);
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  line-height: 1.4;
+}
+
+.console-head__eyebrow-sep {
+  color: var(--ink-400);
+  font-weight: 400;
+}
+
+.console-head h1 {
+  font-size: clamp(1.5rem, 1.2rem + 1vw, 1.95rem);
+  letter-spacing: -0.018em;
+}
+
+.console-head__sub {
+  margin-block-start: var(--space-2);
+  color: var(--ink-600);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.console-head__end {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+
+/* ---------- the figures: one ledger line ---------- */
+
+.console-facts {
+  margin: 0;
+  gap: 0;
+  border: 1px solid var(--paper-edge);
+  border-radius: var(--radius-md);
+  background: var(--paper);
+  overflow: hidden;
+}
+
+.console-facts > div {
+  display: grid;
+  gap: 2px;
+  padding: var(--space-2) var(--space-4);
+  border-radius: 0;
+  border-inline-start: 1px solid var(--paper-edge);
+  background: none;
+}
+
+.console-facts > div:first-child {
+  border-inline-start: 0;
+}
+
+.console-facts dt {
+  color: var(--ink-500);
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  line-height: 1.3;
+}
+
+.console-facts dd {
+  color: var(--ink-900);
+  font-size: 1.0625rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+@media (max-width: 559px) {
+  .console-facts {
+    inline-size: 100%;
+  }
+
+  .console-facts > div {
+    flex: 1 1 auto;
+    padding-inline: var(--space-3);
+  }
+}
+
+/* ---------- sections ---------- */
+
+.console-section__head {
+  padding-block-end: var(--space-2);
+  border-block-end: 1px solid var(--paper-edge);
+}
+
+.console-section__head h2,
+.console-body > section > h2,
+.console-section h2 {
+  font-size: 1.0625rem;
+  letter-spacing: -0.014em;
+}
+
+/* A section's own action sits with its heading, not at the foot of the page. */
+.console-section__head .ui-btn,
+.console-section__head .link-more {
+  margin-block: -6px;
+}
+
+/* ---------- tables ---------- */
+
+/* A table is a block of paper you scroll inside: the column headings stay put, so the twentieth row still says
+   which column is which. */
+.table-scroll {
+  max-block-size: min(72dvh, 42rem);
+  padding: 0;
+  overflow: auto;
+  border-color: var(--paper-edge);
+  border-radius: var(--radius-md);
+  background: var(--paper);
+}
+
+.table-scroll > .data-table {
+  margin: 0;
+}
+
+.data-table {
+  font-size: 0.84rem;
+}
+
+.data-table thead th {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+  padding-block: var(--space-2);
+  background: var(--paper-wash);
+  /* `border-collapse: collapse` swallows a sticky header's own border; the inset shadow draws it instead. */
+  box-shadow: inset 0 -1px 0 var(--paper-edge);
+}
+
+.data-table th,
+.data-table td {
+  padding-block: var(--space-2);
+  vertical-align: middle;
+}
+
+.data-table tbody tr:hover {
+  background: color-mix(in srgb, var(--paper-wash) 70%, var(--paper));
+}
+
+/* ---------- the overview index ---------- */
+
+/* The console's front door: one line per screen, grouped, with the count of what is behind each row. The heading of
+   a group is a rule with a label and a number on it — the same band as a section head, so the two agree. */
+.admin-index__group h2 {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-block-end: 0;
+  padding-block-end: var(--space-2);
+  border-block-end: 1px solid var(--paper-edge);
+}
+
+.admin-index__count {
+  color: var(--ink-500);
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  letter-spacing: var(--tracking-caps);
+}
+
+.admin-index__group ul {
+  border-block-start: 0;
+}
+
+.admin-index__group a {
+  padding-block: var(--space-3);
+  padding-inline: var(--space-2) var(--space-3);
+  transition:
+    background 120ms ease,
+    padding-inline-start 120ms ease;
+}
+
+.admin-index__group a:hover .admin-index__go,
+.admin-index__group a:focus-visible .admin-index__go {
+  color: var(--brand-700);
+  transform: translateX(calc(3px * var(--icon-flip, 1)));
+}
+
+.admin-index__go {
+  transition:
+    color 120ms ease,
+    transform 120ms ease;
+}
+
+.admin-index__note {
+  max-inline-size: 62ch;
+}
+
+@media (min-width: 900px) {
+  .admin-index {
+    column-gap: var(--space-10);
+    row-gap: var(--space-6);
+  }
+}
+
+/* A row's own verb, at the end of the row: the last cell of a directory, aligned to the inline end so the buttons
+   form one column instead of following the length of somebody's name. */
+.data-table .data-table__end {
+  text-align: end;
+  white-space: nowrap;
+}
+
+.data-table .data-table__end .ui-btn {
+  opacity: 0.72;
+  transition: opacity 120ms ease;
+}
+
+.data-table tbody tr:hover .data-table__end .ui-btn,
+.data-table tbody tr:focus-within .data-table__end .ui-btn {
+  opacity: 1;
+}
+
+/* ---------- the role ledger ---------- */
+
+/* Who holds what: one row per role — the name, the number, the people. A list, not a table: there are four roles
+   and a table would give the figure a column of its own it does not need. */
+.role-ledger {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--paper-edge);
+  border-radius: var(--radius-md);
+  background: var(--paper);
+  overflow: hidden;
+}
+
+.role-ledger__row {
+  display: grid;
+  grid-template-columns: minmax(0, 14rem) auto minmax(0, 1fr);
+  align-items: baseline;
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-3) var(--space-4);
+}
+
+.role-ledger__row + .role-ledger__row {
+  border-block-start: 1px solid var(--paper-edge);
+}
+
+.role-ledger__name {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.role-ledger__count {
+  min-inline-size: 2ch;
+  color: var(--ink-900);
+  font-size: 1.0625rem;
+  font-weight: 800;
+  text-align: end;
+}
+
+.role-ledger__holders {
+  color: var(--ink-500);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 639px) {
+  .role-ledger__row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .role-ledger__holders {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ---------- glyphs in the rail ---------- */
+
+/* A console that declares icons gets them on every row, indented in one column, so the list can be scanned by shape
+   as well as by word. A console that does not (the operator's flat list, the staff desk) renders none: half an
+   icon set is worse than none. */
+.console-nav--icons a {
+  gap: var(--space-2);
+}
+
+.console-nav__icon {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  inline-size: 18px;
+  line-height: 0;
+  opacity: 0.72;
+  transition: opacity 120ms ease;
+}
+
+.console-nav--icons a:hover .console-nav__icon,
+.console-nav--icons a[aria-current='page'] .console-nav__icon {
+  opacity: 1;
+}
+
+.console-nav__text {
+  min-inline-size: 0;
+}
+
+/* Inside the forest rail the glyphs are cream at rest and forest-ink on the plate you are standing on — inherited
+   `currentColor`, so there is no second colour to keep in sync. */
+@media (min-width: 900px) {
+  .console-side .console-nav__icon {
+    color: inherit;
+  }
+}

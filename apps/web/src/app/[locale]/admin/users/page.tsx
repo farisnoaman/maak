@@ -6,7 +6,7 @@ import { PreviewBanner } from '@/components/PreviewBanner';
 import { ConsoleShell } from '@/components/ConsoleShell';
 import { adminNav } from '@/components/admin/AdminNav';
 import { EmptyState } from '@/components/ui/Feedback';
-import { RoleConsole } from '@/components/admin/RoleConsole';
+import { UserDirectory } from '@/components/admin/UserDirectory';
 import { loadAccountContext } from '@/lib/account';
 import { loadAdminUsers } from '@/lib/admin';
 import { previewAccount, previewUsers } from '@/lib/preview-data';
@@ -62,24 +62,16 @@ export default async function AdminUsersPage({ params }: { params: Promise<{ loc
         pathname="/admin/users"
         locale={locale}
         title="console.navUsers"
-        subtitle="admin.subtitle"
+        subtitle="admin.usersSubtitle"
         groups={adminNav(locale)}
         actions={
-          <Link
-            className="ui-btn ui-btn--ghost ui-btn--sm"
-            href={`/${locale}/admin/users/deletions`}
-          >
-            {t('admin.deletionTitle')}
+          <Link className="ui-btn ui-btn--primary ui-btn--sm" href={`/${locale}/admin/users/roles`}>
+            {t('admin.manageRoles')}
           </Link>
         }
       >
         {preview ? <PreviewBanner locale={locale} /> : null}
-        <RoleConsole
-          locale={locale}
-          users={directory.users}
-          configured={!preview}
-          truncated={directory.truncated}
-        />
+        <UserDirectory locale={locale} users={directory.users} truncated={directory.truncated} />
       </ConsoleShell>
     </>
   );
