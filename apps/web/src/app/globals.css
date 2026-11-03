@@ -10983,3 +10983,260 @@ h3,
   background: var(--paper-wash);
   border-color: color-mix(in srgb, var(--ink-900) 18%, transparent);
 }
+
+/* ====================================================================================================================
+ * 33. WARM AND HUMAN, IN PUBLIC — the home page
+ *
+ * The console got the material in §26/§31. The front door had the direction only as tokens: the type and the accent were
+ * right, but the page still wore the older, colder furniture — `.card` with a mid-grey hairline and a blue-cast shadow, a
+ * black 2px rule over each of the three steps, full-bleed grey bands with a border top and bottom, and a gradient green
+ * banner. That is four unrelated surfaces on a screen whose job is to feel like a place to book a seat.
+ *
+ * The rules below are the same decisions as the console, stated for the public half:
+ *
+ *   1. Paper is cream, edges are warm, corners are round — one card look for every card on the site.
+ *   2. A band is a tint, not a box: no border, no shadow, just a wash of colour between two stretches of paper.
+ *   3. Space is spent inside a block, not between blocks — the page had 40–64px between every section and 20px inside
+ *      the things that mattered.
+ *   4. Controls are sized for a thumb and the hover moves a hair, nothing more.
+ * ================================================================================================================== */
+
+/* 1. The card, once. `.card` is the public site's only card class: the trip result, the fare calculator, the account
+      panels. Warm paper, warm hairline, one soft shadow (§26's tokens, so light and dark both hold). */
+.card {
+  border-color: var(--paper-edge);
+  background: var(--paper);
+  box-shadow: var(--shadow-sm);
+}
+
+/* 2. Bands are washes. The old ones were grey with a hairline top and bottom — a stripe of a different material
+      pretending to be a section. */
+.section--muted {
+  border-block: 0;
+  background: var(--paper-wash);
+}
+
+/* 3. The page was 160px of empty air between two sections on a desktop. The blocks are closer now, and the space
+      inside them does the separating. */
+.section {
+  padding-block: var(--space-8);
+}
+
+@media (min-width: 720px) {
+  .section {
+    padding-block: var(--space-12);
+  }
+}
+
+/* The hero sits on its own wash, so its neighbour needs no extra room at the top. */
+.hero + .section {
+  padding-block-start: var(--space-6);
+}
+
+/* 4. The search card: paper, a warm edge, and the ring it already earns on focus. It floated on `--shadow-lg`, which
+      is the one shadow in the product strong enough to look like elevation rather than paper. */
+.hero-search {
+  border-color: var(--paper-edge);
+  background: var(--paper);
+  box-shadow: var(--shadow-md);
+}
+
+/* 5. The departures panel beside the search: the same card as the results below it, not a heavier one. */
+.hero__aside {
+  border-color: var(--paper-edge);
+  background: var(--paper);
+  box-shadow: var(--shadow-sm);
+}
+
+.departure:hover {
+  border-color: var(--paper-edge);
+  background: var(--paper-wash);
+}
+
+/* 6. Reassurance: a disc that reads at 22px and a tick that sits in it, not a 20px chip with a 13px glyph. */
+.trust-row__tick {
+  inline-size: 22px;
+  block-size: 22px;
+  background: color-mix(in srgb, var(--brand-500) 14%, var(--paper));
+  color: var(--brand-700);
+}
+
+.trust-row__tick svg {
+  inline-size: 13px;
+  block-size: 13px;
+}
+
+/* 7. Destinations: thumb-sized targets with a warm edge, and a wash — not a brand tint — on hover. */
+.destination-chip {
+  padding-inline: var(--space-4);
+  min-block-size: var(--tap-target);
+  border-color: var(--paper-edge);
+  background: var(--paper);
+  border-radius: var(--radius-md);
+}
+
+.destination-chip:hover {
+  border-color: var(--brand-300);
+  background: var(--paper-wash);
+}
+
+.destination-chip__pin {
+  color: var(--brand-600);
+}
+
+/* 8. The three steps: plates, not underline-and-sentence. The 2px black rule over each one read as a form divider on a
+      page that has no form; the number is the structure, so the number gets the disc. */
+.steps {
+  gap: var(--space-3);
+  margin-block-start: var(--space-6);
+}
+
+.step {
+  padding: var(--space-4);
+  border-block-start: 0;
+  border: 1px solid var(--paper-edge);
+  border-radius: var(--radius-lg);
+  background: var(--paper);
+}
+
+.step__num {
+  inline-size: 30px;
+  block-size: 30px;
+  background: var(--brand-600);
+  color: #fff;
+  font-size: var(--text-sm);
+}
+
+.step h3 {
+  margin-block-start: var(--space-3);
+  font-size: 1rem;
+}
+
+.step p {
+  margin-block-start: var(--space-1);
+  color: var(--ink-600);
+  font-size: var(--text-sm);
+  line-height: 1.55;
+  max-inline-size: 34ch;
+}
+
+/* 9. The one place the page speaks to supply: flat deep green, warm corners. It was a diagonal gradient of two greens,
+      which is decoration on top of a solid idea. */
+.operator-band {
+  border-radius: var(--radius-xl);
+  background: var(--brand-700);
+}
+
+/* Its button is white paper on the green, and it is the same size as every other primary. */
+.operator-band .btn--primary {
+  min-block-size: var(--tap-target);
+  border-color: #fff;
+  background: var(--paper);
+  color: var(--brand-900);
+}
+
+.operator-band .btn--primary:hover {
+  background: #fff;
+}
+
+/* 10. Console doors: quiet, but 44px and on paper. */
+.teams__link {
+  border-color: var(--paper-edge);
+  background: var(--paper);
+  border-radius: var(--radius-md);
+}
+
+.teams__link:hover {
+  background: var(--paper-wash);
+  border-color: var(--brand-300);
+}
+
+/* 11. "All trips" and the hero's other text links are used with a thumb on a phone: they get a target, not a line. */
+.link-more {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--tap-target);
+  gap: var(--space-1);
+  color: var(--brand-700);
+}
+
+.link-more:hover {
+  color: var(--brand-900);
+}
+
+/* 12. Motion: short, and only where a pointer is. */
+@media (prefers-reduced-motion: reduce) {
+  .destination-chip,
+  .departure,
+  .teams__link,
+  .hero-search {
+    transition: none;
+  }
+}
+
+/* ====================================================================================================================
+ * 34. THE MARKETPLACE LIST, ON THE SAME PAPER
+ *
+ * The results page is the busiest public screen: a filter panel, a toolbar with a count and a sort, a row of applied
+ * chips, and a grid of cards. Each of those was drawn with slightly different furniture — the panel and the toolbar used
+ * `--surface-sunken` hairlines, the chips were a 32px pill at brand-50, and the pager mixed `.ui-btn--ghost` with a
+ * `.btn--ghost`. It is the same set of decisions as §33, applied to the controls:
+ *
+ *   one paper for panels, one warm hairline for dividers, and every chip big enough to hit with a thumb.
+ * ================================================================================================================== */
+
+.trip-filters {
+  border-color: var(--paper-edge);
+  background: var(--paper);
+}
+
+.trips-toolbar {
+  border-block-end-color: var(--paper-edge);
+}
+
+/* An applied filter is a control — you press it to remove it — so it is a 36px target, not a 32px label. */
+.filter-chip {
+  min-block-size: 36px;
+  padding-inline: var(--space-3);
+  border-color: color-mix(in srgb, var(--brand-500) 30%, var(--paper-edge));
+  background: color-mix(in srgb, var(--brand-500) 8%, var(--paper));
+  color: var(--brand-900);
+}
+
+.filter-chip:hover {
+  background: color-mix(in srgb, var(--brand-500) 14%, var(--paper));
+}
+
+.filter-chip--clear {
+  border-color: var(--paper-edge);
+  background: var(--paper);
+  color: var(--ink-700);
+}
+
+/* The sort is a navigation of three links: each gets a real target, and the current one is a pill rather than bold
+   text the reader has to spot. */
+.trips-sort__link {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--tap-target);
+  padding-inline: var(--space-3);
+  border-radius: var(--radius-md);
+  color: var(--ink-600);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.trips-sort__link:hover {
+  background: var(--paper-wash);
+  color: var(--ink-900);
+}
+
+.trips-sort__link[aria-current='true'] {
+  background: color-mix(in srgb, var(--brand-500) 10%, var(--paper));
+  color: var(--brand-700);
+}
+
+/* The marketplace's own heading band sits on the page, so it needs no card — just a little air under the header. */
+.trips-hero {
+  padding-block: var(--space-2) var(--space-4);
+}

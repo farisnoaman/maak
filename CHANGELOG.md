@@ -13,6 +13,23 @@ on `main`; the tag is the last step, not the first.
 
 ## [Unreleased] — after the last phase report
 
+### Changed — the public front door, in warm paper (`docs/polish-plan.md` §33)
+
+- **One card for the whole site**: `.card` (trip results, fare calculator, account panels) takes the warm paper, the warm
+  hairline and the light shadow the console already used — the last cold surface in the product.
+- **Bands are washes**: `.section--muted` loses its top and bottom rules; the page separates with tint, not borders.
+- **Less air between sections, more inside them**: 40→32px on a phone, 64→48px on a desktop, plus a 24px hand-off from
+  the hero.
+- **The three steps are plates** (paper card, number in a brand disc) instead of a black rule over a paragraph; the
+  **operator banner is flat deep green** instead of a diagonal gradient; destinations and console doors are 44px targets;
+  the reassurance ticks are 22px discs.
+
+### Changed — the marketplace list on the same paper (`docs/polish-plan.md` §34)
+
+- The filter panel and the toolbar take warm hairlines; an **applied filter chip is a 36px target** with a brand wash
+  instead of a 32px label; the sort links are 44px targets with the current one as a pill.
+- The marketplace heading band gets its spacing from the page rather than from a card.
+
 ### Changed — one card shell and one action row (`docs/polish-plan.md` §31)
 
 - **Four card classes became one look**: `.trip-card`, `.place-card`, `.geo-region-card`, `.supervisor-card` (plus

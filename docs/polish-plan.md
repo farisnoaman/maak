@@ -72,6 +72,9 @@ questions in the order they ask them.**
 | 24 | The trip page, one material | §28 left the facts list and the fare panel wearing two older shells — three kinds of card on one screen | `[x]` — §29 |
 | 25 | `/admin/regions`, re-cut | A table of four columns with the coverage as one dotted sentence, an editor that replaced the list, and the supervisor assignment under it — three jobs in one scroll, two of them forms | `[x]` — §30 |
 | 26 | **Four card classes, four looks** | The trip page, the places queue, the regions tree and the supervisor roster each had their own border, shadow, padding and divider — and the trip page's footer row mixed `.btn` with `.ui-btn` | `[x]` — §31 |
+| 27 | Two admin pages with two jobs each | Subscriptions carried the payer list and the support grants; users carried the directory and the deletion queue | `[x]` — §32 |
+| 28 | **The public front door, in warm paper** | The console got the material; home still wore mid-grey hairlines, a blue-cast shadow, a black rule over each step and a gradient banner | `[x]` — §33 |
+| 29 | The marketplace list | The panel, the toolbar and the chips were three shades of the same grey, and an applied filter was a 32px target | `[x]` — §34 |
 | 27 | Two more pages with two jobs each | Subscriptions carried the payer list and the support grants; users carried the directory and the deletion queue | `[x]` — §32 |
 
 ## 3–4. Trips list and trip detail — what changed
@@ -1208,3 +1211,40 @@ Each new route is the same shape as the others: locale → session → role gate
 
 **Verified.** `/en|/ar` for both new routes: facts, empty states and the cross-links render. `check:all` ✓,
 `check:responsive` ✓, `check:guards` ✓, `check:a11y` ✓.
+
+## 33. The front door, in warm paper
+
+**Why now.** The console queue is closed (rows 1–29 except the mobile app) and the public pages still had the *direction*
+only as tokens: the type and the accent were right, the furniture was not. On one screen: `.card` with a mid-grey
+hairline and a blue-cast shadow, a black 2px rule over each of the three steps, full-bleed grey bands with a border top and
+bottom, and a diagonal gradient behind the operator pitch.
+
+**What it is now** (stylesheet §33).
+
+- **One card.** `.card` — the trip result, the fare calculator, the account panels — takes `--paper`, `--paper-edge` and
+  the light warm shadow. That single rule is what makes the public site and the console read as one product; the card
+  class was the only thing they had in common and it was the one thing still cold.
+- **Bands, not boxes.** `.section--muted` loses its top and bottom hairlines and becomes a wash of `--paper-wash`.
+- **Less space between, more inside.** Sections were 40px apart on a phone and 64px on a desktop; now 32 and 48, and
+  the hero hands 24px to the section under it. The blocks are closer; the padding inside them separates.
+- **The search card and the departures panel** are the same card as the results below them (`--shadow-md` on the search,
+  `--shadow-sm` on the panel), instead of the two heaviest shadows in the product.
+- **The three steps are plates**: a paper card each, the number in a brand disc, the sentence at a 34ch measure — instead
+  of a black rule over a paragraph, which read as a form divider on a page that has no form.
+- **Destinations and console doors are thumb-sized**: 44px, warm edge, a wash on hover, and `--radius-md` so they look like
+  buttons rather than pills.
+- **The operator banner is flat deep green.** The gradient was decoration over a solid idea.
+- **The reassurance ticks** are 22px discs with a 13px glyph — a tick that reads at the size it is drawn.
+
+## 34. The marketplace list, on the same paper
+
+Same decisions, applied to the busiest public screen: the filter panel and the toolbar take `--paper-edge` hairlines
+instead of `--surface-sunken`; an applied filter chip is a **36px target** (it is a control — you press it to remove the
+filter) with a brand wash instead of a 32px brand-50 label; the sort links are 44px targets and the current one is a pill
+(`aria-current` already marked it); the marketplace heading band gets its air from the page, not from a card.
+
+**Verified.** `/en` and `/ar` (both directions), `/en/trips`, `/en/trips?sort=cheapest`, `/ar` — 200 with the real seeded
+data (the earlier "no database" banner was a missing `.env.local`, restored with `npm run dev:setup`). `tsc` ✓,
+`prettier` ✓, `check:responsive` ✓ (110 media queries), `check:guards` ✓, `check:all` ✓, `check:a11y` ✓ over **117
+routes**. **Gap:** no browser — the 32→48px section rhythm at 720px, the step plates at 320px and the hover washes are
+read from the CSS.
