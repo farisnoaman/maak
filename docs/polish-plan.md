@@ -78,6 +78,7 @@ questions in the order they ask them.**
 | 30 | The trips toolbar | *Filters* and *Soonest / Cheapest / Featured* acted on the same list from opposite ends of the page, one a 16rem column and one a row; the results paid a third of the width for the column | `[x]` — §35 |
 | 31 | **The console had no chrome** | The rail was the same paper as the page, the header a title over a hairline, the figures three loose numbers, the tables the browser's — and three screens that had been given pages of their own (`/users/deletions`, `/plans/commissions`, `/subscriptions/overrides`) had no way in from the navigation at all | `[x]` — §36 |
 | 32 | Users & roles, two jobs in one column | The directory of fifty accounts ended in a grant/revoke fieldset, so the read screen carried the write control and the question the control raises ("who else is an admin?") was answered nowhere | `[x]` — §36 |
+| 33 | **The staff desk opened on a wall** | *Find a trip* — six controls and eleven chips — stood open above the queue on every visit, so the page a staff member came for began below the fold | `[x]` — §37 |
 | 27 | Two more pages with two jobs each | Subscriptions carried the payer list and the support grants; users carried the directory and the deletion queue | `[x]` — §32 |
 
 ## 3–4. Trips list and trip detail — what changed
@@ -1354,3 +1355,34 @@ eyebrow (`Admin/People`, `الإدارة/الأشخاص`). `tsc` ✓, `prettier`
 135 commands), `check:responsive` ✓ (115 media queries), `check:all` ✓, `next build` ✓, `check:a11y` ✓ over **119
 routes** (the new page added to the list). **Gap:** no browser — the rail's sticky panel, the cream plate in dark mode,
 the sticky table header and the ledger's two-column fold at 639px are read from the CSS.
+
+## 37. *Find a trip* is a button, not a wall
+
+**The report.** *"Find Trip should be like filter wrapped in a button instead of always showing flattened in the page."*
+
+**What was wrong.** `/staff/trips` had one job in the URL and two on the screen. Without filters it is the verification
+queue; with them it is the staff search. But the search form stood open on **every** visit — a query field, five status
+chips, two dates, a governorate select and four verification chips, in a card above the queue. A staff member arriving
+to decide one submission scrolled past a form they had not asked for, and the queue — the reason the page exists —
+started below the fold.
+
+**What it is now** (stylesheet §37). One row, in the shape §35 gave the marketplace:
+
+- **`0 results` / `3 waiting for review` · [🔍 Find a trip ③] [Export CSV]`** — the count the page already knew, the
+  disclosure, and the export of exactly the rows those filters return.
+- The button is the `<details>`' own summary, so it is keyboard-operable with no JavaScript, and the panel is placed
+  **absolutely against the row** — it covers the results instead of pushing them down and back up. It closes on
+  *Apply*, on `Escape` (focus back to the button) and on a press outside, because a panel over the list must not
+  require a second, precise target to dismiss (`FiltersMenu`, unchanged).
+- The button wears **the number of filters in force**, so a filtered view can never be mistaken for a plain one — the
+  same guarantee the marketplace's badge gives.
+- Inside the panel the form keeps every field, in three columns from 720px: the query, the trip status, then the
+  history and the verification decision. Its hint and its actions span the row.
+- The count line moved out of the results section (it was printed twice) and out of the queue (same), so the toolbar
+  is the one place that says how much there is.
+
+**Verified.** `/en|ar /staff/trips` server-render `count → <div controls> → <details><summary>[icon] Find a trip</summary>
+<div panel><form>…</form></div></details> → export`; with `?q=AD&status=draft&from=2026-01-01` the summary carries
+`data-active="true"` and the badge reads `3`, and the old `ops-toolbar` count row is gone. `tsc` ✓, `prettier` ✓,
+`check:guards` ✓, `check:responsive` ✓ (118 media queries), `check:a11y` ✓ over **119 routes**. **Gap:** no browser —
+the panel's overlay position under the row and the three-column form at 720px are read from the CSS.

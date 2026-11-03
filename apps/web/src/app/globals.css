@@ -11793,3 +11793,68 @@ h3,
     color: inherit;
   }
 }
+
+/* =====================================================================================
+ * §37 — the console toolbar: one row, a disclosure, and the panel under it
+ *
+ * The staff trips desk opened on a wall. Six controls and eleven chips stood in a card above the queue on every
+ * visit — a form nobody had asked for, and the queue that *is* the page began below the fold. The same form now
+ * lives behind a button in one row with the count and the export, in the shape §35 gave the marketplace: the button
+ * is the `<details>`' own summary, the panel is placed absolutely against the row so it covers the results instead
+ * of pushing them down and back up, and it closes on Apply, on Escape and on a press outside (`FiltersMenu`).
+ * ===================================================================================== */
+.console-toolbar {
+  /* The panel is measured against this row, so the row is the containing block. */
+  position: relative;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  padding-block-end: var(--space-3);
+  border-block-end: 1px solid var(--paper-edge);
+}
+
+.console-toolbar__count {
+  margin: 0;
+  color: var(--ink-600);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.console-toolbar__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-inline-start: auto;
+}
+
+/* The same shape as the marketplace's panel: where it goes, what state it is in, when. */
+.trip-search {
+  display: grid;
+  gap: var(--space-4);
+  min-inline-size: 0;
+}
+
+@media (min-width: 720px) {
+  .trip-filters__panel > .trip-search {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: start;
+  }
+
+  /* The hint names the whole form and the actions close it, so both take the full width. */
+  .trip-search > .form-hint,
+  .trip-search > .trip-filters__actions {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 559px) {
+  /* The button keeps the end of the line; the count takes its own. */
+  .console-toolbar__count {
+    flex: 1 1 100%;
+  }
+}

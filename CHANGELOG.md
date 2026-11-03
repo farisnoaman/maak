@@ -13,6 +13,17 @@ on `main`; the tag is the last step, not the first.
 
 ## [Unreleased] — after the last phase report
 
+### Changed — *Find a trip* is a button, not a wall (`docs/polish-plan.md` §37)
+
+- `/staff/trips` opened on the search form: a query field, five status chips, two dates, a governorate select and four
+  verification chips, in a card above the queue — so the queue began below the fold.
+- The same form now lives behind **[Find a trip]** in one row with the count and the export: the count the page already
+  knew, the disclosure, and the CSV of exactly those rows. The `<details>` summary is the button (no JavaScript
+  needed), the panel is placed against the row so it covers the results instead of shoving them down, and it closes on
+  *Apply*, `Escape` and a press outside. The badge counts the filters in force, so a filtered view cannot be mistaken
+  for a plain one.
+- The results count was printed in two places; the toolbar is now the one place that says how much there is.
+
 ### Changed — the console gets a frame, and the admin console gets its pages back (`docs/polish-plan.md` §36)
 
 - **The rail is the console**: a deep-forest panel in both themes (a fixed brand colour, so the console keeps one
