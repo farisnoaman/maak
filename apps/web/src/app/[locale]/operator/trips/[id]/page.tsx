@@ -3,6 +3,7 @@ import { isLocale, translate, type Locale, type TranslationKey } from '@maak/cor
 import { SiteHeader } from '@/components/SiteHeader';
 import { PreviewBanner } from '@/components/PreviewBanner';
 import { ConsoleShell } from '@/components/ConsoleShell';
+import { operatorNav } from '@/components/operator/OperatorNav';
 import { EmptyState } from '@/components/ui/Feedback';
 import { TripDetail } from '@/components/trips/TripDetail';
 import { loadAccountContext } from '@/lib/account';
@@ -24,14 +25,6 @@ export default async function OperatorTripPage({
   }
 
   const [detail, options] = await Promise.all([loadTrip(id), loadTripOptions(loaded)]);
-  const nav = [
-    { key: 'console.navOverview' as TranslationKey, href: `/${locale}/operator` },
-    { key: 'console.navTrips' as TranslationKey, href: `/${locale}/operator/trips` },
-    { key: 'console.navVehicles' as TranslationKey, href: `/${locale}/operator/vehicles` },
-
-    { key: 'console.navFleet' as TranslationKey, href: `/${locale}/operator/fleet` },
-    { key: 'console.navDrivers' as TranslationKey, href: `/${locale}/operator/drivers` },
-  ];
 
   // RLS already hides another owner's trip; this is the readable half of that refusal.
   if (!detail) {
@@ -44,7 +37,7 @@ export default async function OperatorTripPage({
           locale={locale}
           title="trips.title"
           subtitle="trips.subtitle"
-          items={nav}
+          groups={operatorNav(locale)}
         >
           <EmptyState title={t('errors.NOT_FOUND')} />
         </ConsoleShell>
@@ -55,7 +48,12 @@ export default async function OperatorTripPage({
   return (
     <>
       <SiteHeader locale={locale} pathname="/operator/trips" />
-      <ConsoleShell locale={locale} title="trips.title" subtitle="trips.subtitle" items={nav}>
+      <ConsoleShell
+        locale={locale}
+        title="trips.title"
+        subtitle="trips.subtitle"
+        groups={operatorNav(locale)}
+      >
         {!loaded.configured ? <PreviewBanner locale={locale} /> : null}
         <a className="trip-back" href={`/${locale}/operator/trips`}>
           ← {t('common.back')}

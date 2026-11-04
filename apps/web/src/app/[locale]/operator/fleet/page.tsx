@@ -3,6 +3,7 @@ import { isLocale, translate, type Locale, type TranslationKey } from '@maak/cor
 import { SiteHeader } from '@/components/SiteHeader';
 import { PreviewBanner } from '@/components/PreviewBanner';
 import { ConsoleShell } from '@/components/ConsoleShell';
+import { operatorNav } from '@/components/operator/OperatorNav';
 import { FleetRollup } from '@/components/fleet/FleetRollup';
 import { activeOrganization, loadAccountContext } from '@/lib/account';
 import { loadFleetSettings, loadFleetSummary, loadReportAccess } from '@/lib/fleet-ops';
@@ -49,14 +50,6 @@ export default async function OperatorFleetPage({
         loaded.roles.includes('platform_admin') ||
         summary.vehicles.length > 0;
 
-  const nav = [
-    { key: 'console.navOverview' as TranslationKey, href: `/${locale}/operator` },
-    { key: 'console.navVehicles' as TranslationKey, href: `/${locale}/operator/vehicles` },
-    { key: 'console.navFleet' as TranslationKey, href: `/${locale}/operator/fleet` },
-    { key: 'console.navDrivers' as TranslationKey, href: `/${locale}/operator/drivers` },
-    { key: 'org.team' as TranslationKey, href: `/${locale}/operator/team` },
-  ];
-
   return (
     <>
       <SiteHeader locale={locale} pathname="/operator/fleet" />
@@ -66,7 +59,7 @@ export default async function OperatorFleetPage({
         locale={locale}
         title="fleetOps.fleet"
         subtitle="fleetOps.fleetSubtitle"
-        items={nav}
+        groups={operatorNav(locale)}
       >
         {!loaded.configured ? <PreviewBanner locale={locale} /> : null}
 

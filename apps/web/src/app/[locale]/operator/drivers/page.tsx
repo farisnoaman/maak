@@ -3,6 +3,7 @@ import { isLocale, translate, type Locale, type TranslationKey } from '@maak/cor
 import { SiteHeader } from '@/components/SiteHeader';
 import { PreviewBanner } from '@/components/PreviewBanner';
 import { ConsoleShell } from '@/components/ConsoleShell';
+import { operatorNav } from '@/components/operator/OperatorNav';
 import { DriverConsole } from '@/components/fleet/DriverConsole';
 import { activeOrganization, loadAccountContext } from '@/lib/account';
 import { signedObjectUrl } from '@/lib/storage';
@@ -55,12 +56,17 @@ export default async function OperatorDriversPage({
         locale={locale}
         title="fleet.drivers"
         subtitle="console.subtitle.operator"
-        items={[
-          { key: 'console.navOverview', href: `/${locale}/operator` },
-          { key: 'console.navVehicles', href: `/${locale}/operator/vehicles` },
-          { key: 'console.navFleet', href: `/${locale}/operator/fleet` },
-          { key: 'console.navDrivers', href: `/${locale}/operator/drivers` },
-          { key: 'org.team', href: `/${locale}/operator/team` },
+        groups={operatorNav(locale)}
+        facts={[
+          { label: t('console.navDrivers'), value: String(drivers.length) },
+          {
+            label: t('verification.status.pending'),
+            value: String(
+              drivers.filter((driver) => driver.verificationStatus === 'pending').length,
+            ),
+            href: `/${locale}/operator/drivers`,
+            tone: drivers.some((d) => d.verificationStatus === 'pending') ? 'warning' : undefined,
+          },
         ]}
       >
         {!loaded.configured ? <PreviewBanner locale={locale} /> : null}

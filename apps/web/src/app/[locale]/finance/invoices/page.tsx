@@ -47,7 +47,7 @@ export default async function FinanceInvoicesPage({
         locale={locale}
         title="invoices.title"
         subtitle="invoices.subtitle"
-        items={financeNav(locale)}
+        groups={financeNav(locale)}
         actions={
           /* Outstanding is the one number this page is opened for, so it sits in the header band where a console
              puts its headline — not as a heading that repeated the page title above a sentence about it. */

@@ -46,7 +46,7 @@ export default async function FinanceAccountsPage({
         locale={locale}
         title="financeAccounts.title"
         subtitle="financeAccounts.subtitle"
-        items={financeNav(locale)}
+        groups={financeNav(locale)}
       >
         <section>
           {!isFinance ? <p className="ui-alert">{t('financeAccounts.subtitle')}</p> : null}

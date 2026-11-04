@@ -2,8 +2,8 @@ import { notFound, redirect } from 'next/navigation';
 import { isLocale, translate, type Locale, type TranslationKey } from '@maak/core';
 import { SiteHeader } from '@/components/SiteHeader';
 import { ConsoleShell } from '@/components/ConsoleShell';
+import { operatorMoneyNav } from '@/components/operator/OperatorNav';
 import { ExpensesPanel } from '@/components/finance/ExpensesPanel';
-import { operatorMoneyNav } from '@/components/payments/financeNav';
 import { loadAccountContext } from '@/lib/account';
 import { loadExpenses } from '@/lib/finance';
 
@@ -48,7 +48,7 @@ export default async function OperatorExpensesPage({
         locale={locale}
         title="expenses.title"
         subtitle="expenses.subtitle"
-        items={operatorMoneyNav(locale)}
+        groups={operatorMoneyNav(locale)}
       >
         <ExpensesPanel
           locale={locale}

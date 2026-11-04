@@ -3,6 +3,7 @@ import { isLocale, translate, type Locale, type TranslationKey } from '@maak/cor
 import { SiteHeader } from '@/components/SiteHeader';
 import { PreviewBanner } from '@/components/PreviewBanner';
 import { ConsoleShell } from '@/components/ConsoleShell';
+import { operatorNav } from '@/components/operator/OperatorNav';
 import { TripWizard } from '@/components/trips/TripWizard';
 import { activeOrganization, loadAccountContext } from '@/lib/account';
 import { loadTripOptions } from '@/lib/trips';
@@ -43,12 +44,7 @@ export default async function NewTripPage({
         locale={locale}
         title="trips.new"
         subtitle="trips.subtitle"
-        items={[
-          { key: 'console.navOverview', href: `/${locale}/operator` },
-          { key: 'console.navTrips', href: `/${locale}/operator/trips` },
-          { key: 'console.navVehicles', href: `/${locale}/operator/vehicles` },
-          { key: 'console.navDrivers', href: `/${locale}/operator/drivers` },
-        ]}
+        groups={operatorNav(locale)}
       >
         {!loaded.configured ? <PreviewBanner locale={locale} /> : null}
         <p className="trip-form__hint">{t('trips.entryLocked')}</p>

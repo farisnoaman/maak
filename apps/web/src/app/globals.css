@@ -11926,3 +11926,13 @@ h3,
 .trip-book__breakdown {
   border-color: var(--paper-edge);
 }
+
+/* A figure that is not a warning but a fault: the staff desk's stale trips. Same card, the danger pair of the ramp. */
+.console-kpi--danger {
+  border-color: color-mix(in srgb, var(--state-danger) 40%, var(--paper-edge));
+  background: color-mix(in srgb, var(--state-danger) 6%, var(--paper));
+}
+
+.console-kpi--danger .console-kpi__value {
+  color: var(--state-danger);
+}

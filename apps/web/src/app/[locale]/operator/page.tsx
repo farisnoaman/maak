@@ -10,6 +10,7 @@ import {
 } from '@maak/core';
 import { SiteHeader } from '@/components/SiteHeader';
 import { ConsoleShell } from '@/components/ConsoleShell';
+import { operatorNav } from '@/components/operator/OperatorNav';
 import { Icon } from '@/components/ui/Icon';
 import { loadAccountContext } from '@/lib/account';
 import { loadTripRequests } from '@/lib/bookings';
@@ -166,67 +167,6 @@ export default async function OperatorOverviewPage({
   const owners = [...new Set(upcoming.map((item) => item.owner))];
   const withOrg = requestedOrg ? `?org=${encodeURIComponent(requestedOrg)}` : '';
 
-  const nav: { key: TranslationKey; href: string }[] = [
-    { key: 'console.navOverview', href: `/${locale}/operator` },
-    { key: 'console.navTrips', href: `/${locale}/operator/trips` },
-    { key: 'console.navVehicles', href: `/${locale}/operator/vehicles` },
-    { key: 'console.navFleet', href: `/${locale}/operator/fleet` },
-    { key: 'console.navDrivers', href: `/${locale}/operator/drivers` },
-    { key: 'console.navPayments', href: `/${locale}/operator/payments` },
-    { key: 'console.navPayouts', href: `/${locale}/operator/payouts` },
-  ];
-
-  /** Where the overview can go. Icons describe the screen, not the verb — a wallet is payments at any size. */
-  const doors: {
-    key: TranslationKey;
-    note: TranslationKey;
-    href: string;
-    icon: Parameters<typeof Icon>[0]['name'];
-  }[] = [
-    {
-      key: 'console.navTrips',
-      note: 'operatorHome.tripsNote',
-      href: `/${locale}/operator/trips`,
-      icon: 'route',
-    },
-    {
-      key: 'console.navVehicles',
-      note: 'console.tileVehicles',
-      href: `/${locale}/operator/vehicles`,
-      icon: 'bus',
-    },
-    {
-      key: 'console.navDrivers',
-      note: 'console.tileDrivers',
-      href: `/${locale}/operator/drivers`,
-      icon: 'users',
-    },
-    {
-      key: 'console.navFleet',
-      note: 'fleetOps.fleetSubtitle',
-      href: `/${locale}/operator/fleet`,
-      icon: 'spark',
-    },
-    {
-      key: 'console.navPayments',
-      note: 'console.tilePayments',
-      href: `/${locale}/operator/payments`,
-      icon: 'wallet',
-    },
-    {
-      key: 'console.navPayouts',
-      note: 'console.tilePayouts',
-      href: `/${locale}/operator/payouts`,
-      icon: 'ticket',
-    },
-    {
-      key: 'org.team',
-      note: 'operatorHome.teamNote',
-      href: `/${locale}/operator/team`,
-      icon: 'shield',
-    },
-  ];
-
   return (
     <>
       <SiteHeader locale={locale} pathname="/operator" />
@@ -236,7 +176,14 @@ export default async function OperatorOverviewPage({
         consoleTitle="console.operator"
         subtitle="console.subtitle.operator"
         pathname="/operator"
-        items={nav}
+        groups={operatorNav(locale)}
+        facts={figures.map((figure) => ({
+          label: t(figure.key),
+          value: String(figure.value),
+          note: figure.note,
+          href: figure.href,
+          tone: figure.tone,
+        }))}
         actions={
           <>
             <Link className="btn btn--primary" href={`/${locale}/operator/trips/new${withOrg}`}>
@@ -249,8 +196,8 @@ export default async function OperatorOverviewPage({
           </>
         }
       >
-        {/* One answer, once. Four zeroes under a sentence that already says nothing is waiting is the same answer
-            twice — so the figures appear only when at least one of them is worth acting on. */}
+        {/* One answer, once. The four figures are the KPI strip above; when all four are zero the strip has already
+            said so, and this sentence says what that means — which the numbers cannot. */}
         {waitingCount === 0 ? (
           <p className="ops-clear" role="status">
             <span className="ops-clear__tick" aria-hidden="true">
@@ -260,28 +207,7 @@ export default async function OperatorOverviewPage({
               <strong>{t('operatorHome.clear')}</strong> {t('operatorHome.clearBody')}
             </span>
           </p>
-        ) : (
-          <div className="stat-grid stat-grid--links">
-            {figures.map((figure) => (
-              <Link
-                className={`stat stat--link${figure.tone ? ` stat--${figure.tone}` : ''}`}
-                href={figure.href}
-                key={figure.key}
-              >
-                <span className="stat__label">{t(figure.key)}</span>
-                <strong className="stat__value">{figure.value}</strong>
-                {figure.note ? (
-                  <span className="stat__note">
-                    <bdi dir="ltr">{figure.note}</bdi>
-                  </span>
-                ) : null}
-                <span className="stat__go" aria-hidden="true">
-                  <Icon name="chevron" size={14} />
-                </span>
-              </Link>
-            ))}
-          </div>
-        )}
+        ) : null}
 
         <section className="ops-section" aria-labelledby="op-departures">
           <div className="ops-section__head">
@@ -375,26 +301,6 @@ export default async function OperatorOverviewPage({
               })}
             </ul>
           )}
-        </section>
-
-        <section className="ops-section" aria-labelledby="op-screens">
-          <div className="ops-section__head">
-            <h2 id="op-screens">{t('operatorHome.screens')}</h2>
-          </div>
-          <ul className="doorlist">
-            {doors.map((door) => (
-              <li key={door.href}>
-                <Link className="door" href={door.href}>
-                  <span className="door__icon" aria-hidden="true">
-                    <Icon name={door.icon} size={16} />
-                  </span>
-                  <span className="door__label">{t(door.key)}</span>
-                  <span className="door__note">{t(door.note)}</span>
-                  <Icon name="chevron" size={15} className="door__go" />
-                </Link>
-              </li>
-            ))}
-          </ul>
         </section>
       </ConsoleShell>
     </>

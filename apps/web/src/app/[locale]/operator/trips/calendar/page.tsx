@@ -11,6 +11,7 @@ import Link from 'next/link';
 import { SiteHeader } from '@/components/SiteHeader';
 import { PreviewBanner } from '@/components/PreviewBanner';
 import { ConsoleShell } from '@/components/ConsoleShell';
+import { operatorNav } from '@/components/operator/OperatorNav';
 import { EmptyState } from '@/components/ui/Feedback';
 import { Badge } from '@/components/ui/Feedback';
 import { activeOrganization, loadAccountContext } from '@/lib/account';
@@ -111,16 +112,6 @@ export default async function OperatorTripsCalendarPage({
       ? `${MONTHS_AR[monthIndex] ?? ''} ${year}`
       : `${first.toLocaleString('en-US', { month: 'long', timeZone: 'UTC' })} ${year}`;
 
-  const nav = [
-    { key: 'console.navOverview' as TranslationKey, href: `/${locale}/operator` },
-    { key: 'console.navTrips' as TranslationKey, href: `/${locale}/operator/trips` },
-    { key: 'trips.calendar' as TranslationKey, href: `/${locale}/operator/trips/calendar` },
-    { key: 'console.navVehicles' as TranslationKey, href: `/${locale}/operator/vehicles` },
-
-    { key: 'console.navFleet' as TranslationKey, href: `/${locale}/operator/fleet` },
-    { key: 'console.navDrivers' as TranslationKey, href: `/${locale}/operator/drivers` },
-  ];
-
   return (
     <>
       <SiteHeader locale={locale} pathname="/operator/trips" />
@@ -130,7 +121,7 @@ export default async function OperatorTripsCalendarPage({
         locale={locale}
         title="trips.calendar"
         subtitle="trips.calendarHint"
-        items={nav}
+        groups={operatorNav(locale)}
       >
         {!loaded.configured ? <PreviewBanner locale={locale} /> : null}
 

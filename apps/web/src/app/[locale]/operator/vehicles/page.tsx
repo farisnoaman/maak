@@ -3,6 +3,7 @@ import { translate, isLocale, type Locale, type TranslationKey } from '@maak/cor
 import { SiteHeader } from '@/components/SiteHeader';
 import { PreviewBanner } from '@/components/PreviewBanner';
 import { ConsoleShell } from '@/components/ConsoleShell';
+import { operatorNav } from '@/components/operator/OperatorNav';
 import { EmptyState } from '@/components/ui/Feedback';
 import { VehicleCard, publicPhotoUrl } from '@/components/fleet/VehicleCard';
 import { activeOrganization, loadAccountContext } from '@/lib/account';
@@ -45,15 +46,6 @@ export default async function OperatorVehiclesPage({
       .map((photo) => [photo.vehicleId, photo.storagePath]),
   );
 
-  const nav = [
-    { key: 'console.navOverview' as TranslationKey, href: `/${locale}/operator` },
-    { key: 'console.navVehicles' as TranslationKey, href: `/${locale}/operator/vehicles` },
-
-    { key: 'console.navFleet' as TranslationKey, href: `/${locale}/operator/fleet` },
-    { key: 'console.navDrivers' as TranslationKey, href: `/${locale}/operator/drivers` },
-    { key: 'org.team' as TranslationKey, href: `/${locale}/operator/team` },
-  ];
-
   return (
     <>
       <SiteHeader locale={locale} pathname="/operator/vehicles" />
@@ -63,7 +55,18 @@ export default async function OperatorVehiclesPage({
         locale={locale}
         title="fleet.vehicles"
         subtitle="console.subtitle.operator"
-        items={nav}
+        groups={operatorNav(locale)}
+        facts={[
+          { label: t('console.navVehicles'), value: String(vehicles.length) },
+          {
+            label: t('verification.status.pending'),
+            value: String(
+              vehicles.filter((vehicle) => vehicle.verificationStatus === 'pending').length,
+            ),
+            href: `/${locale}/operator/vehicles`,
+            tone: vehicles.some((v) => v.verificationStatus === 'pending') ? 'warning' : undefined,
+          },
+        ]}
       >
         {!loaded.configured ? <PreviewBanner locale={locale} /> : null}
 

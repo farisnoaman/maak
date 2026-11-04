@@ -50,7 +50,7 @@ export default async function FinancePaymentsPage({
         locale={locale}
         title="financePayments.title"
         subtitle="financePayments.subtitle"
-        items={financeNav(locale)}
+        groups={financeNav(locale)}
       >
         <section>
           <h2>

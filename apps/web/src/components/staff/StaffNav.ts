@@ -1,4 +1,6 @@
 import type { ConsoleNavGroup } from '@/components/ConsoleShell';
+import type { IconName } from '@/components/ui/Icon';
+import type { TranslationKey } from '@maak/core';
 
 /**
  * The staff console's navigation, in one place.
@@ -12,26 +14,32 @@ import type { ConsoleNavGroup } from '@/components/ConsoleShell';
  * things up in.
  */
 export function staffNav(locale: string): readonly ConsoleNavGroup[] {
+  const item = (key: TranslationKey, href: string, icon: IconName) => ({
+    key,
+    href: `/${locale}${href}`,
+    icon,
+  });
+
   return [
     {
       key: 'console.groupWork',
       items: [
-        { key: 'console.navOverview', href: `/${locale}/staff` },
-        { key: 'ops.dashboard', href: `/${locale}/staff/dashboard` },
-        { key: 'ops.scan', href: `/${locale}/staff/scan` },
+        item('console.navOverview', '/staff', 'spark'),
+        item('ops.dashboard', '/staff/dashboard', 'calendar'),
+        item('ops.scan', '/staff/scan', 'ticket'),
       ],
     },
     {
       key: 'console.groupReview',
       items: [
-        { key: 'staff.trips.title', href: `/${locale}/staff/trips` },
-        { key: 'console.navVerifications', href: `/${locale}/staff/verifications` },
-        { key: 'fleet.staffQueue', href: `/${locale}/staff/vehicles` },
+        item('staff.trips.title', '/staff/trips', 'route'),
+        item('console.navVerifications', '/staff/verifications', 'shield'),
+        item('fleet.staffQueue', '/staff/vehicles', 'bus'),
       ],
     },
     {
       key: 'console.groupReference',
-      items: [{ key: 'nav.places', href: `/${locale}/admin/places` }],
+      items: [item('nav.places', '/admin/places', 'pin')],
     },
   ];
 }

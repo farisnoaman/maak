@@ -25,7 +25,7 @@ export interface ConsoleFact {
   readonly value: string;
   readonly note?: string;
   readonly href?: string;
-  readonly tone?: 'warning';
+  readonly tone?: 'warning' | 'danger';
 }
 
 /**
@@ -211,7 +211,7 @@ export function ConsoleShell({
               </Link>
             ) : (
               <div
-                className={`console-kpi${fact.tone === 'warning' ? ' console-kpi--warn' : ''}`}
+                className={`console-kpi${fact.tone ? ` console-kpi--${fact.tone}` : ''}`}
                 key={fact.label}
               >
                 {inner}

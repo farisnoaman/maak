@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation';
 import { formatMinor, isLocale, translate, type Locale, type TranslationKey } from '@maak/core';
 import { SiteHeader } from '@/components/SiteHeader';
 import { ConsoleShell } from '@/components/ConsoleShell';
+import { operatorNav } from '@/components/operator/OperatorNav';
 import { Badge } from '@/components/ui/Feedback';
 import { PayoutRequestForm } from '@/components/payments/PayoutDesk';
 import { activeOrganization, loadAccountContext } from '@/lib/account';
@@ -44,16 +45,6 @@ export default async function OperatorPayoutsPage({
     (account) => account.kind !== 'platform' && account.status === 'active',
   );
 
-  const nav = [
-    { key: 'console.navOverview' as TranslationKey, href: `/${locale}/operator` },
-    { key: 'console.navVehicles' as TranslationKey, href: `/${locale}/operator/vehicles` },
-    { key: 'console.navFleet' as TranslationKey, href: `/${locale}/operator/fleet` },
-    { key: 'console.navDrivers' as TranslationKey, href: `/${locale}/operator/drivers` },
-    { key: 'console.navPayments' as TranslationKey, href: `/${locale}/operator/payments` },
-    { key: 'console.navPayouts' as TranslationKey, href: `/${locale}/operator/payouts` },
-    { key: 'org.team' as TranslationKey, href: `/${locale}/operator/team` },
-  ];
-
   return (
     <>
       <SiteHeader locale={locale} pathname="/operator/payouts" />
@@ -63,7 +54,7 @@ export default async function OperatorPayoutsPage({
         locale={locale}
         title="payouts.title"
         subtitle="payouts.subtitle"
-        items={nav}
+        groups={operatorNav(locale)}
       >
         <section>
           <p className="payout-available">
