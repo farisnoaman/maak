@@ -64,6 +64,8 @@ const ALL_ROUTES = [
   { path: '/en/staff/verifications', lang: 'en', dir: 'ltr', account: 'staff' },
   { path: '/ar/admin/users', lang: 'ar', dir: 'rtl', account: 'staff' },
   { path: '/en/admin/users', lang: 'en', dir: 'ltr', account: 'staff' },
+  { path: '/ar/admin/users/roles', lang: 'ar', dir: 'rtl', account: 'staff' },
+  { path: '/en/admin/users/roles', lang: 'en', dir: 'ltr', account: 'staff' },
   { path: '/ar/admin/users/deletions', lang: 'ar', dir: 'rtl', account: 'staff' },
   { path: '/en/admin/users/deletions', lang: 'en', dir: 'ltr', account: 'staff' },
   // Phase 2 surfaces

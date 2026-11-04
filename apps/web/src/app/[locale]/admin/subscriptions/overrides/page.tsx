@@ -43,10 +43,10 @@ export default async function AdminQuotaOverridesPage({
   if (!allowed) {
     return (
       <>
-        <SiteHeader locale={locale} pathname="/admin/subscriptions" />
+        <SiteHeader locale={locale} pathname="/admin/subscriptions/overrides" />
         <ConsoleShell
           consoleTitle="console.admin"
-          pathname="/admin/subscriptions"
+          pathname="/admin/subscriptions/overrides"
           locale={locale}
           title="subs.overrides"
           subtitle="subs.overridesSubtitle"
@@ -63,10 +63,10 @@ export default async function AdminQuotaOverridesPage({
 
   return (
     <>
-      <SiteHeader locale={locale} pathname="/admin/subscriptions" />
+      <SiteHeader locale={locale} pathname="/admin/subscriptions/overrides" />
       <ConsoleShell
         consoleTitle="console.admin"
-        pathname="/admin/subscriptions"
+        pathname="/admin/subscriptions/overrides"
         locale={locale}
         title="subs.overrides"
         subtitle="subs.overridesSubtitle"

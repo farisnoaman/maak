@@ -76,6 +76,9 @@ questions in the order they ask them.**
 | 28 | **The public front door, in warm paper** | The console got the material; home still wore mid-grey hairlines, a blue-cast shadow, a black rule over each step and a gradient banner | `[x]` — §33 |
 | 29 | The marketplace list | The panel, the toolbar and the chips were three shades of the same grey, and an applied filter was a 32px target | `[x]` — §34 |
 | 30 | The trips toolbar | *Filters* and *Soonest / Cheapest / Featured* acted on the same list from opposite ends of the page, one a 16rem column and one a row; the results paid a third of the width for the column | `[x]` — §35 |
+| 31 | **The console had no chrome** | The rail was the same paper as the page, the header a title over a hairline, the figures three loose numbers, the tables the browser's — and three screens that had been given pages of their own (`/users/deletions`, `/plans/commissions`, `/subscriptions/overrides`) had no way in from the navigation at all | `[x]` — §36 |
+| 32 | Users & roles, two jobs in one column | The directory of fifty accounts ended in a grant/revoke fieldset, so the read screen carried the write control and the question the control raises ("who else is an admin?") was answered nowhere | `[x]` — §36 |
+| 33 | **The staff desk opened on a wall** | *Find a trip* — six controls and eleven chips — stood open above the queue on every visit, so the page a staff member came for began below the fold | `[x]` — §37 |
 | 27 | Two more pages with two jobs each | Subscriptions carried the payer list and the support grants; users carried the directory and the deletion queue | `[x]` — §32 |
 
 ## 3–4. Trips list and trip detail — what changed
@@ -1283,3 +1286,103 @@ and with `?sort=cheapest&direct=1` the button receives `activeCount: 1` (the bad
 `check:responsive` ✓ (110 media queries), `check:guards` ✓ — including §15, React may not render `<details open>` —
 `check:all` ✓, build ✓, `check:a11y` ✓ over **117 routes**. **Gap:** no browser — the panel's position under the row,
 its three-column form at 720px and the two-line row at 559px are read from the CSS.
+
+## 36. The console gets a frame — and the admin console gets its pages back
+
+**The report.** *"Enhance the visuals of console pages, I'm not happy about console, I want separate pages to manage
+things well."* Then, narrowing it: **admin first**, **one job per page**, and **console chrome with the warm paper
+kept**.
+
+**What was wrong, in two parts.**
+
+*The visuals.* A console was a page with a list beside it. The rail was the same paper as the content, separated by a
+hairline; the header was a title over a rule; the figures were three loose numbers with no frame; the tables were the
+browser's, scrolled sideways without a sticky heading; and the rail's current item was a pale ghost. Nothing said
+*console*. It read as a document that happens to have links — the opposite of the job, which is a place you work all
+day.
+
+*The structure.* Admin had been split two screens at a time (§26, §32) but the console still had two problems:
+
+1. **Three screens were orphaned.** `/admin/users/deletions`, `/admin/plans/commissions` and
+   `/admin/subscriptions/overrides` each had their own page and each was reachable only by a button on its parent, and
+   none of them was in the navigation. A screen nobody can find is a screen nobody uses.
+2. **`/admin/users` was still two jobs.** A directory of fifty accounts ended in a grant/revoke fieldset: the read
+   screen carried the dangerous write control, and the question the control raises — *who else is an admin?* — was
+   answered nowhere on the page. Its own comment admitted the risk ("the command refuses to demote the only admin")
+   instead of showing the ledger.
+
+**What it is now.**
+
+**The rail** (§36 in the stylesheet). Deep forest in both themes — `--brand-900` is fixed, unlike `--ink-*` and
+`--surface-*`, so the console keeps one identity at night while the paper beside it goes dark on its own. Cream
+destinations, group captions in 11px capitals on a hairline, and the screen you are on as a **cream plate with forest
+ink** — the one high-value surface inside the rail, so a glance finds the current screen before it reads a word. It is
+a rounded panel with a light shadow, sticky, and it scrolls itself. On a phone the console still wears its colour: one
+dark 44px row that names where you are and opens the list beneath it in place.
+
+**The glyphs.** A console can declare an icon per destination (`ConsoleNavItem.icon`); the shell paints them on every
+row or on none, because a rail where three rows have a mark and seven do not looks like a page missing its images. The
+admin console declares eleven; the operator's and the staff desk's flat lists declare none and are unchanged.
+
+**The header band.** An eyebrow above the title — *Admin / People* — so the page says where you are before it says what
+you are looking at; the sidebar scrolls away, that line does not. Then the title, the sentence, and on the same band the
+figures and the page's verb.
+
+**The figures are one ledger line.** A bordered strip of cells divided by hairlines (label in 11px capitals, value in
+tabular figures), instead of three floating numbers that read as captions.
+
+**Sections are documents.** A section head is now a heading and a count on a rule — and the rules are `--paper-edge`
+everywhere, not the grey of a different era. **Tables** are a block of paper you scroll inside: the column headings stay
+put (`position: sticky`), the frame is warm, and a row's own verb sits at the inline end so the buttons form a column.
+
+**The overview is a map with numbers.** The admin index and the rail are now **one declared map**
+(`adminDestinations`), rendered twice — as the walkable list and as the readable index — so they cannot disagree, and
+each group heading carries the count of what is behind it. That map is also how the three orphaned screens came back:
+People is *Users · Roles & access · Deletion requests*, Money is *Plans · Commission rules · Subscriptions · Quota
+overrides*.
+
+**The active row is resolved, not annotated.** Every page used to pass its *parent's* path as `pathname` and paint its
+own row by hand, so the pages that forgot lit up nothing. The rail now takes the longest prefix of the current path: a
+child screen names itself if the map has it, and belongs to its parent if it does not.
+
+**`/admin/users/roles` is a page.** The grant/revoke control, with the ledger it should have had: one row per platform
+role — the name, the number of holders, and who they are. The directory keeps the read, and each row hands its person
+over (`?user=`), so acting on someone does not begin with finding them again in a select of fifty.
+
+**Verified.** `/en|ar /admin` · `/admin/users` · `/admin/users/roles` · `/admin/users/deletions` ·
+`/admin/plans/commissions` · `/admin/subscriptions/overrides` all 200 with the right `aria-current` row and the right
+eyebrow (`Admin/People`, `الإدارة/الأشخاص`). `tsc` ✓, `prettier` ✓, `check:guards` ✓ (32 core, 203 style, 46 migrations,
+135 commands), `check:responsive` ✓ (115 media queries), `check:all` ✓, `next build` ✓, `check:a11y` ✓ over **119
+routes** (the new page added to the list). **Gap:** no browser — the rail's sticky panel, the cream plate in dark mode,
+the sticky table header and the ledger's two-column fold at 639px are read from the CSS.
+
+## 37. *Find a trip* is a button, not a wall
+
+**The report.** *"Find Trip should be like filter wrapped in a button instead of always showing flattened in the page."*
+
+**What was wrong.** `/staff/trips` had one job in the URL and two on the screen. Without filters it is the verification
+queue; with them it is the staff search. But the search form stood open on **every** visit — a query field, five status
+chips, two dates, a governorate select and four verification chips, in a card above the queue. A staff member arriving
+to decide one submission scrolled past a form they had not asked for, and the queue — the reason the page exists —
+started below the fold.
+
+**What it is now** (stylesheet §37). One row, in the shape §35 gave the marketplace:
+
+- **`0 results` / `3 waiting for review` · [🔍 Find a trip ③] [Export CSV]`** — the count the page already knew, the
+  disclosure, and the export of exactly the rows those filters return.
+- The button is the `<details>`' own summary, so it is keyboard-operable with no JavaScript, and the panel is placed
+  **absolutely against the row** — it covers the results instead of pushing them down and back up. It closes on
+  *Apply*, on `Escape` (focus back to the button) and on a press outside, because a panel over the list must not
+  require a second, precise target to dismiss (`FiltersMenu`, unchanged).
+- The button wears **the number of filters in force**, so a filtered view can never be mistaken for a plain one — the
+  same guarantee the marketplace's badge gives.
+- Inside the panel the form keeps every field, in three columns from 720px: the query, the trip status, then the
+  history and the verification decision. Its hint and its actions span the row.
+- The count line moved out of the results section (it was printed twice) and out of the queue (same), so the toolbar
+  is the one place that says how much there is.
+
+**Verified.** `/en|ar /staff/trips` server-render `count → <div controls> → <details><summary>[icon] Find a trip</summary>
+<div panel><form>…</form></div></details> → export`; with `?q=AD&status=draft&from=2026-01-01` the summary carries
+`data-active="true"` and the badge reads `3`, and the old `ops-toolbar` count row is gone. `tsc` ✓, `prettier` ✓,
+`check:guards` ✓, `check:responsive` ✓ (118 media queries), `check:a11y` ✓ over **119 routes**. **Gap:** no browser —
+the panel's overlay position under the row and the three-column form at 720px are read from the CSS.

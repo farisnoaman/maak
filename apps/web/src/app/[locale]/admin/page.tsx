@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { isLocale, translate, type Locale, type TranslationKey } from '@maak/core';
 import { SiteHeader } from '@/components/SiteHeader';
 import { ConsoleShell } from '@/components/ConsoleShell';
-import { adminNav } from '@/components/admin/AdminNav';
+import { adminDestinations, adminNav } from '@/components/admin/AdminNav';
 import { loadAccountContext } from '@/lib/account';
 
 /**
@@ -31,61 +31,8 @@ export default async function AdminConsolePage({
   const loaded = await loadAccountContext();
   const isAdmin = !loaded.configured || loaded.roles.includes('platform_admin');
 
-  const groups: {
-    key: TranslationKey;
-    items: { key: TranslationKey; note: TranslationKey; href: string }[];
-  }[] = [
-    {
-      key: 'console.groupGeography',
-      items: [
-        {
-          key: 'nav.regions',
-          note: 'geo.subtitle',
-          href: `/${locale}/admin/regions`,
-        },
-        {
-          key: 'nav.places',
-          note: 'places.subtitle',
-          href: `/${locale}/admin/places`,
-        },
-      ],
-    },
-    {
-      key: 'console.groupPeople',
-      items: [
-        {
-          key: 'console.navUsers',
-          note: 'admin.subtitle',
-          href: `/${locale}/admin/users`,
-        },
-      ],
-    },
-    {
-      key: 'console.groupMoney',
-      items: [
-        {
-          key: 'financeNav.plans',
-          note: 'plans.subtitle',
-          href: `/${locale}/admin/plans`,
-        },
-        {
-          key: 'financeNav.subscriptions',
-          note: 'subs.subtitle',
-          href: `/${locale}/admin/subscriptions`,
-        },
-      ],
-    },
-    {
-      key: 'console.groupPlatform',
-      items: [
-        {
-          key: 'catalogue.title',
-          note: 'catalogue.subtitle',
-          href: `/${locale}/admin/notifications`,
-        },
-      ],
-    },
-  ];
+  /* One map, declared in `AdminNav` and rendered twice: as the rail, and as this index. */
+  const groups = adminDestinations(locale);
 
   return (
     <>
@@ -104,7 +51,10 @@ export default async function AdminConsolePage({
           <div className="admin-index">
             {groups.map((group) => (
               <section className="admin-index__group" key={group.key}>
-                <h2>{t(group.key)}</h2>
+                <h2>
+                  <span>{t(group.key)}</span>
+                  <span className="admin-index__count">{group.items.length}</span>
+                </h2>
                 <ul>
                   {group.items.map((item) => (
                     <li key={item.href}>

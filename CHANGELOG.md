@@ -13,6 +13,37 @@ on `main`; the tag is the last step, not the first.
 
 ## [Unreleased] — after the last phase report
 
+### Changed — *Find a trip* is a button, not a wall (`docs/polish-plan.md` §37)
+
+- `/staff/trips` opened on the search form: a query field, five status chips, two dates, a governorate select and four
+  verification chips, in a card above the queue — so the queue began below the fold.
+- The same form now lives behind **[Find a trip]** in one row with the count and the export: the count the page already
+  knew, the disclosure, and the CSV of exactly those rows. The `<details>` summary is the button (no JavaScript
+  needed), the panel is placed against the row so it covers the results instead of shoving them down, and it closes on
+  *Apply*, `Escape` and a press outside. The badge counts the filters in force, so a filtered view cannot be mistaken
+  for a plain one.
+- The results count was printed in two places; the toolbar is now the one place that says how much there is.
+
+### Changed — the console gets a frame, and the admin console gets its pages back (`docs/polish-plan.md` §36)
+
+- **The rail is the console**: a deep-forest panel in both themes (a fixed brand colour, so the console keeps one
+  identity at night while the paper beside it goes dark), cream destinations, group captions on a hairline, and the
+  current screen as a cream plate with forest ink — the only high-value surface inside the rail.
+- **Glyphs in the rail**: a console may declare an icon per destination; the shell paints them on every row or on
+  none. Admin declares eleven.
+- **The header band names where you are** — an eyebrow (*Admin / People*) above the title — and the page's **figures are
+  one ledger line**: a bordered strip of cells divided by hairlines, values in tabular figures.
+- **Tables are a block of paper you scroll inside**: sticky column headings, warm frame, and each row's verb aligned at
+  the inline end.
+- **One map, rendered twice**: `adminDestinations` drives both the rail and the overview index (group headings now carry
+  counts), so the two cannot disagree — and the three orphaned screens (`/admin/users/deletions`,
+  `/admin/plans/commissions`, `/admin/subscriptions/overrides`) are finally in the navigation.
+- **The active row is resolved by longest prefix**, not annotated by hand per page — child screens now light up their
+  own row, or their parent's.
+- **`/admin/users/roles` is a page**: grant/revoke, plus the ledger it should always have had — one row per platform
+  role with its holder count and names. The directory keeps the read, and each row hands its person over (`?user=`).
+  `RoleConsole` is gone, replaced by `UserDirectory` + `RoleGrants`.
+
 ### Changed — the trips toolbar: Filters and the sort tabs, one row (`docs/polish-plan.md` §35)
 
 - **`3 trips` · [Filters ②] [Soonest · Cheapest · Featured]`** — the two controls that act on the same list shared

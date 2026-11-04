@@ -41,7 +41,7 @@ export default async function AdminDeletionsPage({
   if (!isAdmin) {
     return (
       <>
-        <SiteHeader locale={locale} pathname="/admin/users" />
+        <SiteHeader locale={locale} pathname="/admin/users/deletions" />
         <main id="main" className="shell section">
           <h1>{t('admin.deletionTitle')}</h1>
           <EmptyState title={t('errors.FORBIDDEN')} description={t('admin.deletionHint')} />
@@ -56,10 +56,10 @@ export default async function AdminDeletionsPage({
 
   return (
     <>
-      <SiteHeader locale={locale} pathname="/admin/users" />
+      <SiteHeader locale={locale} pathname="/admin/users/deletions" />
       <ConsoleShell
         consoleTitle="console.admin"
-        pathname="/admin/users"
+        pathname="/admin/users/deletions"
         locale={locale}
         title="admin.deletionTitle"
         subtitle="admin.deletionHint"

@@ -1,12 +1,18 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { translate, type Locale, type TranslationKey } from '@maak/core';
-import { Icon } from './ui/Icon';
+import { Icon, type IconName } from './ui/Icon';
 import { DetailsForDesktop } from './ui/DetailsForDesktop';
 
 export interface ConsoleNavItem {
   readonly key: TranslationKey;
   readonly href: string;
+  /**
+   * The mark beside the row. Optional, and per console rather than per row: a rail where three destinations have a
+   * glyph and seven do not looks like a page missing its images, so the shell only paints icons when the console
+   * declares them for its list (see `.console-nav--icons`).
+   */
+  readonly icon?: IconName;
 }
 
 export interface ConsoleNavGroup {
@@ -79,10 +85,29 @@ export function ConsoleShell({
   const sections: readonly ConsoleNavGroup[] = groups ?? (items ? [{ key: title, items }] : []);
   const current = pathname ? `/${locale}${pathname}` : null;
   const brand = consoleTitle ?? title;
+
+  /**
+   * The destination you are standing on, by the longest prefix — not by exact match.
+   *
+   * A console is a tree: `/admin/users/deletions` is a screen *inside* Users, `/admin/regions/new` is Regions at the
+   * moment of adding one. Every one of those pages used to pass its parent's path as `pathname` and paint its own
+   * row as current by hand, which meant the sub-screens that forgot (the quota grants, the commissions desk) lit up
+   * nothing at all — a console where half the pages say you are nowhere. The sidebar knows the tree, so it resolves
+   * it: the row that matches most of the path is the row you are on, and `/admin/users/deletions` can name itself.
+   */
+  const flat = sections.flatMap((section) => section.items.map((item) => ({ ...item, section })));
+  const active = current
+    ? flat
+        .filter((item) => current === item.href || current.startsWith(`${item.href}/`))
+        .sort((a, b) => b.href.length - a.href.length)[0]
+    : undefined;
+
   /* The menu's second line: the destination you are standing on, named. Falls back to the console's own name. */
-  const currentKey =
-    sections.flatMap((section) => section.items).find((item) => item.href === current)?.key ??
-    brand;
+  const currentKey = active?.key ?? brand;
+  /* The band above the title: the console, then the group of screens this one belongs to. */
+  const groupKey = groups && active ? active.section.key : null;
+  /* Icons are a console's choice, not a row's: see `ConsoleNavItem.icon`. */
+  const hasIcons = flat.some((item) => item.icon !== undefined);
 
   return (
     <main id="main" className="shell console-layout">
@@ -123,19 +148,23 @@ export function ConsoleShell({
             </span>
           </summary>
 
-          <nav className="console-nav" aria-label={t(brand)}>
+          <nav
+            className={hasIcons ? 'console-nav console-nav--icons' : 'console-nav'}
+            aria-label={t(brand)}
+          >
             {sections.map((section) => (
               <div className="console-nav__group" key={section.key}>
                 {groups ? <p className="console-nav__label">{t(section.key)}</p> : null}
                 {section.items.map((item) => {
-                  const active = current !== null && item.href === current;
+                  const here = active?.href === item.href;
                   return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      aria-current={active ? 'page' : undefined}
-                    >
-                      {t(item.key)}
+                    <Link key={item.href} href={item.href} aria-current={here ? 'page' : undefined}>
+                      {hasIcons ? (
+                        <span className="console-nav__icon" aria-hidden="true">
+                          {item.icon ? <Icon name={item.icon} size={16} /> : null}
+                        </span>
+                      ) : null}
+                      <span className="console-nav__text">{t(item.key)}</span>
                     </Link>
                   );
                 })}
@@ -152,6 +181,18 @@ export function ConsoleShell({
       <div className="console-main">
         <header className="console-head">
           <div className="console-head__text">
+            {/* Where you are, above what you are looking at. The sidebar scrolls away; this line does not. */}
+            <p className="console-head__eyebrow">
+              <span>{t(brand)}</span>
+              {groupKey ? (
+                <>
+                  <span className="console-head__eyebrow-sep" aria-hidden="true">
+                    /
+                  </span>
+                  <span>{t(groupKey)}</span>
+                </>
+              ) : null}
+            </p>
             <h1>{t(title)}</h1>
             <p className="console-head__sub">{t(subtitle)}</p>
           </div>

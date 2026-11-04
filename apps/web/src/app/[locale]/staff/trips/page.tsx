@@ -16,6 +16,7 @@ import { PreviewBanner } from '@/components/PreviewBanner';
 import { ConsoleShell } from '@/components/ConsoleShell';
 import { Badge, EmptyState } from '@/components/ui/Feedback';
 import { StaffTripReview } from '@/components/trips/StaffTripReview';
+import { FiltersMenu } from '@/components/trips/FiltersMenu';
 import { DirectionalIcon } from '@/components/ui/DirectionalIcon';
 import { loadAccountContext } from '@/lib/account';
 import { loadStaffTrips, loadTrips } from '@/lib/trips';
@@ -97,6 +98,15 @@ export default async function StaffTripsPage({
   ).filter((value): value is 'unverified' | 'pending' | 'verified' | 'rejected' =>
     ['unverified', 'pending', 'verified', 'rejected'].includes(value),
   );
+  /* How many filters are in force — the badge on the button. Counted, not recomputed from strings. */
+  const activeFilterCount =
+    (q !== '' ? 1 : 0) +
+    requested.length +
+    verification.length +
+    (from !== '' ? 1 : 0) +
+    (to !== '' ? 1 : 0) +
+    (gov !== '' ? 1 : 0);
+
   const searching =
     q !== '' ||
     requested.length > 0 ||
@@ -174,110 +184,127 @@ export default async function StaffTripsPage({
       >
         {!loaded.configured ? <PreviewBanner locale={locale} /> : null}
 
-        {/* The filters used to be a bare grid between the panel edge and the results, with no title and no
-            boundary — it read as page furniture rather than as the tool that decides what the table shows. */}
-        <section className="card ops-filters" aria-labelledby="staff-search">
-          <h2 id="staff-search">{t('staff.trips.find')}</h2>
-          <p className="form-hint">{t('staff.trips.searchHint')}</p>
-          <form method="get" action={`/${locale}/staff/trips`} className="trip-filters trip-search">
-            <div className="trip-filters__group">
-              <label htmlFor="staff-q">{t('trips.search.q')}</label>
-              <input
-                id="staff-q"
-                name="q"
-                type="search"
-                defaultValue={q}
-                className="ui-input"
-                placeholder={t('trips.code')}
-              />
-            </div>
+        {/*
+          The search is a button now, not a wall.
 
-            <fieldset className="trip-filters__group">
-              <legend>{t('trips.statusLabel')}</legend>
-              <div className="trip-filters__options">
-                {STATUSES.map((status) => (
-                  <label className="trip-filters__option" key={status}>
-                    <input
-                      type="checkbox"
-                      name="status"
-                      value={status}
-                      defaultChecked={requested.includes(status)}
-                    />
-                    <span>{t(tripStatusKey(status))}</span>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
+          Six controls and eleven chips used to stand open above the queue on every visit — a staff member arriving
+          to review a submission scrolled past a search form they had not asked for, and the queue that *is* the
+          page began below the fold. The form is the same form; it lives in the panel that the button drops, in the
+          one row that also carries the count and the export. It closes on Apply, on Escape and on a press outside
+          (see `FiltersMenu`), and the button wears the number of filters in force so an investigation cannot be
+          mistaken for an empty queue.
+        */}
+        <div className="console-toolbar">
+          <p className="console-toolbar__count" role="status">
+            {searching
+              ? t('staff.trips.results', { count: search?.items.length ?? 0 })
+              : (queue?.pending.length ?? 0) > 0
+                ? t('staff.trips.waiting', { count: queue?.pending.length ?? 0 })
+                : null}
+          </p>
+          <div className="console-toolbar__controls">
+            <FiltersMenu label={t('staff.trips.find')} activeCount={activeFilterCount}>
+              <form
+                method="get"
+                action={`/${locale}/staff/trips`}
+                className="trip-search"
+                aria-label={t('staff.trips.find')}
+              >
+                <p className="form-hint">{t('staff.trips.searchHint')}</p>
+                <div className="trip-filters__group">
+                  <label htmlFor="staff-q">{t('trips.search.q')}</label>
+                  <input
+                    id="staff-q"
+                    name="q"
+                    type="search"
+                    defaultValue={q}
+                    className="ui-input"
+                    placeholder={t('trips.code')}
+                  />
+                </div>
 
-            <fieldset className="trip-filters__group">
-              <legend>{t('ops.history')}</legend>
-              <div className="trip-filters__options trip-filters__options--dates">
-                <label>
-                  <span>{t('ops.filterFrom')}</span>
-                  <input type="date" name="from" defaultValue={from} className="ui-input" />
-                </label>
-                <label>
-                  <span>{t('ops.filterTo')}</span>
-                  <input type="date" name="to" defaultValue={to} className="ui-input" />
-                </label>
-                <label>
-                  <span>{t('ops.filterGovernorate')}</span>
-                  <select name="gov" defaultValue={gov} className="ui-input">
-                    <option value="">{t('ops.filterAny')}</option>
-                    {governorates.map((governorate) => (
-                      <option key={governorate.id} value={governorate.id}>
-                        {locale === 'ar'
-                          ? governorate.nameAr
-                          : (governorate.nameEn ?? governorate.nameAr)}
-                      </option>
+                <fieldset className="trip-filters__group">
+                  <legend>{t('trips.statusLabel')}</legend>
+                  <div className="trip-filters__options">
+                    {STATUSES.map((status) => (
+                      <label className="trip-filters__option" key={status}>
+                        <input
+                          type="checkbox"
+                          name="status"
+                          value={status}
+                          defaultChecked={requested.includes(status)}
+                        />
+                        <span>{t(tripStatusKey(status))}</span>
+                      </label>
                     ))}
-                  </select>
-                </label>
-              </div>
-              <p className="trip-filters__legend">{t('staff.trips.decision')}</p>
-              <div className="trip-filters__options">
-                {VERIFICATIONS.map((status) => (
-                  <label className="trip-filters__option" key={status}>
-                    <input
-                      type="checkbox"
-                      name="verification"
-                      value={status}
-                      defaultChecked={verification.includes(status)}
-                    />
-                    <span>{t(tripVerificationKey(status))}</span>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
+                  </div>
+                </fieldset>
 
-            <div className="trip-filters__actions">
-              <button type="submit" className="ui-btn ui-btn--primary">
-                {t('staff.trips.search')}
-              </button>
-              <Link className="ui-btn ui-btn--ghost" href={`/${locale}/staff/trips`}>
-                {t('trips.search.clear')}
-              </Link>
-            </div>
-          </form>
-        </section>
+                <fieldset className="trip-filters__group">
+                  <legend>{t('ops.history')}</legend>
+                  <div className="trip-filters__options trip-filters__options--dates">
+                    <label>
+                      <span>{t('ops.filterFrom')}</span>
+                      <input type="date" name="from" defaultValue={from} className="ui-input" />
+                    </label>
+                    <label>
+                      <span>{t('ops.filterTo')}</span>
+                      <input type="date" name="to" defaultValue={to} className="ui-input" />
+                    </label>
+                    <label>
+                      <span>{t('ops.filterGovernorate')}</span>
+                      <select name="gov" defaultValue={gov} className="ui-input">
+                        <option value="">{t('ops.filterAny')}</option>
+                        {governorates.map((governorate) => (
+                          <option key={governorate.id} value={governorate.id}>
+                            {locale === 'ar'
+                              ? governorate.nameAr
+                              : (governorate.nameEn ?? governorate.nameAr)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                  <p className="trip-filters__legend">{t('staff.trips.decision')}</p>
+                  <div className="trip-filters__options">
+                    {VERIFICATIONS.map((status) => (
+                      <label className="trip-filters__option" key={status}>
+                        <input
+                          type="checkbox"
+                          name="verification"
+                          value={status}
+                          defaultChecked={verification.includes(status)}
+                        />
+                        <span>{t(tripVerificationKey(status))}</span>
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+
+                <div className="trip-filters__actions">
+                  <button type="submit" className="ui-btn ui-btn--primary">
+                    {t('staff.trips.search')}
+                  </button>
+                  <Link className="ui-btn ui-btn--ghost" href={`/${locale}/staff/trips`}>
+                    {t('trips.search.clear')}
+                  </Link>
+                </div>
+              </form>
+            </FiltersMenu>
+            {searching && (search?.items.length ?? 0) > 0 ? (
+              <a
+                className="ui-btn ui-btn--ghost ui-btn--sm"
+                href={`/api/staff/trips/export?${exportQuery.toString()}`}
+                download
+              >
+                {t('ops.exportCsv')}
+              </a>
+            ) : null}
+          </div>
+        </div>
 
         {searching ? (
           <section aria-live="polite" aria-atomic="true">
-            <div className="ops-toolbar">
-              <p role="status" className="ops-toolbar__count">
-                {t('staff.trips.results', { count: search?.items.length ?? 0 })}
-              </p>
-              {(search?.items.length ?? 0) > 0 ? (
-                <a
-                  className="ui-btn ui-btn--ghost ui-btn--sm"
-                  href={`/api/staff/trips/export?${exportQuery.toString()}`}
-                  download
-                >
-                  {t('ops.exportCsv')}
-                </a>
-              ) : null}
-            </div>
-
             {search?.error ? (
               <p className="fleet-error" role="alert">
                 {t('errors.FORBIDDEN')}
@@ -367,12 +394,6 @@ export default async function StaffTripsPage({
           </section>
         ) : (
           <>
-            {/* The count is only worth a line when there is a count; at zero the panel below says it better. */}
-            {(queue?.pending.length ?? 0) > 0 ? (
-              <p className="trip-form__hint">
-                {t('staff.trips.waiting', { count: queue?.pending.length ?? 0 })}
-              </p>
-            ) : null}
             <StaffTripReview locale={locale} trips={queue?.pending ?? []} />
           </>
         )}
