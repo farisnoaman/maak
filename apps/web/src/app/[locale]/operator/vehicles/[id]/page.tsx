@@ -3,6 +3,7 @@ import { isLocale, translate, type Locale, type TranslationKey } from '@maak/cor
 import { SiteHeader } from '@/components/SiteHeader';
 import { PreviewBanner } from '@/components/PreviewBanner';
 import { ConsoleShell } from '@/components/ConsoleShell';
+import { operatorNav } from '@/components/operator/OperatorNav';
 import { EmptyState } from '@/components/ui/Feedback';
 import { VehicleDetail } from '@/components/fleet/VehicleDetail';
 import { loadAccountContext } from '@/lib/account';
@@ -49,7 +50,7 @@ export default async function VehicleDetailPage({
           locale={locale}
           title="fleet.vehicles"
           subtitle="console.subtitle.operator"
-          items={[{ key: 'console.navVehicles', href: `/${locale}/operator/vehicles` }]}
+          groups={operatorNav(locale)}
         >
           <EmptyState title={t('errors.NOT_FOUND')} />
         </ConsoleShell>
@@ -67,13 +68,7 @@ export default async function VehicleDetailPage({
         locale={locale}
         title="fleet.vehicles"
         subtitle="console.subtitle.operator"
-        items={[
-          { key: 'console.navOverview', href: `/${locale}/operator` },
-          { key: 'console.navVehicles', href: `/${locale}/operator/vehicles` },
-
-          { key: 'console.navFleet', href: `/${locale}/operator/fleet` },
-          { key: 'console.navDrivers', href: `/${locale}/operator/drivers` },
-        ]}
+        groups={operatorNav(locale)}
       >
         {preview ? <PreviewBanner locale={locale} /> : null}
         <a className="btn btn--ghost" href={`/${locale}/operator/vehicles`}>

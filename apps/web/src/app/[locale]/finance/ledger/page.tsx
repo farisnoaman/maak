@@ -73,7 +73,7 @@ export default async function FinanceLedgerPage({
         locale={locale}
         title="ledger.title"
         subtitle="ledger.subtitle"
-        items={financeNav(locale)}
+        groups={financeNav(locale)}
       >
         <section>
           <h2>{t('ledger.post')}</h2>

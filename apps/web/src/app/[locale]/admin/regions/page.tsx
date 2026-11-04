@@ -68,7 +68,11 @@ export default async function AdminRegionsPage({
         facts={[
           { label: t('geo.factRegions'), value: String(active.length) },
           { label: t('geo.factDistricts'), value: String(coveredDistricts) },
-          { label: t('geo.factSupervisors'), value: String(directory.supervisors.length) },
+          {
+            label: t('geo.factSupervisors'),
+            value: String(directory.supervisors.length),
+            href: `/${locale}/admin/regions/supervisors`,
+          },
         ]}
       >
         {directory.configured ? null : <PreviewBanner locale={locale} />}

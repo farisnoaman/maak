@@ -79,6 +79,10 @@ questions in the order they ask them.**
 | 31 | **The console had no chrome** | The rail was the same paper as the page, the header a title over a hairline, the figures three loose numbers, the tables the browser's — and three screens that had been given pages of their own (`/users/deletions`, `/plans/commissions`, `/subscriptions/overrides`) had no way in from the navigation at all | `[x]` — §36 |
 | 32 | Users & roles, two jobs in one column | The directory of fifty accounts ended in a grant/revoke fieldset, so the read screen carried the write control and the question the control raises ("who else is an admin?") was answered nowhere | `[x]` — §36 |
 | 33 | **The staff desk opened on a wall** | *Find a trip* — six controls and eleven chips — stood open above the queue on every visit, so the page a staff member came for began below the fold | `[x]` — §37 |
+| 34 | **The console had no dashboard in it** | The bare column sprawled the full width and read as a document; the rail that replaced it charged a permanent 236px column, so the data got two thirds of a laptop and the navigation took the eye — and neither put the screen's figures in front of the reader | `[x]` — §38 |
+| 35 | A panel with no numbers | Users, plans and regions printed their counts in prose (or not at all) while the figure a desk opens for — how many, how much — went unstated | `[x]` — §38 |
+| 36 | **Three consoles, three different navigation maps** | Operator re-declared its list in ten pages and no two agreed (the overview seven links, trips eight, vehicles six); finance was one flat row of ten with a tenth pointing at `/staff/dashboard`, another console; only admin and staff were grouped | `[x]` — §40 |
+| 37 | Figures only on the admin desk | Of 38 operator/staff/finance pages, one used the KPI strip; the rest put their counts in prose, mixed link-buttons and door lists that repeated the navigation | `[x]` — §40 |
 | 27 | Two more pages with two jobs each | Subscriptions carried the payer list and the support grants; users carried the directory and the deletion queue | `[x]` — §32 |
 
 ## 3–4. Trips list and trip detail — what changed
@@ -1386,3 +1390,88 @@ started below the fold.
 `data-active="true"` and the badge reads `3`, and the old `ops-toolbar` count row is gone. `tsc` ✓, `prettier` ✓,
 `check:guards` ✓, `check:responsive` ✓ (118 media queries), `check:a11y` ✓ over **119 routes**. **Gap:** no browser —
 the panel's overlay position under the row and the three-column form at 720px are read from the CSS.
+
+## 38. The console, as a dashboard — and the public pages in the same material
+
+**The report.** *"Can you redesign the console pages, do it in different way if possible."* Choices: keep the palette
+(emerald, not the reference site's pine), restructure as a **full-width grid dashboard**, and carry the material to
+**the public site** too.
+
+**Why a fourth shape.** Three had already been tried and each was wrong in the same direction — a frame that was not
+the content. The bordered `console-panel` wrapped every screen in a card. The flat column put the page on the
+browser's paper and let it sprawl the full 1120px: a document. The forest rail put the *navigation* in a panel as
+heavy as the content and charged a permanent 236px column for it — on a laptop the data got two thirds of the width
+while the rail took the eye, on every screen, forever.
+
+**What it is now** (stylesheet §38).
+
+- **A bar, not a rail.** The product's mark, the console's name and every destination in one sticky strip. Visible at
+  every width — no disclosure, no hamburger — scrolling sideways on a phone rather than folding away. Group captions
+  are 11px capitals above their tabs; the current tab is the one filled emerald cell in the strip.
+- **Figures lead.** The header band's loose numbers are a **KPI strip**: cards, auto-fitting, label in capitals, value
+  at display size with tabular figures, an optional note, and — when the figure has a screen behind it — the whole
+  card is the door to it (Users → *Deletion requests*, Plans → *Commission rules*, Regions → *Supervisors*).
+- **A two-column section grid** above 1080px, one column below. A section is a panel: paper, hairline, radius, air.
+  A table, a list, a form or a ledger spans both tracks by construction (`:has()`), so a page that is one long table
+  is not a page with an empty column beside it. Itemised things inside a panel keep their own smaller card — two
+  levels, and the limit.
+- **The dead sidebar is gone**: `.console-side*`, `.console-menu*` and the `DetailsForDesktop` mechanism that revealed
+  it are deleted, not overridden. The stylesheet shrank by ~250 lines even after the new block.
+- **Figures added where a screen had none**: `/admin/users` (accounts, verified, deletion requests), `/admin/plans`
+  (plans, commission rules).
+
+**The public pages** (§39). Same palette, same paper, same hairlines — what they borrow is the *shape* of a fact. The
+trip page's policy list and the booking breakdown drew their rows with **dashed** dividers, a form's convention
+borrowed by a page and the one treatment on the public site with no counterpart in the console. They are the ledger's
+card now: one solid hairline between rows, one radius, one paper (and inside a trip card, no frame at all, because the
+card is already the frame).
+
+**Palette unchanged.** This pass moved arrangement, not colour: `--brand-*` emerald, `--paper` warm, `--sand-*` accent.
+The reference site's pine/bronze was measured, documented and deliberately *not* adopted.
+
+**Verified.** `/en|ar` home, `/trips`, a trip page, and every `/admin/*` screen — 200 with the new bar, KPI strip and
+panels (`console-kpi--link` → `/admin/users/deletions` resolves); `tsc` ✓, `prettier` ✓, `check:guards` ✓ (32 core,
+203 style, 46 migrations, 135 commands), `check:responsive` ✓ (113 media queries — fewer than before, because the
+sidebar's breakpoints went with it), `check:all` ✓, `next build` ✓, `check:a11y` ✓ over **119 routes**. **Gap:** no
+browser — the sticky bar, the two-column fold at 1080px and the `:has()` span rules are read from the CSS.
+
+## 40. The other three consoles — one map each, and the figures where the work is
+
+**The report.** *"Continue other consoles."* The dashboard from §38 was applied to admin only; operator, staff, finance
+and driver still carried whatever navigation their page happened to build.
+
+**The navigation.** Every console now declares **one map**, and every page of that console reads it:
+
+- **Operator** (`components/operator/OperatorNav.ts`) was the worst case: about ten pages each declared their own
+  `items` array, and no two agreed — overview seven links, trips eight (plus the calendar and a staff shortcut),
+  vehicles six, fleet five, drivers three, payments four, and billing/expenses/payouts/team/settings their own
+  handfuls. The shortcuts that matter (the calendar from a trip, payouts from payments) appeared and vanished
+  depending on where you already were. Now: *Work* (Overview, Trips, Calendar) · *Fleet* (Vehicles, Drivers, Fleet
+  ops) · *Money* (Payments, Payouts, Billing, Expenses) · *Organisation* (Team, Settings). The staff shortcut moved to
+  the trip list, where a staff member with operator rights actually looks for a queue.
+- **Finance** (`payments/financeNav.ts`) was a flat list of nine equal links plus a tenth — *Overview* — pointing at
+  **`/staff/dashboard`**: a finance officer who clicked it landed in a different console, with that console's
+  navigation. Now grouped by the question each screen answers: *Desk* · *Incoming* · *Books* · *Counterparties*, and
+  the stray link is gone.
+- **Staff** keeps its existing three groups and gains the same glyph set, so the strip looks the same across the four
+  desks.
+- The operator's money pages get `operatorMoneyNav`, which is **the same map filtered** — *Work* and *Money* — rather
+  than the four-link list they used to show, which dropped the trip you were checking.
+
+**The figures.** Only one of the 38 operator/staff/finance pages used the KPI strip; the rest printed counts in prose,
+or spent a link-button and a door list repeating the navigation the bar already carries.
+
+- **Operator overview**: its four waiting-figures were a bespoke `stat-grid`; they are the shell's KPI strip now
+  (label, value, note, tone and the door all map one to one), and the "where the overview can go" door list — a second
+  copy of the navigation — is deleted. The clear-state sentence stays: it is the answer, not a figure.
+- **Staff dashboard**: the same conversion, including the *Scope* card (with the governorate names as its note).
+- **Finance dashboard**: profit / gross / payable as the strip, with the period as the note.
+- **Operator vehicles and drivers**: how many, and how many are waiting on a decision — the second one a warning card
+  that opens the queue.
+- `ConsoleFact.tone` learned `danger`, for the staff desk's stale-trip figure.
+
+**Verified.** Every operator (12), staff (6) and finance (9) page returns 200 with the new bar; the strip appears on
+`/operator`, `/operator/vehicles`, `/operator/drivers`, `/staff/dashboard`, `/staff/trips`, `/finance/dashboard`.
+`tsc` ✓, `prettier` ✓, `check:guards` ✓ (32 core, 203 style, 46 migrations, 135 commands), `check:responsive` ✓ (113
+media queries), `check:all` ✓, `next build` ✓ (compiled 13.4s), `check:a11y` ✓ over **119 routes**. **Gap:** no
+browser — the grouped strip's wrapping at 320px and the operator bar's ten tabs on a tablet are read from the CSS.

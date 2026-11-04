@@ -2,8 +2,8 @@ import { notFound, redirect } from 'next/navigation';
 import { isLocale, translate, type TranslationKey, type Locale } from '@maak/core';
 import { SiteHeader } from '@/components/SiteHeader';
 import { ConsoleShell } from '@/components/ConsoleShell';
+import { operatorMoneyNav } from '@/components/operator/OperatorNav';
 import { BillingPanel } from '@/components/finance/BillingPanel';
-import { operatorMoneyNav } from '@/components/payments/financeNav';
 import { loadAccountContext } from '@/lib/account';
 import {
   loadFinanceDashboard,
@@ -54,7 +54,7 @@ export default async function OperatorBillingPage({
         locale={locale}
         title="billing.title"
         subtitle="billing.subtitle"
-        items={operatorMoneyNav(locale)}
+        groups={operatorMoneyNav(locale)}
       >
         {dashboard === null ? (
           <p className="form-hint">{t('billing.noSubscription')}</p>

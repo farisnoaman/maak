@@ -75,7 +75,26 @@ export default async function FinanceDashboardPage({
         locale={locale}
         title="financeDash.title"
         subtitle="financeDash.subtitle"
-        items={financeNav(locale)}
+        groups={financeNav(locale)}
+        facts={
+          dashboard
+            ? [
+                {
+                  label: t('financeDash.profit'),
+                  value: formatMinor(dashboard.summary.profitYer, 'YER', { locale }),
+                  note: period,
+                },
+                {
+                  label: t('financeDash.gross'),
+                  value: formatMinor(dashboard.summary.grossYer, 'YER', { locale }),
+                },
+                {
+                  label: t('financeDash.payable'),
+                  value: formatMinor(dashboard.summary.payableYer, 'YER', { locale }),
+                },
+              ]
+            : undefined
+        }
       >
         {dashboard === null ? (
           /* Not the subtitle again: the header already carries it. "We could not read the ledger" is the one thing

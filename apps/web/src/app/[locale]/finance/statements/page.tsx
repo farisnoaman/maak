@@ -68,7 +68,7 @@ export default async function FinanceStatementsPage({
         locale={locale}
         title="statement.title"
         subtitle="statement.subtitle"
-        items={financeNav(locale)}
+        groups={financeNav(locale)}
       >
         <section>
           <h2>

@@ -64,6 +64,20 @@ export default async function AdminUsersPage({ params }: { params: Promise<{ loc
         title="console.navUsers"
         subtitle="admin.usersSubtitle"
         groups={adminNav(locale)}
+        facts={[
+          { label: t('admin.users'), value: String(directory.users.length) },
+          {
+            label: t('admin.verification'),
+            value: String(
+              directory.users.filter((user) => user.verification === 'verified').length,
+            ),
+          },
+          {
+            label: t('admin.deletionTitle'),
+            value: String(directory.users.filter((user) => user.deletionPending).length),
+            href: `/${locale}/admin/users/deletions`,
+          },
+        ]}
         actions={
           <Link className="ui-btn ui-btn--primary ui-btn--sm" href={`/${locale}/admin/users/roles`}>
             {t('admin.manageRoles')}

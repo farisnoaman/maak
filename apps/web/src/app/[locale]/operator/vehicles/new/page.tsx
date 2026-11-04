@@ -3,6 +3,7 @@ import { isLocale, translate, type Locale, type TranslationKey } from '@maak/cor
 import { SiteHeader } from '@/components/SiteHeader';
 import { PreviewBanner } from '@/components/PreviewBanner';
 import { ConsoleShell } from '@/components/ConsoleShell';
+import { operatorNav } from '@/components/operator/OperatorNav';
 import { VehicleWizard } from '@/components/fleet/VehicleWizard';
 import { activeOrganization, loadAccountContext } from '@/lib/account';
 
@@ -38,12 +39,7 @@ export default async function NewVehiclePage({
         locale={locale}
         title="fleet.addVehicle"
         subtitle="console.subtitle.operator"
-        items={[
-          { key: 'console.navOverview', href: `/${locale}/operator` },
-          { key: 'console.navVehicles', href: `/${locale}/operator/vehicles` },
-          { key: 'console.navFleet', href: `/${locale}/operator/fleet` },
-          { key: 'console.navDrivers', href: `/${locale}/operator/drivers` },
-        ]}
+        groups={operatorNav(locale)}
       >
         {!loaded.configured ? <PreviewBanner locale={locale} /> : null}
         <p className="fleet-hint">{t('verification.subtitle')}</p>

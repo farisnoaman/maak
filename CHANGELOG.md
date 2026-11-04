@@ -13,6 +13,36 @@ on `main`; the tag is the last step, not the first.
 
 ## [Unreleased] — after the last phase report
 
+### Changed — the other three consoles: one map each, and the figures where the work is (`docs/polish-plan.md` §40)
+
+- **Operator** gets one declared map (`components/operator/OperatorNav.ts`): *Work* · *Fleet* · *Money* ·
+  *Organisation*. It replaced about ten hand-rolled lists that disagreed with each other — the overview had seven
+  links, trips eight, vehicles six, drivers three, and the shortcuts that mattered appeared and vanished by page.
+- **Finance** is grouped (*Desk* · *Incoming* · *Books* · *Counterparties*) and loses its tenth link, *Overview*, which
+  pointed at `/staff/dashboard` — another console, with another console's navigation.
+- **Staff** keeps its groups and gains the glyphs, so the strip looks the same on all four desks.
+- Operator money pages show `operatorMoneyNav` — the same map filtered to *Work* and *Money*, not a four-link subset
+  that dropped the trip being checked.
+- **KPI strips** replace bespoke figure markup: the operator overview's `stat-grid` (and its duplicate "screens" door
+  list, a second copy of the navigation), the staff dashboard's grid including its *Scope* card, and the finance
+  dashboard's profit / gross / payable. Vehicles and drivers gained count + awaiting-decision cards.
+- `ConsoleFact.tone` gained `danger` for the staff desk's stale-trip figure.
+
+### Changed — the console is a dashboard, and the public pages wear its material (`docs/polish-plan.md` §38–39)
+
+- **A bar, not a rail.** The console's name and every destination in one sticky strip — visible at every width, no
+  disclosure, scrolling sideways on a phone. The current tab is the strip's one filled emerald cell.
+- **Figures lead.** Header figures became a **KPI strip**: auto-fitting cards, label in capitals, display-size tabular
+  values, and — where a screen exists behind the number — the whole card is the door (Users → deletion requests,
+  Plans → commission rules, Regions → supervisors). Users and plans gained figures they never had.
+- **Two-column section grid** above 1080px, one below; each section a panel (paper, hairline, radius) and anything
+  with a table, list, form or ledger spans both tracks. Itemised things inside keep their own card: two levels.
+- **The dark sidebar is deleted**, with `DetailsForDesktop` and the `.console-side*`/`.console-menu*` rules — ~250
+  lines gone, and four media queries with them.
+- **Public**: the trip page's policies and the booking breakdown lose their dashed dividers for the console's ledger
+  card (one solid hairline, one radius, one paper).
+- Palette unchanged: emerald and warm paper throughout. The reference site's pine/bronze was measured and not adopted.
+
 ### Changed — *Find a trip* is a button, not a wall (`docs/polish-plan.md` §37)
 
 - `/staff/trips` opened on the search form: a query field, five status chips, two dates, a governorate select and four

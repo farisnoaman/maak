@@ -1239,239 +1239,6 @@ a {
   }
 }
 
-/* ---------- app shell (consoles) ---------- */
-.console-layout {
-  display: grid;
-  /*
-   * `minmax(0, 1fr)` on the implicit column, never the default `auto`. An `auto` track is sized to the *max-content*
-   * of what is in it, and on a phone the aside holds a row of `nowrap` chips — so the track grew to the width of the
-   * whole chip row, and the panel beside it was laid out at that width, past the right edge of the screen. That is
-   * the horizontal scrollbar on `/staff/scan`: one unguarded track, one page wider than the phone.
-   */
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-5);
-  padding-block: var(--space-6);
-  min-inline-size: 0;
-}
-/* A grid child defaults to `min-width: auto` — a second way of refusing to shrink below its content. */
-.console-side,
-.console-main,
-.console-body,
-.console-panel {
-  min-inline-size: 0;
-}
-@media (min-width: 900px) {
-  .console-layout {
-    grid-template-columns: 236px minmax(0, 1fr);
-    gap: var(--space-8);
-    padding-block: var(--space-8);
-  }
-  /* The sidebar stays with you: a console is a place you move around in, not a page you scroll past a menu on. */
-  .console-side {
-    position: sticky;
-    inset-block-start: calc(68px + var(--space-6));
-    align-self: start;
-    max-block-size: calc(100dvh - 68px - var(--space-8));
-    overflow-y: auto;
-    overscroll-behavior: contain;
-  }
-}
-
-/*
- * The navigation: one vertical list, presented two ways.
- *
- * Above 900px it sits under the console's name (`.console-side__brand`) and wraps nothing. Below it, the list lives
- * inside a native disclosure whose summary says where you are, so a phone spends one 44px row on its navigation
- * instead of three rows of wrapped chips above every page title.
- */
-.console-nav {
-  display: grid;
-  align-content: start;
-  gap: 2px;
-  max-inline-size: 100%;
-}
-.console-nav a {
-  display: flex;
-  align-items: center;
-  min-block-size: var(--tap-target);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-sm);
-  font-size: 0.9rem;
-  font-weight: 600;
-  line-height: 1.3;
-  color: var(--ink-600);
-  text-wrap: balance;
-  transition:
-    background 120ms ease,
-    color 120ms ease;
-}
-/* The active destination is a tint plus weight, not a grey box: one accent on the page, and it is the tint of the
-   product's own brand rather than an arbitrary highlight. */
-.console-nav a[aria-current='page'] {
-  background: color-mix(in srgb, var(--brand-500) 12%, transparent);
-  color: var(--brand-700);
-  font-weight: 700;
-}
-.console-nav a:hover {
-  background: var(--surface-muted);
-  color: var(--ink-900);
-}
-.console-nav a[aria-current='page']:hover {
-  background: color-mix(in srgb, var(--brand-500) 18%, transparent);
-  color: var(--brand-700);
-}
-
-/* ---------- the phone's menu ---------- */
-
-.console-menu__toggle {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  inline-size: 100%;
-  min-block-size: var(--tap-target);
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--surface-sunken);
-  border-radius: var(--radius-md);
-  background: var(--surface-base);
-  cursor: pointer;
-  list-style: none;
-}
-.console-menu__toggle::-webkit-details-marker {
-  display: none;
-}
-.console-menu__text {
-  display: grid;
-  gap: 1px;
-  min-inline-size: 0;
-  text-align: start;
-}
-.console-menu__brand {
-  color: var(--ink-500);
-  font-size: var(--text-2xs);
-  font-weight: 800;
-  letter-spacing: var(--tracking-caps);
-  text-transform: uppercase;
-}
-.console-menu__current {
-  color: var(--ink-900);
-  font-size: 0.95rem;
-  font-weight: 700;
-}
-.console-menu__glyphs {
-  display: inline-grid;
-  place-items: center;
-  flex: none;
-  line-height: 0;
-  color: var(--ink-500);
-}
-.console-menu__glyph--close {
-  display: none;
-}
-.console-menu[open] .console-menu__glyph--open {
-  display: none;
-}
-.console-menu[open] .console-menu__glyph--close {
-  display: inline-block;
-}
-.console-menu[open] > .console-menu__toggle {
-  border-color: var(--brand-500);
-}
-.console-menu[open] > .console-menu__toggle .console-menu__glyphs {
-  color: var(--brand-700);
-}
-
-@media (max-width: 899.98px) {
-  /* The panel pushes the page down rather than floating over it: a console's destinations are a list to read, and an
-     overlay over a form is a dialog nobody asked for. */
-  .console-menu[open] > .console-nav {
-    margin-block-start: var(--space-2);
-    padding: var(--space-2);
-    border: 1px solid var(--surface-sunken);
-    border-radius: var(--radius-md);
-    background: var(--surface-base);
-    box-shadow: var(--shadow-md);
-  }
-  /* Inside a menu the group captions earn their line: they are what makes nine destinations scannable. */
-  .console-menu .console-nav__label {
-    display: block;
-    padding-inline: var(--space-3);
-    padding-block: var(--space-2) var(--space-1);
-  }
-  .console-menu .console-nav__group + .console-nav__group {
-    margin-block-start: var(--space-1);
-    padding-block-start: var(--space-1);
-    border-block-start: 1px solid var(--surface-sunken);
-  }
-}
-
-/* On a phone the menu row already says the console's name, so printing it again above the row is a duplicate — the
-   exact bit of chrome (an ADMIN label over the title) this pass set out to remove. */
-.console-side__brand {
-  display: none;
-}
-
-/* The product lockup in the sidebar: a door home, and the one place the console wears the brand. */
-.console-side__home {
-  display: none;
-}
-@media (min-width: 900px) {
-  /* The console's name, above its list, is the sidebar's heading — the menu row has no job here. */
-  .console-side__brand {
-    display: block;
-  }
-  .console-side__home {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    margin-block-end: var(--space-4);
-    padding-block-end: var(--space-4);
-    border-block-end: 1px solid var(--surface-sunken);
-    color: var(--ink-900);
-    font-size: 1.02rem;
-    font-weight: 800;
-  }
-  .console-side__home .brand__mark {
-    inline-size: 30px;
-    block-size: 30px;
-    font-size: 0.95rem;
-  }
-  .console-menu {
-    display: contents;
-  }
-  .console-menu__toggle {
-    display: none;
-  }
-  .console-nav {
-    /* Author styles beat the UA rule that hides a closed <details>' children — the same mechanism the site header
-       uses, so the sidebar needs no JavaScript to be a sidebar. */
-    display: grid !important;
-  }
-}
-
-/*
- * `.console-panel` stays for the account screens, where it is a real card on a page of cards. The console shell no
- * longer uses it: see `.console-head` / `.console-body` below.
- */
-.console-panel {
-  padding: var(--space-4);
-}
-
-@media (min-width: 720px) {
-  .console-panel {
-    padding: var(--space-6);
-  }
-}
-.console-panel h1 {
-  font-size: 1.3rem;
-  font-weight: 800;
-}
-.console-panel p {
-  margin-block-start: var(--space-3);
-  color: var(--ink-600);
-  font-size: 0.9rem;
-}
-
 /* ---------- the console page: a header band and a flat content column ---------- */
 
 .console-main {
@@ -1733,21 +1500,6 @@ a {
   margin-block-start: var(--space-1);
 }
 
-/*
- * The console sidebar's own name, and the grouped nav under it.
- *
- * The heading used to be the *page* title, so "Verification review" sat above a nav that also listed
- * "Verification review" — the sidebar looked like a breadcrumb of itself. Groups give nine links three
- * headings to sit under, which is what makes a shift's worth of destinations scannable.
- */
-.console-side__brand {
-  font-size: 0.78rem;
-  font-weight: 800;
-  letter-spacing: var(--tracking-caps);
-  text-transform: uppercase;
-  color: var(--ink-500);
-  margin-block-end: var(--space-3);
-}
 .console-nav__group {
   display: contents;
 }
@@ -10203,11 +9955,6 @@ h3,
   }
 }
 
-/* The sidebar sits on the paper, so it needs no surface of its own — only air. */
-.console-side {
-  padding-block-start: var(--space-1);
-}
-
 /* 2. The head band: a title with room around it, and the numbers in their own wash instead of floating in a margin. */
 .console-head h1 {
   font-size: clamp(1.45rem, 1.15rem + 1vw, 2rem);
@@ -10240,33 +9987,6 @@ h3,
 
 .console-facts dd {
   font-size: 1.125rem;
-}
-
-/* 3. Navigation: a place you are standing. */
-.console-nav a {
-  border-radius: var(--radius-md);
-  color: var(--ink-600);
-}
-
-.console-nav a[aria-current='page'] {
-  background: var(--paper);
-  color: var(--ink-900);
-  font-weight: 700;
-  box-shadow: var(--shadow-sm);
-}
-
-.console-nav a[aria-current='page']:hover {
-  background: var(--paper);
-  color: var(--ink-900);
-}
-
-.console-nav a:hover {
-  background: color-mix(in srgb, var(--paper-wash) 80%, transparent);
-  color: var(--ink-900);
-}
-
-.console-nav__label {
-  color: var(--ink-500);
 }
 
 /* 4. Section heads: the count is a pill, the rule above the section is warm. */
@@ -10442,20 +10162,6 @@ h3,
   @supports not (selector(::details-content)) {
     .site-menu__toggle {
       display: inline-flex;
-    }
-  }
-}
-
-@media (min-width: 900px) {
-  @supports (selector(::details-content)) {
-    .console-menu::details-content {
-      content-visibility: visible;
-    }
-  }
-
-  @supports not (selector(::details-content)) {
-    .console-menu__toggle {
-      display: flex;
     }
   }
 }
@@ -11338,463 +11044,6 @@ h3,
 }
 
 /* =====================================================================================
- * §36 — the console chrome
- *
- * A console was a page with a list beside it: the sidebar was the same paper as the content, the header band was a
- * title and a hairline, and the tables were the browser's. Everything about it said "a document that happens to
- * have links". An operator working a queue all day needs the opposite — a place with a frame: a rail that is
- * unmistakably *the console* and not the page, a header that says where you are before it says what you are
- * looking at, figures that read as one ledger line rather than three loose numbers, and tables you can scan
- * without chasing a row across the screen.
- *
- * The rule stays the one §31 set: **one frame per screen**. The rail is the frame's edge, not a card; the content
- * column is still flat, divided by hairlines. Nothing here adds a second box around the page.
- *
- * The rail is the brand, in both themes. `--brand-900` is a fixed deep forest in light *and* dark mode (unlike
- * `--surface-*` and `--ink-*`, which flip), so the console keeps one identity at night and the paper beside it can
- * go dark on its own.
- * ===================================================================================== */
-:root {
-  --rail: var(--brand-900);
-  --rail-ink: #f2f7f4;
-  --rail-dim: color-mix(in srgb, #ffffff 66%, var(--rail));
-  --rail-edge: color-mix(in srgb, #ffffff 14%, var(--rail));
-  --rail-hover: color-mix(in srgb, #ffffff 9%, var(--rail));
-  --rail-active-bg: #fbf8ee;
-  --rail-active-ink: #06362b;
-}
-
-/* ---------- the rail ---------- */
-
-@media (min-width: 900px) {
-  .console-side {
-    padding: var(--space-4) var(--space-3) var(--space-3);
-    border-radius: var(--radius-lg);
-    background: var(--rail);
-    box-shadow: var(--shadow-md);
-  }
-
-  /* The door home and the console's name: cream on forest, the one place the product's mark sits on its own ground. */
-  .console-side__home {
-    color: var(--rail-ink);
-    border-block-end-color: var(--rail-edge);
-  }
-
-  .console-side__home .brand__mark {
-    background: color-mix(in srgb, #ffffff 15%, transparent);
-    color: var(--rail-ink);
-  }
-
-  .console-side__brand {
-    color: var(--rail-dim);
-    font-size: var(--text-2xs);
-    font-weight: 800;
-    letter-spacing: var(--tracking-caps);
-    text-transform: uppercase;
-  }
-
-  .console-side .console-nav {
-    gap: 1px;
-  }
-
-  .console-side .console-nav a {
-    color: var(--rail-dim);
-    border-radius: var(--radius-sm);
-    font-weight: 600;
-  }
-
-  .console-side .console-nav a:hover {
-    background: var(--rail-hover);
-    color: var(--rail-ink);
-  }
-
-  /* You are here: a cream plate under the pointer's thumb, in the ink of the deep forest. It is the only high-value
-     surface inside the rail, so a glance finds the current screen before it reads a word. */
-  .console-side .console-nav a[aria-current='page'],
-  .console-side .console-nav a[aria-current='page']:hover {
-    background: var(--rail-active-bg);
-    color: var(--rail-active-ink);
-    font-weight: 800;
-  }
-
-  .console-side .console-nav__label {
-    color: color-mix(in srgb, #ffffff 52%, var(--rail));
-    font-size: 0.66rem;
-    letter-spacing: var(--tracking-caps);
-  }
-
-  .console-side .console-nav__group + .console-nav__group {
-    margin-block-start: var(--space-2);
-    padding-block-start: var(--space-2);
-    border-block-start: 1px solid var(--rail-edge);
-  }
-}
-
-/* A phone's console still wears the console's colour — one dark row that names where you are, opened in place. */
-.console-menu__toggle {
-  padding-inline: var(--space-4);
-  border-color: var(--rail);
-  background: var(--rail);
-}
-
-.console-menu__brand {
-  color: color-mix(in srgb, #ffffff 62%, var(--rail));
-}
-
-.console-menu__current {
-  color: var(--rail-ink);
-}
-
-.console-menu__glyphs {
-  color: var(--rail-ink);
-}
-
-.console-menu[open] > .console-menu__toggle {
-  border-color: color-mix(in srgb, #ffffff 34%, var(--rail));
-}
-
-.console-menu[open] > .console-menu__toggle .console-menu__glyphs {
-  color: var(--rail-ink);
-}
-
-@media (max-width: 899.98px) {
-  /* The list it opens is paper: destinations are read, not decorated. */
-  .console-menu[open] > .console-nav {
-    border-color: var(--paper-edge);
-    background: var(--paper);
-  }
-}
-
-/* ---------- the header band ---------- */
-
-.console-main {
-  gap: var(--space-4);
-}
-
-.console-head {
-  padding-block: var(--space-1) var(--space-4);
-  border-block-end-color: var(--paper-edge);
-}
-
-/* Where you are, above what you are looking at: the console, the group, the screen. It is the breadcrumb the sidebar
-   cannot give you once it has scrolled, and it costs one line of 11px capitals. */
-.console-head__eyebrow {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-  margin-block-end: var(--space-2);
-  color: var(--brand-700);
-  font-size: var(--text-2xs);
-  font-weight: 800;
-  letter-spacing: var(--tracking-caps);
-  text-transform: uppercase;
-  line-height: 1.4;
-}
-
-.console-head__eyebrow-sep {
-  color: var(--ink-400);
-  font-weight: 400;
-}
-
-.console-head h1 {
-  font-size: clamp(1.5rem, 1.2rem + 1vw, 1.95rem);
-  letter-spacing: -0.018em;
-}
-
-.console-head__sub {
-  margin-block-start: var(--space-2);
-  color: var(--ink-600);
-  font-size: 0.9rem;
-  line-height: 1.5;
-}
-
-.console-head__end {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: var(--space-3);
-}
-
-/* ---------- the figures: one ledger line ---------- */
-
-.console-facts {
-  margin: 0;
-  gap: 0;
-  border: 1px solid var(--paper-edge);
-  border-radius: var(--radius-md);
-  background: var(--paper);
-  overflow: hidden;
-}
-
-.console-facts > div {
-  display: grid;
-  gap: 2px;
-  padding: var(--space-2) var(--space-4);
-  border-radius: 0;
-  border-inline-start: 1px solid var(--paper-edge);
-  background: none;
-}
-
-.console-facts > div:first-child {
-  border-inline-start: 0;
-}
-
-.console-facts dt {
-  color: var(--ink-500);
-  font-size: var(--text-2xs);
-  font-weight: 800;
-  letter-spacing: var(--tracking-caps);
-  text-transform: uppercase;
-  line-height: 1.3;
-}
-
-.console-facts dd {
-  color: var(--ink-900);
-  font-size: 1.0625rem;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.2;
-}
-
-@media (max-width: 559px) {
-  .console-facts {
-    inline-size: 100%;
-  }
-
-  .console-facts > div {
-    flex: 1 1 auto;
-    padding-inline: var(--space-3);
-  }
-}
-
-/* ---------- sections ---------- */
-
-.console-section__head {
-  padding-block-end: var(--space-2);
-  border-block-end: 1px solid var(--paper-edge);
-}
-
-.console-section__head h2,
-.console-body > section > h2,
-.console-section h2 {
-  font-size: 1.0625rem;
-  letter-spacing: -0.014em;
-}
-
-/* A section's own action sits with its heading, not at the foot of the page. */
-.console-section__head .ui-btn,
-.console-section__head .link-more {
-  margin-block: -6px;
-}
-
-/* ---------- tables ---------- */
-
-/* A table is a block of paper you scroll inside: the column headings stay put, so the twentieth row still says
-   which column is which. */
-.table-scroll {
-  max-block-size: min(72dvh, 42rem);
-  padding: 0;
-  overflow: auto;
-  border-color: var(--paper-edge);
-  border-radius: var(--radius-md);
-  background: var(--paper);
-}
-
-.table-scroll > .data-table {
-  margin: 0;
-}
-
-.data-table {
-  font-size: 0.84rem;
-}
-
-.data-table thead th {
-  position: sticky;
-  inset-block-start: 0;
-  z-index: 1;
-  padding-block: var(--space-2);
-  background: var(--paper-wash);
-  /* `border-collapse: collapse` swallows a sticky header's own border; the inset shadow draws it instead. */
-  box-shadow: inset 0 -1px 0 var(--paper-edge);
-}
-
-.data-table th,
-.data-table td {
-  padding-block: var(--space-2);
-  vertical-align: middle;
-}
-
-.data-table tbody tr:hover {
-  background: color-mix(in srgb, var(--paper-wash) 70%, var(--paper));
-}
-
-/* ---------- the overview index ---------- */
-
-/* The console's front door: one line per screen, grouped, with the count of what is behind each row. The heading of
-   a group is a rule with a label and a number on it — the same band as a section head, so the two agree. */
-.admin-index__group h2 {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-3);
-  margin-block-end: 0;
-  padding-block-end: var(--space-2);
-  border-block-end: 1px solid var(--paper-edge);
-}
-
-.admin-index__count {
-  color: var(--ink-500);
-  font-size: var(--text-2xs);
-  font-weight: 800;
-  letter-spacing: var(--tracking-caps);
-}
-
-.admin-index__group ul {
-  border-block-start: 0;
-}
-
-.admin-index__group a {
-  padding-block: var(--space-3);
-  padding-inline: var(--space-2) var(--space-3);
-  transition:
-    background 120ms ease,
-    padding-inline-start 120ms ease;
-}
-
-.admin-index__group a:hover .admin-index__go,
-.admin-index__group a:focus-visible .admin-index__go {
-  color: var(--brand-700);
-  transform: translateX(calc(3px * var(--icon-flip, 1)));
-}
-
-.admin-index__go {
-  transition:
-    color 120ms ease,
-    transform 120ms ease;
-}
-
-.admin-index__note {
-  max-inline-size: 62ch;
-}
-
-@media (min-width: 900px) {
-  .admin-index {
-    column-gap: var(--space-10);
-    row-gap: var(--space-6);
-  }
-}
-
-/* A row's own verb, at the end of the row: the last cell of a directory, aligned to the inline end so the buttons
-   form one column instead of following the length of somebody's name. */
-.data-table .data-table__end {
-  text-align: end;
-  white-space: nowrap;
-}
-
-.data-table .data-table__end .ui-btn {
-  opacity: 0.72;
-  transition: opacity 120ms ease;
-}
-
-.data-table tbody tr:hover .data-table__end .ui-btn,
-.data-table tbody tr:focus-within .data-table__end .ui-btn {
-  opacity: 1;
-}
-
-/* ---------- the role ledger ---------- */
-
-/* Who holds what: one row per role — the name, the number, the people. A list, not a table: there are four roles
-   and a table would give the figure a column of its own it does not need. */
-.role-ledger {
-  display: grid;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  border: 1px solid var(--paper-edge);
-  border-radius: var(--radius-md);
-  background: var(--paper);
-  overflow: hidden;
-}
-
-.role-ledger__row {
-  display: grid;
-  grid-template-columns: minmax(0, 14rem) auto minmax(0, 1fr);
-  align-items: baseline;
-  gap: var(--space-2) var(--space-4);
-  padding: var(--space-3) var(--space-4);
-}
-
-.role-ledger__row + .role-ledger__row {
-  border-block-start: 1px solid var(--paper-edge);
-}
-
-.role-ledger__name {
-  font-weight: 700;
-  font-size: 0.9rem;
-}
-
-.role-ledger__count {
-  min-inline-size: 2ch;
-  color: var(--ink-900);
-  font-size: 1.0625rem;
-  font-weight: 800;
-  text-align: end;
-}
-
-.role-ledger__holders {
-  color: var(--ink-500);
-  font-size: 0.85rem;
-  line-height: 1.45;
-}
-
-@media (max-width: 639px) {
-  .role-ledger__row {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-
-  .role-ledger__holders {
-    grid-column: 1 / -1;
-  }
-}
-
-/* ---------- glyphs in the rail ---------- */
-
-/* A console that declares icons gets them on every row, indented in one column, so the list can be scanned by shape
-   as well as by word. A console that does not (the operator's flat list, the staff desk) renders none: half an
-   icon set is worse than none. */
-.console-nav--icons a {
-  gap: var(--space-2);
-}
-
-.console-nav__icon {
-  display: inline-grid;
-  place-items: center;
-  flex: none;
-  inline-size: 18px;
-  line-height: 0;
-  opacity: 0.72;
-  transition: opacity 120ms ease;
-}
-
-.console-nav--icons a:hover .console-nav__icon,
-.console-nav--icons a[aria-current='page'] .console-nav__icon {
-  opacity: 1;
-}
-
-.console-nav__text {
-  min-inline-size: 0;
-}
-
-/* Inside the forest rail the glyphs are cream at rest and forest-ink on the plate you are standing on — inherited
-   `currentColor`, so there is no second colour to keep in sync. */
-@media (min-width: 900px) {
-  .console-side .console-nav__icon {
-    color: inherit;
-  }
-}
-
-/* =====================================================================================
  * §37 — the console toolbar: one row, a disclosure, and the panel under it
  *
  * The staff trips desk opened on a wall. Six controls and eleven chips stood in a card above the queue on every
@@ -11857,4 +11106,833 @@ h3,
   .console-toolbar__count {
     flex: 1 1 100%;
   }
+}
+
+/* =====================================================================================
+ * §38 — the console, as a dashboard
+ *
+ * Three shapes have now been tried. The bordered panel put a card around the page. The flat column put the page on
+ * the browser's own paper and let it sprawl the full 1120px, which is a document, not a desk. The forest rail put the
+ * navigation in a panel as heavy as the content and charged a permanent 236px column for it — on a laptop the data
+ * got two thirds of the width while the rail took the eye, on every screen, forever.
+ *
+ * This is the fourth, and it is the one the content asked for: **give the width back, and let the numbers lead.**
+ *
+ *   · the navigation is a **bar**, not a rail — the console's name and its groups across the top, one sticky strip,
+ *     visible at every width and scrollable sideways on a phone instead of folded into a menu;
+ *   · the page opens with a title row and a **KPI strip** — the two or three figures the screen exists to answer,
+ *     as cards in a grid, so "how much" is answered before anything is read;
+ *   · the sections below sit in a **two-column grid** that collapses to one on a narrow screen, each a panel with a
+ *     hairline and a radius. Anything itemised inside keeps its own smaller card: two levels, and the limit.
+ *
+ * The palette does not move. This is the same emerald product in the same warm paper — only the arrangement is new.
+ * ===================================================================================== */
+
+/* ---------- the page ---------- */
+
+.console-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: var(--space-4);
+  padding-block: var(--space-4) var(--space-8);
+}
+
+/* The account screens still use this as a real card on a page of cards. */
+.console-panel {
+  padding: var(--space-4);
+}
+
+@media (min-width: 720px) {
+  .console-panel {
+    padding: var(--space-6);
+  }
+}
+
+/* ---------- the bar ---------- */
+
+/*
+ * Sticky, so a console is a place: the destinations stay overhead while the table scrolls under them. It carries the
+ * page surface and a single hairline rather than a second frame — the bar is the top edge of the page, not a widget
+ * floating above it.
+ */
+.console-bar {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 20;
+  display: grid;
+  gap: var(--space-2);
+  margin-block-end: var(--space-1);
+  padding-block: var(--space-2);
+  border-block-end: 1px solid var(--paper-edge);
+  background: var(--paper);
+}
+
+.console-bar__id {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+/* The way home, and the product's mark: a console is a room in a product, and this is its door. */
+.console-bar__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: 32px;
+  color: var(--ink-900);
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.console-bar__brand .brand__mark {
+  inline-size: 26px;
+  block-size: 26px;
+  font-size: 0.8rem;
+}
+
+/* On a phone the mark says enough; the wordmark would push the console's name off the line. */
+.console-bar__product {
+  display: none;
+}
+
+.console-bar__sep {
+  color: var(--ink-400);
+}
+
+.console-bar__console {
+  color: var(--ink-600);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+@media (min-width: 560px) {
+  .console-bar__product {
+    display: inline;
+  }
+}
+
+/* ---------- the destinations, in a strip ---------- */
+
+.console-nav {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  /* A phone scrolls the strip sideways rather than folding it away: the destinations are always there. */
+  max-inline-size: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  padding-block-end: 2px;
+}
+
+.console-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.console-nav__group {
+  display: grid;
+  gap: 2px;
+  flex: none;
+}
+
+.console-nav__label {
+  margin: 0;
+  padding-inline: var(--space-2);
+  color: var(--ink-400);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+.console-nav__row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* One tab: 44px tall, so it is a target on a touch screen and a comfortable click with a mouse. */
+.console-nav a {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: var(--tap-target);
+  padding-inline: var(--space-3);
+  border-radius: var(--radius-sm);
+  color: var(--ink-600);
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  transition:
+    background 120ms ease,
+    color 120ms ease;
+}
+
+.console-nav a:hover {
+  background: var(--paper-wash);
+  color: var(--ink-900);
+}
+
+/* You are here: the one filled tab in the strip. */
+.console-nav a[aria-current='page'],
+.console-nav a[aria-current='page']:hover {
+  background: var(--brand-600);
+  color: #fff;
+  font-weight: 700;
+}
+
+.console-nav__icon {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  line-height: 0;
+  opacity: 0.75;
+}
+
+.console-nav a[aria-current='page'] .console-nav__icon {
+  opacity: 1;
+}
+
+.console-nav__text {
+  min-inline-size: 0;
+}
+
+/* A flat console (one list, no groups) gets the same strip with no captions above it. */
+.console-nav:not(:has(.console-nav__label)) a {
+  min-block-size: var(--tap-target);
+}
+
+/* ---------- the title row ---------- */
+
+.console-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-5);
+  padding-block: var(--space-2) var(--space-1);
+}
+
+.console-head__text {
+  min-inline-size: 0;
+}
+
+.console-head__eyebrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-1);
+  color: var(--brand-700);
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  line-height: 1.4;
+}
+
+.console-head__eyebrow-sep {
+  color: var(--ink-400);
+  font-weight: 400;
+}
+
+.console-head h1 {
+  font-size: clamp(1.5rem, 1.2rem + 1vw, 1.95rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.12;
+}
+
+.console-head__sub {
+  margin-block-start: var(--space-1);
+  max-inline-size: 68ch;
+  color: var(--ink-600);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.console-head__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.console-head__stamp {
+  color: var(--ink-500);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- the KPI strip ---------- */
+
+/*
+ * The figures a screen is opened for, as cards: label in capitals, value at display size, and a note when the number
+ * needs a second word. Cards rather than a strip of text because they are the first thing scanned and the thing a
+ * thumb reaches for — a KPI with an `href` is a door to the queue that produced it.
+ */
+.console-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr));
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.console-kpi {
+  position: relative;
+  display: grid;
+  gap: 2px;
+  align-content: start;
+  min-inline-size: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--paper-edge);
+  border-radius: var(--radius-md);
+  background: var(--paper);
+  color: inherit;
+}
+
+.console-kpi--link {
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease,
+    transform 120ms ease;
+}
+
+.console-kpi--link:hover,
+.console-kpi--link:focus-visible {
+  border-color: color-mix(in srgb, var(--brand-500) 42%, var(--paper-edge));
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+
+.console-kpi--warn {
+  border-color: color-mix(in srgb, var(--state-warning) 38%, var(--paper-edge));
+  background: color-mix(in srgb, var(--state-warning) 7%, var(--paper));
+}
+
+.console-kpi__label {
+  color: var(--ink-500);
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  line-height: 1.3;
+}
+
+.console-kpi__value {
+  margin: 0;
+  color: var(--ink-900);
+  font-size: clamp(1.25rem, 1.05rem + 0.7vw, 1.6rem);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.console-kpi__note {
+  color: var(--ink-500);
+  font-size: var(--text-xs);
+  line-height: 1.35;
+}
+
+.console-kpi__go {
+  position: absolute;
+  inset-block-start: var(--space-3);
+  inset-inline-end: var(--space-3);
+  color: var(--ink-400);
+  line-height: 0;
+}
+
+.console-kpi--link:hover .console-kpi__go {
+  color: var(--brand-700);
+}
+
+/* ---------- the section grid ---------- */
+
+.console-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: var(--space-3);
+  min-inline-size: 0;
+}
+
+.console-body--tiles {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+}
+
+/* One column, full width: the shape for a screen that is a single long table. */
+.console-body--single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* Two columns once the viewport can carry two readable ones. */
+@media (min-width: 1080px) {
+  .console-body {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-4);
+    align-items: start;
+  }
+
+  /* A table, a list, a form or a ledger wants the whole width — and gets it, so a page of one table is not a page
+     with an empty column beside it. */
+  .console-body > :has(.table-scroll),
+  .console-body > :has(table),
+  .console-body > :has(form),
+  .console-body > :has(.role-ledger),
+  .console-body > :has(.sub-list),
+  .console-body > :only-child,
+  .console-body > .console-wide {
+    grid-column: 1 / -1;
+  }
+}
+
+/*
+ * A section is a panel: paper, a hairline, a radius, and room inside. Two of them side by side read as a dashboard;
+ * the same sections stacked full width read as a document, which is what the last two attempts produced.
+ *
+ * A direct `.card` is still flattened: the panel *is* the frame, so a card inside it would be a frame in a frame.
+ */
+.console-body > section,
+.console-body > div.console-section {
+  min-inline-size: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--paper-edge);
+  border-radius: var(--radius-lg);
+  background: var(--paper);
+}
+
+.console-body > .card {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Sections no longer draw their own dividers: the gap and the panel edge do that job now. */
+.console-body > section + section,
+.console-body > .card + .card,
+.console-body > .card + section,
+.console-body > section + .card,
+.console-section:not(:first-child) {
+  padding-block-start: var(--space-4);
+  border-block-start: 1px solid var(--paper-edge);
+}
+
+@media (min-width: 1080px) {
+  .console-body > section + section,
+  .console-body > .card + .card,
+  .console-body > .card + section,
+  .console-body > section + .card,
+  .console-section:not(:first-child) {
+    padding-block-start: var(--space-4);
+    border-block-start: 1px solid var(--paper-edge);
+  }
+}
+
+/* A section inside the body that is *not* a panel: the strip of a page that is all table. */
+.console-body > .console-flat {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+/* ---------- section heads ---------- */
+
+.console-section {
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+  min-inline-size: 0;
+}
+
+.console-section__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  padding-block-end: var(--space-2);
+  border-block-end: 1px solid var(--paper-edge);
+  margin-block-end: var(--space-1);
+}
+
+.console-section__head h2,
+.console-section h2,
+.console-body > section > h2,
+.console-body > .card > h2 {
+  font-size: 1.0625rem;
+  font-weight: 750;
+  letter-spacing: -0.014em;
+}
+
+.console-section__head .console-section__meta {
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--paper-wash);
+  color: var(--ink-600);
+  font-size: var(--text-xs);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.console-section__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.console-subhead {
+  margin: var(--space-2) 0 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+/* ---------- tables ---------- */
+
+.table-scroll {
+  max-inline-size: 100%;
+  max-block-size: min(72dvh, 42rem);
+  padding: 0;
+  overflow: auto;
+  border: 1px solid var(--paper-edge);
+  border-radius: var(--radius-md);
+  background: var(--paper);
+}
+
+.table-scroll > .data-table {
+  margin: 0;
+}
+
+.data-table {
+  font-size: 0.84rem;
+}
+
+.data-table thead th {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+  padding-block: var(--space-2);
+  background: var(--paper-wash);
+  color: var(--ink-700);
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  box-shadow: inset 0 -1px 0 var(--paper-edge);
+}
+
+.data-table th,
+.data-table td {
+  padding-block: var(--space-2);
+  border-block-end-color: var(--paper-edge);
+  vertical-align: middle;
+}
+
+.data-table tbody tr:hover {
+  background: color-mix(in srgb, var(--paper-wash) 70%, var(--paper));
+}
+
+/* A row's own verb, at the inline end, so the buttons form a column. */
+.data-table .data-table__end {
+  text-align: end;
+  white-space: nowrap;
+}
+
+.data-table .data-table__end .ui-btn {
+  opacity: 0.75;
+  transition: opacity 120ms ease;
+}
+
+.data-table tbody tr:hover .data-table__end .ui-btn,
+.data-table tbody tr:focus-within .data-table__end .ui-btn {
+  opacity: 1;
+}
+
+/* ---------- the overview index ---------- */
+
+.admin-index {
+  display: grid;
+  gap: var(--space-5);
+  align-content: start;
+}
+
+.admin-index__group h2 {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: 0;
+  padding-block-end: var(--space-2);
+  border-block-end: 1px solid var(--paper-edge);
+  color: var(--ink-500);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.admin-index__count {
+  color: var(--ink-400);
+  font-size: var(--text-2xs);
+  font-weight: 800;
+}
+
+.admin-index__group ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-index__group a {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-1) var(--space-4);
+  min-block-size: var(--tap-target);
+  padding: var(--space-3) var(--space-2) var(--space-3) var(--space-3);
+  border-radius: var(--radius-sm);
+  color: inherit;
+}
+
+.admin-index__group li + li a {
+  border-block-start: 1px solid var(--paper-edge);
+  border-radius: 0;
+}
+
+.admin-index__group a:hover,
+.admin-index__group a:focus-visible {
+  background: var(--paper-wash);
+}
+
+.admin-index__name {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.admin-index__note {
+  grid-column: 1;
+  max-inline-size: 62ch;
+  color: var(--ink-500);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.admin-index__go {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  color: var(--ink-400);
+  transition:
+    color 120ms ease,
+    transform 120ms ease;
+}
+
+.admin-index__group a:hover .admin-index__go {
+  color: var(--brand-700);
+  transform: translateX(calc(3px * var(--icon-flip, 1)));
+}
+
+@media (min-width: 1080px) {
+  .admin-index {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
+    gap: var(--space-6) var(--space-8);
+  }
+}
+
+/* ---------- the role ledger ---------- */
+
+.role-ledger {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--paper-edge);
+  border-radius: var(--radius-md);
+  background: var(--paper);
+  overflow: hidden;
+}
+
+.role-ledger__row {
+  display: grid;
+  grid-template-columns: minmax(0, 14rem) auto minmax(0, 1fr);
+  align-items: baseline;
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-3) var(--space-4);
+}
+
+.role-ledger__row + .role-ledger__row {
+  border-block-start: 1px solid var(--paper-edge);
+}
+
+.role-ledger__name {
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.role-ledger__count {
+  min-inline-size: 2ch;
+  color: var(--ink-900);
+  font-size: 1.0625rem;
+  font-weight: 800;
+  text-align: end;
+}
+
+.role-ledger__holders {
+  color: var(--ink-500);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 639px) {
+  .role-ledger__row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .role-ledger__holders {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ---------- what is left of the flat-column material ---------- */
+
+.unit-title {
+  margin: 0;
+  font-weight: 700;
+}
+
+.unit-meta {
+  margin: 0;
+  color: var(--ink-500);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.block {
+  display: block;
+}
+
+.id-short {
+  color: var(--ink-500);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.82rem;
+}
+
+/* The old ledger strip: still used by a couple of desks that print two numbers in a header band. */
+.console-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  margin: 0;
+  border: 1px solid var(--paper-edge);
+  border-radius: var(--radius-md);
+  background: var(--paper);
+  overflow: hidden;
+}
+
+.console-facts > div {
+  display: grid;
+  gap: 2px;
+  padding: var(--space-2) var(--space-4);
+  border-inline-start: 1px solid var(--paper-edge);
+}
+
+.console-facts > div:first-child {
+  border-inline-start: 0;
+}
+
+.console-facts dt {
+  color: var(--ink-500);
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.console-facts dd {
+  margin: 0;
+  color: var(--ink-900);
+  font-size: 1.0625rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* =====================================================================================
+ * §39 — the public pages wear the same material
+ *
+ * The console's dashboard is not a private language: the public pages were already the same palette, the same paper
+ * and the same hairlines, so what they borrow here is the *shape* of a fact — a bordered block of paper whose rows
+ * are divided by one hairline, with the label quiet and the value answering it across a two-column line.
+ *
+ * The trip page's policies and the booking breakdown were still drawing their rows with **dashed** dividers — a
+ * form's convention borrowed by a page, and the one treatment on the public site that had no counterpart in the
+ * console. They are the ledger's card now: one solid hairline between rows, one radius, one paper.
+ * ===================================================================================== */
+
+.trip-facts {
+  border: 1px solid var(--paper-edge);
+  border-radius: var(--radius-md);
+  background: var(--paper);
+  overflow: hidden;
+}
+
+.trip-facts__row {
+  padding: var(--space-3) var(--space-4);
+}
+
+.trip-facts__row + .trip-facts__row {
+  border-block-start: 1px solid var(--paper-edge);
+}
+
+.trip-facts__row dt {
+  color: var(--ink-500);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.trip-facts__row dd {
+  color: var(--ink-900);
+  font-weight: 700;
+}
+
+/* Inside a card the facts are a summary, not a panel: the card is already the frame. */
+.trip-card .trip-facts {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.trip-card .trip-facts__row {
+  padding-inline: 0;
+}
+
+/* The booking breakdown, the same treatment. */
+.trip-book__breakdown {
+  border-color: var(--paper-edge);
+}
+
+/* A figure that is not a warning but a fault: the staff desk's stale trips. Same card, the danger pair of the ramp. */
+.console-kpi--danger {
+  border-color: color-mix(in srgb, var(--state-danger) 40%, var(--paper-edge));
+  background: color-mix(in srgb, var(--state-danger) 6%, var(--paper));
+}
+
+.console-kpi--danger .console-kpi__value {
+  color: var(--state-danger);
 }

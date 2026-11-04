@@ -1,35 +1,53 @@
+import type { ConsoleNavGroup } from '@/components/ConsoleShell';
+import type { IconName } from '@/components/ui/Icon';
 import type { TranslationKey } from '@maak/core';
 
 /**
- * Navigation for the two desks that touch money all day.
+ * The finance console's navigation, in one place.
  *
- * One list per desk, because the jobs are different: finance works the ledger, an operator looks at their own
- * plan and payouts. The admin console's links are grouped in `components/admin/AdminNav.ts` — its old list here
- * pointed at `/finance/invoices` and `/finance/payouts`, screens that belong to another console.
+ * It was a flat list of ten links, which is a list, not a map: *Dashboard*, *Invoices*, *Statements*, *Ledger*,
+ * *Reconciliation*, *Payments*, *Accounts*, *Agents*, *Payouts* — nine screens of equal weight in one row, with no
+ * hint that the first four are the desk's daily work and the last five are its reference — and a tenth link,
+ * *Overview*, that pointed at **`/staff/dashboard`**, a different console. A finance officer who clicked it landed in
+ * the staff desk, with the staff navigation, wondering what happened.
+ *
+ * Grouped by the question each screen answers: what came in, what it is made of, who we owe, and the books underneath
+ * all three.
  */
-export function financeNav(locale: string) {
-  return [
-    { key: 'financeNav.dashboard' as TranslationKey, href: `/${locale}/finance/dashboard` },
-    { key: 'financeNav.invoices' as TranslationKey, href: `/${locale}/finance/invoices` },
-    { key: 'financeNav.statements' as TranslationKey, href: `/${locale}/finance/statements` },
-    { key: 'financeNav.ledger' as TranslationKey, href: `/${locale}/finance/ledger` },
-    {
-      key: 'financeNav.reconciliation' as TranslationKey,
-      href: `/${locale}/finance/reconciliation`,
-    },
-    { key: 'console.navFinancePayments' as TranslationKey, href: `/${locale}/finance/payments` },
-    { key: 'console.navFinanceAccounts' as TranslationKey, href: `/${locale}/finance/accounts` },
-    { key: 'console.navFinanceAgents' as TranslationKey, href: `/${locale}/finance/agents` },
-    { key: 'console.navFinancePayouts' as TranslationKey, href: `/${locale}/finance/payouts` },
-    { key: 'console.navOverview' as TranslationKey, href: `/${locale}/staff/dashboard` },
-  ];
-}
+export function financeNav(locale: string): readonly ConsoleNavGroup[] {
+  const item = (key: TranslationKey, href: string, icon: IconName) => ({
+    key,
+    href: `/${locale}${href}`,
+    icon,
+  });
 
-export function operatorMoneyNav(locale: string) {
   return [
-    { key: 'financeNav.billing' as TranslationKey, href: `/${locale}/operator/billing` },
-    { key: 'financeNav.expenses' as TranslationKey, href: `/${locale}/operator/expenses` },
-    { key: 'console.navPayments' as TranslationKey, href: `/${locale}/operator/payments` },
-    { key: 'console.navPayouts' as TranslationKey, href: `/${locale}/operator/payouts` },
+    {
+      key: 'console.groupDesk',
+      items: [item('financeNav.dashboard', '/finance/dashboard', 'spark')],
+    },
+    {
+      key: 'console.groupIncoming',
+      items: [
+        item('financeNav.invoices', '/finance/invoices', 'ticket'),
+        item('console.navFinancePayments', '/finance/payments', 'wallet'),
+        item('financeNav.statements', '/finance/statements', 'price'),
+      ],
+    },
+    {
+      key: 'console.groupBooks',
+      items: [
+        item('financeNav.ledger', '/finance/ledger', 'route'),
+        item('financeNav.reconciliation', '/finance/reconciliation', 'shield'),
+        item('console.navFinanceAccounts', '/finance/accounts', 'inbox'),
+      ],
+    },
+    {
+      key: 'console.groupParties',
+      items: [
+        item('console.navFinanceAgents', '/finance/agents', 'users'),
+        item('console.navFinancePayouts', '/finance/payouts', 'bus'),
+      ],
+    },
   ];
 }

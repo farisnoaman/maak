@@ -11,6 +11,7 @@ import {
 import { SiteHeader } from '@/components/SiteHeader';
 import { PreviewBanner } from '@/components/PreviewBanner';
 import { ConsoleShell } from '@/components/ConsoleShell';
+import { operatorNav } from '@/components/operator/OperatorNav';
 import { EmptyState } from '@/components/ui/Feedback';
 import { PrintButton } from '@/components/staff/PrintButton';
 import { activeOrganization, loadAccountContext } from '@/lib/account';
@@ -62,13 +63,6 @@ export default async function FleetReportPage({
     loadFleetSummary(loaded, org?.id ?? null),
   ]);
 
-  const nav = [
-    { key: 'console.navOverview' as TranslationKey, href: `/${locale}/operator` },
-    { key: 'console.navVehicles' as TranslationKey, href: `/${locale}/operator/vehicles` },
-    { key: 'console.navFleet' as TranslationKey, href: `/${locale}/operator/fleet` },
-    { key: 'console.navDrivers' as TranslationKey, href: `/${locale}/operator/drivers` },
-  ];
-
   if (!access.allowed) {
     return (
       <>
@@ -79,7 +73,7 @@ export default async function FleetReportPage({
           locale={locale}
           title="fleetOps.report"
           subtitle="fleetOps.fleetSubtitle"
-          items={nav}
+          groups={operatorNav(locale)}
         >
           <EmptyState
             title={t('fleetOps.reportLocked')}
@@ -104,7 +98,7 @@ export default async function FleetReportPage({
         locale={locale}
         title="fleetOps.report"
         subtitle="fleetOps.reportHint"
-        items={nav}
+        groups={operatorNav(locale)}
       >
         {!loaded.configured ? <PreviewBanner locale={locale} /> : null}
 

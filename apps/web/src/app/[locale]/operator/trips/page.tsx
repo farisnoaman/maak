@@ -3,6 +3,7 @@ import { isLocale, translate, tripStatusKey, type Locale, type TranslationKey } 
 import { SiteHeader } from '@/components/SiteHeader';
 import { PreviewBanner } from '@/components/PreviewBanner';
 import { ConsoleShell } from '@/components/ConsoleShell';
+import { operatorNav } from '@/components/operator/OperatorNav';
 import { EmptyState } from '@/components/ui/Feedback';
 import { TripBadges } from '@/components/trips/TripBadges';
 import { activeOrganization, loadAccountContext } from '@/lib/account';
@@ -64,20 +65,6 @@ export default async function OperatorTripsPage({
     loaded.roles.includes('platform_staff') ||
     loaded.roles.includes('platform_admin');
 
-  const nav = [
-    { key: 'console.navOverview' as TranslationKey, href: `/${locale}/operator` },
-    { key: 'console.navTrips' as TranslationKey, href: `/${locale}/operator/trips` },
-    { key: 'trips.calendar' as TranslationKey, href: `/${locale}/operator/trips/calendar` },
-    { key: 'console.navVehicles' as TranslationKey, href: `/${locale}/operator/vehicles` },
-
-    { key: 'console.navFleet' as TranslationKey, href: `/${locale}/operator/fleet` },
-    { key: 'console.navDrivers' as TranslationKey, href: `/${locale}/operator/drivers` },
-    { key: 'org.team' as TranslationKey, href: `/${locale}/operator/team` },
-    ...(isStaff
-      ? [{ key: 'staff.trips.title' as TranslationKey, href: `/${locale}/staff/trips` }]
-      : []),
-  ];
-
   const contextQuery = org ? `org=${org.id}` : '';
 
   return (
@@ -89,7 +76,7 @@ export default async function OperatorTripsPage({
         locale={locale}
         title="trips.title"
         subtitle="trips.subtitle"
-        items={nav}
+        groups={operatorNav(locale)}
       >
         {!loaded.configured ? <PreviewBanner locale={locale} /> : null}
 

@@ -12,6 +12,7 @@ import {
 import { SiteHeader } from '@/components/SiteHeader';
 import { PreviewBanner } from '@/components/PreviewBanner';
 import { ConsoleShell } from '@/components/ConsoleShell';
+import { operatorNav } from '@/components/operator/OperatorNav';
 import { Badge, EmptyState, type BadgeTone } from '@/components/ui/Feedback';
 import { HealthActions } from '@/components/fleet/HealthActions';
 import { activeOrganization, loadAccountContext } from '@/lib/account';
@@ -126,13 +127,6 @@ export default async function VehicleHealthPage({
       preview.vehicle.ownerOrgId === org.id &&
       (org.role === 'owner' || org.role === 'manager'));
 
-  const nav = [
-    { key: 'console.navOverview' as TranslationKey, href: `/${locale}/operator` },
-    { key: 'console.navVehicles' as TranslationKey, href: `/${locale}/operator/vehicles` },
-    { key: 'console.navFleet' as TranslationKey, href: `/${locale}/operator/fleet` },
-    { key: 'console.navDrivers' as TranslationKey, href: `/${locale}/operator/drivers` },
-  ];
-
   const { vehicle, maintenance, fuel, expenses } = preview;
   const state = maintenance.state;
 
@@ -145,7 +139,7 @@ export default async function VehicleHealthPage({
         locale={locale}
         title="fleetOps.healthTitle"
         subtitle="fleetOps.healthSubtitle"
-        items={nav}
+        groups={operatorNav(locale)}
       >
         {!loaded.configured ? <PreviewBanner locale={locale} /> : null}
 

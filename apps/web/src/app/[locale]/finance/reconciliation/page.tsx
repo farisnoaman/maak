@@ -43,7 +43,7 @@ export default async function FinanceReconciliationPage({
         locale={locale}
         title="recon.title"
         subtitle="recon.subtitle"
-        items={financeNav(locale)}
+        groups={financeNav(locale)}
       >
         {allowed ? (
           <ReconciliationDesk locale={locale} data={data} orgId={null} ownerUserId={null} />

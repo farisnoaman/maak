@@ -44,7 +44,7 @@ export default async function FinancePayoutsPage({
         locale={locale}
         title="financePayouts.title"
         subtitle="financePayouts.subtitle"
-        items={financeNav(locale)}
+        groups={financeNav(locale)}
       >
         <section>
           {/* The console header already prints this sentence. Repeating it here was the page's first line of

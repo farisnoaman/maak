@@ -112,6 +112,27 @@ export default async function StaffDashboardPage({
         subtitle="ops.dashboardSubtitle"
         pathname="/staff/dashboard"
         groups={staffNav(locale)}
+        facts={
+          summary
+            ? [
+                ...figures.map((figure) => ({
+                  label: t(figure.key),
+                  // An em dash when the count could not be read — never a zero it cannot vouch for.
+                  value: String(figure.value ?? '—'),
+                  href: figure.href,
+                  tone: figure.tone,
+                })),
+                {
+                  label: t('ops.scope'),
+                  value: summary.global
+                    ? t('ops.scopeGlobal')
+                    : t('ops.scopeCount', { count: summary.governorates.length }),
+                  // A count of three is not a patch; the names are.
+                  note: scopeNames.length > 0 ? scopeNames.join(' · ') : undefined,
+                },
+              ]
+            : undefined
+        }
         actions={
           <span className="console-head__stamp">
             {t('ops.asOf', { time: formatDateTime(new Date().toISOString(), { locale }) })}
@@ -142,37 +163,6 @@ export default async function StaffDashboardPage({
                 {t('ops.allClear')}
               </p>
             ) : null}
-
-            <div className="stat-grid stat-grid--links">
-              {figures.map((figure) => (
-                <Link
-                  className={`stat stat--link${figure.tone ? ` stat--${figure.tone}` : ''}`}
-                  href={figure.href}
-                  key={figure.key}
-                >
-                  <span className="stat__label">{t(figure.key)}</span>
-                  {/* An em dash when the count could not be read — never a zero it cannot vouch for. */}
-                  <strong className="stat__value">{figure.value ?? '—'}</strong>
-                  <span className="stat__go route-arrow" aria-hidden="true">
-                    →
-                  </span>
-                </Link>
-              ))}
-              <div className="stat">
-                <span className="stat__label">{t('ops.scope')}</span>
-                {summary.global ? (
-                  <strong className="stat__value stat__value--text">{t('ops.scopeGlobal')}</strong>
-                ) : (
-                  <strong className="stat__value stat__value--text">
-                    {t('ops.scopeCount', { count: summary.governorates.length })}
-                  </strong>
-                )}
-                {/* A count of three is not a patch; the names are. */}
-                {scopeNames.length > 0 ? (
-                  <span className="stat__note">{scopeNames.join(' · ')}</span>
-                ) : null}
-              </div>
-            </div>
 
             {/* The panel carries its own heading and card, so it is not wrapped in another section — that is how
                 the page ended up with two titles stacked on each other. */}

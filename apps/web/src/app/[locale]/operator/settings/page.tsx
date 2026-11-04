@@ -3,6 +3,7 @@ import { isLocale, translate, type Locale, type TranslationKey } from '@maak/cor
 import { SiteHeader } from '@/components/SiteHeader';
 import { PreviewBanner } from '@/components/PreviewBanner';
 import { ConsoleShell } from '@/components/ConsoleShell';
+import { operatorNav } from '@/components/operator/OperatorNav';
 import { EmptyState } from '@/components/ui/Feedback';
 import { OrganizationPanel } from '@/components/account/OrganizationPanel';
 import { activeOrganization, loadAccountContext } from '@/lib/account';
@@ -39,12 +40,7 @@ export default async function OperatorSettingsPage({
         locale={locale}
         title="org.settings"
         subtitle="console.subtitle.operator"
-        items={[
-          { key: 'console.navOverview', href: `/${locale}/operator` },
-          { key: 'org.settings', href: `/${locale}/operator/settings` },
-          { key: 'org.team', href: `/${locale}/operator/team` },
-          { key: 'nav.account', href: `/${locale}/account` },
-        ]}
+        groups={operatorNav(locale)}
       >
         {preview ? <PreviewBanner locale={locale} /> : null}
         {org ? (

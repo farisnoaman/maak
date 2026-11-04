@@ -41,6 +41,14 @@ export default async function AdminPlansPage({ params }: { params: Promise<{ loc
         title="plans.title"
         subtitle="plans.subtitle"
         groups={adminNav(locale)}
+        facts={[
+          { label: t('plans.priceList'), value: String(plans.length) },
+          {
+            label: t('plans.commissions'),
+            value: String(rules.length),
+            href: `/${locale}/admin/plans/commissions`,
+          },
+        ]}
         actions={
           <Link
             className="ui-btn ui-btn--ghost ui-btn--sm"
