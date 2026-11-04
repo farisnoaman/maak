@@ -13,6 +13,21 @@ on `main`; the tag is the last step, not the first.
 
 ## [Unreleased] — after the last phase report
 
+### Changed — the console is a dashboard, and the public pages wear its material (`docs/polish-plan.md` §38–39)
+
+- **A bar, not a rail.** The console's name and every destination in one sticky strip — visible at every width, no
+  disclosure, scrolling sideways on a phone. The current tab is the strip's one filled emerald cell.
+- **Figures lead.** Header figures became a **KPI strip**: auto-fitting cards, label in capitals, display-size tabular
+  values, and — where a screen exists behind the number — the whole card is the door (Users → deletion requests,
+  Plans → commission rules, Regions → supervisors). Users and plans gained figures they never had.
+- **Two-column section grid** above 1080px, one below; each section a panel (paper, hairline, radius) and anything
+  with a table, list, form or ledger spans both tracks. Itemised things inside keep their own card: two levels.
+- **The dark sidebar is deleted**, with `DetailsForDesktop` and the `.console-side*`/`.console-menu*` rules — ~250
+  lines gone, and four media queries with them.
+- **Public**: the trip page's policies and the booking breakdown lose their dashed dividers for the console's ledger
+  card (one solid hairline, one radius, one paper).
+- Palette unchanged: emerald and warm paper throughout. The reference site's pine/bronze was measured and not adopted.
+
 ### Changed — *Find a trip* is a button, not a wall (`docs/polish-plan.md` §37)
 
 - `/staff/trips` opened on the search form: a query field, five status chips, two dates, a governorate select and four

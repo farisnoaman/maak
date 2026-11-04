@@ -79,6 +79,8 @@ questions in the order they ask them.**
 | 31 | **The console had no chrome** | The rail was the same paper as the page, the header a title over a hairline, the figures three loose numbers, the tables the browser's — and three screens that had been given pages of their own (`/users/deletions`, `/plans/commissions`, `/subscriptions/overrides`) had no way in from the navigation at all | `[x]` — §36 |
 | 32 | Users & roles, two jobs in one column | The directory of fifty accounts ended in a grant/revoke fieldset, so the read screen carried the write control and the question the control raises ("who else is an admin?") was answered nowhere | `[x]` — §36 |
 | 33 | **The staff desk opened on a wall** | *Find a trip* — six controls and eleven chips — stood open above the queue on every visit, so the page a staff member came for began below the fold | `[x]` — §37 |
+| 34 | **The console had no dashboard in it** | The bare column sprawled the full width and read as a document; the rail that replaced it charged a permanent 236px column, so the data got two thirds of a laptop and the navigation took the eye — and neither put the screen's figures in front of the reader | `[x]` — §38 |
+| 35 | A panel with no numbers | Users, plans and regions printed their counts in prose (or not at all) while the figure a desk opens for — how many, how much — went unstated | `[x]` — §38 |
 | 27 | Two more pages with two jobs each | Subscriptions carried the payer list and the support grants; users carried the directory and the deletion queue | `[x]` — §32 |
 
 ## 3–4. Trips list and trip detail — what changed
@@ -1386,3 +1388,47 @@ started below the fold.
 `data-active="true"` and the badge reads `3`, and the old `ops-toolbar` count row is gone. `tsc` ✓, `prettier` ✓,
 `check:guards` ✓, `check:responsive` ✓ (118 media queries), `check:a11y` ✓ over **119 routes**. **Gap:** no browser —
 the panel's overlay position under the row and the three-column form at 720px are read from the CSS.
+
+## 38. The console, as a dashboard — and the public pages in the same material
+
+**The report.** *"Can you redesign the console pages, do it in different way if possible."* Choices: keep the palette
+(emerald, not the reference site's pine), restructure as a **full-width grid dashboard**, and carry the material to
+**the public site** too.
+
+**Why a fourth shape.** Three had already been tried and each was wrong in the same direction — a frame that was not
+the content. The bordered `console-panel` wrapped every screen in a card. The flat column put the page on the
+browser's paper and let it sprawl the full 1120px: a document. The forest rail put the *navigation* in a panel as
+heavy as the content and charged a permanent 236px column for it — on a laptop the data got two thirds of the width
+while the rail took the eye, on every screen, forever.
+
+**What it is now** (stylesheet §38).
+
+- **A bar, not a rail.** The product's mark, the console's name and every destination in one sticky strip. Visible at
+  every width — no disclosure, no hamburger — scrolling sideways on a phone rather than folding away. Group captions
+  are 11px capitals above their tabs; the current tab is the one filled emerald cell in the strip.
+- **Figures lead.** The header band's loose numbers are a **KPI strip**: cards, auto-fitting, label in capitals, value
+  at display size with tabular figures, an optional note, and — when the figure has a screen behind it — the whole
+  card is the door to it (Users → *Deletion requests*, Plans → *Commission rules*, Regions → *Supervisors*).
+- **A two-column section grid** above 1080px, one column below. A section is a panel: paper, hairline, radius, air.
+  A table, a list, a form or a ledger spans both tracks by construction (`:has()`), so a page that is one long table
+  is not a page with an empty column beside it. Itemised things inside a panel keep their own smaller card — two
+  levels, and the limit.
+- **The dead sidebar is gone**: `.console-side*`, `.console-menu*` and the `DetailsForDesktop` mechanism that revealed
+  it are deleted, not overridden. The stylesheet shrank by ~250 lines even after the new block.
+- **Figures added where a screen had none**: `/admin/users` (accounts, verified, deletion requests), `/admin/plans`
+  (plans, commission rules).
+
+**The public pages** (§39). Same palette, same paper, same hairlines — what they borrow is the *shape* of a fact. The
+trip page's policy list and the booking breakdown drew their rows with **dashed** dividers, a form's convention
+borrowed by a page and the one treatment on the public site with no counterpart in the console. They are the ledger's
+card now: one solid hairline between rows, one radius, one paper (and inside a trip card, no frame at all, because the
+card is already the frame).
+
+**Palette unchanged.** This pass moved arrangement, not colour: `--brand-*` emerald, `--paper` warm, `--sand-*` accent.
+The reference site's pine/bronze was measured, documented and deliberately *not* adopted.
+
+**Verified.** `/en|ar` home, `/trips`, a trip page, and every `/admin/*` screen — 200 with the new bar, KPI strip and
+panels (`console-kpi--link` → `/admin/users/deletions` resolves); `tsc` ✓, `prettier` ✓, `check:guards` ✓ (32 core,
+203 style, 46 migrations, 135 commands), `check:responsive` ✓ (113 media queries — fewer than before, because the
+sidebar's breakpoints went with it), `check:all` ✓, `next build` ✓, `check:a11y` ✓ over **119 routes**. **Gap:** no
+browser — the sticky bar, the two-column fold at 1080px and the `:has()` span rules are read from the CSS.
